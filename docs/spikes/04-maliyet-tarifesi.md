@@ -3,8 +3,8 @@ proje: ScryneQuant
 created: 2026-09-08
 type: spike-raporu
 spike: 4
-kapatir: K-016 (kismen), K-007 (sayilar)
-status: kismen-tamamlandi
+kapatir: K-016, K-007 (sayilar)
+status: tamamlandi
 ---
 # Spike 4 — Maliyet tarifesi ve spread
 
@@ -78,12 +78,18 @@ konmalı. Faz 1'de veri geldiğinde `|open[t+1] − close[t]| / close[t]` dağı
 muhafazakâr bir yüzdelik (ör. medyan yerine 75. persentil) alınır. Bu bir Faz 1 işi olarak
 kaydedildi → **K-020**.
 
+> **Düzeltme (Spike 2, aynı gün):** bu paragrafın yönü doğru, **aralığı yanlış.** Kripto
+> 7/24 kesintisiz işlem gördüğü için `open[t+1]`, `close[t]`'in birkaç milisaniye
+> sonrasıdır — "saatlerce süren belirsizlik penceresi" değil. Ölçüm: 1h'de vakaların
+> %52,2'sinde iki fiyat **birebir aynı**, 75. persentil 0,0014 bps. Gerçek pencere bar
+> kapanışı ile emrin borsada dolması arasıdır (~300 ms). K-020 → **K-021**.
+
 ### K-007'ye giren kesin değerler (v1 başlangıcı)
 
 ```
 fee_maker_bps      : 10.0     (kullanılmıyor; model taker varsayıyor)
 fee_taker_bps      : 10.0     ← ölçüldü, BNB indirimi yok
-slippage_bps       : GEÇİCİ 5.0 — Faz 1'de veriden kalibre edilecek (K-020)
+slippage_bps       : GEÇİCİ 5.0 — Faz 1'de kalibre edilecek (K-021)
 bnb_discount       : false    (muhafazakârlık kuralı)
 ```
 
@@ -104,14 +110,16 @@ Bir stratejinin günde 10 işlem yapması, yılda %500'ün üzerinde brüt getir
 gerektiği anlamına gelir — sadece başabaş kalmak için. Bu, Faz 4'te işlem sıklığının neden
 birinci sınıf bir metrik olduğunu tek başına açıklıyor.
 
-## 4. Kapanmayan kısım
+## 4. Kapanmayan kısım — *sonradan kapandı (2026-09-08, aynı gün)*
 
-- **K-016 kısmen açık.** Komisyon tarifesi kapandı, `slippage_bps` Faz 1'e devredildi
-  (K-020).
-- **K-015'e kısmi kanıt.** `api.binance.com`'un **public** endpoint'i Türkiye'den
-  sorunsuz cevap verdi (üç istek, hata yok, gecikme sorunsuz). Bu **yeterli kanıt değil**:
-  kimlik doğrulamalı endpoint'ler, hesap açma/KYC durumu ve Spot Testnet'in güncel hâli
-  hâlâ doğrulanmadı. Spike 1 duruyor.
+- ~~**K-016 kısmen açık.**~~ **Kapandı.** Komisyon tarifesi burada kapandı; `slippage_bps`
+  Faz 1'e devredildi. **Ancak bu raporun önerdiği kalibrasyon yöntemi (K-020) Spike 2'de
+  ölçülüp çürütüldü** — `|open[t+1] − close[t]|` dağılımı neredeyse sıfır çıktı (1h'de
+  vakaların %52,2'sinde iki fiyat birebir aynı). Yerine K-021 geçti: yürütme penceresindeki
+  fiyat hareketi. Ayrıntı: `02-veri-hacmi.md` §4.
+- ~~**K-015'e kısmi kanıt.**~~ **Kapandı** — Spike 1 (`01-binance-erisim.md`) kimlik
+  doğrulamalı endpoint'leri, rate limit'in gerçek tüketimini ve Spot Testnet'i ölçtü.
+  Hesap açma/KYC ise ölçülemez (idari adım); Faz 7/8'in ön koşulu olarak Roadmap'e yazıldı.
 
 ## Kaynaklar
 

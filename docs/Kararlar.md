@@ -38,7 +38,13 @@ yitirmesidir.
 Vektörize motorun tek gerçek avantajı hız; bu projenin ölçeğinde o avantaja ihtiyaç yok:
 5 yıllık 1h BTC/USDT ≈ 44 bin bar, saf Python döngüsüyle saniyeler mertebesi. 1m'ye
 inildiğinde ≈ 2,6 milyon bar, dakikalar mertebesi — parametre taraması için hâlâ kabul
-edilebilir. Hız gerçekten darboğaz olduğunda vektörize bir **tarama** katmanı eklenebilir,
+edilebilir.
+
+**Ölçüldü (Spike 2, 2026-09-08):** bu paragraf tahmindi; gerçek sayı daha iyi çıktı. Gerçekçi
+bir döngü (dataclass `Signal`, risk kontrolü, equity/drawdown takibi) **1.800.526 bar/s**.
+5 yıllık 1h'de **1000 parametrelik tarama 25 saniye**; 1m'de 24,3 dakika. Yani hız, K-017'nin
+timeframe kararında bir etken bile olmadı — ve vektörize tarama katmanı ihtiyacı 1h için
+görünürde yok. *Faz 3 sonunda gerçek motorla yeniden ölçülmeli.* Hız gerçekten darboğaz olduğunda vektörize bir **tarama** katmanı eklenebilir,
 ama o katmanın çıktısı hiçbir zaman "sonuç" sayılmaz; sadece event-driven motorda
 doğrulanacak aday parametreleri üretir.
 
@@ -161,14 +167,19 @@ backtest sonucuna hangi değerlerle çalıştığı yazılır:
   yüksek tutulur.
 - **Ölçülen değerler (Spike 4, 2026-09-08 — `docs/spikes/04-maliyet-tarifesi.md`):**
   `fee_taker_bps = 10.0` (Binance VIP 0 spot, BNB indirimi varsayılmıyor),
-  `slippage_bps = 5.0` **geçici** — Faz 1'de tarihsel veriden kalibre edilecek (K-020).
-  Geçici değerle üretilen hiçbir sonuç promotion'a giremez.
+  `slippage_bps = 5.0` **geçici** — Faz 1'de kalibre edilecek (K-021; ilk yöntem K-020 idi,
+  ölçüm onu çürüttü). Geçici değerle üretilen hiçbir sonuç promotion'a giremez.
 
 **Spike 4'ün düzelttiği varsayım:** yukarıdaki "slippage varsayımı spread'i kapsayacak kadar
 yüksek tutulur" cümlesi yanlış bir modele dayanıyordu. Ölçüm: BTC/USDT spread'i 0,00128 bps,
 komisyon 20 bps — komisyon spread'den ~15.600 kat büyük, yani spread bu projede bir maliyet
 kalemi değil. K-004'ün `t+1` açılış fill'i göz önüne alındığında `slippage_bps` aslında bir
-**fiyat hareketi** proxy'sidir, mikroyapı proxy'si değil. Bkz. K-020.
+**fiyat hareketi** proxy'sidir, mikroyapı proxy'si değil. Bkz. K-021.
+
+**Spike 2'nin ayrıca düzelttiği (2026-09-08):** Spike 4 yönü doğru bulmuştu ama ölçülecek
+aralığı yanlış seçmişti. `open[t+1] − close[t]` bir bar boyu belirsizlik değil, birkaç
+milisaniyedir (ölçüldü: 1h'de vakaların %52,2'sinde iki fiyat birebir aynı). Gerçek pencere
+bar kapanışı ile emrin dolması arasıdır. Ayrıntı: K-021.
 
 **Yön kuralı:** belirsizlik olduğunda her zaman aleyhte yuvarla. Backtest gerçeğinden kötü
 çıkarsa sürpriz iyi olur; iyi çıkarsa sürpriz para kaybettirir.
@@ -245,7 +256,8 @@ Bu yüzden kapı **sistemde** olmalı: bugünkü Scryne, altı ay sonraki sabır
 
 ## K-011 — Veri saklama: Parquet + DuckDB (tarihsel), PostgreSQL (operasyonel, Faz 5+)
 
-**Durum:** kabul · **Kapatır:** Denetim C1 · **Değiştirir:** Proje-Fikri §7, §30
+**Durum:** kabul · **Kapatır:** Denetim C1 · **Değiştirir:** Proje-Fikri §7, §30 ·
+**Doğrulandı:** Spike 3 (2026-09-08)
 
 **Karar:** İki katmanlı:
 
@@ -263,8 +275,23 @@ sürümlenebiliyor — canlı bir veritabanının durumu için aynısı geçerli
 PostgreSQL asıl olarak eşzamanlı yazma, transaction ve dayanıklı state gerektiğinde
 (paper/live) anlamlı. O noktada zaten gerekli olacak; şimdi kurmak erken.
 
-**Ne zaman gözden geçirilir:** veri hacmi Faz 0 spike'ında ölçüldüğünde (Denetim E), ve
-tek dosya boyutu ya da sorgu süresi rahatsız edici hale geldiğinde.
+**Spike 3'ün doğruladığı ve eklediği (2026-09-08, `docs/spikes/03-parquet-duckdb.md`):**
+
+Seçim ölçümle onaylandı, hiçbir eşik zorlanmadı: 5 yıllık 1m verisi 71 MB, tamamı 0,12 s'de
+RAM'e giriyor, en ağır sorgu (1m→1h yeniden örneklem) 87 ms. Karara üç somut değer eklendi:
+
+- **Sıkıştırma `zstd`** — 525k bar için 14,21 MB / 0,190 s yazma / 0,022 s okuma. brotli %17
+  daha küçük ama 12 kat yavaş yazıyor; gzip 33 kat. snappy %30 daha büyük, okuma avantajı 3 ms.
+- **Sembol/timeframe başına tek dosya** — yıl/ay bölümleme bu ölçekte %18 *daha çok* yer
+  kaplıyor (16,73 vs 14,21 MB) ve kazandırdığı 11 ms hissedilmiyor. *Gözden geçirme koşulu:
+  tek dosya 500 MB'ı aştığında veya çok sembollü çalışmaya geçildiğinde.*
+- **Veri seti hash'i = Parquet dosyasının SHA-256'sı** — aynı DataFrame iki kez yazıldığında
+  çıktı **bit düzeyinde aynı** (zstd ve snappy'de doğrulandı). K-009 ayrı bir içerik-hash
+  mekanizması gerektirmiyor.
+
+DuckDB'nin native tablo formatı ölçüldü ve **bilerek reddedildi**: %42 daha küçük (8,26 MB) ve
+sorgusu 25 kat hızlı (0,6 vs 15,1 ms), ama canlı bir veritabanı durumu hash'lenemez. Bu projede
+reproducibility birinci sınıf, 15 milisaniye hiçbir yerde darboğaz değil.
 
 ---
 
@@ -344,9 +371,125 @@ sayısal eşik esnetilemez — değiştirmek için karar günlüğüne yazmak ge
 
 ---
 
+## K-015 — Binance erişimi: coğrafi engel yok, testnet ayakta
+
+**Durum:** kabul · **Kaynak:** Spike 1 · **Tarih:** 2026-09-08 ·
+**Rapor:** `docs/spikes/01-binance-erisim.md`
+
+**Karar:** Binance'e Türkiye'den erişim doğrulandı. Faz 1'in indiricisi ve Faz 7'nin testnet
+planı bu temele kurulabilir.
+
+**Ölçülen kanıt (2026-09-08, 19:53 UTC, VPN yok):**
+
+- **Coğrafi engel yok.** Kimlik doğrulamalı endpoint'lere anahtarsız istek **400/401**
+  (`-1102 signature missing`, `-2014 API-key format invalid`) döndürdü — coğrafi engelin
+  imzası olan **451 hiçbir istekte görülmedi**. `/sapi/v1/system/status` →
+  `{"status":0,"msg":"normal"}`. İstek Binance'in anahtar doğrulama katmanına ulaşıyor.
+- **Gecikme:** altı host, 60/60 başarılı istek, p50 260–360 ms, kuyruk 1,6 s'ye çıkıyor.
+- **Rate limit:** beyan 6.000 weight/dk; **ölçülen tüketim klines çağrısı başına sabit 2**
+  (`limit` 100 de olsa 1000 de olsa). Teorik tavan 3.000.000 bar/dk. **Rate limit bu proje
+  için darboğaz değil.**
+- **Spot Testnet ayakta** ve canlıyı takip ediyor: aynı üç saatlik barda fiyat sapması
+  **%0,007**. `ccxt.set_sandbox_mode(True)` doğru host'a yöneliyor.
+- **Saat farkı:** yerel − sunucu = **−153,2 ms** (güvenli yön).
+- **BTCUSDT emir kuralları (Faz 7):** tick 0,01 USDT · step 0,00001 BTC ·
+  **minNotional 5,00 USDT** · status TRADING.
+
+**Ölçümden Faz 1/7'ye bağlayıcı geçen kurallar:**
+
+1. **Kapanmamış bar depoya yazılmaz.** REST `klines` her zaman devam eden barı son eleman
+   olarak döndürüyor ve o bar çağrılar arasında **değişiyor** (3 saniye arayla iki istekte
+   son bar farklı, sondan önceki aynı). Kapanmışlık bayrağı REST'te yok — o bayrak yalnızca
+   WebSocket akışında var; tek güvenilir kural `close_time < serverTime`. **Faz 1'in
+   idempotency kriteri bu kural olmadan sağlanamaz** — aynı komut iki kez çalıştırıldığında
+   dosya farklı çıkar.
+2. **Her zaman `limit=1000`** — weight çağrı başına sabit; küçük sayfa istemek saf kayıp.
+3. **IPv4'e zorla veya kalıcı session kullan.** Yerel çözümleyici `*.binance.vision` için
+   AAAA sorgusunu ~12 saniye sonra düşürüyor; `AF_UNSPEC` varsayılanıyla **her yeni bağlantı
+   12 saniye gecikiyor** (ölçüldü: 12.098 ms vs 26,6 ms). Binance'e ait değil, ortama ait —
+   ama koda bakarak anlaşılmaz, o yüzden burada yazılı.
+4. **Timeout ≥ 5 s ve retry'lı** — ölçülen kuyruk gecikmesi 1,6 s.
+5. **Tarihsel indirme `data-api.binance.vision` üzerinden** — p50 277,6 ms, ve emir
+   trafiğiyle aynı IP weight havuzunu paylaşmaz.
+6. **`load_markets()` önbelleğe alınır** — 3,2 s sürüyor ve 4.619 marketin tamamını çekiyor;
+   tek sembolle çalışan bir sistemde her başlatmada ödenmemeli.
+7. **Clock-drift kontrolü Faz 7'nin ön koşulu** — fark +1000 ms'i aşarsa imzalı istekler
+   sessizce reddedilir.
+
+**Kapanmayan kısım — dürüst sınır:** Bu ölçüm elde API anahtarı olmadan yapıldı. Kanıtlanan:
+kimlik doğrulamalı yol Türkiye'den **açık**. Kanıtlanmayan: hesap açma, KYC ve o hesabın
+spot işlem yetkisi — bunlar teknik değil idari adımlar, ölçülemezdi. **Testnet anahtarı**
+(KYC'siz, GitHub hesabıyla alınır) Faz 7'nin, **canlı hesap + API anahtarı** Faz 8'in ön
+koşulu olarak Roadmap'e yazıldı. O noktada bu spike'ın kimlik doğrulama kısmı gerçek
+anahtarla **tekrarlanmalıdır**; bugünkü kanıt "yol açık" der, "hesap çalışıyor" demez.
+
+---
+
+## K-017 — Birincil timeframe: 1h
+
+**Durum:** kabul · **Kaynak:** Spike 2 · **Tarih:** 2026-09-08 ·
+**Rapor:** `docs/spikes/02-veri-hacmi.md`
+
+**Karar:** **Birincil timeframe 1h.** Strateji, backtest ve promotion 1h barı üzerinde
+çalışır. 1m verisi indirilir ve saklanır ama strateji timeframe'i değildir.
+
+**Kararı veren ölçüm — hacim değil, hareket/maliyet oranı.**
+
+Önce elenen gerekçeler: ne depolama, ne indirme, ne hesaplama kısıt çıktı.
+
+| | 1h (5 yıl) | 1m (5 yıl) |
+| --- | --- | --- |
+| Bar | 43.800 | 2.628.000 |
+| Parquet (zstd) | 1,66 MB | 71,04 MB |
+| İndirme | 0,26 dk | 12,31 dk |
+| RAM | 2,33 MB | 140,35 MB |
+| 1000 parametrelik tarama | 0,41 dk | 24,3 dk |
+
+Hepsi rahat. Karar bu yüzden başka bir yerden geldi — **Spike 4'ün ölçtüğü 20,02 bps
+gidiş-dönüş maliyetine karşı bir barın tipik hareketi:**
+
+```
+Gidiş-dönüş maliyeti        : 20,02 bps   (Spike 4)
+Medyan 1 saatlik hareket    : 20,85 bps   -> oran ~1
+Medyan 1 dakikalık hareket  :  2,42 bps   -> oran ~1/8
+```
+
+**1m barda çalışan bir strateji, tipik bir barın 8 katı büyüklüğünde bir hareketi yakalamak
+zorundadır — sadece başabaş kalmak için.** 1h'de bu engel 8,6 kat daha alçak. İkisi de kolay
+değil; biri diğerinden ölçülebilir biçimde daha zor.
+
+Bu, "daha çok bar = daha çok fırsat" sezgisinin tersini söylüyor: bar başına hareket
+küçülürken bar başına sabit maliyet aynı kalıyor.
+
+**1m verisi neden yine de indirilir:** (1) K-021'in slippage kalibrasyonu — 1h barın
+içindeki fiyat yolunu görmenin tek yolu; (2) Faz 3'ün fill gerçekçiliği — bir 1h bar içinde
+stop'un tetiklenip tetiklenmediği 1h OHLC'den **tahmindir**, 1m'den **ölçümdür**; (3) Faz
+7'nin emir testleri dakika ölçeğinde davranır.
+
+**Faz 1'de indirilecek:** BTC/USDT **1h, 5 yıl** (birincil) + **1m, 3 yıl** (yardımcı).
+Ölçülenden projeksiyon: ~1,7 MB + ~43 MB parquet, toplam ~8 dakika.
+
+**Ölçümün yan bulguları — üçü de sonraki fazları bağlıyor:**
+
+- **Veri kusursuz çıktı.** 3 yıllık 1h (26.281 bar) ve 1 yıllık 1m (525.601 bar) verisinde
+  **sıfır** eksik bar, sıfır tekrar eden timestamp, sıfır OHLC tutarsızlığı, sıfır
+  sıfır-hacimli bar. **Sonucu:** K-006'nın kalite bayrakları gerçek veriyle hiç
+  tetiklenmeyecek; o kod yolları **yapay bozuk fixture** ile test edilmek zorunda. Aksi
+  hâlde hiç çalıştırılmamış bir güvenlik mekanizmasına güvenmiş oluruz.
+- **K-001'in hız tahmini fazla karamsardı.** Gerçekçi bir döngü (dataclass `Signal`, risk
+  kontrolü, equity/drawdown takibi, trade listesi) **1.800.526 bar/s** ölçtü; asgari döngü
+  5.147.117 bar/s. 1h'de 5 yıllık 1000 parametrelik tarama **25 saniye**. K-001'in
+  "vektörize tarama katmanı gerekebilir" ihtiyatı 1h için gereksiz. *Bu sayı Faz 3 sonunda
+  gerçek motorla yeniden ölçülmeli — gerçekçi varyant bile bir üst sınır tahminidir.*
+- **İndirme ağ sınırlı, rate limit sınırlı değil** — 526 çağrı yalnızca 224 weight harcadı
+  (limit 6.000/dk) ve ağ süresi duvar saatinin %99'u. Faz 1'de hız gerekirse kazanç
+  paralellikten gelir, kuyruk optimizasyonundan değil.
+
+---
+
 ## K-020 — Slippage parametresi veriden kalibre edilir, tahmin edilmez
 
-**Durum:** açık (Faz 1'de kapanacak) · **Kaynak:** Spike 4 · **Tarih:** 2026-09-08
+**Durum:** değiştirildi → K-021 · **Kaynak:** Spike 4 · **Tarih:** 2026-09-08
 
 **Karar:** `slippage_bps` bir tahmin değil, ölçüm olacak. Faz 1'de tarihsel veri geldiğinde
 `|open[t+1] − close[t]| / close[t]` dağılımı hesaplanır ve muhafazakâr bir yüzdelik alınır
@@ -363,14 +506,87 @@ değil — 1h timeframe'de saatlerce süren bir belirsizlik penceresi. Spread (�
 Yani bu parametrenin doğru değeri borsanın ücret sayfasından değil **kendi verimizden**
 çıkar. Tam olarak ölçebileceğimiz bir şeyi tahmin etmek için hiçbir sebep yok.
 
+**Neden değiştirildi (Spike 2, 2026-09-08):** Yukarıdaki son cümle doğru, ama önerilen
+**ölçüm yöntemi yanlıştı.** `|open[t+1] − close[t]|` dağılımı gerçekten ölçüldü ve neredeyse
+sıfır çıktı: 1h'de vakaların **%52,2'sinde iki fiyat birebir aynı**, 75. persentil
+**0,0014 bps**. Bu yöntem `slippage_bps`'i geçici değerin 3.500'de biri olarak belirlerdi —
+yani maliyeti fiilen sıfırlardı.
+
+Sebep: kripto 7/24 kesintisiz işlem görüyor. `open[t+1]`, `close[t]`'in birkaç milisaniye
+sonrasıdır; arada piyasa kapanışı yok, boşluk yok. Bu dağılım bir yürütme belirsizliğini
+değil, iki komşu işlemin tick farkını ölçüyor. Ayrıntı: `docs/spikes/02-veri-hacmi.md` §4.
+
+Yerine **K-021** geçti.
+
 ---
 
-## Açık kararlar (spike bekliyor)
+## K-021 — Slippage: yürütme penceresindeki fiyat hareketinden kalibre edilir
 
-| No | Konu | Kapanacağı yer |
-| --- | --- | --- |
-| K-015 | Binance erişimi ve testnet'in güncel durumu | Faz 0 spike |
-| K-016 | Fee/slippage'ın kesin sayıları | **Fee kapandı** (Spike 4). Slippage → K-020 |
-| K-017 | Birincil timeframe (1h mi 1m mi) ve veri hacmi | Faz 0 spike |
-| K-019 | Promotion kapılarının sayısal eşikleri (K-018'in devamı) | Faz 4 sonu |
-| K-020 | `slippage_bps`'in veriden kalibrasyonu | Faz 1 |
+**Durum:** açık (Faz 1'de kapanacak) · **Değiştirir:** K-020 · **Kaynak:** Spike 2 ·
+**Tarih:** 2026-09-08
+
+**Karar:** `slippage_bps`, K-020'nin öngördüğü `|open[t+1] − close[t]|` dağılımından
+**hesaplanmaz** — o dağılım ölçüldü ve neredeyse sıfır çıktı (bkz. K-020'nin düzeltme notu).
+Yerine parametre **yürütme penceresindeki fiyat hareketinden** kalibre edilir.
+
+**Yürütme penceresi nedir:** bar kapandığı an ile emrin borsada dolduğu an arasındaki süre.
+Spike 1 bunun ağ ayağını ölçtü: p50 ~300 ms, kuyruk 1,6 s; buna emir işleme süresi eklenir.
+Yani pencere **saniye altı ile birkaç saniye arası** — K-004'ün ima ettiği "bir bar boyu"
+değil.
+
+**Kalibrasyon yöntemi (Faz 1):** Pencere bir dakikadan kısa olduğuna göre, 1 dakikalık fiyat
+hareketi dağılımı **muhafazakâr bir üst sınırdır**. Ölçüldü (BTC/USDT, 1 yıl, 525.600 bar):
+
+| | p50 | p75 | p90 | p95 | p99 |
+| --- | --- | --- | --- | --- | --- |
+| 1 dakikalık hareket (bps) | 2,42 | **5,01** | 8,86 | 12,32 | 22,64 |
+| 1m bar içi salınım (bps) | 4,28 | 7,82 | 12,99 | 17,48 | 30,71 |
+
+Yön kuralı (K-007) gereği aleyhte ve muhafazakâr taraf seçilir. Faz 1'de bu dağılım,
+kullanılacak veri aralığı üzerinde yeniden hesaplanır ve seçilen persentil **gerekçesiyle
+birlikte** kaydedilir.
+
+**Geçici değerin durumu:** `slippage_bps = 5,0` yerinde kalıyor. Ölçüm bunu doğrulamıyor ama
+**çürütmüyor da**: 1 dakikalık hareketin 75. persentili 5,01 bps — yani büyüklük mertebesi
+tesadüfen doğruydu, türetme yolu yanlıştı. Kalibrasyon tamamlanana kadar bu değerle üretilen
+sonuçlar `provisional_cost_model` bayrağı taşır ve promotion'a giremez (K-010).
+
+**Gerekçe:** K-020 doğru soruyu sordu ("tahmin etme, ölç") ama yanlış şeyi ölçmeyi önerdi.
+Bu tam olarak projenin uyardığı hata sınıfı: yöntem makul görünüyordu, sonuç makul görünen
+bir sayı üretecekti (0,0014 bps — küçük, ama "ölçülmüş"), ve maliyeti fiilen sıfırlayarak
+her stratejiyi kârlı gösterecekti. Yanlışlığı ancak dağılıma bakılınca ortaya çıktı — "neredeyse
+doğru" olanın fark edilmemesi tam olarak budur.
+
+---
+
+## Açık kararlar
+
+Faz 0 kapandığında (2026-09-08) durum:
+
+| No | Konu | Durum | Kapanacağı yer |
+| --- | --- | --- | --- |
+| K-011 | Parquet + DuckDB saklama | ✅ **kabul** | Spike 3 |
+| K-015 | Binance erişimi, rate limit, testnet | ✅ **kabul** | Spike 1 |
+| K-016 | Fee/slippage'ın kesin sayıları | ✅ **kabul** | Fee: Spike 4. Slippage → K-021 |
+| K-017 | Birincil timeframe ve veri hacmi | ✅ **kabul** (1h) | Spike 2 |
+| K-019 | Promotion kapılarının sayısal eşikleri | ⏳ açık | Faz 4 sonu |
+| K-020 | Slippage kalibrasyonu (ilk yöntem) | ⛔ değiştirildi → K-021 | — |
+| K-021 | Slippage'ın yürütme penceresinden kalibrasyonu | ⏳ açık | Faz 1 |
+
+**Faz 0'ın dört spike'ı da kapandı.** Kalan iki açık karar Faz 1 ve Faz 4'e ait; Faz 0'ı
+bloke etmiyorlar.
+
+### Faz 0'dan çıkan, karar olmayan ama bağlayıcı gereksinimler
+
+Bunlar ayrı birer K-0XX değil çünkü alternatifi olan tercihler değil — ölçümün dayattığı
+kısıtlar. İlgili kararların içinde ayrıntılı, burada tek bakışta:
+
+| # | Gereksinim | Kaynak | Nerede uygulanır |
+| --- | --- | --- | --- |
+| 1 | Kapanmamış bar depoya yazılmaz (`close_time < serverTime`) | Spike 1 | Faz 1 — idempotency'nin ön koşulu |
+| 2 | Klines çağrısı her zaman `limit=1000` | Spike 1 | Faz 1 |
+| 3 | IPv4'e zorla veya kalıcı session kullan (aksi hâlde +12 s/bağlantı) | Spike 1 | Faz 1, Faz 7 |
+| 4 | Veri seti hash'i = Parquet dosyasının SHA-256'sı | Spike 3 | Faz 1, Faz 3 (K-009) |
+| 5 | Kalite bayrakları yapay bozuk fixture ile test edilir | Spike 2 | Faz 1 (K-006) |
+| 6 | Testnet API anahtarı alınmış olmalı | Spike 1 | Faz 7 ön koşulu |
+| 7 | Canlı hesap + KYC + API anahtarı; Spike 1'in auth kısmı tekrarlanır | Spike 1 | Faz 8 ön koşulu |

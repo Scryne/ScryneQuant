@@ -18,8 +18,8 @@ yanlış sonuç olarak geri döner.
 
 | Faz | Adı | Durum | Bitti Kriteri |
 | --- | --- | --- | --- |
-| 0 | Teknik doğrulama (spike'lar) | 🔄 Devam Ediyor | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
-| 1 | Market data temeli | ⏳ Bekliyor | BTC/USDT ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent |
+| 0 | Teknik doğrulama (spike'lar) | ✅ Tamamlandı | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
+| 1 | Market data temeli | 🔄 Devam Ediyor | BTC/USDT 1h ≥5 yıl + 1m ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent, slippage kalibre |
 | 2 | İndikatör + strateji sözleşmesi | ⏳ Bekliyor | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
 | 3 | Backtest motoru | ⏳ Bekliyor | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ⏳ Bekliyor | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
@@ -32,41 +32,67 @@ yanlış sonuç olarak geri döner.
 
 ## Faz Detayları
 
-### Faz 0: Teknik doğrulama (spike'lar)
+### Faz 0: Teknik doğrulama (spike'lar) — ✅ kapandı 2026-09-08
 
-Kod yazılan bir faz değil, **ölçüm yapılan** faz. Aşağıdaki dört bilinmeyen masa başında
-karara bağlanamaz; Faz 1'in mimarisi bunlar kapanmadan dondurulmaz.
+Kod yazılan bir faz değil, **ölçüm yapılan** faz. Dört bilinmeyen de kapandı.
 
-- **İşler:**
-  - **Spike 1 (K-015):** CCXT ile Binance'e gerçek istek. Türkiye'den erişim, kimlik
-    gereksinimi, rate limit, Spot Testnet'in güncel durumu. Çıktı: kısa rapor.
-  - **Spike 2 (K-017):** BTC/USDT 1h ve 1m için 1 yıllık veri indirilip ölçülür — süre,
-    dosya boyutu, bar sayısı. Birincil timeframe kararı buradan çıkar.
-  - **Spike 3 (K-011):** ölçülen hacim Parquet'e yazılıp DuckDB ile sorgulanır; seçim
-    doğrulanır ya da değiştirilir.
-  - **Spike 4 (K-016):** Binance'in güncel spot komisyon tarifesi ve gerçekleşen spread
-    gözlemi → K-007'nin sayıları doldurulur.
-- **Bitti Kriteri:** Dört spike raporu `docs/spikes/` altında, her biri gerçek ölçülmüş
-  sayı içeriyor; K-011, K-015, K-016, K-017 `Kararlar.md`de `kabul` durumuna geçmiş;
-  K-007'nin maliyet sayıları tahmin değil doğrulanmış değerle dolu.
-- **Notlar:** Spike kodu atılacak koddur, `research/spikes/` altında yaşar ve production
-  paketine taşınmaz.
+| Spike | Kapattığı karar | Sonuç | Rapor |
+| --- | --- | --- | --- |
+| 1 | K-015 | Coğrafi engel yok; rate limit darboğaz değil; testnet ayakta | `docs/spikes/01-binance-erisim.md` |
+| 2 | K-017 | **Birincil timeframe 1h** | `docs/spikes/02-veri-hacmi.md` |
+| 3 | K-011 | Parquet+zstd + DuckDB doğrulandı, değişiklik yok | `docs/spikes/03-parquet-duckdb.md` |
+| 4 | K-016 | `fee_taker_bps = 10.0`; slippage → K-021 | `docs/spikes/04-maliyet-tarifesi.md` |
+
+**Bitti kriteri karşılandı:** dört rapor da yerinde ve her biri gerçek ölçülmüş sayı içeriyor;
+K-011, K-015, K-016, K-017 `kabul` durumunda; K-007'nin komisyon sayısı doğrulanmış değerle
+dolu.
+
+**Kapsam dışı bırakılan:** Faz 0'ın trading eğitimi kısmı K-018 ile kaldırıldı.
+
+**Faz 0'ın ürettiği ve sonraki fazları bağlayan sonuçlar** — ayrıntısı `docs/Kararlar.md`
+sonundaki "Faz 0'dan çıkan gereksinimler" tablosunda:
+
+1. Kapanmamış bar depoya yazılmaz — **Faz 1 idempotency'sinin ön koşulu**.
+2. Klines çağrısı her zaman `limit=1000`.
+3. IPv4'e zorla veya kalıcı session kullan (aksi hâlde bağlantı başına +12 s).
+4. Veri seti hash'i = Parquet dosyasının SHA-256'sı (yazım bit düzeyinde deterministik).
+5. Kalite bayrakları yapay bozuk fixture ile test edilir — gerçek veride tek bozuk bar yok.
+6. Testnet API anahtarı **Faz 7'nin**, canlı hesap + KYC + anahtar **Faz 8'in** ön koşulu.
+
+**Bir karar düzeltildi:** K-020'nin slippage kalibrasyon yöntemi ölçümle çürütüldü, yerine
+K-021 geçti. Ayrıntı: `docs/spikes/02-veri-hacmi.md` §4.
+
+**Notlar:** Spike kodu atılacak koddur, `research/spikes/` altında yaşar (gitignore'da) ve
+production paketine taşınmaz. Ham ölçüm çıktıları `research/spikes/out/` altında.
 
 ### Faz 1: Market data temeli
 
+- **Kapsam (Faz 0'ın ölçümüyle netleşti):** BTC/USDT **1h, 5 yıl** (birincil, K-017) +
+  **1m, 3 yıl** (yardımcı: slippage kalibrasyonu, fill gerçekçiliği, Faz 7). Projeksiyon:
+  ~1,7 MB + ~43 MB parquet, ~8 dakika indirme.
 - **İşler:** Exchange adapter arayüzü + Binance implementasyonu; tarihsel indirici
   (sayfalama, rate limit, kaldığı yerden devam); doğrulama (eksik bar, tekrar eden
   timestamp, OHLC tutarlılığı, sıfır hacim); kalite bayrakları (K-006); Parquet deposu
-  (K-011); kalite raporu; CLI komutları; **slippage kalibrasyonu (K-020)**.
+  (zstd, sembol/timeframe başına tek dosya — K-011); kalite raporu; CLI komutları;
+  **slippage kalibrasyonu (K-021)**.
+- **Faz 0'dan gelen bağlayıcı kurallar:** kapanmamış bar yazılmaz (`close_time <
+  serverTime`); `limit=1000`; IPv4/kalıcı session; timeout ≥ 5 s + retry; indirme
+  `data-api.binance.vision` üzerinden; `load_markets()` önbellekli.
 - **Bitti Kriteri:**
-  - BTC/USDT için ≥3 yıllık veri indirilmiş ve saklanmış.
+  - BTC/USDT 1h için ≥5 yıllık, 1m için ≥3 yıllık veri indirilmiş ve saklanmış.
   - `data quality` komutu boşluk/tekrar/şüpheli bar raporu üretiyor.
   - Aynı indirme komutu iki kez çalıştırıldığında dosya içeriği bit düzeyinde aynı
-    (idempotent).
+    (idempotent). **Ön koşul:** kapanmamış bar yazılmıyor — Spike 1 bu barın çağrılar
+    arasında değiştiğini ölçtü, atılmazsa idempotency imkânsız.
   - Tüm timestamp'ler UTC epoch ms, bar açılış zamanı (K-005) — test ile kanıtlı.
-  - **`slippage_bps` veriden kalibre edilmiş** (K-020): `|open[t+1] − close[t]|` dağılımı
-    hesaplanıp muhafazakâr persentil seçilmiş; geçici 5.0 değeri kaldırılmış.
-- **Notlar:**
+  - **`slippage_bps` kalibre edilmiş** (K-021): yürütme penceresindeki fiyat hareketi
+    dağılımı kullanılacak veri aralığı üzerinde hesaplanmış, muhafazakâr persentil
+    **gerekçesiyle birlikte** kaydedilmiş; geçici 5.0 değeri kaldırılmış.
+  - **Kalite bayrakları yapay bozuk fixture ile test edilmiş** (K-006): Spike 2 gerçek
+    veride tek bozuk bar bulamadı; `gap`/`duplicate`/`suspect` kod yolları aksi hâlde hiç
+    çalıştırılmamış olur.
+- **Notlar:** Faz 0'ın ölçtüğü indirme hızı (~3.500 bar/s, ağ sınırlı) bu fazın süre
+  beklentisidir; rate limit zorlanmayacak.
 
 ### Faz 2: İndikatör + strateji sözleşmesi
 
@@ -155,7 +181,13 @@ bilimsel olarak karşılaştırmak.
     durumla local state uyuşuyor (reconciliation).
   - Testnet'te ≥100 emir, elle müdahale gerektiren hata olmadan tamamlanmış.
   - Uyuşmazlık tespit edildiğinde sistem işlem yapmayı durduruyor (halt), tahmin yürütmüyor.
+- **Ön koşul (Faz 0'dan):** `testnet.binance.vision` üzerinden **testnet API anahtarı
+  alınmış** olmalı (GitHub hesabıyla, KYC gerektirmez). Ayrıca clock-drift kontrolü
+  çalışıyor olmalı — fark +1000 ms'i aşarsa imzalı istekler sessizce reddedilir (Spike 1'de
+  ölçülen: −153 ms).
 - **Notlar:** Testnet periyodik olarak sıfırlanabilir; testler buna dayanıklı yazılmalı.
+  Spike 1'de testnet'in canlı fiyatı %0,007 sapmayla takip ettiği ölçüldü — execution
+  testleri için gerçekçi.
 
 ### Faz 8: Kontrollü live
 
@@ -170,5 +202,8 @@ live arasındaki gerçek operasyon farkı.
     raporlanmış.
   - Kill switch canlıda en az bir kez **kasıtlı olarak** test edilmiş ve doğru davranmış.
   - Uzlaşmazlık, duplicate emir veya açıklanamayan pozisyon farkı sayısı: **sıfır.**
+- **Ön koşul (Faz 0'dan):** Canlı Binance hesabı açılmış, KYC tamamlanmış, spot işlem
+  yetkili API anahtarı üretilmiş olmalı. **Spike 1'in kimlik doğrulama kısmı bu gerçek
+  anahtarla tekrarlanır** — bugünkü kanıt "yol açık" der, "hesap çalışıyor" demez.
 - **Notlar:** Sermaye artırma kararı bu fazın çıktısına bakılarak verilir; fazın içinde
   değil. Drift beklenenden büyükse sermaye artmaz, Faz 3-4'e geri dönülür.
