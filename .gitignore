@@ -1,0 +1,48 @@
+# Bağımlılıklar / derleme çıktıları
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Hook'ların ürettiği çalışma-anı durumu — makineye özel, koda ait değil
+.claude/.sync-lock.json
+
+# Ortam / sır dosyaları
+.env
+.env.local
+.env.*.local
+
+# Log / OS / editör
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# --- ScryneQuant ---
+# Sırlar: borsa API anahtarı hiçbir koşulda repoya girmez
+.env
+.env.*
+secrets/
+*.key
+*.pem
+config.local.*
+
+# Market verisi ve araştırma çıktıları — büyük, yeniden üretilebilir, git'e ait değil
+research/datasets/
+research/spikes/
+data/
+*.parquet
+*.duckdb
+*.db
+
+# Notebook çıktıları
+.ipynb_checkpoints/
+
+# Backtest çıktıları
+runs/
+artifacts/
