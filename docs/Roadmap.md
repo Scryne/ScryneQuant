@@ -39,9 +39,9 @@ modellememek. Atlanabilir görünen ama atlanırsa Faz 3'te sessiz hata olarak g
 faz budur.
 
 - **İşler:**
-  - 12 kavramın her biri için ScryneOS vault'unda `🧠 500-Knowledge/` altına kısa not:
-    candle, order türleri, long/short, spot vs futures, fee (maker/taker), spread, slippage,
-    volatilite, drawdown, position sizing, risk/ödül, likidite.
+  - **Öğrenme listesi: `docs/Faz-0-Ogrenme.md`** — 12 kavram, her biri hangi kararda
+    işine yarayacağıyla birlikte. Her kavram için ScryneOS vault'unda
+    `🧠 500-Knowledge/` altına kendi cümlelerinle bir paragraf.
   - **Elle bir işlem hesabı:** giriş, çıkış, taker fee iki bacakta, slippage dahil net P&L.
     Kalemle. Bu sayı Faz 3'te motorun doğruluğunun referansı olacak.
   - **Spike 1 (K-015):** CCXT ile Binance'e gerçek istek. Türkiye'den erişim, kimlik
