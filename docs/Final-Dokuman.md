@@ -2,7 +2,7 @@
 proje: ScryneQuant
 created: 2026-09-08
 type: final-dokuman
-status: onay-bekliyor
+status: aktif
 ---
 # ScryneQuant — Final Doküman
 
@@ -47,6 +47,8 @@ Live trading bunun **ardından** gelir ve promotion kapılarından (K-010) geçm
 | Grafik | **lightweight-charts** | Mum ve equity curve'ün ikisini de yapar; tek kütüphane |
 | Log | **structlog** (JSON) + Postgres audit tablosu | Prometheus/Grafana/Sentry v1'de yok |
 | Test | **pytest** | Determinizm ve look-ahead testleri birinci sınıf |
+| Paket yönetimi | **uv** + `uv.lock` | Kilitli sürümler; K-009'un ortam kaydının kaynağı |
+| Lint/format | **ruff** | `docs/` ve `research/` hariç |
 | Notebook | Jupyter (yalnızca araştırma) | Notebook'tan production koduna içe aktarma yok, tersi var |
 
 **v1'de bilerek yok:** VectorBT, TimescaleDB, Redis, Celery, Temporal, Docker, Prometheus,
@@ -154,9 +156,28 @@ niyet (§10). Exchange'e giden yol yoktur.
 | Saat kayması | UTC-only + clock drift kontrolü | K-005 |
 | Regülasyon | Kendi hesabı / kendi parası kuralı | K-014 |
 
-**Henüz doğrulanmamış** (Faz 0 spike'ı; kapanmadan Faz 1 mimarisi dondurulmaz):
-Binance erişimi ve testnet durumu (K-015), fee/slippage'ın gerçek sayıları (K-016),
-veri hacmi ve birincil timeframe (K-017).
+**Faz 0'da doğrulandı (2026-09-08).** Dört spike da kapandı; raporlar `docs/spikes/`
+altında, gerekçeler `docs/Kararlar.md`'de:
+
+| Bilinmeyen | Sonuç |
+| --- | --- |
+| Binance erişimi ve testnet (K-015) | Coğrafi engel yok; rate limit darboğaz değil; testnet ayakta |
+| Fee/slippage (K-016) | `fee_taker_bps = 10.0` ölçüldü; slippage Faz 1'e devredildi (K-021) |
+| Veri hacmi ve birincil timeframe (K-017) | **1h** — 5 yıl = 1,66 MB, 1000 parametrelik tarama 25 sn |
+| Saklama (K-011) | Parquet+zstd + DuckDB doğrulandı; parquet yazımı bit düzeyinde deterministik |
+
+**Faz 0'ın stack'e getirdiği düzeltmeler:**
+
+- **CCXT yerinde kalıyor**, iki ayarla: `load_markets()` önbelleğe alınır (3,2 s sürüyor,
+  4.619 marketin tamamını çekiyor) ve `fetch_ohlcv` `close_time` döndürmediği için
+  kapanmışlık kontrolü `open_time + timeframe` üzerinden bizde hesaplanır.
+- **Kapanmamış bar depoya yazılmaz.** REST her zaman devam eden barı son eleman olarak
+  döndürüyor ve o bar çağrılar arasında değişiyor — atılmazsa Faz 1'in idempotency
+  kriteri sağlanamaz.
+- **Veri seti hash'i = Parquet dosyasının SHA-256'sı** (K-009 için ayrı bir mekanizma
+  gerekmiyor).
+- **Bağımlılıklar `uv` + `uv.lock` ile kilitli** — K-009'un istediği kütüphane sürümü
+  kaydının tek doğruluk kaynağı.
 
 ---
 

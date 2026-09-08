@@ -293,6 +293,21 @@ DuckDB'nin native tablo formatı ölçüldü ve **bilerek reddedildi**: %42 daha
 sorgusu 25 kat hızlı (0,6 vs 15,1 ms), ama canlı bir veritabanı durumu hash'lenemez. Bu projede
 reproducibility birinci sınıf, 15 milisaniye hiçbir yerde darboğaz değil.
 
+**Faz 1 uygulaması — yazım parametreleri dondurulmuştur.** Dosyanın SHA-256'sı kimlik
+olduğuna göre, hash'i etkileyen her şey karar kapsamındadır. `data/depo.py` şunları açıkça
+sabitler; değiştirilmesi mevcut tüm dosyaların kimliğini değiştirir:
+
+- **pandas metadata'sı yazılmaz.** `pa.Table.from_pandas` dosyaya pandas sürümünü ve index
+  şemasını gömer; pandas güncellenince aynı veri farklı hash verirdi. Bunun yerine açık
+  Arrow şemasıyla tablo kuruluyor. (Testle korunuyor: dosyada `pandas_version` geçmemeli.)
+- **Sıkıştırma seviyesi, `row_group_size` ve parquet sürümü açıkça veriliyor** — hepsinin
+  kütüphane varsayılanı sürümle değişebilir ve dosya düzenini etkiler.
+- **Satırlar `open_time`'a göre sıralı ve tekil**; gelen sıra dosyaya sızmaz. Çakışmada
+  **son** kayıt tutulur (yeniden indirilen aralık daha güncel veridir).
+
+Kanıt: iki ayrı Python sürecinde yazılan 26.281 barlık gerçek BTC/USDT verisi bit düzeyinde
+aynı çıktı (`tests/unit/test_depo_surecler_arasi.py`).
+
 ---
 
 ## K-012 — Arayüz Faz 6'da başlar; öncesi CLI + notebook
@@ -559,6 +574,30 @@ doğru" olanın fark edilmemesi tam olarak budur.
 
 ---
 
+## K-022 — Bağımlılıklar `uv` + `uv.lock` ile kilitlenir
+
+**Durum:** kabul · **Tarih:** 2026-09-08 · **Hizmet ettiği:** K-009
+
+**Karar:** Paket yönetimi `uv`, sürüm kilidi `uv.lock` (commit edilir). Python sürümü
+`pyproject.toml`'da `==3.12.*` olarak sabit. Alternatif olan pip + `requirements.txt` +
+elle `pip freeze` reddedildi.
+
+**Gerekçe:** K-009 her backtest sonucuna kütüphane sürümlerinin yazılmasını istiyor. Bu,
+ancak sürümlerin gerçekten sabit olduğu bir dünyada anlamlı — aksi hâlde kayıt "o gün ne
+kuruluysa o" demekten ibaret kalır ve altı ay sonra aynı ortamı kurmak mümkün olmaz.
+`pip freeze` doğrudan bağımlılıkları yakalar ama transitive olanlarda kayma bırakır; kilit
+dosyası tüm ağacı çözer.
+
+`common/hash.py:ortam_kaydi()` yine de **çalışma anındaki** sürümleri okur, kilit dosyasını
+değil: ikisinin ayrışabildiği durumları (elle kurulmuş paket, bozuk ortam) görmenin tek yolu
+bu.
+
+**Yan karar:** lint/format `ruff`, ama `docs/` ve `research/` hariç. `docs/Proje-Fikri.md`
+tarihsel kayıttır ve içindeki kod blokları olduğu gibi kalmalıdır; `research/` zaten commit
+edilmiyor.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -572,6 +611,7 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-019 | Promotion kapılarının sayısal eşikleri | ⏳ açık | Faz 4 sonu |
 | K-020 | Slippage kalibrasyonu (ilk yöntem) | ⛔ değiştirildi → K-021 | — |
 | K-021 | Slippage'ın yürütme penceresinden kalibrasyonu | ⏳ açık | Faz 1 |
+| K-022 | Bağımlılık kilidi (`uv`) | ✅ **kabul** | Faz 1 başlangıcı |
 
 **Faz 0'ın dört spike'ı da kapandı.** Kalan iki açık karar Faz 1 ve Faz 4'e ait; Faz 0'ı
 bloke etmiyorlar.

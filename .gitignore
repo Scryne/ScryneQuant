@@ -33,12 +33,19 @@ secrets/
 config.local.*
 
 # Market verisi ve araştırma çıktıları — büyük, yeniden üretilebilir, git'e ait değil
-research/datasets/
-research/spikes/
-data/
+# Desenler köke sabitlenmiş: `data/` sabitlenmezse src/scryne_quant/data/ paketini de
+# yakalar ve kod sessizce commit dışında kalır.
+/research/datasets/
+/research/spikes/
+/data/
 *.parquet
 *.duckdb
 *.db
+
+# İstisna: test fixture'ları. Faz 3'ün bitti kriteri, referans senaryonun beklenen P&L'inin
+# tests/fixtures/ altında **sabitlenmiş** olmasını istiyor (K-018/4). Yukarıdaki global
+# desenler bu dosyaları sessizce dışarıda bırakırdı.
+!tests/fixtures/**
 
 # Notebook çıktıları
 .ipynb_checkpoints/
