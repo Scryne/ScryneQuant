@@ -51,7 +51,9 @@ bunlardan birini ihlal ediyorsa görev yanlıştır; kural değil.
 5. **Fill bir sonraki barın açılışındadır**, asla sinyal barının kapanışından. (K-004)
 6. **Slippage her zaman aleyhte.** Belirsizlikte kötü yöne yuvarla. (K-007)
 7. **Aynı girdi aynı çıktıyı verir.** Determinizm testle korunur. (K-009)
-8. **Promotion kapıları kaldırılamaz.** Live'a elle toggle ile geçilmez. (K-010)
+8. **Promotion kapıları kaldırılamaz ve sayısaldır.** Live'a elle toggle ile geçilmez;
+   her kapı geçer/kalır döndüren makine kontrolüdür, "sonuçlara bakıp karar ver" değil.
+   (K-010, K-018)
 9. **Kendi hesabı, kendi parası.** Başkasının parası, sinyal paylaşımı, copy trading
    yasak — hukuki sınır. (K-014)
 

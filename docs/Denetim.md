@@ -146,11 +146,16 @@ veri modelinin üzerine kurulur ve yeniden yazılır. → K-012
 katmanı) ve §58 (multi-agent research assistant) dokümanda hâlâ geniş yer kaplıyor ve
 kapsamı bulanıklaştırıyor. Bunlar "Gelecek" başlığına indirildi. → K-013
 
-### C4. Phase 0'ın bitti kriteri yok — bu yüzden atlanacak faz
+### C4. Phase 0 kapsam dışı bırakıldı
 
-§53'ün Phase 0'ı 12 kavram listeliyor ("Amaç yazılım geliştirmek değil, sistemi yanlış
-modellememektir") ve kesinlikle haklı. Ama çıktısı tanımlı olmadığı için pratikte "okudum,
-anladım" deyip geçilecek bir faz. Roadmap'te ölçülebilir çıktıya bağlandı.
+§53'ün Phase 0'ı bir trading eğitimi fazı tanımlıyor ("Amaç yazılım geliştirmek değil,
+sistemi yanlış modellememektir").
+
+**Bu faz 2026-09-08'de Scryne'ın kararıyla kapsam dışına alındı** — eğitim yapılmayacak.
+Faz 0 yalnızca teknik doğrulama (spike'lar) fazı olarak duruyor.
+
+Kararın mimari sonucu K-018'de: operatör yargısına dayanan kontroller makineye devredildi,
+promotion kapıları eşiği yazılı ve otomatik kontrol edilir hale getirildi.
 
 ---
 

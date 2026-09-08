@@ -306,6 +306,36 @@ başlar. Yasağın yazılı olması, o anın fark edilmesini sağlar.
 
 ---
 
+## K-018 — Eğitim fazı kapsam dışı; operatör yargısı yerine makine eşiği
+
+**Durum:** kabul · **Kapatır:** Denetim C4 · **Tarih:** 2026-09-08
+
+**Karar:** Faz 0'ın trading eğitimi kısmı Scryne'ın kararıyla kaldırıldı. Faz 0 yalnızca
+teknik doğrulama (spike) fazıdır.
+
+Bunun **zorunlu mimari sonucu**: sistemin hiçbir güvenlik kontrolü operatörün piyasa
+bilgisine dayanamaz. Bu yüzden:
+
+1. **K-010'un kapıları sayısal eşiklerle tanımlanır ve makine kontrol eder.** "Sonuçlara
+   bak ve karar ver" bir kapı değildir. Her kapı geçer/kalır döndüren bir kontroldür.
+2. **Son adımdaki elle onay yerinde kalır** ama artık son savunma değil, son formalitedir.
+   Onaydan önceki kapılar geçilmemişse onay ekranı zaten açılmaz.
+3. **Eşikler Faz 4 sonunda gerçek veriyle kalibre edilir** ve K-019 olarak yazılır. Adayları:
+   OOS/IS Sharpe oranı alt sınırı, max drawdown üst sınırı, minimum işlem sayısı,
+   paper-backtest drift üst sınırı, parametre duyarlılığı üst sınırı.
+4. **Faz 3'ün doğruluk referansı elle hesaba dayanamaz.** Referans senaryonun beklenen P&L'i
+   `tests/fixtures/` altına bağımsız olarak sabitlenir; motorun kendi çıktısından
+   türetilemez.
+
+**Gerekçe:** Bir kontrolün etkili olması, onu uygulayan tarafın onu uygulayabilmesine
+bağlıdır. Eğitim kapsam dışına alındığına göre, kontrolün ağırlığı insandan sisteme
+kaydırılmak zorundaydı — aksi hâlde kapılar kâğıt üzerinde var, pratikte yoktu.
+
+Bu, K-010'u zayıflatmaz; **sertleştirir.** İnsan yargısına bırakılan bir kapı esnetilebilir,
+sayısal eşik esnetilemez — değiştirmek için karar günlüğüne yazmak gerekir ve bu iz bırakır.
+
+---
+
 ## Açık kararlar (spike bekliyor)
 
 | No | Konu | Kapanacağı yer |
@@ -313,3 +343,4 @@ başlar. Yasağın yazılı olması, o anın fark edilmesini sağlar.
 | K-015 | Binance erişimi ve testnet'in güncel durumu | Faz 0 spike |
 | K-016 | Fee/slippage'ın kesin sayıları | Faz 0 spike (K-007'yi tamamlar) |
 | K-017 | Birincil timeframe (1h mi 1m mi) ve veri hacmi | Faz 0 spike |
+| K-019 | Promotion kapılarının sayısal eşikleri (K-018'in devamı) | Faz 4 sonu |

@@ -18,10 +18,10 @@ yanlış sonuç olarak geri döner.
 
 | Faz | Adı | Durum | Bitti Kriteri |
 | --- | --- | --- | --- |
-| 0 | Trading temeli + spike'lar | ⏳ Bekliyor | 12 kavramın vault notu + elle hesaplanmış örnek işlem + 3 spike raporu (K-015/016/017 kapandı) |
+| 0 | Teknik doğrulama (spike'lar) | ⏳ Bekliyor | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
 | 1 | Market data temeli | ⏳ Bekliyor | BTC/USDT ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent |
 | 2 | İndikatör + strateji sözleşmesi | ⏳ Bekliyor | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
-| 3 | Backtest motoru | ⏳ Bekliyor | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; elle hesaplanmış senaryoyla birebir uyuşuyor |
+| 3 | Backtest motoru | ⏳ Bekliyor | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ⏳ Bekliyor | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ⏳ Bekliyor | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
 | 6 | Paper trading + dashboard | ⏳ Bekliyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
@@ -32,18 +32,12 @@ yanlış sonuç olarak geri döner.
 
 ## Faz Detayları
 
-### Faz 0: Trading temeli + spike'lar
+### Faz 0: Teknik doğrulama (spike'lar)
 
-Bu faz **yazılım fazı değil.** Amacı, Proje-Fikri §53'ün dediği gibi, sistemi yanlış
-modellememek. Atlanabilir görünen ama atlanırsa Faz 3'te sessiz hata olarak geri dönen tek
-faz budur.
+Kod yazılan bir faz değil, **ölçüm yapılan** faz. Aşağıdaki dört bilinmeyen masa başında
+karara bağlanamaz; Faz 1'in mimarisi bunlar kapanmadan dondurulmaz.
 
 - **İşler:**
-  - **Öğrenme listesi: `docs/Faz-0-Ogrenme.md`** — 12 kavram, her biri hangi kararda
-    işine yarayacağıyla birlikte. Her kavram için ScryneOS vault'unda
-    `🧠 500-Knowledge/` altına kendi cümlelerinle bir paragraf.
-  - **Elle bir işlem hesabı:** giriş, çıkış, taker fee iki bacakta, slippage dahil net P&L.
-    Kalemle. Bu sayı Faz 3'te motorun doğruluğunun referansı olacak.
   - **Spike 1 (K-015):** CCXT ile Binance'e gerçek istek. Türkiye'den erişim, kimlik
     gereksinimi, rate limit, Spot Testnet'in güncel durumu. Çıktı: kısa rapor.
   - **Spike 2 (K-017):** BTC/USDT 1h ve 1m için 1 yıllık veri indirilip ölçülür — süre,
@@ -52,8 +46,9 @@ faz budur.
     doğrulanır ya da değiştirilir.
   - **Spike 4 (K-016):** Binance'in güncel spot komisyon tarifesi ve gerçekleşen spread
     gözlemi → K-007'nin sayıları doldurulur.
-- **Bitti Kriteri:** 12 not yazılmış; elle P&L hesabı yapılmış; dört spike raporu
-  `docs/spikes/` altında; K-015, K-016, K-017 `Kararlar.md`de `kabul` durumuna geçmiş.
+- **Bitti Kriteri:** Dört spike raporu `docs/spikes/` altında, her biri gerçek ölçülmüş
+  sayı içeriyor; K-011, K-015, K-016, K-017 `Kararlar.md`de `kabul` durumuna geçmiş;
+  K-007'nin maliyet sayıları tahmin değil doğrulanmış değerle dolu.
 - **Notlar:** Spike kodu atılacak koddur, `research/spikes/` altında yaşar ve production
   paketine taşınmaz.
 
@@ -79,7 +74,7 @@ Projenin en kritik fazı. Buradaki iki test (look-ahead, izolasyon) sonradan ekl
   `Strategy` ABC ve `ctx` sözleşmesi (K-002); `Signal` modeli (Pydantic); ilk strateji
   (SMA crossover) referans olarak.
 - **Bitti Kriteri:**
-  - Her indikatör bağımsız bir referans kaynağıyla (elle hesap veya bilinen kütüphane)
+  - Her indikatör bağımsız bir referansla (bilinen kütüphane veya sabitlenmiş fixture)
     karşılaştırılıp doğrulanmış.
   - **Look-ahead testi yeşil:** `t` sonrası veri bozulduğunda backtest çıktısı bit düzeyinde
     değişmiyor (K-002).
@@ -94,8 +89,10 @@ Projenin en kritik fazı. Buradaki iki test (look-ahead, izolasyon) sonradan ekl
   ortalama tutma süresi); equity curve; trade listesi; çalıştırma kaydı (K-009).
 - **Bitti Kriteri:**
   - **Determinizm:** aynı veri + config + seed ile iki çalıştırmanın sonuç hash'i aynı.
-  - **Doğruluk:** elle hesaplanmış ≥10 işlemlik bir senaryo ile motorun çıktısı kuruşuna
-    kadar uyuşuyor (Faz 0'daki elle hesap bunun temeli).
+  - **Doğruluk:** ≥10 işlemlik bir referans senaryonun beklenen P&L'i motordan bağımsız
+    olarak hesaplanıp `tests/fixtures/` altına sabitlenmiş, ve motorun çıktısı bu değerle
+    kuruşuna kadar uyuşuyor. Referans motorun kendi çıktısından türetilemez — türetilirse
+    test hiçbir şey kanıtlamaz.
   - Her sonuç kaydında commit SHA, dirty bayrağı, veri hash'i, config hash'i, seed,
     kütüphane sürümleri var.
   - `ok` olmayan bar oranı sonuç kaydına yazılıyor (K-006).
@@ -103,7 +100,8 @@ Projenin en kritik fazı. Buradaki iki test (look-ahead, izolasyon) sonradan ekl
 
 ### Faz 4: Strateji laboratuvarı
 
-Amaç kâr bulmak değil — strateji ailelerini bilimsel olarak karşılaştırmayı öğrenmek.
+Amaç kâr bulmak değil — strateji ailelerini aynı veri ve aynı maliyet varsayımlarıyla
+bilimsel olarak karşılaştırmak.
 
 - **İşler:** 5 strateji ailesi (SMA/EMA crossover, RSI mean reversion, breakout, momentum,
   multi-factor); parametre taraması; walk-forward; out-of-sample ayrımı; Monte Carlo;
