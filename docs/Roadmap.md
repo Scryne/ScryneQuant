@@ -18,7 +18,7 @@ yanlış sonuç olarak geri döner.
 
 | Faz | Adı | Durum | Bitti Kriteri |
 | --- | --- | --- | --- |
-| 0 | Teknik doğrulama (spike'lar) | ⏳ Bekliyor | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
+| 0 | Teknik doğrulama (spike'lar) | 🔄 Devam Ediyor | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
 | 1 | Market data temeli | ⏳ Bekliyor | BTC/USDT ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent |
 | 2 | İndikatör + strateji sözleşmesi | ⏳ Bekliyor | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
 | 3 | Backtest motoru | ⏳ Bekliyor | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
@@ -57,13 +57,15 @@ karara bağlanamaz; Faz 1'in mimarisi bunlar kapanmadan dondurulmaz.
 - **İşler:** Exchange adapter arayüzü + Binance implementasyonu; tarihsel indirici
   (sayfalama, rate limit, kaldığı yerden devam); doğrulama (eksik bar, tekrar eden
   timestamp, OHLC tutarlılığı, sıfır hacim); kalite bayrakları (K-006); Parquet deposu
-  (K-011); kalite raporu; CLI komutları.
+  (K-011); kalite raporu; CLI komutları; **slippage kalibrasyonu (K-020)**.
 - **Bitti Kriteri:**
   - BTC/USDT için ≥3 yıllık veri indirilmiş ve saklanmış.
   - `data quality` komutu boşluk/tekrar/şüpheli bar raporu üretiyor.
   - Aynı indirme komutu iki kez çalıştırıldığında dosya içeriği bit düzeyinde aynı
     (idempotent).
   - Tüm timestamp'ler UTC epoch ms, bar açılış zamanı (K-005) — test ile kanıtlı.
+  - **`slippage_bps` veriden kalibre edilmiş** (K-020): `|open[t+1] − close[t]|` dağılımı
+    hesaplanıp muhafazakâr persentil seçilmiş; geçici 5.0 değeri kaldırılmış.
 - **Notlar:**
 
 ### Faz 2: İndikatör + strateji sözleşmesi

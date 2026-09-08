@@ -159,8 +159,16 @@ backtest sonucuna hangi değerlerle çalıştığı yazılır:
   aşağı).
 - **Spread:** modelin içinde ayrıca sayılmaz; slippage varsayımı spread'i kapsayacak kadar
   yüksek tutulur.
-- **Kesin sayılar Faz 0 spike'ında Binance'in güncel ücret tarifesi ölçülerek doldurulur**
-  ve tahmin edilen değil, doğrulanmış değer kullanılır.
+- **Ölçülen değerler (Spike 4, 2026-09-08 — `docs/spikes/04-maliyet-tarifesi.md`):**
+  `fee_taker_bps = 10.0` (Binance VIP 0 spot, BNB indirimi varsayılmıyor),
+  `slippage_bps = 5.0` **geçici** — Faz 1'de tarihsel veriden kalibre edilecek (K-020).
+  Geçici değerle üretilen hiçbir sonuç promotion'a giremez.
+
+**Spike 4'ün düzelttiği varsayım:** yukarıdaki "slippage varsayımı spread'i kapsayacak kadar
+yüksek tutulur" cümlesi yanlış bir modele dayanıyordu. Ölçüm: BTC/USDT spread'i 0,00128 bps,
+komisyon 20 bps — komisyon spread'den ~15.600 kat büyük, yani spread bu projede bir maliyet
+kalemi değil. K-004'ün `t+1` açılış fill'i göz önüne alındığında `slippage_bps` aslında bir
+**fiyat hareketi** proxy'sidir, mikroyapı proxy'si değil. Bkz. K-020.
 
 **Yön kuralı:** belirsizlik olduğunda her zaman aleyhte yuvarla. Backtest gerçeğinden kötü
 çıkarsa sürpriz iyi olur; iyi çıkarsa sürpriz para kaybettirir.
@@ -336,11 +344,33 @@ sayısal eşik esnetilemez — değiştirmek için karar günlüğüne yazmak ge
 
 ---
 
+## K-020 — Slippage parametresi veriden kalibre edilir, tahmin edilmez
+
+**Durum:** açık (Faz 1'de kapanacak) · **Kaynak:** Spike 4 · **Tarih:** 2026-09-08
+
+**Karar:** `slippage_bps` bir tahmin değil, ölçüm olacak. Faz 1'de tarihsel veri geldiğinde
+`|open[t+1] − close[t]| / close[t]` dağılımı hesaplanır ve muhafazakâr bir yüzdelik alınır
+(medyan değil, 75. persentil ya da daha yukarısı — yön kuralı gereği aleyhte).
+
+Kalibrasyon yapılana kadar geçici değer `5.0 bps`'tir ve bu değerle üretilen sonuçlar
+`provisional_cost_model` bayrağı taşır; promotion'a giremez (K-010).
+
+**Gerekçe:** K-004 fill'i `t+1` barının açılışına koyuyor. Sinyal `t` kapanışında üretilip
+emir bir sonraki barın açılışında dolduğuna göre, aradaki fiyat farkı bir mikroyapı olayı
+değil — 1h timeframe'de saatlerce süren bir belirsizlik penceresi. Spread (ölçüldü:
+0,00128 bps) bunun yanında görünmez kalıyor.
+
+Yani bu parametrenin doğru değeri borsanın ücret sayfasından değil **kendi verimizden**
+çıkar. Tam olarak ölçebileceğimiz bir şeyi tahmin etmek için hiçbir sebep yok.
+
+---
+
 ## Açık kararlar (spike bekliyor)
 
 | No | Konu | Kapanacağı yer |
 | --- | --- | --- |
 | K-015 | Binance erişimi ve testnet'in güncel durumu | Faz 0 spike |
-| K-016 | Fee/slippage'ın kesin sayıları | Faz 0 spike (K-007'yi tamamlar) |
+| K-016 | Fee/slippage'ın kesin sayıları | **Fee kapandı** (Spike 4). Slippage → K-020 |
 | K-017 | Birincil timeframe (1h mi 1m mi) ve veri hacmi | Faz 0 spike |
 | K-019 | Promotion kapılarının sayısal eşikleri (K-018'in devamı) | Faz 4 sonu |
+| K-020 | `slippage_bps`'in veriden kalibrasyonu | Faz 1 |
