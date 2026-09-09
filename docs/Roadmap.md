@@ -20,7 +20,7 @@ yanlış sonuç olarak geri döner.
 | --- | --- | --- | --- |
 | 0 | Teknik doğrulama (spike'lar) | ✅ Tamamlandı | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
 | 1 | Market data temeli | ✅ Tamamlandı | BTC/USDT 1h ≥5 yıl + 1m ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent, slippage kalibre |
-| 2 | İndikatör + strateji sözleşmesi | 🔄 Devam Ediyor | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
+| 2 | İndikatör + strateji sözleşmesi | ⏳ Bekliyor | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
 | 3 | Backtest motoru | ⏳ Bekliyor | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ⏳ Bekliyor | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ⏳ Bekliyor | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
