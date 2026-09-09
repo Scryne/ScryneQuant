@@ -18,6 +18,7 @@ from typing import Annotated, Any
 
 import typer
 
+from scryne_quant.backtest.motor import Backtest
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.hash import git_durumu, ortam_kaydi
 from scryne_quant.common.zaman import simdi_ms, utc_str
@@ -31,6 +32,11 @@ from scryne_quant.data.kalibrasyon import (
     kalibre_et,
 )
 from scryne_quant.exchange.binance import BinanceAdaptoru
+from scryne_quant.features.barlar import bar_dizileri
+from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
+
+#: Backtest sonuç kayıtlarının yazıldığı dizin (`.gitignore`'da).
+VARSAYILAN_KOSU_KOKU = Path("runs")
 
 #: Varsayılan depo kökü. `.gitignore` `/data/`'yı dışlıyor — market verisi repoya girmez.
 VARSAYILAN_DEPO = Path("data/market")
@@ -339,6 +345,93 @@ def data_maliyet(
 
 
 # --------------------------------------------------------------------- yardım
+
+
+# ------------------------------------------------------------------- backtest
+
+
+@app.command("backtest")
+def backtest(
+    sembol: Annotated[str, typer.Argument(help="Örn. BTCUSDT")] = "BTCUSDT",
+    timeframe: Annotated[str, typer.Option("--timeframe", "-t")] = "1h",
+    hizli: Annotated[int, typer.Option("--hizli", help="Hızlı SMA penceresi.")] = 20,
+    yavas: Annotated[int, typer.Option("--yavas", help="Yavaş SMA penceresi.")] = 50,
+    maruziyet: Annotated[float, typer.Option("--maruziyet", help="Giriş hedefi [0,1].")] = 0.2,
+    sermaye: Annotated[float, typer.Option("--sermaye")] = 10_000.0,
+    seed: Annotated[int, typer.Option("--seed", help="Kayda yazılır (K-009).")] = 0,
+    kayit: Annotated[
+        bool, typer.Option("--kayit/--kayit-yok", help="Sonucu runs/ altına yaz.")
+    ] = True,
+    egri: Annotated[bool, typer.Option("--egri", help="Equity eğrisini de kaydet.")] = False,
+    depo: Depo = VARSAYILAN_DEPO,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """SMA kesişim stratejisini depodaki veri üzerinde backtest eder. (Faz 3)
+
+    Faz 4'te strateji seçimi parametreleşecek; şimdilik tek referans strateji var ve
+    komutu ona sabitlemek, olmayan bir esnekliği varmış gibi göstermekten iyi.
+    """
+    depo_nesnesi = ParquetDepo(depo)
+    df = depo_nesnesi.oku(sembol, timeframe)
+    model = maliyet_mod.yukle()
+
+    strateji = SmaKesisim(hizli=hizli, yavas=yavas, maruziyet=maruziyet)
+    motor = Backtest(strateji, model, baslangic_sermaye=sermaye, seed=seed)
+    sonuc = motor.calistir(
+        sembol,
+        timeframe,
+        bar_dizileri(df),
+        veri_sha256=depo_nesnesi.sha256(sembol, timeframe),
+    )
+
+    yol: Path | None = None
+    if kayit:
+        yol = sonuc.yaz(
+            VARSAYILAN_KOSU_KOKU / f"{sonuc.config_hash[:12]}-{sonuc.sonuc_hash[:12]}.json",
+            egri=egri,
+        )
+
+    if json_cikti:
+        govde = sonuc.sozluk(egri=egri)
+        govde["kayit_yolu"] = str(yol) if yol else None
+        _yaz_json(govde)
+        return
+
+    m = sonuc.metrikler
+    typer.echo(f"{sembol} {timeframe} · {sonuc.veri.bar_sayisi:,} bar · {strateji!r}")
+    typer.echo(f"  {utc_str(sonuc.veri.ilk_ms)} → {utc_str(sonuc.veri.son_ms)}")
+    typer.echo("")
+    typer.echo(f"  sermaye     : {m.baslangic_sermaye:>14,.2f} → {m.bitis_sermaye:>14,.2f}")
+    typer.echo(f"  toplam getiri: {m.toplam_getiri:>13.2%}")
+    typer.echo(f"  CAGR        : {m.cagr:>14.2%}{'' if m.yillik_anlamli else '  (pencere kısa)'}")
+    typer.echo(f"  max drawdown: {m.max_drawdown:>14.2%}  ({m.max_drawdown_bar:,} bar)")
+    typer.echo(f"  Sharpe      : {m.sharpe:>14.3f}    Sortino: {m.sortino:.3f}")
+    typer.echo(f"  Calmar      : {m.calmar:>14.3f}    Volatilite: {m.yillik_volatilite:.2%}")
+    typer.echo("")
+    typer.echo(f"  işlem       : {m.islem_sayisi:>14,}  ({m.kazanan} kazanç / {m.kaybeden} kayıp)")
+    typer.echo(f"  win rate    : {m.win_rate:>14.1%}    profit factor: {m.profit_factor:.3f}")
+    typer.echo(f"  expectancy  : {m.expectancy:>14,.2f}    ardışık kayıp: {m.ardisik_kayip}")
+    typer.echo(f"  ort. tutma  : {m.ortalama_tutma_bar:>14.1f} bar")
+    typer.echo("")
+    typer.echo(f"  komisyon    : {m.toplam_komisyon:>14,.2f}")
+    typer.echo(f"  slippage    : {m.toplam_slippage:>14,.2f}")
+    typer.echo(f"  hacim       : {m.islem_hacmi:>14,.2f}  (turnover {m.turnover:.1f}×)")
+    typer.echo("")
+    typer.echo(f"  ok olmayan bar: {sonuc.veri.ok_olmayan_bar} ({sonuc.veri.ok_olmayan_oran:.4%})")
+    typer.echo(f"  üretilen sinyal: {sonuc.uretilen_sinyal}")
+    atlanan = {a: n for a, n in sonuc.atlanan.items() if n}
+    if atlanan:
+        typer.echo(f"  atlanan sinyal : {atlanan}")
+    typer.echo("")
+    typer.echo(f"  config_hash : {sonuc.config_hash[:16]}")
+    typer.echo(f"  sonuc_hash  : {sonuc.sonuc_hash[:16]}")
+    if sonuc.promotion_engelleri:
+        typer.secho(
+            f"  promotion engeli: {', '.join(sonuc.promotion_engelleri)}",
+            fg=typer.colors.YELLOW,
+        )
+    if yol:
+        typer.echo(f"  kayıt       : {yol}")
 
 
 @app.command("bilgi")

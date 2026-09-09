@@ -1,0 +1,215 @@
+"""Backtest sonuç kaydı: bir koşunun yeniden üretilebilir kimliği. (K-009, K-006)
+
+K-009'un istediği altı alan burada: commit SHA, `dirty` bayrağı, veri seti hash'i, config
+hash'i, seed, kütüphane sürümleri. Hiçbiri isteğe bağlı değil — biri eksikse o sonuç
+"şu kodla, şu veriyle üretildi" diyemez, yalnızca "bir zamanlar üretildi" der.
+
+**`sonuc_hash` ile `config_hash` farklı şeyler.** `config_hash` girdiyi (strateji,
+parametreler, maliyet modeli, sermaye) özetler; `sonuc_hash` çıktıyı (metrikler, işlem
+defteri, equity eğrisi). Determinizm iddiası ikisinin **birlikte** sabit kalmasıdır: aynı
+config_hash + aynı veri hash'i → aynı sonuc_hash. Yalnızca birini tutmak iddianın yarısını
+kanıtlar.
+
+**Ortam ve git durumu hash'e girmez.** Girseydi aynı veri ve aynı config'le yapılan iki
+koşu, arada tek bir commit atıldığı için farklı hash verirdi — ve determinizm testi hiçbir
+zaman yeşile dönmezdi. Onlar kayıtta durur, kimliğin içinde değil.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Final
+
+import numpy as np
+
+from scryne_quant.backtest.fill import AtlamaSebebi
+from scryne_quant.backtest.metrikler import Islem, Metrikler
+from scryne_quant.common.hash import git_durumu, nesne_hash, ortam_kaydi
+from scryne_quant.common.zaman import utc_str
+
+#: `ok` olmayan bar oranı bu eşiği aşarsa sonuç `data_quality_warning` alır (K-006).
+#:
+#: **Bu sayı geçicidir.** K-006 "bir eşiği aşarsa" diyor ama eşiği vermiyor; promotion
+#: kapılarının sayısal eşikleri K-019'un konusu ve Faz 4 sonunda gerçek veriyle kalibre
+#: edilecek. Buradaki %1, ölçülen gerçeğe (BTC/USDT 1h, 5,2 yıl: 4/45.576 = %0,0088) 100
+#: kat pay bırakıyor — yani bugünkü veri için bağlayıcı değil, ama sessizce de geçmiyor.
+VARSAYILAN_KALITE_ESIGI: Final = 0.01
+
+
+@dataclass(frozen=True, slots=True)
+class VeriKimligi:
+    """Backtest'in okuduğu veri: neyi, nereden, ne kadarını."""
+
+    sembol: str
+    timeframe: str
+    sha256: str
+    bar_sayisi: int
+    ilk_ms: int
+    son_ms: int
+    ok_olmayan_bar: int
+    ok_olmayan_oran: float
+    kalite_sayimi: dict[str, int]
+
+    def sozluk(self) -> dict[str, Any]:
+        return {
+            "sembol": self.sembol,
+            "timeframe": self.timeframe,
+            "sha256": self.sha256,
+            "bar_sayisi": self.bar_sayisi,
+            "ilk_ms": self.ilk_ms,
+            "son_ms": self.son_ms,
+            "ilk_utc": utc_str(self.ilk_ms),
+            "son_utc": utc_str(self.son_ms),
+            "ok_olmayan_bar": self.ok_olmayan_bar,
+            "ok_olmayan_oran": self.ok_olmayan_oran,
+            "kalite_sayimi": dict(sorted(self.kalite_sayimi.items())),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Sonuc:
+    """Bir backtest koşusunun tamamı: kimlik, girdi, çıktı."""
+
+    veri: VeriKimligi
+    strateji: dict[str, Any]
+    maliyet: dict[str, Any]
+    baslangic_sermaye: float
+    seed: int
+    metrikler: Metrikler
+    islemler: list[Islem]
+    ozkaynak: np.ndarray = field(repr=False)
+    maruziyet: np.ndarray = field(repr=False)
+    zamanlar: np.ndarray = field(repr=False)
+    atlanan: dict[str, int] = field(default_factory=dict)
+    uretilen_sinyal: int = 0
+    acik_pozisyon_sonda: bool = False
+    kalite_esigi: float = VARSAYILAN_KALITE_ESIGI
+
+    # ------------------------------------------------------------- kimlikler
+
+    @property
+    def config_hash(self) -> str:
+        """Girdiyi özetler: strateji + parametreler + maliyet + sermaye + seed."""
+        return nesne_hash(
+            {
+                "strateji": self.strateji,
+                "maliyet": self.maliyet,
+                "baslangic_sermaye": self.baslangic_sermaye,
+                "seed": self.seed,
+                "sembol": self.veri.sembol,
+                "timeframe": self.veri.timeframe,
+            }
+        )
+
+    @property
+    def sonuc_hash(self) -> str:
+        """Çıktıyı özetler. Determinizm testinin karşılaştırdığı sayı bu."""
+        return nesne_hash(
+            {
+                "metrikler": self.metrikler.sozluk(),
+                "islemler": [i.sozluk() for i in self.islemler],
+                "ozkaynak": self.ozkaynak.tolist(),
+                "maruziyet": self.maruziyet.tolist(),
+                "atlanan": dict(sorted(self.atlanan.items())),
+            }
+        )
+
+    @property
+    def data_quality_warning(self) -> bool:
+        """K-006: eşiği aşan `ok` olmayan bar oranı promotion'a engeldir (K-010)."""
+        return self.veri.ok_olmayan_oran > self.kalite_esigi
+
+    @property
+    def promotion_engelleri(self) -> list[str]:
+        """Bu sonucun promotion zincirine giremeyeceği sebepler. Boşsa engel yok.
+
+        Kapının **kendisi** değil, kapının okuyacağı liste (K-010 Faz 5'te uygulanacak).
+        Burada üretilmesinin sebebi, engelin sonucun içinde taşınması: sonuç dosyası elden
+        ele geçerken "bu neden geçemez" bilgisi kaybolmasın.
+        """
+        engeller: list[str] = []
+        if self.dirty:
+            engeller.append("dirty")  # K-009
+        if self.data_quality_warning:
+            engeller.append("data_quality_warning")  # K-006
+        if self.maliyet.get("gecici"):
+            engeller.append("gecici_maliyet_modeli")  # K-021
+        return engeller
+
+    @property
+    def dirty(self) -> bool:
+        return bool(self._git.get("dirty"))
+
+    @property
+    def _git(self) -> dict[str, Any]:
+        return git_durumu()
+
+    # ------------------------------------------------------------------ kayıt
+
+    def sozluk(self, *, islem_listesi: bool = True, egri: bool = False) -> dict[str, Any]:
+        """Sonuç kaydının tam gösterimi.
+
+        `egri=False` varsayılan: 45.000 barlık bir equity eğrisi JSON'da ~1 MB tutar ve
+        özeti okunmaz hâle getirir. Eğri gerektiğinde açıkça istenir; kimliği zaten
+        `sonuc_hash` taşıyor.
+        """
+        git = self._git
+        kayit: dict[str, Any] = {
+            "kimlik": {
+                "config_hash": self.config_hash,
+                "sonuc_hash": self.sonuc_hash,
+                "veri_sha256": self.veri.sha256,
+                "commit": git.get("commit"),
+                "dirty": git.get("dirty"),
+                "seed": self.seed,
+                "ortam": ortam_kaydi(),
+            },
+            "veri": self.veri.sozluk(),
+            "config": {
+                "strateji": self.strateji,
+                "maliyet": self.maliyet,
+                "baslangic_sermaye": self.baslangic_sermaye,
+                "kalite_esigi": self.kalite_esigi,
+            },
+            "metrikler": self.metrikler.sozluk(),
+            "akis": {
+                "uretilen_sinyal": self.uretilen_sinyal,
+                "islenen_sinyal": sum(1 for i in self.islemler for _ in range(i.fill_sayisi)),
+                "atlanan": dict(sorted(self.atlanan.items())),
+                "acik_pozisyon_sonda": self.acik_pozisyon_sonda,
+            },
+            "promotion": {
+                "gecebilir": not self.promotion_engelleri,
+                "engeller": self.promotion_engelleri,
+                "data_quality_warning": self.data_quality_warning,
+            },
+        }
+        if islem_listesi:
+            kayit["islemler"] = [i.sozluk() for i in self.islemler]
+        if egri:
+            kayit["egri"] = {
+                "zamanlar": self.zamanlar.tolist(),
+                "ozkaynak": self.ozkaynak.tolist(),
+                "maruziyet": self.maruziyet.tolist(),
+            }
+        return kayit
+
+    def yaz(self, yol: str | Path, *, egri: bool = False) -> Path:
+        """Sonuç kaydını JSON olarak yazar. Anahtarlar sıralı — byte düzeyinde kararlı."""
+        p = Path(yol)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        icerik = json.dumps(
+            self.sozluk(egri=egri), ensure_ascii=False, indent=2, sort_keys=True
+        )
+        p.write_text(icerik + "\n", encoding="utf-8", newline="\n")
+        return p
+
+
+def atlama_sayimi(sebepler: list[AtlamaSebebi]) -> dict[str, int]:
+    """Atlama sebeplerini sayar. Sıfır olanlar da yazılır — yokluk da bir bilgi."""
+    sayim = dict.fromkeys((s.value for s in AtlamaSebebi), 0)
+    for s in sebepler:
+        sayim[s.value] += 1
+    return sayim

@@ -200,3 +200,75 @@ class TestBilgi:
         assert "commit" in govde["git"]
         assert govde["ortam"]["python"].startswith("3.12")
         assert "pandas" in govde["ortam"]["paketler"]
+
+
+class TestBacktest:
+    """`sq backtest` — Faz 3'ün CLI yüzü. (K-012)"""
+
+    def test_json_ciktisi(self, dolu_depo, tmp_path, monkeypatch):
+        monkeypatch.setattr(cli, "VARSAYILAN_KOSU_KOKU", tmp_path / "runs")
+        sonuc = calistir(
+            "backtest", "BTCUSDT", "--depo", str(dolu_depo),
+            "--hizli", "5", "--yavas", "20", "--json",
+        )
+        assert sonuc.exit_code == 0, sonuc.output
+        govde = json.loads(sonuc.stdout)
+
+        # K-009'un altı zorunlu alanı
+        assert set(govde["kimlik"]) >= {
+            "commit", "dirty", "veri_sha256", "config_hash", "sonuc_hash", "seed", "ortam"
+        }
+        assert govde["kimlik"]["veri_sha256"], "veri hash'i boş olamaz"
+        # K-006: kalite oranı kayıtta
+        assert "ok_olmayan_oran" in govde["veri"]
+        assert "yillik_anlamli" in govde["metrikler"]
+        assert govde["kayit_yolu"]
+
+    def test_kayit_dosyasi_yaziliyor(self, dolu_depo, tmp_path, monkeypatch):
+        monkeypatch.setattr(cli, "VARSAYILAN_KOSU_KOKU", tmp_path / "runs")
+        sonuc = calistir(
+            "backtest", "BTCUSDT", "--depo", str(dolu_depo), "--hizli", "5", "--yavas", "20"
+        )
+        assert sonuc.exit_code == 0, sonuc.output
+        dosyalar = list((tmp_path / "runs").glob("*.json"))
+        assert len(dosyalar) == 1
+        kayit = json.loads(dosyalar[0].read_text(encoding="utf-8"))
+        assert kayit["kimlik"]["sonuc_hash"]
+        assert "egri" not in kayit, "eğri açıkça istenmedikçe yazılmamalı"
+
+    def test_egri_istenince_yaziliyor(self, dolu_depo, tmp_path, monkeypatch):
+        monkeypatch.setattr(cli, "VARSAYILAN_KOSU_KOKU", tmp_path / "runs")
+        calistir(
+            "backtest", "BTCUSDT", "--depo", str(dolu_depo),
+            "--hizli", "5", "--yavas", "20", "--egri",
+        )
+        kayit = json.loads(next((tmp_path / "runs").glob("*.json")).read_text(encoding="utf-8"))
+        assert len(kayit["egri"]["ozkaynak"]) == kayit["veri"]["bar_sayisi"]
+
+    def test_ayni_komut_ayni_sonuc_hash(self, dolu_depo, tmp_path, monkeypatch):
+        """Determinizm CLI seviyesinde de görülmeli (K-009)."""
+        monkeypatch.setattr(cli, "VARSAYILAN_KOSU_KOKU", tmp_path / "runs")
+        argv = ("backtest", "BTCUSDT", "--depo", str(dolu_depo), "--hizli", "5",
+                "--yavas", "20", "--json", "--kayit-yok")
+        a = json.loads(calistir(*argv).stdout)["kimlik"]["sonuc_hash"]
+        b = json.loads(calistir(*argv).stdout)["kimlik"]["sonuc_hash"]
+        assert a == b
+
+    def test_parametre_degisince_hash_degisiyor(self, dolu_depo):
+        temel = ("backtest", "BTCUSDT", "--depo", str(dolu_depo), "--json", "--kayit-yok")
+        a = json.loads(calistir(*temel, "--hizli", "5", "--yavas", "20").stdout)["kimlik"]
+        b = json.loads(calistir(*temel, "--hizli", "6", "--yavas", "20").stdout)["kimlik"]
+        assert a["config_hash"] != b["config_hash"]
+
+    def test_insan_ciktisi(self, dolu_depo, tmp_path, monkeypatch):
+        monkeypatch.setattr(cli, "VARSAYILAN_KOSU_KOKU", tmp_path / "runs")
+        sonuc = calistir(
+            "backtest", "BTCUSDT", "--depo", str(dolu_depo), "--hizli", "5", "--yavas", "20"
+        )
+        assert sonuc.exit_code == 0
+        for parca in ("sermaye", "max drawdown", "Sharpe", "config_hash", "sonuc_hash"):
+            assert parca in sonuc.stdout
+
+    def test_olmayan_veri_hata_verir(self, dolu_depo):
+        sonuc = calistir("backtest", "ETHUSDT", "--depo", str(dolu_depo))
+        assert sonuc.exit_code != 0

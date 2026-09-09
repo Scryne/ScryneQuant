@@ -13,6 +13,8 @@ import pytest
 
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import BAR_SUTUNLARI, KaliteDurumu
+from scryne_quant.strategy.sinyal import Sinyal, Yon
+from scryne_quant.strategy.temel import Strateji
 
 
 def bar_uret(
@@ -66,3 +68,38 @@ def barlar() -> pd.DataFrame:
 def depo_kok(tmp_path):
     """Teste özel boş depo kökü."""
     return tmp_path / "depo"
+
+
+class PlanliStrateji(Strateji):
+    """Takvimden sinyal üreten test stratejisi.
+
+    Referans senaryolarında strateji mantığı **ölçülen şey değil** — ölçülen, motorun fill
+    ve muhasebe aritmetiği. Sinyalleri sabit bir takvimden vermek o ikisini ayırıyor:
+    referans fixture'ı bir stratejinin davranışını yeniden üretmek zorunda kalmıyor.
+
+    Takvim bar indeksine bakar; bu geleceğe bakmak değil, takvime bakmaktır — indeks
+    `ctx.uzunluk - 1`den, yani zaten görülmüş bar sayısından türetiliyor.
+    """
+
+    ad = "planli"
+
+    def __init__(self, takvim: dict[int, tuple[str, float]]) -> None:
+        self._takvim = dict(takvim)
+        super().__init__(takvim=tuple(sorted(takvim.items())))
+
+    def ozellikler(self):
+        return ()
+
+    def on_bar(self, ctx):
+        girdi = self._takvim.get(ctx.uzunluk - 1)
+        if girdi is None:
+            return None
+        yon, hedef = girdi
+        return Sinyal(
+            symbol=ctx.sembol,
+            side=Yon(yon),
+            target_exposure=hedef,
+            confidence=1.0,
+            reason="PLANLI_TAKVIM",
+            timestamp=ctx.zaman,
+        )

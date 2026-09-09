@@ -21,7 +21,7 @@ yanlış sonuç olarak geri döner.
 | 0 | Teknik doğrulama (spike'lar) | ✅ Tamamlandı | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
 | 1 | Market data temeli | ✅ Tamamlandı | BTC/USDT 1h ≥5 yıl + 1m ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent, slippage kalibre |
 | 2 | İndikatör + strateji sözleşmesi | ✅ Tamamlandı | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
-| 3 | Backtest motoru | ⏳ Bekliyor | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
+| 3 | Backtest motoru | ✅ Tamamlandı | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ⏳ Bekliyor | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ⏳ Bekliyor | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
 | 6 | Paper trading + dashboard | ⏳ Bekliyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
@@ -176,7 +176,7 @@ döngüsü 0,26 s (~177.000 bar/s), 1.087 sinyal; iki koşunun sinyal hash'i ayn
   Faz 4'ün diğer strateji aileleri (breakout, momentum) yeni indikatör isterse **deftere**
   (`features/motor.py:DEFTER`) eklenir; kayıtsız indikatör tanım olarak kabul edilmez.
 
-### Faz 3: Backtest motoru
+### Faz 3: Backtest motoru — ✅ kapandı 2026-09-09
 
 - **İşler:** Event loop; fill modeli (K-004); maliyet modeli (K-007); portföy simülasyonu;
   metrikler (§17: getiri, Sharpe, max drawdown, win rate, profit factor, işlem sayısı,
@@ -190,7 +190,66 @@ döngüsü 0,26 s (~177.000 bar/s), 1.087 sinyal; iki koşunun sinyal hash'i ayn
   - Her sonuç kaydında commit SHA, dirty bayrağı, veri hash'i, config hash'i, seed,
     kütüphane sürümleri var.
   - `ok` olmayan bar oranı sonuç kaydına yazılıyor (K-006).
-- **Notlar:**
+
+**Bitti kriteri karşılandı:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| Determinizm hash'le kanıtlı | ✅ `Sonuc.sonuc_hash` (çıktı) + `config_hash` (girdi); aynı veri+config iki koşuda aynı, farklı config farklı — negatif kontrolüyle birlikte |
+| Bağımsız referansla birebir uyuşuyor | ✅ **12 turluk** senaryo, `Decimal` (50 basamak) defter + **kapalı formül** çapraz doğrulaması; motorla bağıl fark <1e-12 (K-029) |
+| Referans motordan türetilmemiş | ✅ üretici `scryne_quant`ı import etmiyor — `ast` ile taranıyor, söz değil kısıt |
+| Kayıtta commit/dirty/veri hash/config hash/seed/kütüphane sürümleri | ✅ `Sonuc.sozluk()["kimlik"]`, testle sabitlenmiş |
+| `ok` olmayan bar oranı kayıtta (K-006) | ✅ sayı, oran ve bayrak başına dağılım; eşiği aşınca `data_quality_warning` |
+
+**Üretilen paketler:** `backtest/` (`fill.py` K-004/K-007 fill ve boyutlandırma, `motor.py`
+event loop, `metrikler.py` 29 metrik + işlem defteri, `sonuc.py` K-009 kaydı),
+`portfolio/durum.py` (değişmez portföy, spot değişmezleri), `tools/backtest_referans_uret.py`,
+CLI: `sq backtest`.
+
+**Faz 3'ün verdiği kararlar:** K-028 (`ok` olmayan barda ne karar ne fill; atlanan sinyal
+sayılır), K-029 (referans kapalı formülle çapraz doğrulanır, üretici motoru import edemez).
+
+**Ölçüm — BTC/USDT 1h, 5,2 yıl, 45.576 bar, SMA(20/50), %90 hedef maruziyet:**
+
+| | |
+| --- | --- |
+| Koşu süresi | 0,35 s |
+| İşlem | 543 (165 kazanç / 378 kayıp), win rate %30,4 |
+| Toplam getiri | **−%58,61** (CAGR −%15,61) |
+| Sharpe / Sortino / Calmar | −0,373 / −0,277 / −0,213 |
+| Max drawdown | %73,37 |
+| Profit factor | 0,864 |
+| Komisyon + slippage | 6.465 + 3.426 = **9.891 USDT** |
+
+**Bu tablonun en önemli satırı sonuncusu.** 10.000 USDT'lik sermayeyle yapılan koşuda
+ödenen toplam maliyet 9.891 USDT — yani **başlangıç sermayesinin tamamı kadar.** Strateji
+brüt olarak neredeyse başabaş (profit factor 0,864); zararın tamamına yakınını 543 işlemin
+maliyeti üretiyor. K-017'nin timeframe kararını veren hareket/maliyet oranı burada somut
+sayıya döndü, ve K-007'nin "maliyet varsayımı stratejinin bir parçasıdır, dipnot değil"
+cümlesi tam olarak bunu kastediyordu.
+
+Roadmap Faz 4 notu bu sonucu zaten öngörüyordu: **bu bir başarısızlık değil, sistemin
+çalıştığının kanıtı.** Maliyetleri gizleyen bir motor aynı stratejiyi kârlı gösterirdi.
+
+**Beklenmeyen bulgular:**
+
+1. **Kendi yazdığım K-004 testi hiçbir şey kanıtlamıyordu.** Fill barının açılışı ile
+   kapanışı aynı sayı seçilmişti, dolayısıyla "kapanıştan doldur" mutasyonu testi
+   kırmıyordu — mutasyon testi yakaladı. Vaka dört olası fiyatın dördü de farklı olacak
+   şekilde yeniden yazıldı. Yeşil ama boş bir test, testsizlikten daha kötüdür: koruma
+   sanılır.
+2. **CAGR kısa pencerede `OverflowError` fırlatıyordu.** 3 barlık bir koşuda üs 2.922
+   oluyor ve `(1,5)**2922` taşıyor. Log uzayına taşındı ve tavana kırpıldı; ayrıca
+   `Metrikler.yillik_anlamli` bayrağı eklendi (pencere ≥30 gün mü). Bu, Faz 4'ün kısa
+   walk-forward katmanlarında kesin patlardı.
+3. **Referans testi üç kasıtlı bozmayı da yakalıyor:** slippage yönü ters (10 test),
+   fill kapanışa kaymış (3), tek bacakta komisyon unutulmuş (8).
+
+- **Notlar:** Sonuç kayıtları `runs/` altına yazılıyor (gitignore'da), dosya adı
+  `<config_hash>-<sonuc_hash>` — aynı deneyin iki kez çalıştırılması aynı dosyayı üretir.
+  `Sonuc.promotion_engelleri` K-010'un Faz 5'te uygulayacağı kapının okuyacağı listeyi
+  şimdiden üretiyor; bugün üç engel tanınıyor: `dirty` (K-009), `data_quality_warning`
+  (K-006), `gecici_maliyet_modeli` (K-021).
 
 ### Faz 4: Strateji laboratuvarı
 

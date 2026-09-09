@@ -840,6 +840,90 @@ kırmızıya dönemeyen bir izolasyon testi, güvenlik değil tiyatrodur.
 
 ---
 
+## K-028 — `ok` olmayan barda ne karar verilir ne fill yapılır
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 3 · **Detaylandırır:** K-006
+
+K-006 "`ok` dışındaki barlar backtest'te **sessizce kullanılmaz**" diyor ve oranın sonuç
+kaydına yazılmasını istiyor. Bu karar cümlenin uygulama karşılığını sabitliyor.
+
+**Karar 1 — `ok` olmayan bar hem karar hem fill dışıdır.** Motor o barda `on_bar`
+çağırmaz ve bekleyen bir sinyali o barın açılışından doldurmaz.
+
+Gerekçe: bir `suspect` barın açılış fiyatı, tanımı gereği güvenilmez. O fiyattan
+doldurmak, gerçek olmayan bir fiyattan **gerçek bir P&L** üretmek olurdu — ve o P&L
+sonuçta bir sayı olarak görünür, uyarı olarak değil. Karar tarafında da aynısı geçerli:
+şüpheli bir kapanışa bakarak verilen karar, şüpheli bir karardır.
+
+**Karar 2 — kural bayrağa göre değişmez, tekdüzedir.** `gap`, `duplicate`, `suspect`,
+`backfilled` — dördü de aynı muameleyi görür. Bayrak başına farklı kural yazmak (örneğin
+"`gap` barında fill yapılabilir çünkü fiyatı kendi başına geçerlidir") daha ince olurdu ama
+dört ayrı kod yolu üretirdi ve her biri ayrı ayrı test edilmek zorunda kalırdı. Ölçülen
+gerçek bu inceliği gereksiz kılıyor: BTC/USDT 1h, 5,2 yıl, 45.576 barda `ok` olmayan bar
+sayısı **4** (%0,0088). Kazanç sıfıra yakın, karmaşıklık maliyeti gerçek.
+
+**Karar 3 — atlanan sinyal sayılır ve kayda yazılır.** K-006'nın "sessizce kullanılmaz"
+kuralının simetriği: sinyal sessizce **atılmaz** da. `AtlamaSebebi` enum'u beş sebep
+tanımlıyor (`sonraki_bar_yok`, `fill_bari_ok_degil`, `hedef_zaten_tutturulmus`,
+`nakit_yok`, `pozisyon_yok`) ve sonuç kaydında sıfır olanlar dahil hepsi görünür — yokluk
+da bir bilgi.
+
+**Karar 4 — özkaynak `ok` olmayan barda da işaretlenir.** Pozisyon o barda da elde
+duruyor; equity eğrisinde delik bırakmak, olmayan bir "işlem yapılmadı" hâli uydurmak
+olurdu. Bilinen sınır: şüpheli bir kapanış o barda yapay bir drawdown sivrisi üretebilir.
+Alternatifi (bir önceki `ok` kapanıştan işaretlemek) veri uydurmak olurdu — K-024'ün
+"boşluk sentetik barla doldurulmaz" kuralının aynısı.
+
+**Bilinen sınır — indikatörler `ok` olmayan barı yine de görür.** İndikatörler tüm seri
+üzerinde hesaplanıyor, yani bir `suspect` barın fiyatı sonraki 20 barın SMA'sını
+kirletiyor. Bunu düzeltmek boşluk-farkında indikatörler gerektirirdi; K-024 zaten sentetik
+bar üretmeyi reddetmişti. Ölçülen etki (4 bar / 45.576) bu borcu şimdilik kabul edilebilir
+kılıyor. Faz 4'te çok daha kirli bir veri setiyle çalışılırsa bu karar yeniden açılmalı.
+
+---
+
+## K-029 — Backtest referansı kapalı formülle çapraz doğrulanır; üretici motoru import edemez
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 3 · **Hizmet ettiği:** Faz 3 bitti
+kriteri, K-009
+
+Faz 3'ün kriteri açık: referans senaryonun beklenen P&L'i "motordan **bağımsız** olarak
+hesaplanmış" olmalı, çünkü "motorun kendi çıktısından türetilirse test hiçbir şey
+kanıtlamaz". Bu karar o bağımsızlığın nasıl sağlandığını ve **nereye kadar gerçek olduğunu**
+sabitliyor.
+
+**Karar 1 — üretici projeyi import edemez.** `tools/backtest_referans_uret.py`
+`scryne_quant`ın hiçbir modülünü import etmez; bunu bir test statik olarak (`ast`) tarar
+(K-027'nin tarayıcısının aynı fikri). Söz değil, kısıt.
+
+**Karar 2 — sayısal bağımsızlık: `Decimal` (50 basamak) karşısında `float64`.** Aynı kayan
+nokta hatasını iki tarafta birden yapmak mümkün değil. Tolerans 1e-11 bağıl — 10.000
+USDT'de kuruşun milyonda biri.
+
+**Karar 3 — asıl kanıt cebirsel.** Referans senaryo A'nın her turu "tüm nakitle gir,
+tamamen çık" biçiminde; böyle bir turun sonucu döngü çalıştırmadan yazılabilir:
+
+```
+C_son / C_ilk = (o_çıkış / o_giriş) × (1−s)(1−f) / [(1+s)(1+f)]
+```
+
+Bu formül K-004 (fill `t+1` açılışında) ve K-007'nin (slippage aleyhte, iki bacakta taker
+komisyonu) metninden cebirle çıkarıldı — ne motorun kodundan ne referans defterinden.
+Üretici, defter sonucunu bu formülle karşılaştırmadan dosya yazmayı reddeder; ölçülen
+uyum 1,9e-49 bağıl fark. Testler ayrıca formülü fixture'ın defterini hiç kullanmadan
+**doğrudan motora karşı** da kuruyor — yani defter ile motor aynı anda aynı hatayı yapsa
+bile test kırılır.
+
+**Karar 4 — bağımsızlığın sınırı açıkça yazılır.** Senaryo B (kısmi maruziyet) kapalı
+formüle uymaz; orada yalnızca Decimal defteri var ve kanıt gücü daha zayıf. Bu bilinçli bir
+kabul, gizlenmiş bir varsayım değil — hem üreticinin hem testin docstring'inde yazılı.
+
+**Ölçülen etki:** referans testi üç kasıtlı bozmayı da yakaladı — slippage yönünü ters
+çevirmek (10 test kırmızı), fill'i kapanışa kaydırmak (3), tek bacakta komisyonu unutmak
+(8). Kırılamayan bir doğruluk testi, doğruluk kanıtı değildir.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -859,10 +943,14 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-025 | Maliyet konfigürasyonu ve geçici model bayrağı | ✅ **kabul** | Faz 1 |
 | K-026 | İndikatör konvansiyonu TA-Lib; referans dondurulmuş | ✅ **kabul** | Faz 2 |
 | K-027 | Strateji izolasyonu izin listesiyle zorlanır | ✅ **kabul** | Faz 2 |
+| K-028 | `ok` olmayan barda karar da fill de yok | ✅ **kabul** | Faz 3 |
+| K-029 | Backtest referansı kapalı formülle çapraz doğrulanır | ✅ **kabul** | Faz 3 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
-K-021'i kapattı; Faz 2 K-026 ve K-027'yi ekledi.** Geriye tek açık karar kaldı:
-**K-019** (promotion kapılarının sayısal eşikleri), Faz 4 sonunda kapanacak.
+K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u ekledi.** Geriye tek açık karar
+kaldı: **K-019** (promotion kapılarının sayısal eşikleri), Faz 4 sonunda kapanacak.
+Faz 3 ayrıca K-019'un işini kolaylaştıracak iki bayrak üretti: `Metrikler.yillik_anlamli`
+(pencere yıllıklandırmaya yetiyor mu) ve `Sonuc.promotion_engelleri`.
 
 ### Faz 0'dan çıkan, karar olmayan ama bağlayıcı gereksinimler
 
