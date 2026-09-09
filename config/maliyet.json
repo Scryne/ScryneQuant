@@ -1,0 +1,26 @@
+{
+  "fee_taker_bps": 10.0,
+  "kalibrasyon": {
+    "aralik_baslangic_ms": 1691122620000,
+    "aralik_bitis_ms": 1788951120000,
+    "bar_sayisi": 1630475,
+    "dagilim_bps": {
+      "max": 428.9804,
+      "ort": 4.0499,
+      "p50": 2.566,
+      "p75": 5.2996,
+      "p90": 9.3253,
+      "p95": 12.8698,
+      "p99": 23.426
+    },
+    "deger_bps": 5.2996,
+    "gerekce": "Olculen buyukluk 1 dakikalik bar-to-bar kapanis hareketi; gercek yurutme penceresi (bar kapanisi -> emrin dolmasi, Spike 1: p50 ~300 ms, kuyruk 1,6 s) bundan onlarca kat kisa, yani metrik zaten muhafazakar bir ust sinir. Rastgele yuruyuste hareket ~sqrt(t) ile buyudugu icin 60 s olcmek 1 s'lik gercek pencereyi ~7,7 kat abartir. Bu yuzden p95/p99 iki muhafazakarligi carpar ve her stratejiyi gercek olmayan bir sebeple zararli gosterir; medyan ise K-007'nin 'belirsizlikte aleyhte yuvarla' kuralini cigner. p75 tek ve bilincli bir emniyet payi birakir. Tam dagilim kayitta: persentil karari yeniden olcum gerektirmeden degistirilebilir.",
+    "persentil": 75.0,
+    "sembol": "BTCUSDT",
+    "tarih": "2026-09-09",
+    "timeframe": "1m",
+    "veri_sha256": "5a3b33c708a5ef4f37453d12843a6945799235fbc57f5ac8023a8c34a964a38e",
+    "yontem": "1 dakikalık bar-to-bar kapanış hareketi: |close[t] - close[t-1]| / close[t-1] * 10000 (bps). Yürütme penceresinin (bar kapanışı → emrin dolması, ölçülen p50 ~300 ms) muhafazakâr üst sınırı: gerçek pencere 1 dakikadan onlarca kat kısa."
+  },
+  "slippage_bps": 5.2996
+}

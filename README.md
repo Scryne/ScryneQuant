@@ -5,7 +5,21 @@ backtest eden, risk kurallarıyla sınırlandıran, paper trading ile doğrulaya
 yapısal kapılardan geçtikten sonra kontrollü biçimde otomatik uygulayan tek kişilik quant
 araştırma ve execution platformu.
 
-**Durum:** Roadmap hazır, uygulama başlamadı. Sıradaki adım: Faz 0.
+**Durum:** Faz 1 (market data temeli) — uygulama sürüyor. Sıradaki: Faz 2 (indikatör +
+strateji sözleşmesi).
+
+## Kurulum ve ilk komutlar
+
+```bash
+uv sync                                      # bağımlılıklar (K-022)
+uv run pytest -q                             # tüm testler
+uv run sq data indir BTCUSDT 1h --yil 5.2    # tarihsel veri (idempotent)
+uv run sq data quality BTCUSDT 1h            # kalite raporu (K-006)
+uv run sq data maliyet                       # yürürlükteki maliyet modeli (K-007)
+```
+
+Veri `data/market/<SEMBOL>/<timeframe>.parquet` altında yaşar ve git'e girmez; dosyanın
+SHA-256'sı veri setinin kimliğidir (K-009).
 
 ## Bu proje ne değil
 
@@ -23,6 +37,7 @@ kaç kötü stratejiyi elediğiyle ölçülür.
 | Özgün fikir neydi? | [`docs/Proje-Fikri.md`](docs/Proje-Fikri.md) |
 | Fikirde ne düzeltildi? | [`docs/Denetim.md`](docs/Denetim.md) |
 | Arayüz nasıl görünecek? | [`DESIGN.md`](DESIGN.md) |
+| Veri katmanı ne buldu? | [`docs/Faz-1-Veri-Raporu.md`](docs/Faz-1-Veri-Raporu.md) |
 
 ## Değişmez kurallar
 

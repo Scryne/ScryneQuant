@@ -537,8 +537,8 @@ Yerine **K-021** geçti.
 
 ## K-021 — Slippage: yürütme penceresindeki fiyat hareketinden kalibre edilir
 
-**Durum:** açık (Faz 1'de kapanacak) · **Değiştirir:** K-020 · **Kaynak:** Spike 2 ·
-**Tarih:** 2026-09-08
+**Durum:** kabul (Faz 1'de kapatıldı, 2026-09-09) · **Değiştirir:** K-020 · **Kaynak:** Spike 2 +
+Faz 1 kalibrasyonu · **Tarih:** 2026-09-08, kapanış 2026-09-09
 
 **Karar:** `slippage_bps`, K-020'nin öngördüğü `|open[t+1] − close[t]|` dağılımından
 **hesaplanmaz** — o dağılım ölçüldü ve neredeyse sıfır çıktı (bkz. K-020'nin düzeltme notu).
@@ -565,6 +565,45 @@ birlikte** kaydedilir.
 **çürütmüyor da**: 1 dakikalık hareketin 75. persentili 5,01 bps — yani büyüklük mertebesi
 tesadüfen doğruydu, türetme yolu yanlıştı. Kalibrasyon tamamlanana kadar bu değerle üretilen
 sonuçlar `provisional_cost_model` bayrağı taşır ve promotion'a giremez (K-010).
+
+**Faz 1 kalibrasyonu — 2026-09-09, karar kapandı.**
+
+Ölçüm `sq data slippage-kalibre` ile, kullanılacak veri aralığının tamamı üzerinde yapıldı:
+BTC/USDT 1m, 2023-08-04 → 2026-09-09, **1.630.475 hareket**, hepsi `ok` bar
+(veri hash'i `5a3b33c7…`).
+
+| | p50 | p75 | p90 | p95 | p99 | ort | max |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 dk hareket (bps) | 2,566 | **5,300** | 9,325 | 12,870 | 23,426 | 4,050 | 428,98 |
+| 1m bar içi salınım (bps) | 4,446 | 8,172 | 13,584 | 18,302 | 32,349 | 6,296 | 643,57 |
+
+**Seçilen: p75 → `slippage_bps = 5,2996`.** Geçici 5,0 değeri kaldırıldı,
+`provisional_cost_model` bayrağı düştü.
+
+**Persentil neden p75 — kaydedilen gerekçe:** ölçülen büyüklük 1 dakikalık hareket, ama
+gerçek yürütme penceresi (bar kapanışı → emrin dolması; Spike 1: p50 ~300 ms, kuyruk 1,6 s)
+bundan onlarca kat kısa. Yani **metrik zaten muhafazakâr bir üst sınır**: rastgele yürüyüşte
+hareket ~√t ile büyüdüğünden 60 s ölçmek 1 s'lik pencereyi ~7,7 kat abartır. Üstüne p95/p99
+koymak iki muhafazakârlığı çarpar ve her stratejiyi **gerçek olmayan bir sebeple** zararlı
+gösterir — bu da bir hata türüdür, sadece diğer yöne doğru. Medyan ise K-007'nin
+"belirsizlikte aleyhte yuvarla" kuralını çiğner. p75 tek ve bilinçli bir emniyet payıdır.
+Tam dağılım `config/maliyet.json`'a yazıldı; persentil kararı yeniden ölçüm gerektirmeden
+değiştirilebilir (K-025).
+
+**Spike 2'nin sayısı doğrulandı.** 1 yıllık veride ölçülen p50 = 2,42 / p75 = 5,01 bps;
+3,1 yıllık veride p50 = 2,566 / p75 = 5,300. Yöntem tanımının spike'ınkiyle aynı olduğunun
+kanıtı bu yakınlık — farklı bir büyüklük ölçülüyor olsaydı sayılar bu kadar örtüşmezdi.
+
+**Kalan dürüst sınır:** bu hâlâ bir **proxy**. Gerçek slippage ancak Faz 7'de, testnet'te
+gönderilen emirlerin fiili dolum fiyatlarıyla ölçülebilir. O ölçüm geldiğinde buradaki sayı
+doğrulanmalı; sapıyorsa yeni bir karar yazılır. Bugünkü kanıt "muhafazakâr bir üst sınır"
+der, "gerçekleşen slippage budur" demez.
+
+**Gidiş-dönüş maliyeti artık:** 2 × (10,0 + 5,2996) = **30,60 bps.** K-017'nin timeframe
+kararı 20,02 bps'lik komisyon ayağına dayanıyordu; slippage eklendiğinde 1h barın medyan
+hareketi (20,85 bps) gidiş-dönüş maliyetinin **altına** düşüyor. Karar değişmiyor — 1m'nin
+oranı hâlâ 8 kat daha kötü — ama Faz 4'ün "hiçbiri maliyetlerden sonra anlamlı değil"
+beklentisi bu sayıyla daha da olası hale geldi.
 
 **Gerekçe:** K-020 doğru soruyu sordu ("tahmin etme, ölç") ama yanlış şeyi ölçmeyi önerdi.
 Bu tam olarak projenin uyardığı hata sınıfı: yöntem makul görünüyordu, sonuç makul görünen
@@ -598,6 +637,112 @@ edilmiyor.
 
 ---
 
+## K-023 — Tarihsel klines ccxt'nin ham ucundan alınır, `fetch_ohlcv`'den değil
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 1 · **Değiştirir:** Final-Doküman'ın
+"CCXT yerinde kalıyor" notunun bir ayrıntısını
+
+**Karar:** Binance adaptörü tarihsel barları `exchange.publicGetKlines(...)` ile, yani
+ccxt'nin **ham** Binance ucundan çeker. `fetch_ohlcv` kullanılmaz. ccxt transport katmanı
+olarak yerinde kalır: kalıcı `requests.Session`, rate limiter, hata sınıfları hep ondan.
+
+**Gerekçe:** `fetch_ohlcv`'nin normalize ettiği satır altı alandır —
+`[timestamp, open, high, low, close, volume]`. `BAR_SEMASI` bunların yanında
+`quote_volume` ve `trades` alanlarını **zorunlu** tutuyor. İkisi de gerçekten kullanılıyor:
+
+- `trades` ile `volume`'ün ayrışması (`islemsiz_hacim`) veri bozulmasının imzasıdır —
+  K-006'nın `suspect` kurallarından biri buna bakar.
+- `quote_volume` §8'in hacim ortalaması indikatörünün doğal girdisi; `volume × fiyat`
+  olarak yeniden türetmek, bar içindeki fiyat yolunu ortalama sayarak sessiz bir hata
+  ekler.
+
+Alternatif üçtü: (a) şemadan iki alanı atmak, (b) `fetch_ohlcv` kullanıp alanları ayrı bir
+çağrıyla tamamlamak, (c) ccxt'yi tamamen bırakıp doğrudan `requests` kullanmak. (a) zaten
+commit edilmiş bir şemayı kalite kontrolünü zayıflatmak için değiştirirdi; (b) her bar için
+iki kaynak demek — hangisi doğru sorusu ortaya çıkar; (c) ccxt'nin rate limiter'ını ve Faz
+7'nin ihtiyaç duyacağı imzalama katmanını elle yeniden yazmak olurdu.
+
+**Sonucu:** adaptör Binance'in 12 alanlı kline dizisinin sıralamasına bağımlı hale geldi.
+Bu bağımlılık `_KLINE_ALANLARI` sözlüğünde tek bir yerde yazılı ve
+`test_binance_adaptoru.py::TestKlineDonusumu::test_alan_eslesmesi` onu sabitliyor —
+alanlar karışırsa test kırmızı yanar, sessiz yanlış veri değil.
+
+---
+
+## K-024 — Kalite bayrağı tekildir; boşluk sentetik barla doldurulmaz
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 1 · **Detaylandırır:** K-006
+
+K-006 bayrakların **ne olduğunu** söylüyor; bu karar birden fazlası aynı anda geçerliyken
+ne olacağını ve bayrağın veriye nasıl dokunacağını söylüyor.
+
+**Karar 1 — bayrak tekildir, öncelik sırası şudur:**
+
+```
+suspect > gap > duplicate > backfilled > ok
+```
+
+Gerekçe: `suspect` barın **içeriğinin** yanlış olabileceğini söyler; en ağırı budur.
+`gap` seriyi ilgilendirir, bar içeriğini değil. `duplicate` yalnızca barın **gelişini**
+ilgilendirir — tekilleştirme onu zaten çözdü. `backfilled` bir köken bilgisidir, kusur
+değil. Öncelik yalnızca raporlamayı etkiler; backtest için ayrım her hâlükârda ikilidir:
+`ok` ya da değil.
+
+**Karar 2 — boşluk bayrağı boşluktan *sonraki* bara konur, eksik barlar için satır
+üretilmez.** Sentetik bir bar yazmak, olmayan bir fiyatı varmış gibi göstermektir; bu
+projenin "neredeyse doğru sonuç yanlış sonuçtan tehlikelidir" uyarısının tam hedefi.
+Boşluğun gerçeği bayrakta ve kalite raporunda durur, veride durmaz.
+
+Yan faydası: K-021'in slippage kalibrasyonu yalnızca `ok` barları kullandığından,
+boşluğun iki yakasını birbirine bağlayan sahte hareketler bu kuralla **kendiliğinden**
+düşer. Bayrağın önceki değil sonraki bara konmasının sebeplerinden biri budur.
+
+**Karar 3 — ızgaraya hizasız timestamp bayrak değil, hatadır.** `open_time % timeframe`
+sıfır değilse `DogrulamaHatasi` fırlatılır. Hizasızlık tek bir barın kusuru değil, serinin
+yanlış hizalanmış olmasıdır (K-005). `suspect` deyip devam etmek, yanlış bir zaman eksenini
+"biraz şüpheli veri" diye kaydetmek olurdu.
+
+**Karar 4 — depo-yeni çakışması `duplicate` üretmez.** `duplicate`, borsanın aynı
+timestamp'i iki kez göndermesini kaydeder. Kendi depomuzu yeni bir indirmeyle birleştirmek
+bir borsa anomalisi değil, olağan işleyiştir; ayrılmazsa örtüşen her yeniden indirme
+yüzlerce barı yanlış bayraklar ve `ok` oranı sebepsiz düşer. Çakışma indiricide çözülür
+(yeni veri kazanır), doğrulamaya yalnızca **tek bir paketin içindeki** tekrarlar ulaşır.
+
+**Ölçüm — bu kararı Faz 1 verisi doğruladı.** Spike 2, 3 yıllık veride hiçbir kalite
+bayrağı tetikleyememişti. Faz 1'in 5,2 yıllık indirmesinde (45.576 bar) **3 boşluk (7 eksik
+bar) ve 1 `suspect` bar** çıktı; en açıklayıcısı 2023-03-24: 12:00 UTC barı sıfır hacimli
+ve dört fiyatı da aynı, 13:00 barı ise hiç yok. Yani bayraklar ölü kod değilmiş — sadece
+Spike 2'nin penceresi onları görecek kadar geniş değilmiş.
+
+---
+
+## K-025 — Maliyet parametreleri `config/maliyet.json`'da yaşar; kalibre edilmemiş model kendini işaretler
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 1 · **Hizmet ettiği:** K-007, K-021
+
+**Karar:** `fee_taker_bps` ve `slippage_bps` tek bir dosyada, `config/maliyet.json`'da
+tutulur; kodda gömülü maliyet sabiti yoktur. Dosya yoksa sistem varsayılana **düşmez**,
+hata verir. Model bir `kalibrasyon` bloğu taşımıyorsa `gecici` sayılır ve bu bayrak sonuç
+kaydına geçer; geçici modelle üretilen sonuç promotion'a giremez (K-010, K-021).
+
+**Kalibrasyon bloğu yalnızca sayıyı değil, sayının kanıtını taşır:** yöntemin formülü,
+persentil, ölçümün yapıldığı sembol/timeframe/aralık, **veri setinin SHA-256'sı**, tam
+persentil dağılımı, tarih ve serbest metin gerekçe. `sq data slippage-kalibre --yaz`
+komutu `--gerekce` olmadan çalışmayı reddeder.
+
+**Gerekçe:** K-007 maliyet varsayımının "stratejinin bir parçası, dipnot değil" olduğunu
+söylüyor. Bir sayının stratejinin parçası olması, altı ay sonra "bu 5,01 nereden geldi"
+sorusunun cevabının bulunabilmesi demek. K-020'nin başına gelen tam olarak buydu: makul
+görünen bir yöntem, makul görünen bir sayı üretecekti ve yanlışlığı ancak dağılıma
+bakılınca ortaya çıktı. Dağılımı sayının yanına yazmak, o kontrolü mümkün kılan şey.
+
+**Neden JSON, TOML değil:** bu dosyayı kalibrasyon komutu **yazıyor**. `tomllib` yalnızca
+okur; TOML yazmak yeni bir bağımlılık ya da elle yazılmış bir serileştirici gerektirirdi —
+ikisi de, içeriği bir backtest sonucunun kimliğine giren bir dosya için kötü takas.
+`json.dumps(sort_keys=True)` byte düzeyinde kararlı bir dosya verir; K-009'un istediği de bu.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -610,11 +755,15 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-017 | Birincil timeframe ve veri hacmi | ✅ **kabul** (1h) | Spike 2 |
 | K-019 | Promotion kapılarının sayısal eşikleri | ⏳ açık | Faz 4 sonu |
 | K-020 | Slippage kalibrasyonu (ilk yöntem) | ⛔ değiştirildi → K-021 | — |
-| K-021 | Slippage'ın yürütme penceresinden kalibrasyonu | ⏳ açık | Faz 1 |
+| K-021 | Slippage'ın yürütme penceresinden kalibrasyonu | ✅ **kabul** (5,2996 bps) | Faz 1, kapandı 2026-09-09 |
 | K-022 | Bağımlılık kilidi (`uv`) | ✅ **kabul** | Faz 1 başlangıcı |
+| K-023 | Klines ccxt'nin ham ucundan alınır | ✅ **kabul** | Faz 1 |
+| K-024 | Bayrak tekildir; boşluk uydurulmaz | ✅ **kabul** | Faz 1 |
+| K-025 | Maliyet konfigürasyonu ve geçici model bayrağı | ✅ **kabul** | Faz 1 |
 
-**Faz 0'ın dört spike'ı da kapandı.** Kalan iki açık karar Faz 1 ve Faz 4'e ait; Faz 0'ı
-bloke etmiyorlar.
+**Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
+K-021'i kapattı.** Geriye tek açık karar kaldı: **K-019** (promotion kapılarının sayısal
+eşikleri), Faz 4 sonunda kapanacak.
 
 ### Faz 0'dan çıkan, karar olmayan ama bağlayıcı gereksinimler
 

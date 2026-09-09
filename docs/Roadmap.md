@@ -19,8 +19,8 @@ yanlış sonuç olarak geri döner.
 | Faz | Adı | Durum | Bitti Kriteri |
 | --- | --- | --- | --- |
 | 0 | Teknik doğrulama (spike'lar) | ✅ Tamamlandı | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
-| 1 | Market data temeli | 🔄 Devam Ediyor | BTC/USDT 1h ≥5 yıl + 1m ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent, slippage kalibre |
-| 2 | İndikatör + strateji sözleşmesi | ⏳ Bekliyor | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
+| 1 | Market data temeli | ✅ Tamamlandı | BTC/USDT 1h ≥5 yıl + 1m ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent, slippage kalibre |
+| 2 | İndikatör + strateji sözleşmesi | 🔄 Devam Ediyor | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
 | 3 | Backtest motoru | ⏳ Bekliyor | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ⏳ Bekliyor | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ⏳ Bekliyor | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
@@ -65,7 +65,7 @@ K-021 geçti. Ayrıntı: `docs/spikes/02-veri-hacmi.md` §4.
 **Notlar:** Spike kodu atılacak koddur, `research/spikes/` altında yaşar (gitignore'da) ve
 production paketine taşınmaz. Ham ölçüm çıktıları `research/spikes/out/` altında.
 
-### Faz 1: Market data temeli
+### Faz 1: Market data temeli — ✅ kapandı 2026-09-09
 
 - **Kapsam (Faz 0'ın ölçümüyle netleşti):** BTC/USDT **1h, 5 yıl** (birincil, K-017) +
   **1m, 3 yıl** (yardımcı: slippage kalibrasyonu, fill gerçekçiliği, Faz 7). Projeksiyon:
@@ -93,6 +93,29 @@ production paketine taşınmaz. Ham ölçüm çıktıları `research/spikes/out/
     çalıştırılmamış olur.
 - **Notlar:** Faz 0'ın ölçtüğü indirme hızı (~3.500 bar/s, ağ sınırlı) bu fazın süre
   beklentisidir; rate limit zorlanmayacak.
+
+**Bitti kriteri karşılandı — ölçümlerin tamamı `docs/Faz-1-Veri-Raporu.md`'de:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| 1h ≥5 yıl | ✅ 5,2 yıl · 45.576 bar · 2,08 MB |
+| 1m ≥3 yıl | ✅ 3,1 yıl · 1.630.476 bar · 63,61 MB |
+| `data quality` raporu | ✅ boşluk/tekrar/şüpheli bar raporu üretiyor (`sq data quality`) |
+| İdempotent indirme | ✅ ikinci çalıştırma 0 bar indiriyor, sha256 aynı |
+| UTC epoch ms, bar açılışı (K-005) | ✅ testle kanıtlı; hizasız timestamp hata veriyor |
+| `slippage_bps` kalibre (K-021) | ✅ **5,2996 bps** (p75), gerekçesiyle kaydedildi; geçici 5,0 kalktı |
+| Kalite bayrakları bozuk fixture ile test edilmiş (K-006) | ✅ `tests/unit/test_dogrulama.py` — her kural için ayrı vaka |
+
+**Faz 1'in verdiği kararlar:** K-023 (klines ccxt'nin ham ucundan), K-024 (bayrak tekildir,
+boşluk uydurulmaz), K-025 (maliyet konfigürasyonu ve geçici model bayrağı). K-021 kapandı.
+
+**Beklenmeyen bulgu:** Spike 2 "gerçek veride anomali yok" demişti; 3 yıl yerine 5,2 yıla
+bakılınca **3 boşluk (7 eksik bar) ve 1 `suspect` bar** çıktı — 2023-03-24'teki Binance
+kesintisi. Bayraklar ölü kod değilmiş, spike'ın penceresi dardı. Ayrıntı: Faz 1 raporu §2.
+
+**Üretilen paketler:** `exchange/` (adaptör sözleşmesi + Binance), `data/` (indirici,
+doğrulama, kalibrasyon, depo), `common/maliyet.py`, `cli/` (`sq data indir|quality|ls|
+slippage-kalibre|maliyet`, `sq bilgi`).
 
 ### Faz 2: İndikatör + strateji sözleşmesi
 

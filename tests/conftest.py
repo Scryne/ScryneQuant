@@ -18,7 +18,10 @@ from scryne_quant.data.semalar import BAR_SUTUNLARI, KaliteDurumu
 def bar_uret(
     n: int = 500,
     timeframe: str = "1h",
-    baslangic_ms: int = 1_700_000_000_000,
+    # 2023-11-14 22:00 UTC — 1h ızgarasına hizalı. Yuvarlak görünen 1_700_000_000_000
+    # değil, çünkü o 22:13:20'ye denk gelir ve K-005'in "bar timestamp'i epoch'a hizalı
+    # açılış zamanıdır" kuralını ihlal eder; doğrulama katmanı onu haklı olarak reddediyor.
+    baslangic_ms: int = 1_699_999_200_000,
     tohum: int = 42,
     kalite: str = KaliteDurumu.OK,
 ) -> pd.DataFrame:

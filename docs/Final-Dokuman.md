@@ -169,8 +169,10 @@ altında, gerekçeler `docs/Kararlar.md`'de:
 **Faz 0'ın stack'e getirdiği düzeltmeler:**
 
 - **CCXT yerinde kalıyor**, iki ayarla: `load_markets()` önbelleğe alınır (3,2 s sürüyor,
-  4.619 marketin tamamını çekiyor) ve `fetch_ohlcv` `close_time` döndürmediği için
-  kapanmışlık kontrolü `open_time + timeframe` üzerinden bizde hesaplanır.
+  4.619 marketin tamamını çekiyor) ve kapanmışlık kontrolü `open_time + timeframe` üzerinden
+  bizde hesaplanır. *Faz 1 düzeltmesi (K-023):* tarihsel barlar `fetch_ohlcv` ile değil,
+  ccxt'nin ham `publicGetKlines` ucuyla çekiliyor — `fetch_ohlcv` `quote_volume` ve `trades`
+  alanlarını düşürüyor, ikisi de `BAR_SEMASI`'nda zorunlu.
 - **Kapanmamış bar depoya yazılmaz.** REST her zaman devam eden barı son eleman olarak
   döndürüyor ve o bar çağrılar arasında değişiyor — atılmazsa Faz 1'in idempotency
   kriteri sağlanamaz.

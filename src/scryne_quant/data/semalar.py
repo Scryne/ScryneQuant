@@ -80,3 +80,16 @@ PANDAS_DTYPES: Final[dict[str, str]] = {
     "trades": "int64",
     "quality_status": "string",
 }
+
+
+#: Borsadan ham gelen bar sütunları — kalite bayrağı **yok**.
+#: Bayrak borsanın beyanı değil, doğrulama katmanının kararıdır (K-006); ham veriyle
+#: doğrulanmış veriyi aynı şemada tutmak o ayrımı siler.
+HAM_BAR_SUTUNLARI: Final[tuple[str, ...]] = tuple(
+    s for s in BAR_SUTUNLARI if s != "quality_status"
+)
+
+#: Ham barların pandas dtype'ları.
+HAM_PANDAS_DTYPES: Final[dict[str, str]] = {
+    s: d for s, d in PANDAS_DTYPES.items() if s != "quality_status"
+}
