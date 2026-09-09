@@ -22,7 +22,7 @@ yanlış sonuç olarak geri döner.
 | 1 | Market data temeli | ✅ Tamamlandı | BTC/USDT 1h ≥5 yıl + 1m ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent, slippage kalibre |
 | 2 | İndikatör + strateji sözleşmesi | ✅ Tamamlandı | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
 | 3 | Backtest motoru | ✅ Tamamlandı | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
-| 4 | Strateji laboratuvarı | ⏳ Bekliyor | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
+| 4 | Strateji laboratuvarı | ✅ Tamamlandı | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ⏳ Bekliyor | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
 | 6 | Paper trading + dashboard | ⏳ Bekliyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
 | 7 | Execution sandbox (testnet) | ⏳ Bekliyor | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
@@ -251,7 +251,7 @@ Roadmap Faz 4 notu bu sonucu zaten öngörüyordu: **bu bir başarısızlık de�
   şimdiden üretiyor; bugün üç engel tanınıyor: `dirty` (K-009), `data_quality_warning`
   (K-006), `gecici_maliyet_modeli` (K-021).
 
-### Faz 4: Strateji laboratuvarı
+### Faz 4: Strateji laboratuvarı — ✅ kapandı 2026-09-09
 
 Amaç kâr bulmak değil — strateji ailelerini aynı veri ve aynı maliyet varsayımlarıyla
 bilimsel olarak karşılaştırmak.
@@ -265,8 +265,68 @@ bilimsel olarak karşılaştırmak.
   - Walk-forward çalışıyor ve parametre kararlılığı görülebiliyor.
   - Herhangi bir deney, kaydından yeniden üretilebiliyor (kanıt: rastgele seçilen bir deney
     yeniden çalıştırılıp hash'i doğrulanır).
+
+**Bitti kriteri karşılandı — ayrıntılı ölçümler `docs/Faz-4-Laboratuvar-Raporu.md`'de:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| 5 aile aynı veri ve aynı maliyetle, sonuçlar yan yana | ✅ `sq lab karsilastir` — 5 aile (6 strateji) + al-tut kıyası, aynı dosya/SHA-256/maliyet/sermaye |
+| Her strateji için IS / OOS ayrı raporlanıyor | ✅ kronolojik %70/%30 bölme; parametre yalnızca IS'te seçiliyor |
+| Walk-forward çalışıyor, parametre kararlılığı görülebiliyor | ✅ 16 katman (1 yıl eğitim / 3 ay test); `parametre_kararliligi()` katman başına seçilen değerleri, benzersiz sayısını ve değişim katsayısını raporluyor |
+| Herhangi bir deney kaydından yeniden üretilebiliyor | ✅ `sq lab dogrula` — beş deney tipi de yeniden üretilip çıktı hash'i doğrulandı |
+
+**Üretilen paketler:** `research/` (`bolme`, `tarama`, `walkforward`, `analiz`,
+`karsilastirma`, `izgaralar`, `kapilar`, `degerlendirme`, `deney`, `tekrar`),
+`strategy/kutuphane/` (5 aile + al-tut kıyası), 3 yeni indikatör (`en_yuksek`, `en_dusuk`,
+`roc` — TA-Lib'e karşı doğrulandı, K-026), CLI: `sq lab {stratejiler,tara,walkforward,
+montecarlo,stres,karsilastir,kapilar,deneyler,dogrula}`.
+
+**Faz 4'ün verdiği kararlar:** **K-019 kapandı** (promotion kapılarının yedi sayısal
+eşiği — projenin son açık kararıydı), K-030 (her karşılaştırmada al-tut kıyası bulunur),
+K-031 (strateji sinyalinin kabul edildiğini varsayamaz).
+
+**Ölçüm — BTC/USDT 1h, 45.576 bar, 5,2 yıl:**
+
+| Strateji | IS Sharpe | OOS Sharpe | OOS/IS | WF bileşik getiri | WF Sharpe |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| **al_tut (kıyas)** | +0,70 | −0,27 | −0,39 | **+39,0 %** | **+0,86** |
+| donchian | +0,75 | −0,35 | −0,46 | +14,4 % | +0,61 |
+| sma_kesisim | +0,62 | −1,03 | −1,67 | +14,7 % | +0,53 |
+| rsi_donus | +0,45 | −0,85 | −1,89 | +7,1 % | +0,27 |
+| momentum | +0,91 | −0,08 | −0,09 | +3,7 % | +0,18 |
+| ema_kesisim | +0,65 | −0,46 | −0,70 | −1,7 % | −0,03 |
+| cok_faktor | +0,23 | −0,95 | −4,15 | −4,1 % | −0,12 |
+
+**Roadmap'in bu faz için yazdığı not doğrulandı.** Altı stratejinin **altısında da**
+in-sample Sharpe pozitif, out-of-sample Sharpe negatif — ders kitabı overfitting tablosu.
+Walk-forward'da dördü pozitife dönüyor ama **hiçbir şey yapmayan al-tut kıyası hepsini
+geçiyor** (+%39,0 / Sharpe 0,86). Aktif yönetimin bu veride yaptığı tek şey 155-287 işlemin
+maliyetini ödemek oldu.
+
+**K-019 kapıları uygulandı: 7 stratejinin 7'si de kaldı** (`sq lab kapilar`). Eşikler
+bugünkü sonuca göre gevşetilmedi; gevşetilseydi kapı kaldırılmış olurdu.
+
+**Beklenmeyen bulgular:**
+
+1. **Kıyasın tek sinyali ısınma penceresinde yutuldu.** `al_tut`un `_girildi` bayrağı
+   ısınma barında kalkıyor, o barın sinyali ölçüm penceresine girmediği için atılıyor, ve
+   strateji bir daha hiç sinyal üretmiyordu. Kıyas tabloda **%0,0 getiri** olarak göründü —
+   çökme yok, uyarı yok. K-031 bu hata sınıfını kapatıyor ve Faz 5'te risk motoru sinyal
+   reddetmeye başlayınca çok daha sık karşılaşılacaktı.
+2. **Walk-forward, tek bölmenin tersini söyledi.** IS/OOS'ta altısı da negatifken
+   walk-forward'da dördü pozitif. Aynı veri, farklı pencere — tek bir OOS testine
+   güvenmemek için somut gerekçe.
+3. **Monte Carlo: bazı stratejilerin geçmiş düşüşü şanslıydı.** `rsi_donus` ve `donchian`
+   için gerçekleşen düşüş, olası sıralamaların yalnızca %15'inden derindi. "Geçmişte %10
+   düştü" cümlesi "en fazla %10 düşer" demek değil.
+4. **Sentetik test verisi momentum eşikleri için fazla sakin.** `bar_uret` bar başına
+   ~%0,08 oynaklık üretiyor, gerçek BTC 1h bunun ~10 katı; `momentum` sentetik seride tek
+   sinyal üretmedi ve bozuk görünüyordu.
+
 - **Notlar:** Bu fazın çıktısı büyük ihtimalle "hiçbiri maliyetlerden sonra anlamlı değil"
-  olacaktır. **Bu bir başarısızlık değil, sistemin çalıştığının kanıtıdır.**
+  olacaktır. **Bu bir başarısızlık değil, sistemin çalıştığının kanıtıdır.** — *Ölçüldü,
+  öyle çıktı.* Faz 5-8 bu tabloyu değiştirmiyor: sistemin işi cevabı ölçmekti ve ölçtü.
+  Sermaye artırma veya live'a geçme kararı bu tabloya bakılarak verilmez.
 
 ### Faz 5: Risk motoru + promotion
 

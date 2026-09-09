@@ -212,3 +212,58 @@ def hacim_ortalamasi(hacim: np.ndarray, pencere: int = 20) -> np.ndarray:
     hatadır, `hacim_ortalamasi` çağrısı değil.
     """
     return sma(hacim, pencere)
+
+
+def en_yuksek(degerler: np.ndarray, pencere: int) -> np.ndarray:
+    """Kayan pencere azamisi (Donchian üst kanalı). İlk geçerli değer indeks ``pencere-1``.
+
+    **Dikkat — pencere `t` barını içerir.** Donchian kırılımı "fiyat önceki N barın
+    zirvesini aştı mı" diye sorar; `t`'nin kendi zirvesini içeren bir kanalla
+    karşılaştırma yapmak her zaman `kapanış ≤ kanal` verir ve kırılım hiç oluşmaz.
+    Bu yüzden kaydırma **stratejinin** işi: `ctx.ozellik("kanal_ust", 1)` ile bir bar
+    geriden okunur. İndikatörün kendisi TA-Lib'in `MAX`'ıyla birebir kalır (K-026) —
+    kaydırmayı buraya gömmek, referansla karşılaştırmayı imkânsız kılardı.
+    """
+    x = _dizi(degerler)
+    _pencere_kontrol(x.size, pencere)
+
+    out = np.full(x.size, YOK)
+    if pencere == 1:
+        out[:] = x
+        return out
+    out[pencere - 1 :] = sliding_window_view(x, pencere).max(axis=-1)
+    return out
+
+
+def en_dusuk(degerler: np.ndarray, pencere: int) -> np.ndarray:
+    """Kayan pencere asgarisi (Donchian alt kanalı). Kaydırma notu: bkz. `en_yuksek`."""
+    x = _dizi(degerler)
+    _pencere_kontrol(x.size, pencere)
+
+    out = np.full(x.size, YOK)
+    if pencere == 1:
+        out[:] = x
+        return out
+    out[pencere - 1 :] = sliding_window_view(x, pencere).min(axis=-1)
+    return out
+
+
+def roc(kapanis: np.ndarray, pencere: int = 10) -> np.ndarray:
+    """Değişim oranı, **yüzde** olarak (TA-Lib `ROC` konvansiyonu, K-026).
+
+    ``(close[t] / close[t-n] - 1) × 100``. İlk geçerli değer indeks ``pencere``.
+
+    Yüzde ölçeği bilinçli: TA-Lib `ROC` yüzde, `ROCP` kesir döndürür. İkisinden birini
+    seçmek zorundaydık ve referansla karşılaştırılabilir olan `ROC`. Eşik yazarken
+    `ctx.ozellik("roc") > 2.0` "%2" demektir, "2 kat" değil — bu ayrım bir stratejide
+    50 kat yanlış pozisyon büyüklüğü demek olurdu, o yüzden isim ve birim burada sabit.
+    """
+    x = _dizi(kapanis)
+    _pencere_kontrol(x.size, pencere + 1)
+
+    out = np.full(x.size, YOK)
+    onceki = x[:-pencere]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        oran = np.where(onceki != 0.0, x[pencere:] / onceki - 1.0, np.nan)
+    out[pencere:] = oran * 100.0
+    return out

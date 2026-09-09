@@ -76,6 +76,27 @@ class Strateji(ABC):
         birincisinden farklı sonuç verir ve K-009 sessizce ihlal edilir.
         """
 
+    def isinma_bar(self) -> int:
+        """Bu stratejinin ilk sinyalini üretebilmesi için gereken bar sayısı.
+
+        Varsayılan, bildirilen özelliklerin en büyük penceresi + 2. İki barlık pay:
+        `rsi`/`atr` gibi indikatörlerin ilk geçerli değeri `pencere` indeksinde (yani
+        `pencere+1`. barda) çıkıyor, ve kesişim soran stratejiler `geri=1` ile bir bar
+        daha geriye bakıyor.
+
+        Faz 4'ün walk-forward'ı bu sayıyı gerçekten kullanıyor: bir katmanın önüne kaç
+        barlık ısınma ekleneceğini belirliyor. Eksik tahmin edilirse katmanın ilk
+        sinyalleri kaybolur ve sonuç sessizce olduğundan sakin görünür — bu yüzden
+        varsayılan cömert tarafta.
+        """
+        pencereler = [
+            int(deger)
+            for tanim in self.ozellikler()
+            for ad, deger in dict(tanim.parametreler).items()
+            if ad == "pencere"
+        ]
+        return max(pencereler, default=0) + 2
+
     # ------------------------------------------------------------ kayıt
 
     def sozluk(self) -> dict[str, Any]:

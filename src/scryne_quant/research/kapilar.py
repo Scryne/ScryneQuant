@@ -1,0 +1,218 @@
+"""Promotion kapılarının sayısal eşikleri. (K-010, K-018, K-019)
+
+K-018 şunu şart koştu: *"K-010'un kapıları sayısal eşiklerle tanımlanır ve makine kontrol
+eder. 'Sonuçlara bak ve karar ver' bir kapı değildir."* Bu modül o eşiklerin adresi.
+
+**Faz 4 eşikleri belirler, Faz 5 uygular.** Burada bir sonucun kapılardan geçip
+geçmediğini **söyleyen** kod var; sinyalin execution'a ulaşmasını engelleyen mekanizma
+Faz 5'in risk motorunda kurulacak. İkisini ayırmak bilinçli: eşiklerin gerekçesi bu fazın
+ölçümlerinden geliyor, zorlama ise başka bir katmanın işi.
+
+**Eşikler nasıl seçildi:** Faz 4'ün gerçek ölçümlerine bakılarak — ama "bugünkü en iyi
+stratejiyi geçirecek" biçimde değil. Tam tersi: Faz 4'te ölçülen **hiçbir strateji bu
+kapılardan geçmiyor** ve bu doğru sonuçtur. Eşiği bugünkü sonuca göre gevşetmek, kapıyı
+kaldırmakla aynı şey olurdu (K-010'un uyardığı sabırsızlık).
+
+Kapılar bir stratejiyi *iyi* ilan etmez; yalnızca **"paper trading'e aday olabilir"**
+der. Zincirin geri kalanı (paper, live adayı, elle onay) K-010'da.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any, Final
+
+import numpy as np
+
+
+@dataclass(frozen=True, slots=True)
+class Esik:
+    """Tek bir kapı: ne ölçülüyor, sınır ne, hangi yönde geçilir, neden bu sayı."""
+
+    ad: str
+    alan: str
+    """Değerlendirilen sözlükteki anahtar."""
+
+    sinir: float
+    yon: str
+    """`>=` (sınırdan büyük/eşit geçer) veya `<=` (küçük/eşit geçer)."""
+
+    gerekce: str
+
+    def gecti_mi(self, deger: float | None) -> bool | None:
+        """`None` = ölçülemedi. Ölçülemeyen bir kapı **geçilmiş sayılmaz**."""
+        if deger is None or (isinstance(deger, float) and np.isnan(deger)):
+            return None
+        return deger >= self.sinir if self.yon == ">=" else deger <= self.sinir
+
+    def sozluk(self) -> dict[str, Any]:
+        return {
+            "ad": self.ad,
+            "alan": self.alan,
+            "sinir": self.sinir,
+            "yon": self.yon,
+            "gerekce": self.gerekce,
+        }
+
+
+#: K-019'un eşikleri. Her biri Faz 4'ün ölçümüne dayanıyor; gerekçeler
+#: `docs/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı.
+ESIKLER: Final[tuple[Esik, ...]] = (
+    Esik(
+        ad="oos_sharpe",
+        alan="oos_sharpe",
+        sinir=0.5,
+        yon=">=",
+        gerekce=(
+            "Out-of-sample Sharpe. 0,5 keyfi bir yuvarlak sayı değil: Faz 4'te al-tut "
+            "kıyasının in-sample Sharpe'ı 0,70 ölçüldü. Kıyasın altında kalan bir "
+            "stratejiyi live'a aday etmek, sermayeyi sadece tutmaktansa sistemde "
+            "tutmak için gerekçe üretemez. 0,5 o çizginin biraz altında — kıyası "
+            "geçmeyi şart koşmuyor ama sıfıra yakın Sharpe'ları eliyor."
+        ),
+    ),
+    Esik(
+        ad="oos_is_orani",
+        alan="oos_is_orani",
+        sinir=0.5,
+        yon=">=",
+        gerekce=(
+            "OOS Sharpe'ın IS Sharpe'a oranı — overfitting'in en doğrudan ölçüsü. "
+            "Faz 4'te altı stratejinin **altısında da** bu oran negatif çıktı "
+            "(−0,09 ile −4,15 arası): in-sample başarı dışarıda tamamen kayboldu. "
+            "0,5, 'IS performansının en az yarısı korunmuş olmalı' demek."
+        ),
+    ),
+    Esik(
+        ad="wf_katman_basari",
+        alan="wf_pozitif_katman_orani",
+        sinir=0.6,
+        yon=">=",
+        gerekce=(
+            "Walk-forward katmanlarının kaçı pozitif getirdi. Bileşik OOS getirisi tek "
+            "bir şanslı katmandan gelebilir; katman başarı oranı bunu ayırt eder. 0,6, "
+            "16 katmanın en az 10'unda kazanmayı şart koşuyor."
+        ),
+    ),
+    Esik(
+        ad="parametre_kararliligi",
+        alan="wf_kararsizlik",
+        sinir=0.35,
+        yon="<=",
+        gerekce=(
+            "Katmanlar arası benzersiz parametre değeri oranı (ortalama). Faz 4'te "
+            "0,15-0,25 arası ölçüldü — yani prosedür 16 katmanda 2-4 farklı parametre "
+            "seçiyor. 0,35 üstü 'her dönem başka bir şey seçiliyor' demektir ve o "
+            "strateji canlıda hangi parametreyle çalıştırılacağı sorusuna cevap veremez."
+        ),
+    ),
+    Esik(
+        ad="asgari_islem",
+        alan="oos_islem",
+        sinir=30,
+        yon=">=",
+        gerekce=(
+            "Out-of-sample işlem sayısı. 30 işlemde win rate'in standart hatası ~%9; "
+            "daha azıyla 'bu strateji kazanıyor' cümlesi kurulamaz. Tarama eşiği 20'ydi "
+            "(aday elemek için); promotion daha yüksek bir kanıt seviyesi ister."
+        ),
+    ),
+    Esik(
+        ad="max_drawdown",
+        alan="oos_max_drawdown",
+        sinir=0.25,
+        yon="<=",
+        gerekce=(
+            "Out-of-sample azami düşüş. Faz 4'te al-tut kıyası %25,7 düştü; bir "
+            "stratejinin varlığın kendisinden daha derin düşmesi, aktif yönetimin "
+            "değer katmadığının işaretidir. Monte Carlo ayrıca gösterdi ki gerçekleşen "
+            "düşüş şanslı bir sıralamanın sonucu olabilir — bu yüzden eşik gerçekleşen "
+            "değere değil, kıyasa dayanıyor."
+        ),
+    ),
+    Esik(
+        ad="stres_dayanikliligi",
+        alan="stres_bozulma",
+        sinir=0.15,
+        yon="<=",
+        gerekce=(
+            "Temel senaryodan en kötü stres senaryosuna getiri farkı (yüzde puan). "
+            "Maliyet kalibrasyonu (K-021) bir tahmindir; slippage iki katına çıkınca "
+            "çöken bir strateji, kalibrasyonun doğruluğuna bahis oynamaktır."
+        ),
+    ),
+)
+
+#: `Sonuc.promotion_engelleri`nin ürettiği, sayısal olmayan engeller. Bunlar eşik değil,
+#: mutlak kapı: `dirty` bir ağaçtan çıkan sonuç ne kadar iyi olursa olsun geçemez.
+MUTLAK_ENGELLER: Final[tuple[str, ...]] = (
+    "dirty",  # K-009
+    "data_quality_warning",  # K-006
+    "gecici_maliyet_modeli",  # K-021
+)
+
+
+@dataclass(frozen=True, slots=True)
+class KapiSonucu:
+    """Bir stratejinin kapı değerlendirmesi."""
+
+    strateji: str
+    kapilar: dict[str, dict[str, Any]]
+    mutlak_engeller: list[str]
+
+    @property
+    def gecti(self) -> bool:
+        """Tüm kapılar geçildi ve mutlak engel yok mu.
+
+        Ölçülemeyen (`None`) bir kapı geçilmiş sayılmaz: "veri yoktu" ile "kapıdan geçti"
+        aynı şey değil, ve ikisini karıştırmak kapıyı sessizce kaldırmak olurdu.
+        """
+        return not self.mutlak_engeller and all(
+            k["gecti"] is True for k in self.kapilar.values()
+        )
+
+    @property
+    def kalan_kapilar(self) -> list[str]:
+        return [ad for ad, k in self.kapilar.items() if k["gecti"] is not True]
+
+    def sozluk(self) -> dict[str, Any]:
+        return {
+            "strateji": self.strateji,
+            "gecti": self.gecti,
+            "kalan_kapilar": self.kalan_kapilar,
+            "mutlak_engeller": self.mutlak_engeller,
+            "kapilar": self.kapilar,
+        }
+
+
+def degerlendir(
+    strateji: str,
+    olcumler: Mapping[str, Any],
+    *,
+    mutlak_engeller: list[str] | None = None,
+) -> KapiSonucu:
+    """Ölçümleri eşiklere karşı değerlendirir. (K-019)
+
+    `olcumler` `ESIKLER`in `alan` adlarını taşıyan bir sözlük; eksik alan "ölçülemedi"
+    demektir ve o kapı geçilmemiş sayılır.
+    """
+    kapilar: dict[str, dict[str, Any]] = {}
+    for esik in ESIKLER:
+        deger = olcumler.get(esik.alan)
+        kapilar[esik.ad] = {
+            "deger": deger,
+            "sinir": esik.sinir,
+            "yon": esik.yon,
+            "gecti": esik.gecti_mi(deger),
+        }
+    return KapiSonucu(
+        strateji=strateji,
+        kapilar=kapilar,
+        mutlak_engeller=list(mutlak_engeller or []),
+    )
+
+
+def esik_tablosu() -> list[dict[str, Any]]:
+    """Eşiklerin gerekçeleriyle birlikte listesi — rapora ve dokümana gider."""
+    return [e.sozluk() for e in ESIKLER]

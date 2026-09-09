@@ -80,13 +80,29 @@ class Backtest:
         bar_dizileri: Mapping[str, np.ndarray],
         *,
         veri_sha256: str = "",
+        olcum_baslangici: int = 0,
     ) -> Sonuc:
-        """Backtest'i koşturur ve tam sonuç kaydını döndürür."""
+        """Backtest'i koşturur ve tam sonuç kaydını döndürür.
+
+        `olcum_baslangici`: bu indeksten **önceki** barlar yalnızca indikatör ısınması
+        içindir — orada üretilen sinyaller işleme dönmez ve equity eğrisi ile metrikler
+        o indeksten başlar.
+
+        Faz 4'ün walk-forward'ı için var. Bir katmanı yalnızca kendi barlarıyla
+        koşturmak, indikatörleri sıfırdan ısıtmak demek olurdu — oysa canlıda o tarihe
+        gelindiğinde geçmiş veri elde olurdu. İndikatörler nedensel olduğu için (K-002)
+        önceki barları hesaba katmak look-ahead değil, **gerçekçilik**tir; ölçümü o
+        barlardan başlatmak ise katmanın sınırını korur.
+        """
         adim = timeframe_ms(timeframe)
         gorunum = gorunum_kur(sembol, timeframe, bar_dizileri, self.strateji)
         n = len(gorunum)
         if n < 2:
             raise BacktestHatasi(f"backtest için en az 2 bar gerekir, verilen: {n}")
+        if not 0 <= olcum_baslangici < n - 1:
+            raise BacktestHatasi(
+                f"ölçüm başlangıcı 0..{n - 2} aralığında olmalı, verilen: {olcum_baslangici}"
+            )
 
         acilis = gorunum.barlar["open"]
         kapanis = gorunum.barlar["close"]
@@ -127,7 +143,9 @@ class Backtest:
                 sinyal = self.strateji.on_bar(ctx)
                 if sinyal is not None:
                     uretilen += 1
-                    if i == n - 1:
+                    if i < olcum_baslangici:
+                        atlanan.append(AtlamaSebebi.ISINMA_PENCERESI)
+                    elif i == n - 1:
                         # Son barın sinyali dolacağı barı bulamaz. Bir sonraki barın
                         # açılışını beklemek yerine kendi kapanışından doldurmak K-004'ün
                         # açıkça yasakladığı şey olurdu.
@@ -140,19 +158,28 @@ class Backtest:
             ozkaynak[i] = portfoy.ozkaynak(fiyat)
             maruziyet[i] = portfoy.maruziyet(fiyat)
 
-        sayim = Counter(str(k) for k in kalite)
-        ok_olmayan = n - sayim.get(str(KaliteDurumu.OK), 0)
+        # Ölçüm penceresi: ısınma barları kayda girmez. Girselerdi katmanın Sharpe'ı
+        # işlem yapılmayan düz barlarla sulandırılır ve katmanlar arası karşılaştırma
+        # ısınma uzunluğuna göre değişirdi.
+        ozkaynak = ozkaynak[olcum_baslangici:]
+        maruziyet = maruziyet[olcum_baslangici:]
+        olcum_zamanlari = np.asarray(zamanlar)[olcum_baslangici:]
+        olcum_kalite = np.asarray(kalite)[olcum_baslangici:]
+        olcum_n = len(olcum_zamanlari)
+
+        sayim = Counter(str(k) for k in olcum_kalite)
+        ok_olmayan = olcum_n - sayim.get(str(KaliteDurumu.OK), 0)
 
         return Sonuc(
             veri=VeriKimligi(
                 sembol=sembol,
                 timeframe=timeframe,
                 sha256=veri_sha256,
-                bar_sayisi=n,
-                ilk_ms=int(zamanlar[0]),
-                son_ms=int(zamanlar[-1]),
+                bar_sayisi=olcum_n,
+                ilk_ms=int(olcum_zamanlari[0]),
+                son_ms=int(olcum_zamanlari[-1]),
                 ok_olmayan_bar=ok_olmayan,
-                ok_olmayan_oran=ok_olmayan / n,
+                ok_olmayan_oran=ok_olmayan / olcum_n,
                 kalite_sayimi=dict(sayim),
             ),
             strateji=self.strateji.sozluk(),
@@ -163,7 +190,7 @@ class Backtest:
             islemler=islemler,
             ozkaynak=ozkaynak,
             maruziyet=maruziyet,
-            zamanlar=np.asarray(zamanlar),
+            zamanlar=olcum_zamanlari,
             atlanan=atlama_sayimi(atlanan),
             uretilen_sinyal=uretilen,
             acik_pozisyon_sonda=portfoy.acik,

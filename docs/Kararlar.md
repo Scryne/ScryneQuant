@@ -924,6 +924,102 @@ kabul, gizlenmiş bir varsayım değil — hem üreticinin hem testin docstring'
 
 ---
 
+## K-019 — Promotion kapılarının sayısal eşikleri
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 4 · **Kapatır:** K-010'un ve K-018/3'ün
+açık bıraktığı sayılar · **Rapor:** `docs/Faz-4-Laboratuvar-Raporu.md`
+
+K-018 şunu şart koşmuştu: *"K-010'un kapıları sayısal eşiklerle tanımlanır ve makine
+kontrol eder. 'Sonuçlara bak ve karar ver' bir kapı değildir."* Eşikler Faz 4 sonunda
+gerçek veriyle kalibre edilecekti. Bu karar o eşikleri sabitliyor.
+
+**Karar — yedi kapı, hepsi sayısal:**
+
+| Kapı | Eşik | Gerekçe |
+| --- | --- | --- |
+| `oos_sharpe` | ≥ 0,50 | Al-tut kıyasının in-sample Sharpe'ı 0,70 ölçüldü. Kıyasın belirgin altında kalan bir strateji, sermayeyi piyasada tutmak yerine sistemde tutmak için gerekçe üretemez. 0,50 kıyası geçmeyi şart koşmuyor ama sıfıra yakın Sharpe'ları eliyor. |
+| `oos_is_orani` | ≥ 0,50 | Overfitting'in en doğrudan ölçüsü. Faz 4'te altı stratejinin **altısında da** negatif çıktı (−0,09 … −4,15). "IS performansının en az yarısı korunmuş olmalı." |
+| `wf_katman_basari` | ≥ 0,60 | Walk-forward katmanlarının kaçı pozitif. Bileşik getiri tek bir şanslı katmandan gelebilir. Ölçülen: 7-10/16, yani yazı-tura. |
+| `parametre_kararliligi` | ≤ 0,35 | Katmanlar arası benzersiz parametre değeri oranı. Ölçülen 0,15-0,25. Üstü, "canlıda hangi parametreyle çalıştıracağız" sorusunun cevapsız olması demek. |
+| `asgari_islem` | ≥ 30 | 30 işlemde win rate'in standart hatası ~%9. Tarama eşiği 20'ydi (aday elemek için); promotion daha yüksek kanıt ister. |
+| `max_drawdown` | ≤ 0,25 | Kıyas %25,7 düştü. Varlığın kendisinden derin düşen aktif yönetim değer katmıyor. Eşik gerçekleşen değere değil kıyasa dayanıyor — çünkü Monte Carlo gerçekleşen düşüşün şanslı bir sıralama olabileceğini gösterdi. |
+| `stres_dayanikliligi` | ≤ 0,15 | Temel senaryodan en kötü stres senaryosuna getiri farkı (yüzde puan). Maliyet kalibrasyonu (K-021) bir tahmindir; slippage iki katına çıkınca çöken strateji, kalibrasyonun doğruluğuna bahis oynamaktır. |
+
+Bunlara ek olarak **üç mutlak engel** sayısal sonuçtan bağımsız olarak kapıyı kapatır:
+`dirty` (K-009), `data_quality_warning` (K-006), `gecici_maliyet_modeli` (K-021).
+
+**Ölçülemeyen kapı geçilmiş sayılmaz.** "Veri yoktu" ile "kapıdan geçti" aynı şey değil;
+ikisini karıştırmak kapıyı sessizce kaldırmak olurdu.
+
+**Eşikler bugünkü sonuca göre ayarlanmadı — ayarlansaydı kapı kaldırılmış olurdu.** Faz
+4'te ölçülen **yedi stratejinin yedisi de kaldı** (kıyas dahil) ve bu doğru sonuçtur.
+`tests/unit/test_kapilar.py::test_faz4_olcumlerinden_hicbiri_gecmiyor` gevşetmeyi yakalar:
+eşikleri indiren biri testi kırar ve karar günlüğüne gerekçe yazmak zorunda kalır. K-018'in
+"sayısal eşik esnetilemez, değiştirmek iz bırakır" cümlesinin mekanizması budur.
+
+**Kapsam sınırı:** K-018/3 beşinci bir aday saymıştı — paper/backtest drift üst sınırı. O
+ölçüm Faz 6'da (paper trading) mümkün olacak; kapı listesine o zaman eklenecek.
+
+**Faz 4 eşikleri belirledi, Faz 5 uygular.** `research/kapilar.py` bir sonucun kapılardan
+geçip geçmediğini **söyler**; sinyalin execution'a ulaşmasını engelleyen mekanizma risk
+motorunun işi.
+
+---
+
+## K-030 — Her karşılaştırmada al-tut kıyası bulunur
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 4
+
+**Karar:** Strateji karşılaştırmalarına `al_tut` (buy & hold) kıyası **otomatik** eklenir;
+istenmesine bırakılmaz. Kıyas `KUTUPHANE`de değil ayrı bir `KIYAS` sözlüğünde durur ve
+beş aileden sayılmaz.
+
+**Gerekçe:** Bir stratejinin "%15 kazandı" cümlesi tek başına hiçbir şey söylemez. Aynı
+dönemde varlık %39 yükseldiyse o strateji para kazandırmadı, **kaybettirdi** — sermayeyi
+piyasada tutmak yerine sistemde tuttu ve farkı fırsat maliyeti olarak ödetti.
+
+Bu teorik bir endişe değil, Faz 4'ün ana bulgusu: walk-forward'da `donchian` +%14,4 ile en
+iyi strateji görünüyordu; kıyas **+%39,0** getirdi ve Sharpe'ı (0,86) hepsinden yüksekti.
+Kıyas tabloda olmasaydı o satır "donchian çalışıyor" diye okunurdu.
+
+**Kıyasın adil olması için diğer stratejilerle aynı yoldan geçer:** aynı `ctx` sözleşmesi,
+aynı fill kuralı (K-004), aynı komisyon ve slippage (K-007), aynı hedef maruziyet.
+`close[-1]/close[0]` hesaplamak daha kolay olurdu ama maliyetsiz ve fill'siz bir kıyas
+stratejileri haksız yere kötü gösterirdi.
+
+**İki istisna kayıtlı:** (1) kıyasın ızgarası tek noktalıdır — kıyas sabit bir çizgi
+olmalı, ayarlanan bir rakip değil. (2) asgari işlem şartı kıyasa uygulanmaz: al-tut
+pozisyonu pencerenin sonunda açık bırakır, yani kapanmış tur sayısı sıfırdır. Şart
+parametre seçimi için var; kıyasta seçilecek bir şey yok. İkisi de ölçülerek öğrenildi —
+şart ilk denemede kıyası tablodan sildi.
+
+---
+
+## K-031 — Strateji, sinyalinin kabul edildiğini varsayamaz
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 4 · **Detaylandırır:** K-002, K-003
+
+**Karar:** Bir strateji kendi içinde durum tutabilir, ama o durum **sinyalin kabul
+edildiği varsayımına dayanamaz.** "Girdim, artık sinyal üretmeyeceğim" biçiminde bir bayrak
+yasaktır; pozisyon durumu `ctx.pozisyon`dan okunur.
+
+**Gerekçe — ölçülen hata:** `al_tut` kıyasının ilk hâli bir `_girildi` bayrağı tutuyordu.
+Walk-forward katmanında bayrak **ısınma barında** kalktı; o barda üretilen sinyal ölçüm
+penceresine girmediği için atıldı (K-028'in `isinma_penceresi` yolu); strateji bir daha hiç
+sinyal üretmedi. Kıyas çizgisi karşılaştırma tablosunda **%0,0 getiri** olarak göründü —
+çökme yok, uyarı yok, sadece sessizce yanlış bir sayı.
+
+**Bu hata sınıfı Faz 5'te büyüyecek.** Bugün sinyali yutan tek yol ısınma penceresi ve
+`ok` olmayan bar (K-028). Risk motoru devreye girdiğinde (Faz 5) sinyaller **rutin olarak**
+reddedilecek: exposure limiti, günlük zarar limiti, cooldown, kill switch. Durumunu
+sinyalin kabulüne bağlayan her strateji o gün sessizce bozulur.
+
+**Sonucu:** `Sinyal.target_exposure`ın mutlak hedef olması (delta değil) bu kuralın ön
+koşuluydu — ve şimdi gerekçesi somutlaştı. Mutlak hedef, kaçırılan bir sinyalden sonra
+kendini bir sonraki barda düzeltir; delta düzeltemez.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -934,7 +1030,7 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-015 | Binance erişimi, rate limit, testnet | ✅ **kabul** | Spike 1 |
 | K-016 | Fee/slippage'ın kesin sayıları | ✅ **kabul** | Fee: Spike 4. Slippage → K-021 |
 | K-017 | Birincil timeframe ve veri hacmi | ✅ **kabul** (1h) | Spike 2 |
-| K-019 | Promotion kapılarının sayısal eşikleri | ⏳ açık | Faz 4 sonu |
+| K-019 | Promotion kapılarının sayısal eşikleri | ✅ **kabul** | Faz 4, kapandı 2026-09-09 |
 | K-020 | Slippage kalibrasyonu (ilk yöntem) | ⛔ değiştirildi → K-021 | — |
 | K-021 | Slippage'ın yürütme penceresinden kalibrasyonu | ✅ **kabul** (5,2996 bps) | Faz 1, kapandı 2026-09-09 |
 | K-022 | Bağımlılık kilidi (`uv`) | ✅ **kabul** | Faz 1 başlangıcı |
@@ -945,12 +1041,16 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-027 | Strateji izolasyonu izin listesiyle zorlanır | ✅ **kabul** | Faz 2 |
 | K-028 | `ok` olmayan barda karar da fill de yok | ✅ **kabul** | Faz 3 |
 | K-029 | Backtest referansı kapalı formülle çapraz doğrulanır | ✅ **kabul** | Faz 3 |
+| K-030 | Her karşılaştırmada al-tut kıyası bulunur | ✅ **kabul** | Faz 4 |
+| K-031 | Strateji sinyalinin kabul edildiğini varsayamaz | ✅ **kabul** | Faz 4 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
-K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u ekledi.** Geriye tek açık karar
-kaldı: **K-019** (promotion kapılarının sayısal eşikleri), Faz 4 sonunda kapanacak.
-Faz 3 ayrıca K-019'un işini kolaylaştıracak iki bayrak üretti: `Metrikler.yillik_anlamli`
-(pencere yıllıklandırmaya yetiyor mu) ve `Sonuc.promotion_engelleri`.
+K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i ekledi.**
+
+**Açık karar kalmadı.** Projenin son açık kararı olan **K-019** (promotion kapılarının
+sayısal eşikleri) Faz 4 sonunda gerçek veriyle kalibre edilip kapandı. Bundan sonraki
+kararlar yeni fazların kendi soruları olacak; K-018/3'ün beşinci eşik adayı
+(paper/backtest drift üst sınırı) Faz 6'da ölçülebilir hâle gelince K-019'a eklenecek.
 
 ### Faz 0'dan çıkan, karar olmayan ama bağlayıcı gereksinimler
 

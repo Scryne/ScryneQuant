@@ -54,6 +54,9 @@ DEFTER: Final[dict[str, Kayit]] = {
     "atr": Kayit(("high", "low", "close"), ("pencere",), ("",), ind.atr),
     "true_range": Kayit(("high", "low", "close"), (), ("",), ind.gercek_aralik),
     "hacim_sma": Kayit(("volume",), ("pencere",), ("",), ind.hacim_ortalamasi),
+    "en_yuksek": Kayit(("high",), ("pencere",), ("",), ind.en_yuksek),
+    "en_dusuk": Kayit(("low",), ("pencere",), ("",), ind.en_dusuk),
+    "roc": Kayit(("close",), ("pencere",), ("",), ind.roc),
     "bollinger": Kayit(
         ("close",),
         ("pencere", "katsayi"),

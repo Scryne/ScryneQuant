@@ -117,6 +117,11 @@ def _vaka(ad: str, aciklama: str, ohlcv: dict[str, np.ndarray], pencereler: dict
         beklenen[f"bollinger_{n}_{katsayi:g}_alt"] = _liste(alt)
     for n in pencereler["hacim"]:
         beklenen[f"hacim_sma_{n}"] = _liste(talib.SMA(v, n))
+    for n in pencereler["kanal"]:
+        beklenen[f"enyuksek_{n}"] = _liste(talib.MAX(h, n))
+        beklenen[f"endusuk_{n}"] = _liste(talib.MIN(d, n))
+    for n in pencereler["roc"]:
+        beklenen[f"roc_{n}"] = _liste(talib.ROC(k, n))
 
     return {
         "ad": ad,
@@ -134,6 +139,8 @@ def main() -> int:
         "atr": (14,),
         "bollinger": ((20, 2.0),),
         "hacim": (20,),
+        "kanal": (20, 55),
+        "roc": (10, 20),
     }
     dar = {
         "sma": (5,),
@@ -142,6 +149,8 @@ def main() -> int:
         "atr": (14,),
         "bollinger": ((5, 2.0),),
         "hacim": (5,),
+        "kanal": (5,),
+        "roc": (3,),
     }
 
     duz = np.full(40, 100.0)

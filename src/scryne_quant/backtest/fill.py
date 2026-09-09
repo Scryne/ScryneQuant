@@ -49,6 +49,9 @@ class IslemYonu(StrEnum):
 class AtlamaSebebi(StrEnum):
     """Bir sinyalin neden işleme dönüşmediği. Sessiz kayıp olmasın diye sayılır."""
 
+    ISINMA_PENCERESI = "isinma_penceresi"
+    """Sinyal ölçüm penceresinden önce üretildi; o barlar yalnızca indikatör ısınması için var."""
+
     SONRAKI_BAR_YOK = "sonraki_bar_yok"
     """Sinyal son barda üretildi; dolacağı `t+1` barı yok (K-004)."""
 

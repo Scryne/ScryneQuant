@@ -33,6 +33,16 @@ from scryne_quant.data.kalibrasyon import (
 )
 from scryne_quant.exchange.binance import BinanceAdaptoru
 from scryne_quant.features.barlar import bar_dizileri
+from scryne_quant.research import analiz as analiz_mod
+from scryne_quant.research import bolme, tekrar
+from scryne_quant.research import degerlendirme as degerlendirme_mod
+from scryne_quant.research import deney as deney_mod
+from scryne_quant.research import karsilastirma as karsilastirma_mod
+from scryne_quant.research import tarama as tarama_mod
+from scryne_quant.research import walkforward as wf_mod
+from scryne_quant.research.izgaralar import izgara as varsayilan_izgara
+from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE, coz
+from scryne_quant.strategy.kutuphane import aile as _aile
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
 
 #: Backtest sonuç kayıtlarının yazıldığı dizin (`.gitignore`'da).
@@ -49,6 +59,11 @@ app = typer.Typer(
 )
 data_app = typer.Typer(name="data", help="Market verisi: indirme, kalite, kalibrasyon.")
 app.add_typer(data_app)
+lab_app = typer.Typer(
+    name="lab",
+    help="Strateji laboratuvarı: tarama, walk-forward, Monte Carlo, stres, karşılaştırma.",
+)
+app.add_typer(lab_app)
 
 Depo = Annotated[Path, typer.Option("--depo", help="Parquet depo kökü.")]
 JsonCikti = Annotated[bool, typer.Option("--json", help="Çıktıyı JSON olarak ver.")]
@@ -432,6 +447,529 @@ def backtest(
         )
     if yol:
         typer.echo(f"  kayıt       : {yol}")
+
+
+# ------------------------------------------------------------------------ lab
+
+
+def _lab_veri(depo: Path, sembol: str, timeframe: str):
+    """Depodan bar dizileri + veri kimliği. Her lab komutunun ilk adımı."""
+    d = ParquetDepo(depo)
+    return bar_dizileri(d.oku(sembol, timeframe)), d.sha256(sembol, timeframe)
+
+
+def _maliyet_govdesi(model: maliyet_mod.MaliyetModeli) -> dict[str, Any]:
+    """Maliyet modelinin deney kaydına giden hâli.
+
+    Tekrar bu bloğu okur, `config/maliyet.json`ın **bugünkü** hâlini değil — aksi hâlde
+    kalibrasyon güncellendiği gün eski deneyler sessizce farklı sonuç verirdi (K-009).
+    """
+    return {
+        "fee_taker_bps": model.fee_taker_bps,
+        "slippage_bps": model.slippage_bps,
+        "kalibrasyon": model.kalibrasyon.model_dump() if model.kalibrasyon else None,
+    }
+
+
+def _tam_pencere(diziler: dict[str, Any], strateji_adi: str) -> bolme.Pencere:
+    """Isınma sonrası tüm veriyi kapsayan pencere."""
+    return bolme.Pencere(
+        "tam",
+        baslangic=karsilastirma_mod.ortak_isinma([strateji_adi]),
+        bitis=len(diziler["open_time"]),
+        isinma_baslangic=0,
+    )
+
+
+Sembol = Annotated[str, typer.Argument(help="Örn. BTCUSDT")]
+Timeframe = Annotated[str, typer.Option("--timeframe", "-t")]
+Sermaye = Annotated[float, typer.Option("--sermaye")]
+Olcut = Annotated[str, typer.Option("--olcut", help="sharpe | calmar | getiri | profit_factor")]
+KayitKok = Annotated[Path, typer.Option("--deney-kok", help="Deney kayıtlarının kökü.")]
+StratejiAdi = Annotated[str, typer.Argument(help="Kütüphanedeki strateji adı.")]
+
+
+@lab_app.command("stratejiler")
+def lab_stratejiler(json_cikti: JsonCikti = False) -> None:
+    """Kütüphanedeki stratejileri ve varsayılan ızgaralarını listeler."""
+    hepsi = {**KUTUPHANE, **KIYAS}
+    govde = {
+        ad: {
+            "sinif": f"{sinif.__module__}.{sinif.__qualname__}",
+            "aile": _aile(ad),
+            "varsayilan": dict(sinif().parametreler),
+            "izgara": {a: list(d) for a, d in varsayilan_izgara(ad).items()},
+            "isinma_bar": sinif().isinma_bar(),
+        }
+        for ad, sinif in hepsi.items()
+    }
+    if json_cikti:
+        _yaz_json(govde)
+        return
+    for ad, bilgi in govde.items():
+        boyut = 1
+        for degerler in bilgi["izgara"].values():
+            boyut *= len(degerler)
+        typer.echo(
+            f"{ad:<14} aile={bilgi['aile']:<15} ızgara={boyut:>4} ısınma={bilgi['isinma_bar']}"
+        )
+
+
+@lab_app.command("tara")
+def lab_tara(
+    strateji: StratejiAdi,
+    sembol: Sembol = "BTCUSDT",
+    timeframe: Timeframe = "1h",
+    oos_orani: Annotated[float, typer.Option("--oos", help="OOS payı [0.1, 0.5].")] = 0.30,
+    olcut: Olcut = "sharpe",
+    sermaye: Sermaye = 10_000.0,
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Bir stratejinin parametre ızgarasını in-sample penceresinde tarar."""
+    sinif = coz(strateji)
+    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    model = maliyet_mod.yukle()
+    secenekler = varsayilan_izgara(strateji)
+
+    ins, _ = karsilastirma_mod.ortak_pencereler(
+        len(diziler["open_time"]), [strateji], oos_orani=oos_orani
+    )
+    sonuc = tarama_mod.tara(
+        sinif, secenekler, model, sembol, timeframe, diziler, ins,
+        olcut=olcut, baslangic_sermaye=sermaye,
+    )
+
+    yol = deney_mod.Deney(
+        tip="tarama", strateji=strateji, veri_sha256=veri_hash,
+        girdi={
+            "sembol": sembol, "timeframe": timeframe,
+            "izgara": {a: list(d) for a, d in secenekler.items()},
+            "pencere": ins.sozluk(), "olcut": olcut,
+            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+            "asgari_islem": sonuc.asgari_islem,
+        },
+        cikti=sonuc.sozluk(),
+    ).yaz(deney_kok)
+
+    if json_cikti:
+        _yaz_json({"deney": str(yol), **sonuc.sozluk()})
+        return
+
+    en_iyi = sonuc.en_iyi
+    typer.echo(f"{strateji} · {sembol} {timeframe} · IS {ins.uzunluk:,} bar · ölçüt={olcut}")
+    typer.echo(
+        f"  aday {len(sonuc.adaylar)} "
+        f"({len(sonuc.gecerliler)} geçerli, ≥{sonuc.asgari_islem} işlem)"
+    )
+    typer.echo(f"  plato oranı {sonuc.ust_yuzde_plato():.2f}   duyarlılık {sonuc.duyarlilik():.3f}")
+    if en_iyi is None:
+        typer.secho(
+            "  geçerli aday yok — ızgara veya asgari işlem şartı gözden geçirilmeli",
+            fg=typer.colors.YELLOW,
+        )
+    else:
+        m = en_iyi.metrikler
+        typer.echo(f"  en iyi: {en_iyi.sozluk_parametreler}")
+        typer.echo(
+            f"    skor {en_iyi.skor:.3f} · işlem {m.islem_sayisi} · getiri {m.toplam_getiri:.1%}"
+            f" · maxDD {m.max_drawdown:.1%} · PF {m.profit_factor:.3f}"
+        )
+    typer.echo(f"  deney: {yol}")
+
+
+@lab_app.command("walkforward")
+def lab_walkforward(
+    strateji: StratejiAdi,
+    sembol: Sembol = "BTCUSDT",
+    timeframe: Timeframe = "1h",
+    egitim: Annotated[int, typer.Option("--egitim", help="Eğitim penceresi (bar).")] = 8766,
+    test: Annotated[int, typer.Option("--test", help="Test penceresi (bar).")] = 2190,
+    sabit_capa: Annotated[
+        bool, typer.Option("--sabit-capa", help="Genişleyen eğitim penceresi.")
+    ] = False,
+    olcut: Olcut = "sharpe",
+    sermaye: Sermaye = 10_000.0,
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Walk-forward: her katmanda optimize et, sonraki katmanda test et."""
+    sinif = coz(strateji)
+    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    model = maliyet_mod.yukle()
+    secenekler = varsayilan_izgara(strateji)
+
+    n = len(diziler["open_time"])
+    isinma = karsilastirma_mod.ortak_isinma([strateji])
+    katmanlar = bolme.walk_forward(n, isinma, egitim, test, kaydirmali=not sabit_capa)
+    sonuc = wf_mod.calistir(
+        sinif, secenekler, model, sembol, timeframe, diziler, katmanlar,
+        olcut=olcut, baslangic_sermaye=sermaye,
+        # Kıyas ölçütünde optimize edilecek bir şey yok ve kapanmış tur da yok.
+        asgari_islem=0 if strateji in KIYAS else tarama_mod.ASGARI_ISLEM,
+    )
+
+    yol = deney_mod.Deney(
+        tip="walk_forward", strateji=strateji, veri_sha256=veri_hash,
+        girdi={
+            "sembol": sembol, "timeframe": timeframe,
+            "izgara": {a: list(d) for a, d in secenekler.items()},
+            "bar_sayisi": n, "isinma": isinma, "egitim_bar": egitim, "test_bar": test,
+            "kaydirmali": not sabit_capa, "olcut": olcut,
+            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+        },
+        cikti=sonuc.sozluk(),
+    ).yaz(deney_kok)
+
+    if json_cikti:
+        _yaz_json({"deney": str(yol), **sonuc.sozluk()})
+        return
+
+    b = sonuc.bilesik_metrikler
+    kip = "sabit çapa" if sabit_capa else "kaydırmalı"
+    typer.echo(
+        f"{strateji} · {sembol} {timeframe} · {len(katmanlar)} katman "
+        f"(eğitim {egitim:,} / test {test:,} bar, {kip})"
+    )
+    typer.echo(f"  başarılı katman: {len(sonuc.basarili_katmanlar)}/{len(sonuc.katmanlar)}")
+    typer.echo("")
+    typer.echo("  bileşik OOS:")
+    typer.echo(
+        f"    sermaye {b.baslangic_sermaye:,.0f} → {b.bitis_sermaye:,.2f} "
+        f"({b.toplam_getiri:+.1%})"
+    )
+    typer.echo(
+        f"    Sharpe {b.sharpe:.3f} · maxDD {b.max_drawdown:.1%} · "
+        f"işlem {b.islem_sayisi} · PF {b.profit_factor:.3f}"
+    )
+    typer.echo("")
+    typer.echo("  parametre kararlılığı (katmanlar arası):")
+    kararlilik = sonuc.parametre_kararliligi()
+    for ad, bilgi in kararlilik["parametreler"].items():
+        ek = f" · dk={bilgi['degisim_katsayisi']:.2f}" if "degisim_katsayisi" in bilgi else ""
+        typer.echo(
+            f"    {ad:<16} benzersiz {bilgi['benzersiz']}/{kararlilik['katman']}{ek}"
+            f"  {bilgi['degerler']}"
+        )
+    typer.echo(f"  deney: {yol}")
+
+
+@lab_app.command("montecarlo")
+def lab_montecarlo(
+    strateji: StratejiAdi,
+    sembol: Sembol = "BTCUSDT",
+    timeframe: Timeframe = "1h",
+    deneme: Annotated[int, typer.Option("--deneme")] = 1_000,
+    seed: Annotated[int, typer.Option("--seed")] = 0,
+    sermaye: Sermaye = 10_000.0,
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """İşlem sırasını karıştırıp düşüş dağılımını çıkarır."""
+    sinif = coz(strateji)
+    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    model = maliyet_mod.yukle()
+    pencere = _tam_pencere(diziler, strateji)
+
+    nesne = sinif()
+    kosu_sonucu = tarama_mod.kosu(
+        nesne, model, sembol, timeframe, diziler, pencere, baslangic_sermaye=sermaye
+    )
+    sonuc = analiz_mod.monte_carlo(kosu_sonucu.islemler, sermaye, deneme=deneme, seed=seed)
+
+    yol = deney_mod.Deney(
+        tip="monte_carlo", strateji=strateji, veri_sha256=veri_hash, seed=seed,
+        girdi={
+            "sembol": sembol, "timeframe": timeframe,
+            "parametreler": dict(nesne.parametreler),
+            "pencere": pencere.sozluk(), "deneme": deneme,
+            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+        },
+        cikti=sonuc.sozluk(),
+    ).yaz(deney_kok)
+
+    if json_cikti:
+        _yaz_json({"deney": str(yol), **sonuc.sozluk()})
+        return
+
+    typer.echo(f"{strateji} · {sonuc.islem_sayisi} işlem · {deneme:,} deneme · seed={seed}")
+    typer.echo(
+        f"  gerçekleşen: maxDD {sonuc.gercek_max_drawdown:.1%} · "
+        f"getiri {sonuc.gercek_getiri:+.1%}"
+    )
+    typer.echo(
+        "  max drawdown dağılımı: "
+        + "  ".join(f"{p}={v:.1%}" for p, v in sonuc.drawdown_dagilimi.items())
+    )
+    typer.echo(
+        "  getiri dağılımı      : "
+        + "  ".join(f"{p}={v:+.1%}" for p, v in sonuc.getiri_dagilimi.items())
+    )
+    typer.echo(f"  gerçekleşenden kötü çıkan deneme oranı: {sonuc.kotu_kuyruk_orani:.1%}")
+    typer.echo(f"  deney: {yol}")
+
+
+@lab_app.command("stres")
+def lab_stres(
+    strateji: StratejiAdi,
+    sembol: Sembol = "BTCUSDT",
+    timeframe: Timeframe = "1h",
+    sermaye: Sermaye = 10_000.0,
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Maliyet varsayımlarını bozup stratejinin dayanıklılığını ölçer. (§15.1)"""
+    sinif = coz(strateji)
+    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    model = maliyet_mod.yukle()
+    pencere = _tam_pencere(diziler, strateji)
+
+    nesne = sinif()
+    sonuc = analiz_mod.stres(
+        nesne, model, sembol, timeframe, diziler, pencere, baslangic_sermaye=sermaye
+    )
+
+    yol = deney_mod.Deney(
+        tip="stres", strateji=strateji, veri_sha256=veri_hash,
+        girdi={
+            "sembol": sembol, "timeframe": timeframe,
+            "parametreler": dict(nesne.parametreler),
+            "pencere": pencere.sozluk(), "baslangic_sermaye": sermaye,
+            "maliyet": _maliyet_govdesi(model),
+        },
+        cikti=sonuc.sozluk(),
+    ).yaz(deney_kok)
+
+    if json_cikti:
+        _yaz_json({"deney": str(yol), **sonuc.sozluk()})
+        return
+
+    typer.echo(f"{strateji} · {sembol} {timeframe} · stres senaryoları")
+    typer.echo(
+        f"  {'senaryo':<14}{'fee':>7}{'slip':>7}{'getiri':>9}"
+        f"{'sharpe':>8}{'maxDD':>8}{'maliyet':>11}"
+    )
+    for ad, s in sonuc.senaryolar.items():
+        typer.echo(
+            f"  {ad:<14}{s['fee_taker_bps']:>7.1f}{s['slippage_bps']:>7.2f}"
+            f"{s['toplam_getiri']:>9.1%}{s['sharpe']:>8.2f}{s['max_drawdown']:>8.1%}"
+            f"{s['toplam_maliyet']:>11,.0f}"
+        )
+    typer.echo(
+        f"  dayanıklı: {'evet' if sonuc.dayanikli else 'HAYIR'} · "
+        f"bozulma {sonuc.bozulma():.1%} puan"
+    )
+    typer.echo(f"  deney: {yol}")
+
+
+@lab_app.command("karsilastir")
+def lab_karsilastir(
+    sembol: Sembol = "BTCUSDT",
+    timeframe: Timeframe = "1h",
+    oos_orani: Annotated[float, typer.Option("--oos", help="OOS payı [0.1, 0.5].")] = 0.30,
+    olcut: Olcut = "sharpe",
+    sermaye: Sermaye = 10_000.0,
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Beş aileyi aynı veri ve aynı maliyetle IS/OOS olarak yan yana koyar. (Faz 4)"""
+    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    model = maliyet_mod.yukle()
+    adlar = [*KUTUPHANE, *KIYAS]
+
+    sonuc = karsilastirma_mod.calistir(
+        model, sembol, timeframe, diziler, stratejiler=adlar,
+        oos_orani=oos_orani, olcut=olcut, baslangic_sermaye=sermaye, veri_sha256=veri_hash,
+    )
+
+    yol = deney_mod.Deney(
+        tip="karsilastirma", strateji="+".join(adlar), veri_sha256=veri_hash,
+        girdi={
+            "sembol": sembol, "timeframe": timeframe, "stratejiler": adlar,
+            "oos_orani": oos_orani, "olcut": olcut,
+            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+        },
+        cikti=sonuc.sozluk(),
+    ).yaz(deney_kok)
+
+    if json_cikti:
+        _yaz_json({"deney": str(yol), **sonuc.sozluk()})
+        return
+
+    typer.echo(
+        f"{sembol} {timeframe} · IS {sonuc.ins_pencere['uzunluk']:,} bar · "
+        f"OOS {sonuc.oos_pencere['uzunluk']:,} bar · ölçüt={olcut}"
+    )
+    typer.echo("")
+    typer.echo(
+        f"  {'strateji':<13}{'aile':<16}{'plato':>7}{'IS-shp':>8}{'OOS-shp':>9}"
+        f"{'OOS/IS':>8}{'OOS-get':>9}{'OOS-DD':>8}{'işlem':>7}"
+    )
+    for s in sonuc.satirlar:
+        if s.ins is None or s.oos is None:
+            typer.echo(f"  {s.strateji:<13}{s.aile:<16}  geçerli aday yok")
+            continue
+        typer.echo(
+            f"  {s.strateji:<13}{s.aile:<16}{s.plato_orani:>7.2f}{s.ins.sharpe:>8.2f}"
+            f"{s.oos.sharpe:>9.2f}{s.oos_is_sharpe_orani:>8.2f}"
+            f"{s.oos.toplam_getiri:>9.1%}{s.oos.max_drawdown:>8.1%}{s.oos.islem_sayisi:>7}"
+        )
+    typer.echo("")
+    typer.echo(f"  deney: {yol}")
+
+
+@lab_app.command("deneyler")
+def lab_deneyler(
+    tip: Annotated[str | None, typer.Option("--tip", help="tarama | walk_forward | ...")] = None,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Kayıtlı deneyleri listeler."""
+    yollar = deney_mod.listele(deney_kok, tip)
+    if json_cikti:
+        _yaz_json([str(y) for y in yollar])
+        return
+    if not yollar:
+        typer.echo("kayıtlı deney yok")
+        return
+    for y in yollar:
+        k = deney_mod.oku(y)
+        typer.echo(f"{k['tip']:<15}{k['strateji']:<24}{k['zaman']}  {y.name}")
+
+
+@lab_app.command("dogrula")
+def lab_dogrula(
+    kayit_yolu: Annotated[Path, typer.Argument(help="Deney kaydı (.json).")],
+    depo: Depo = VARSAYILAN_DEPO,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Bir deneyi kaydından yeniden koşturur ve çıktı hash'ini doğrular. (Faz 4)
+
+    Faz 4'ün bitti kriteri "rastgele seçilen bir deney yeniden çalıştırılıp hash'i
+    doğrulanır" diyor; bu komut o kanıtın kendisi. Çıkış kodu 0 ise aynı, 1 ise değil —
+    yani bir betikten de çağrılabilir.
+    """
+    kayit = deney_mod.oku(kayit_yolu)
+    diziler, veri_hash = _lab_veri(depo, kayit["girdi"]["sembol"], kayit["girdi"]["timeframe"])
+    yeniden = tekrar.tekrar_uret(kayit, diziler, veri_hash)
+    ayni, aciklama = deney_mod.dogrula(kayit, yeniden)
+
+    if json_cikti:
+        _yaz_json(
+            {"kayit": str(kayit_yolu), "tip": kayit["tip"], "ayni": ayni, "aciklama": aciklama}
+        )
+        raise typer.Exit(0 if ayni else 1)
+
+    typer.echo(f"{kayit_yolu.name} · {kayit['tip']} · {kayit['strateji']}")
+    kimlik = kayit["kimlik"]
+    typer.echo(
+        f"  kayıt commit: {kimlik['commit']}{' (DIRTY)' if kimlik['dirty'] else ''}"
+    )
+    typer.echo(f"  veri: {kimlik['veri_sha256'][:16]}…")
+    if ayni:
+        typer.secho(f"  yeniden üretildi: {aciklama}", fg=typer.colors.GREEN)
+    else:
+        typer.secho(f"  YENİDEN ÜRETİLEMEDİ: {aciklama}", fg=typer.colors.RED)
+        raise typer.Exit(1)
+
+
+@lab_app.command("kapilar")
+def lab_kapilar(
+    sembol: Sembol = "BTCUSDT",
+    timeframe: Timeframe = "1h",
+    oos_orani: Annotated[float, typer.Option("--oos", help="OOS payı [0.1, 0.5].")] = 0.30,
+    egitim: Annotated[int, typer.Option("--egitim", help="WF eğitim penceresi (bar).")] = (
+        degerlendirme_mod.EGITIM_BAR
+    ),
+    test: Annotated[int, typer.Option("--test", help="WF test penceresi (bar).")] = (
+        degerlendirme_mod.TEST_BAR
+    ),
+    olcut: Olcut = "sharpe",
+    sermaye: Sermaye = 10_000.0,
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Her stratejiyi K-019 promotion kapılarına karşı değerlendirir. (K-010, K-018)
+
+    IS/OOS + walk-forward + stres zincirini koşturup eşiklere karşı geçer/kalır döndürür.
+    **Uygulamaz** — kapının zorlanması Faz 5'in risk motorunda. Burada üretilen şey karar
+    değil, kararın dayanağı.
+
+    Pahalıdır (7 strateji, 5,2 yıllık veride birkaç dakika). Promotion kararı ucuz
+    olmamalı.
+    """
+    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    model = maliyet_mod.yukle()
+    adlar = [*KUTUPHANE, *KIYAS]
+
+    sonuc = degerlendirme_mod.degerlendir(
+        model, sembol, timeframe, diziler, stratejiler=adlar, oos_orani=oos_orani,
+        olcut=olcut, baslangic_sermaye=sermaye, egitim_bar=egitim, test_bar=test,
+    )
+
+    yol = deney_mod.Deney(
+        tip="degerlendirme", strateji="+".join(adlar), veri_sha256=veri_hash,
+        girdi={
+            "sembol": sembol, "timeframe": timeframe, "stratejiler": adlar,
+            "oos_orani": oos_orani, "olcut": olcut, "egitim_bar": egitim, "test_bar": test,
+            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+        },
+        cikti=sonuc,
+    ).yaz(deney_kok)
+
+    if json_cikti:
+        _yaz_json({"deney": str(yol), **sonuc})
+        return
+
+    p = sonuc["pencereler"]
+    typer.echo(
+        f"{sembol} {timeframe} · IS {p['in_sample']['uzunluk']:,} / "
+        f"OOS {p['out_of_sample']['uzunluk']:,} bar · "
+        f"WF {p['walk_forward']['katman']} katman"
+    )
+    typer.echo("")
+    typer.echo("  K-019 eşikleri:")
+    for e in sonuc["esikler"]:
+        typer.echo(f"    {e['ad']:<24}{e['yon']} {e['sinir']}")
+    typer.echo("")
+
+    kapi_adlari = [e["ad"] for e in sonuc["esikler"]]
+    basliklar = "".join(f"{a[:9]:>10}" for a in kapi_adlari)
+    typer.echo(f"  {'strateji':<13}{basliklar}{'SONUÇ':>9}")
+    for ad, satir in sonuc["stratejiler"].items():
+        hucreler = ""
+        for kapi in kapi_adlari:
+            gecti = satir["kapilar"]["kapilar"][kapi]["gecti"]
+            hucreler += f"{'✓' if gecti else ('—' if gecti is None else '✗'):>10}"
+        durum = "GEÇTİ" if satir["kapilar"]["gecti"] else "kaldı"
+        typer.echo(f"  {ad:<13}{hucreler}{durum:>9}")
+
+    typer.echo("")
+    for ad, satir in sonuc["stratejiler"].items():
+        o = satir["olcumler"]
+        typer.echo(
+            f"  {ad:<13} OOS-shp {o.get('oos_sharpe', float('nan')):>6.2f} · "
+            f"OOS/IS {o.get('oos_is_orani', float('nan')):>6.2f} · "
+            f"WF-shp {o.get('wf_sharpe', float('nan')):>6.2f} · "
+            f"WF+kat {o.get('wf_pozitif_katman', 0)}/{o.get('wf_katman', 0)} · "
+            f"kararsız {o.get('wf_kararsizlik', float('nan')):.2f} · "
+            f"stres {o.get('stres_bozulma', float('nan')):.1%}"
+        )
+    typer.echo("")
+    if sonuc["gecen"]:
+        typer.secho(f"  kapılardan geçen: {', '.join(sonuc['gecen'])}", fg=typer.colors.GREEN)
+    else:
+        typer.secho(
+            "  kapılardan geçen strateji yok — hiçbiri paper trading'e aday değil",
+            fg=typer.colors.YELLOW,
+        )
+    typer.echo(f"  deney: {yol}")
 
 
 @app.command("bilgi")

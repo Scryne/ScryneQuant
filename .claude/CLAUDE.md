@@ -68,6 +68,8 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Kararlar.md` — **karar günlüğü (K-001…).** "Neden böyle" sorusunun tek adresi.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
 - `docs/Roadmap.md` — Faz 0-8, her fazın somut bitti kriteri.
+- `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md` — faz sonu ölçüm
+  raporları. Sayılar buradan alınır, tahmin edilmez.
 - `DESIGN.md` — arayüz kimliği. Token'lar Faz 6'da doldurulacak, karar katmanı şimdiden
   bağlayıcı.
 

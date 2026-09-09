@@ -60,6 +60,12 @@ def _bizim(vaka: dict, anahtar: str) -> np.ndarray:
         return ind.atr(h, d, k, int(kuyruk))
     if ad == "hacim":
         return ind.hacim_ortalamasi(v, int(kuyruk.removeprefix("sma_")))
+    if ad == "enyuksek":
+        return ind.en_yuksek(h, int(kuyruk))
+    if ad == "endusuk":
+        return ind.en_dusuk(d, int(kuyruk))
+    if ad == "roc":
+        return ind.roc(k, int(kuyruk))
     if ad == "bollinger":
         pencere, katsayi, band = kuyruk.split("_")
         bantlar = ind.bollinger(k, int(pencere), float(katsayi))
@@ -103,7 +109,9 @@ class TestReferans:
         """Faz 2 ≥6 indikatör istiyor; referansın gerçekten hepsini içerdiğini sabitler."""
         sutunlar = {s for v in REFERANS["vakalar"] for s in v["beklenen"]}
         aileler = {s.split("_")[0] for s in sutunlar}
-        assert {"sma", "ema", "rsi", "atr", "bollinger", "hacim"} <= aileler
+        assert {
+            "sma", "ema", "rsi", "atr", "bollinger", "hacim", "enyuksek", "endusuk", "roc"
+        } <= aileler
         assert len(aileler - {"true"}) >= 6
 
     def test_referans_baska_bir_uygulamadan_geliyor(self):
@@ -148,6 +156,9 @@ class TestNedensellik:
             pytest.param(lambda g: ind.bollinger(g["close"], 20, 2.0).ust, id="bb_ust"),
             pytest.param(lambda g: ind.bollinger(g["close"], 20, 2.0).alt, id="bb_alt"),
             pytest.param(lambda g: ind.hacim_ortalamasi(g["volume"], 20), id="hacim_sma_20"),
+            pytest.param(lambda g: ind.en_yuksek(g["high"], 20), id="en_yuksek_20"),
+            pytest.param(lambda g: ind.en_dusuk(g["low"], 20), id="en_dusuk_20"),
+            pytest.param(lambda g: ind.roc(g["close"], 10), id="roc_10"),
         ],
     )
     def test_gelecek_bozulunca_gecmis_degismiyor(self, cagri):
@@ -203,6 +214,8 @@ class TestSozlesme:
             lambda: ind.bollinger(np.arange(5.0), 20),
             lambda: ind.bollinger(np.arange(30.0), 20, -1.0),
             lambda: ind.sma(np.zeros((3, 3)), 2),
+            lambda: ind.en_yuksek(np.arange(5.0), 10),
+            lambda: ind.roc(np.arange(5.0), 10),
         ],
     )
     def test_anlamsiz_parametre_hata_veriyor(self, cagri):
@@ -243,3 +256,19 @@ class TestSozlesme:
         g = {ad: _dizi(seri) for ad, seri in vaka["girdi"].items()}
         a = ind.atr(g["high"], g["low"], g["close"], 14)
         assert np.all(a[~np.isnan(a)] >= 0.0)
+
+    def test_kanal_siniri_pencereyi_kapsiyor(self):
+        """`en_yuksek` `t`'nin **kendi** zirvesini de içerir — kaydırma stratejinin işi.
+
+        Bunu indikatöre gömmek TA-Lib `MAX` ile karşılaştırmayı imkânsız kılardı; Donchian
+        kırılımı yazan strateji `ctx.ozellik("kanal_ust", 1)` ile bir bar geriden okur.
+        """
+        x = np.array([1.0, 5.0, 3.0, 2.0, 9.0])
+        np.testing.assert_array_equal(ind.en_yuksek(x, 3)[2:], np.array([5.0, 5.0, 9.0]))
+        np.testing.assert_array_equal(ind.en_dusuk(x, 3)[2:], np.array([1.0, 2.0, 2.0]))
+
+    def test_roc_yuzde_olceginde(self):
+        """TA-Lib `ROC` yüzde döndürür, `ROCP` kesir. Karıştırmak 100 kat hata demek."""
+        x = np.array([100.0, 110.0, 121.0])
+        assert ind.roc(x, 1)[1] == pytest.approx(10.0)
+        assert ind.roc(x, 2)[2] == pytest.approx(21.0)
