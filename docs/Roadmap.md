@@ -20,7 +20,7 @@ yanlış sonuç olarak geri döner.
 | --- | --- | --- | --- |
 | 0 | Teknik doğrulama (spike'lar) | ✅ Tamamlandı | Dört spike raporu `docs/spikes/` altında; K-011/015/016/017 `kabul` durumuna geçmiş |
 | 1 | Market data temeli | ✅ Tamamlandı | BTC/USDT 1h ≥5 yıl + 1m ≥3 yıl indirilmiş, kalite raporu üretiliyor, indirme idempotent, slippage kalibre |
-| 2 | İndikatör + strateji sözleşmesi | ⏳ Bekliyor | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
+| 2 | İndikatör + strateji sözleşmesi | ✅ Tamamlandı | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
 | 3 | Backtest motoru | ⏳ Bekliyor | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ⏳ Bekliyor | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ⏳ Bekliyor | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
@@ -117,7 +117,7 @@ kesintisi. Bayraklar ölü kod değilmiş, spike'ın penceresi dardı. Ayrıntı
 doğrulama, kalibrasyon, depo), `common/maliyet.py`, `cli/` (`sq data indir|quality|ls|
 slippage-kalibre|maliyet`, `sq bilgi`).
 
-### Faz 2: İndikatör + strateji sözleşmesi
+### Faz 2: İndikatör + strateji sözleşmesi — ✅ kapandı 2026-09-09
 
 Projenin en kritik fazı. Buradaki iki test (look-ahead, izolasyon) sonradan eklenemez.
 
@@ -131,7 +131,50 @@ Projenin en kritik fazı. Buradaki iki test (look-ahead, izolasyon) sonradan ekl
     değişmiyor (K-002).
   - **İzolasyon testi yeşil:** `strategy/` paketinin import grafiğinde yasaklı bağımlılık
     yok (K-003).
-- **Notlar:**
+
+**Bitti kriteri karşılandı:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| ≥6 indikatör bağımsız referansla doğrulanmış | ✅ **6 indikatör** (SMA, EMA, RSI, ATR, Bollinger, hacim ortalaması) + `true_range`; referans **TA-Lib 0.7.1**, 4 vaka × 40 sütun `tests/fixtures/indikator_referans.json`'da dondurulmuş (K-026) |
+| Look-ahead testi yeşil | ✅ `tests/unit/test_look_ahead.py` — `t` sonrası bozulunca sinyaller bit düzeyinde aynı; 3 bozma × 5 kesme noktası |
+| İzolasyon testi yeşil | ✅ `tests/unit/test_izolasyon.py` — geçişli import grafiği, izin listesi (K-027) |
+
+**Üretilen paketler:** `features/` (`indikator.py` saf numpy indikatörler, `motor.py`
+bildirimsel özellik motoru, `barlar.py` pandas sınırı), `strategy/` (`baglam.py` = `ctx`,
+`sinyal.py` = Pydantic `Sinyal`, `temel.py` = `Strateji` ABC, `kosu.py` ince sürücü,
+`kutuphane/sma_kesisim.py` referans strateji), `tools/referans_uret.py`.
+
+**`ctx`'in tasarım kararı:** geleceğe erişim yasaklanmadı, **ifade edilemez** kılındı.
+İndeks yönü ters çevrildi — `ctx.bar("close", 1)` bir önceki bar, `geri=-1` ise bir hata
+(`GelecekErisimi`), bir seçenek değil. Mutlak indeks verilseydi `t+1` yazmak mümkün,
+dolayısıyla er ya da geç kaçınılmaz olurdu. Seri erişimleri kopya döndürür: dilim
+döndürmek `.base` üzerinden tüm seriye — yani geleceğe — bir yol bırakırdı.
+
+**Faz 2'nin verdiği kararlar:** K-026 (indikatör konvansiyonu TA-Lib; referans
+dondurulmuş; hareketsiz seride RSI için tek bilinçli sapma), K-027 (izolasyon izin
+listesiyle zorlanır, geçişli, statik, öz-testli).
+
+**Beklenmeyen bulgular — ikisi de testlerin *kendi* testleri sayesinde çıktı:**
+
+1. **Rastgele bozma tek başına look-ahead'i yakalamıyor.** İlk yazılan negatif kontrol
+   (kasten geleceğe bakan `HileliStrateji`) rastgele bozmayla **geçti** — çünkü bir bar
+   ileri bakan hile yalnızca kesme noktasındaki tek sinyali etkiler ve rastgele bir
+   fiyatın o kararı gerçekten çevirmesi yazı-turadır. Çözüm: iki yönlü **sabit** bozma
+   (çok yüksek / çok düşük) eklendi; hangi yöne bakan hile olursa olsun ikisinden biri
+   kararı çevirir. Testin gücü artık olasılıksal değil, yapısal.
+2. **İzolasyon tarayıcısında iki hata vardı.** Öz-test (sahte pakette `a → ara → socket`
+   zinciri) tarayıcının kök paket adını sabit kodladığını ve `__init__.py`'yi yanlış
+   modül adına eşlediğini gösterdi. İkisi de düzeltildi; öz-test bedelini ilk gün ödedi.
+3. **TA-Lib düz seride RSI olarak `0.0` veriyor** — azami aşırı satım, yani hareketsiz
+   bir piyasadan gelen en güçlü alım sinyali. K-026/4 ile bilinçli olarak NaN'a çevrildi.
+
+**Ölçüm:** gerçek BTC/USDT 1h verisinde (45.576 bar) özellik hesabı 0,002 s, strateji
+döngüsü 0,26 s (~177.000 bar/s), 1.087 sinyal; iki koşunun sinyal hash'i aynı.
+
+- **Notlar:** İndikatör motoru `research/`e değil `src/scryne_quant/features/`e yazıldı ve
+  Faz 4'ün diğer strateji aileleri (breakout, momentum) yeni indikatör isterse **deftere**
+  (`features/motor.py:DEFTER`) eklenir; kayıtsız indikatör tanım olarak kabul edilmez.
 
 ### Faz 3: Backtest motoru
 

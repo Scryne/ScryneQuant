@@ -743,6 +743,103 @@ ikisi de, içeriği bir backtest sonucunun kimliğine giren bir dosya için köt
 
 ---
 
+## K-026 — İndikatör konvansiyonu TA-Lib'dir; referans dondurulur, sapma tektir ve kayıtlıdır
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 2 · **Hizmet ettiği:** Faz 2 bitti
+kriteri ("her indikatör bağımsız bir referansla doğrulanmış")
+
+**Karar 1 — konvansiyon TA-Lib'in konvansiyonudur.** Bir indikatörün "doğru" değeri tek
+değil: EMA ilk n değerin SMA'sıyla mı yoksa ilk değerle mi tohumlanır, Bollinger
+popülasyon mu örneklem sapması kullanır, RSI'ın ilk değeri hangi indekstedir — hepsi
+seçimdir. Seçilenler **varsayılmadı, ölçüldü** (TA-Lib 0.7.1):
+
+| İndikatör | İlk geçerli indeks | Konvansiyon |
+| --- | --- | --- |
+| `sma(n)` | `n-1` | Kayan pencere ortalaması |
+| `ema(n)` | `n-1` | Tohum = ilk `n` değerin SMA'sı; α = 2/(n+1) |
+| `rsi(n)` | `n` | Wilder yumuşatması; tohum = ilk `n` farkın basit ortalaması |
+| `atr(n)` | `n` | Wilder; TR indeks 1'den başlar (önceki kapanış gerekir) |
+| `bollinger(n,k)` | `n-1` | SMA ± k × **popülasyon** sapması (ddof=0) |
+| `hacim_sma(n)` | `n-1` | `sma`, hacim serisi üzerinde |
+
+Neden TA-Lib: grafik platformlarının yaygın olarak izlediği konvansiyon bu, dolayısıyla
+canlıda bir grafikle karşılaştırma yapıldığında sayılar tutar. `ta`/`pandas-ta` gibi
+kütüphaneler EMA ve RSI'ı ilk değerden tohumluyor — ısınma bölgesinde farklı sayı, ve o
+farkın nereden geldiği altı ay sonra hatırlanmaz.
+
+**Karar 2 — referans dondurulur, TA-Lib bağımlılık olmaz.** TA-Lib native bir kütüphanedir;
+her makinede kurulu olmasını şart koşmak, testleri çalıştırmayı zorlaştırır. Bunun yerine
+çıktısı `tests/fixtures/indikator_referans.json` içine bir kez yazıldı; testler o dosyaya
+bakıyor. Üretici `tools/referans_uret.py`, `uv run --with ta-lib python tools/referans_uret.py`
+ile elle çalıştırılır.
+
+Fixture **hem girdiyi hem beklenen çıktıyı** taşıyor. Yalnızca çıktıyı saklamak, girdiyi
+üreten test yardımcısı bir gün değiştiğinde referansı sessizce yanlış hale getirirdi — bu
+projede en pahalı hata sınıfı tam olarak bu.
+
+**Karar 3 — tolerans kayan nokta içindir, konvansiyon için değil.** Karşılaştırma bağıl
+1e-11 toleransla yapılır (ölçülen en büyük fark 3,1e-12: TA-Lib yürüyen toplam, numpy
+pencere başına toplam kullanıyor). Ama **NaN maskeleri birebir eşit olmak zorunda**: "ilk
+geçerli değer hangi indekste" bir konvansiyon sorusudur ve yaklaşık cevabı yoktur. Bir
+tohumlama veya ddof farkı bu toleransın kat kat üstünde sapma üretir ve testi kırar.
+
+**Karar 4 — tek bilinçli sapma: hareketsiz seride RSI.** Pencere boyunca fiyat hiç
+kımıldamadıysa (kazanç = kayıp = 0) TA-Lib `0.0` döndürür; biz **NaN** döndürüyoruz.
+
+Gerekçe: 0, RSI ölçeğinde azami aşırı satımdır. Yani hiç hareket etmeyen bir piyasa, bir
+mean-reversion stratejisine üretilebilecek **en güçlü alım sinyalini** verirdi. Bu sayı
+yanlış değil, *tehlikeli*: "neredeyse doğru" sınıfından. Hareket yoksa RSI tanımsızdır ve
+NaN ile yapılan her karşılaştırma False olduğu için hiçbir eşik tetiklenmez.
+
+Bu senaryo teorik değil: 2023-03-24 12:00 UTC barı (K-024'ün ölçümü) tam olarak sıfır
+hacimli ve dört fiyatı aynı. Kesinti uzasaydı pencerenin tamamı düz olabilirdi.
+
+Sapma üç yerde birden kayıtlı: `features/indikator.py:rsi` docstring'i,
+`tools/referans_uret.py` başlığı, ve `test_indikator.py::test_hareketsiz_seride_rsi_tanimsiz`
+— o test ayrıca referanstaki TA-Lib değerinin hâlâ `0.0` olduğunu doğruluyor, yani üst
+kaynak davranışı değişirse haberimiz olur.
+
+---
+
+## K-027 — Strateji izolasyonu izin listesiyle zorlanır, yasak listesiyle değil
+
+**Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 2 · **Detaylandırır:** K-003
+
+K-003 mekanizmayı "import grafiği taranır, yasaklı bağımlılık (`ccxt`, `requests`, `httpx`,
+`socket`, `open`) bulunursa test kırmızıya döner" diye tarif ediyor. Bu karar o taramanın
+nasıl yapıldığını sabitliyor, çünkü tarifin doğrudan uygulanışı yeterince güçlü değil.
+
+**Karar 1 — izin listesi.** Yasak listesi her zaman eksiktir: `aiohttp`, `urllib3`,
+`smtplib`, `paramiko`, `pyarrow`, henüz var olmayan bir kütüphane... Listeye eklemeyi
+unutmak sessizce kuralı deler. İzin listesinde unutmanın yönü güvenli tarafa düşer:
+listede olmayan reddedilir, eklemek bilinçli ve gözden geçirilebilir bir diff olur.
+K-003'ün saydığı beş isim ayrıca kendi testinde açıkça kontrol ediliyor — kararın metni
+testte görünür kalsın diye.
+
+**Karar 2 — tarama geçişlidir.** Yüzeysel bir tarama `strategy → common.hash`'i temiz
+sayardı; oysa `common.hash` `subprocess` çağırıyor. Bir adım derine bakmayan izolasyon
+testi tam da engellemesi gereken şeyi kaçırır. Test bulduğu ihlalin **yolunu** basar
+(`strategy.temel → common.hash → subprocess`), çünkü "yasaklı bağımlılık var" tek başına
+teşhis değil.
+
+**Karar 3 — tarama statiktir (`ast`).** Modülleri import edip `sys.modules`'a bakmak, yan
+etkileri çalıştırmak demek olurdu — ve yan etki tam olarak aradığımız şey.
+
+**Karar 4 — pandas strateji katmanına giremez.** pandas dosya okuyabilir
+(`read_parquet`, `read_csv`), yani K-003'ün kapattığı I/O yüzeyini dolaylı yoldan geri
+açar. Bu yüzden `features/` paketi ikiye bölündü: `indikator.py` ve `motor.py` yalnızca
+numpy kullanır ve stratejiye açıktır; DataFrame ↔ dizi dönüşümü `barlar.py`'de yaşar ve
+izin listesinde **yoktur**. Aynı gerekçeyle `common/zaman.py` açık, `common/hash.py`
+(subprocess) kapalıdır.
+
+**Karar 5 — tarayıcının kendisi test edilir.** `TestTaramaninKendisi` sahte bir paket
+üzerinde `a → ara → socket` zinciri kurup tarayıcının onu bulduğunu doğruluyor. Bu öz-test
+yazılırken tarayıcıda iki gerçek hata çıktı (kök paket adı sabit kodlanmıştı, `__init__.py`
+yanlış modül adına eşleniyordu) — yani öz-test bedelini ilk gün ödedi. Hiçbir zaman
+kırmızıya dönemeyen bir izolasyon testi, güvenlik değil tiyatrodur.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -760,10 +857,12 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-023 | Klines ccxt'nin ham ucundan alınır | ✅ **kabul** | Faz 1 |
 | K-024 | Bayrak tekildir; boşluk uydurulmaz | ✅ **kabul** | Faz 1 |
 | K-025 | Maliyet konfigürasyonu ve geçici model bayrağı | ✅ **kabul** | Faz 1 |
+| K-026 | İndikatör konvansiyonu TA-Lib; referans dondurulmuş | ✅ **kabul** | Faz 2 |
+| K-027 | Strateji izolasyonu izin listesiyle zorlanır | ✅ **kabul** | Faz 2 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
-K-021'i kapattı.** Geriye tek açık karar kaldı: **K-019** (promotion kapılarının sayısal
-eşikleri), Faz 4 sonunda kapanacak.
+K-021'i kapattı; Faz 2 K-026 ve K-027'yi ekledi.** Geriye tek açık karar kaldı:
+**K-019** (promotion kapılarının sayısal eşikleri), Faz 4 sonunda kapanacak.
 
 ### Faz 0'dan çıkan, karar olmayan ama bağlayıcı gereksinimler
 
