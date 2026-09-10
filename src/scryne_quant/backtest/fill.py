@@ -67,6 +67,11 @@ class AtlamaSebebi(StrEnum):
     POZISYON_YOK = "pozisyon_yok"
     """Satım isteniyor ama elde varlık yok."""
 
+    RISK_REDDETTI = "risk_reddetti"
+    """Risk motoru sinyali onaylamadı (Faz 5). Sebebin kendisi audit'te ve `risk` özetinde;
+    burada yalnızca akış muhasebesi için sayılıyor — üretilen sinyallerin toplamı
+    işlenen + atlanan'a eşit kalmalı, yoksa bir yerde sessiz kayıp var."""
+
 
 @dataclass(frozen=True, slots=True)
 class Emir:
@@ -116,20 +121,37 @@ def emir_hazirla(
     acilis: float,
     zaman_ms: int,
     maliyet: MaliyetModeli,
+    *,
+    hedef_maruziyet: float | None = None,
 ) -> Emir | AtlamaSebebi:
     """Sinyali `t+1` açılışında somut bir emre çevirir; çevrilemiyorsa sebebini döndürür.
 
     Sebebi `None` yerine bir enum olarak döndürmek bilinçli: "sinyal işleme dönmedi"
     bilgisi sonuç kaydına yazılıyor. Sessizce `None` dönen bir fonksiyon, stratejinin
     ürettiği sinyallerin kaçının neden kaybolduğunu görünmez kılardı.
+
+    `hedef_maruziyet` risk motoru devredeyken (Faz 5) veriliyor: boyutu belirleyen şey o
+    hâlde stratejinin istediği değil, riskin **onayladığı** hedef. Ayrı bir parametre
+    olmasının sebebi `Sinyal`in değişmez olması ve olması gerektiği — risk motorunun
+    stratejinin sinyalini yeniden yazabildiği bir mimaride, audit'te "strateji ne istedi"
+    sorusunun cevabı kaybolurdu (`OnayliNiyet` ikisini birlikte taşıyor).
+
+    Sinyalin hedefinden **büyük** bir değer kabul edilmiyor: risk aşağı çeker, yukarı asla.
     """
     if acilis <= 0.0:
         raise ValueError(f"geçersiz açılış fiyatı: {acilis}")
 
+    hedef = sinyal.target_exposure if hedef_maruziyet is None else hedef_maruziyet
+    if not 0.0 <= hedef <= sinyal.target_exposure:
+        raise ValueError(
+            "hedef maruziyet [0, sinyalin hedefi] aralığında olmalı: "
+            f"sinyal={sinyal.target_exposure}, verilen={hedef}"
+        )
+
     fee = maliyet.fee_taker_bps * BPS
     deger = portfoy.deger(acilis)
     ozkaynak = portfoy.nakit + deger
-    fark = ozkaynak * sinyal.target_exposure - deger
+    fark = ozkaynak * hedef - deger
 
     if abs(fark) <= ASGARI_ORAN * max(ozkaynak, 1.0):
         return AtlamaSebebi.HEDEF_ZATEN_TUTTURULMUS

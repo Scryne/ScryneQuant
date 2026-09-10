@@ -1020,6 +1020,126 @@ kendini bir sonraki barda düzeltir; delta düzeltemez.
 
 ---
 
+## K-032 — Risk onayı bir tip, bir mühür ve bir kesme noktasıdır
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 5 · **Uygular:** K-008, K-010, §9.1/3
+
+**Karar:** "Sinyal risk motorunu atlayamaz" kuralı üç katmanda birlikte zorlanır; hiçbiri
+tek başına yeterli sayılmaz.
+
+1. **Tip:** `execution/kapi.py` yalnızca `OnayliNiyet` kabul eder. `Sinyal`, `Red`, sözlük
+   veya taklit bir sınıf `MuhurGecersiz` ile reddedilir — `isinstance` ile, yalnızca
+   annotation'a güvenilmez.
+2. **Mühür:** `OnayliNiyet` içeriğinin HMAC'iyle mühürlenir; anahtar süreç başına üretilir
+   ve bir closure hücresinde yaşar. Mühürsüz bir örnek **kurulamaz**, onay sonrası
+   değiştirilmiş bir örnek kapıda yakalanır. Mühür hiçbir hash'e, kayda veya audit
+   satırına girmez (rastgele olduğu için determinizmi kırardı — K-009).
+3. **Kesme noktası (asıl zorlama):** `execution/` ve `oms/` paketlerinden strateji
+   katmanına giden **her** import yolu `risk.niyet`ten geçmek zorunda.
+   `tests/unit/test_risk_bypass.py` bunu `ast` ile ölçüyor: `risk.niyet` grafikten
+   çıkarıldığında strateji katmanı ulaşılamaz hâle gelmiyorsa test kırılır.
+
+**Üçüncü katmanın neden asıl zorlama olduğu.** İlk tasarım "execution strateji katmanına
+hiç ulaşmıyor" diye ölçüyordu ve **test bunu çürüttü**: `OnayliNiyet` sinyali içinde
+taşıdığı için `execution → risk.niyet → strategy.sinyal` yolu kaçınılmaz. O yolu kesmek
+değil, **nereden geçtiğini** zorlamak doğru iddia. Sinyalin niyetin içinde taşınması ayrıca
+gerekli: audit'in "strateji ne istedi, risk ne verdi" karşılaştırması ikisi bir aradayken
+mümkün.
+
+**Mührün sınırı açıkça belgelenmiştir ve test edilmiştir**
+(`test_muhur_kasitli_asilabilir`). Python'da bir sınıfın dışarıdan kurulmasını imkânsız
+kılmanın yolu yok; closure hücresindeki anahtara ulaşmak mümkün. Mührün işi kazara atlamayı
+ve onay-sonrası değişikliği kapatmak, kasıtlı atlamayı **görünür** kılmak. Ne vaat ettiğini
+dürüst tutmayan bir güvenlik katmanı, olmayan bir garanti satar.
+
+**Risk motoru aşağı çeker, yukarı asla.** `OnayliNiyet.__post_init__` onaylı maruziyetin
+`[0, sinyalin hedefi]` aralığında olmasını zorunlu kılar. Mühür içeriğe bağlı olduğu için
+bu kural onay anıyla sınırlı kalmaz, niyetin ömrü boyunca sürer.
+
+**Azaltan niyetler hiçbir engele tabi değildir.** `SELL` ve `FLAT` — SAFE_MODE, cooldown,
+günlük zarar limiti, volatilite guard'ı ve promotion kapısının hepsinin önünde geçer ve
+boyutlandırmadan da muaftır. Bir çıkışı engellemek riski azaltmaz, artırır; K-008/3'ün
+"mevcut çıkış emirleri çalışmaya devam eder" maddesi bu kuralın özel hâli. Ters sırada,
+kill switch tetiklenen bir sistemde strateji pozisyonundan çıkamaz hâle gelir — yani kill
+switch riski dondurmak yerine kilitler.
+
+**Audit append-only ve zincirlenmiştir.** `Defter` protokolü `sil`/`guncelle` tanımlamaz;
+SQLite tarafında UPDATE ve DELETE tetikleyiciyle **hata** fırlatır (sessizce yutulmaz). Her
+satır kendinden öncekinin hash'ini taşır: kurcalamayı engellemez ama **sessiz** kurcalamayı
+imkânsız kılar.
+
+**PostgreSQL Faz 6'da bağlanır, şeması Faz 5'te donar.** K-011 PostgreSQL'i "eşzamanlı
+yazma, transaction ve dayanıklı state gerektiğinde" diye gerekçelendiriyor; Faz 5'te o
+ihtiyacın hiçbiri yok (tek süreç, tek yazıcı, canlı emir yok) ve ayakta bir veritabanı
+gerektiren test takımı fazın kendi kriterine hiçbir şey katmazdı. Ama yazım **yeri**
+değişecekse yazım **biçimi** şimdi sabitlenmeli: `migrations/001_faz5.sql` `SqliteDefter`
+ile aynı kolonları taşıyor ve `tests/unit/test_audit.py` ikisinin ayrışmadığını kontrol
+ediyor. Faz 6 bir şema tasarımıyla değil bir bağlantı dizgisiyle başlıyor.
+
+**Risk motoru backtest'te opsiyoneldir, execution'da değil.** `Backtest(..., risk=None)`
+varsayılanı Faz 1-4'ün ölçümlerini yeniden üretilebilir tutuyor (`sq lab dogrula` buna
+dayanıyor) ve risk özeti `sonuc_hash`'e yalnızca **varsa** giriyor — `"risk": None` yazmak
+eski her kaydın hash'ini değiştirirdi. Bu "risk atlanabilir" demek değil: backtest bir
+simülasyondur, borsaya giden kapı değil. Paper/live modunda motor zorunlu ve promotion
+zinciri risksiz koşulmuş bir sonucu `risk_incelemesi` aşamasında **ölçülemedi** sayar.
+
+---
+
+## K-033 — Risk limitlerinin her biri kaynağını ve gözden geçirme koşulunu taşır
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 5 · **Rapor:**
+`docs/Faz-5-Risk-Raporu.md`
+
+**Karar:** Sekiz limitin her biri `config/risk.json`da bir `Gerekce` ile birlikte yaşar ve
+gerekçe iki kaynaktan birini beyan eder:
+
+- **`olculdu`** — sayı gerçek veriden çıktı. Tam persentil dağılımı kayıtta durur, yani
+  persentil kararı yeniden ölçmeden değiştirilebilir (K-021'in kurduğu kalıp).
+  `veri_sha256` zorunludur.
+- **`istah`** — sayı bir risk iştahı tercihi, ölçüm değil. **`gozden_gecirme` koşulu
+  zorunludur**: "ne zaman yeniden düşüneceğiz" sorusu cevapsız kalan bir tercih, hak
+  ettiği için değil kimse dokunmadığı için kalıcı olur.
+
+Gerekçesi olmayan bir limit **tanımlanamaz** (Pydantic doğrulaması reddeder), ve üç limit
+(`volatilite_esigi`, `ters_hareket_atr_carpani`, `gunluk_zarar_limiti`) `istah` olarak
+işaretlenemez. İştahı ölçüm gibi göstermek en tehlikelisi olurdu: ölçülmüş görünen bir
+tercih tartışılamaz hâle gelir.
+
+**Yürürlükteki değerler (BTC/USDT 1h, 45.576 bar, veri `e3adb02c2a6a`, limit kimliği
+`c3608583bd9f`):**
+
+| Limit | Değer | Kaynak | Dayanak |
+| --- | ---: | --- | --- |
+| `azami_maruziyet` | %30 | iştah | Proje-Fikri §11. Gözden geçirme: Faz 8 |
+| `islem_basina_risk` | %0,5 | iştah | Proje-Fikri §42. Gözden geçirme: Faz 5 raporundaki maruziyet tablosu |
+| `ters_hareket_atr_carpani` | 6,3934× | **ölçüldü** | 24 barlık ufukta aleyhte hareketin p90'ı (45.538 örnek) |
+| `gunluk_zarar_limiti` | %2,0 | **ölçüldü** | 1.899 günde 24 kez (%1,26) tetikliyor |
+| `drawdown_limiti` | %20 | iştah | K-019'un `max_drawdown` kapısı (%25) altında kalmak zorunda |
+| `ardisik_kayip_limiti` | 10 | iştah | Faz 4'ün 564 kayıp serisinde p95 = 10 |
+| `cooldown_bar` | 24 | iştah | 1h'de bir gün ≈ bir pozisyon ömrü (medyan tutma 27 saat) |
+| `volatilite_esigi` | %2,0466 | **ölçüldü** | ATR(14)/fiyat p99 (45.562 bar) |
+
+**"2×ATR" varsayımı ölçümle çürütüldü.** Yaygın kural stop mesafesini 2×ATR alır. Bu
+veride 24 barlık ufukta aleyhte hareketin **medyanı** 2,07 ATR — yani 2,0 seçmek vakaların
+yarısında gerçek riskin altında kalmak olurdu. K-007'nin "belirsizlikte kötü yöne yuvarla"
+kuralı p90'ı (6,39) dayatıyor. Risk ufkunun tutma süresi olmasının sebebi v1'de borsada
+duran bir stop emri olmaması (Faz 7): pozisyon strateji `FLAT` diyene kadar açık kalır.
+
+**Drawdown limiti ile promotion kapısı arasındaki ilişki koda gömülüdür.** `limitler.py`
+`drawdown_limiti >= 0,25` ise konfigürasyonu reddeder: fren kapıdan **önce** devreye
+girmek zorunda, yoksa canlıda bugün promote etmeyeceğimiz bir düşüşe izin verilmiş olur.
+Sayı iki yerde yaşıyor (`risk/` `research/`i import etmiyor — canlı karar yolu araştırma
+koduna bağlanmamalı) ve ayrışmaması testle korunuyor.
+
+**Drawdown limiti bir tavan değil, bir tetikleyicidir.** Aşıldığında kill switch'i açar ve
+yeni girişi durdurur; zaten olmuş bir düşüşü geri **alamaz**, çünkü K-008/2 açık
+pozisyonları kapatmayı açıkça yasaklıyor. Ölçüldü: `cok_faktor` risk altında %20,1 düştü,
+limit %20,0 — limit tam tasarlandığı gibi çalıştı ve yine de aşıldı. Aynı sınıf bir ayrım
+`azami_maruziyet`te de var: tavan **hedef** maruziyet üzerindedir, gerçekleşen üzerinde
+değil (ölçüldü: %30 tavanda gerçekleşen %30,14, fill sonrası fiyat hareketi).
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -1043,9 +1163,12 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-029 | Backtest referansı kapalı formülle çapraz doğrulanır | ✅ **kabul** | Faz 3 |
 | K-030 | Her karşılaştırmada al-tut kıyası bulunur | ✅ **kabul** | Faz 4 |
 | K-031 | Strateji sinyalinin kabul edildiğini varsayamaz | ✅ **kabul** | Faz 4 |
+| K-032 | Risk onayı bir tip, bir mühür ve bir kesme noktası | ✅ **kabul** | Faz 5 |
+| K-033 | Her risk limiti kaynağını ve gözden geçirme koşulunu taşır | ✅ **kabul** | Faz 5 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
-K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i ekledi.**
+K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5
+K-032/033'ü ekledi.**
 
 **Açık karar kalmadı.** Projenin son açık kararı olan **K-019** (promotion kapılarının
 sayısal eşikleri) Faz 4 sonunda gerçek veriyle kalibre edilip kapandı. Bundan sonraki

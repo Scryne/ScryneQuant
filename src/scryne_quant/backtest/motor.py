@@ -5,12 +5,21 @@ Bir barın iç sırası **sabittir** ve bu sıra kararların yarısıdır:
 1. **Fill** — bir önceki barda üretilmiş bekleyen sinyal, bu barın **açılışından** dolar
    (K-004). Önce fill olması şart: strateji bu barın kapanışında karar verirken elindeki
    pozisyonun güncel olması gerekir.
-2. **Karar** — strateji bu barın **kapanmış** hâliyle çağrılır, `ctx` `t`'de kesiktir
-   (K-002). Ürettiği sinyal bekleyene alınır; bu barda dolmaz.
-3. **Değerleme** — özkaynak ve maruziyet bu barın kapanışıyla işaretlenir.
+2. **Risk durumu** — risk motoru devredeyse (Faz 5) bu barın özkaynağını işler: gün
+   dönümü, zirve, drawdown. Karardan **önce**; sonra olsaydı drawdown ve günlük zarar bir
+   bar gecikmeli ölçülür, yani limitler bir bar geç devreye girerdi.
+3. **Karar** — strateji bu barın **kapanmış** hâliyle çağrılır, `ctx` `t`'de kesiktir
+   (K-002). Ürettiği sinyal risk motorundan geçer; onaylanırsa bekleyene alınır (riskin
+   izin verdiği hedefle), reddedilirse `risk_reddetti` olarak sayılır. Hiçbir hâlde bu
+   barda dolmaz.
+4. **Değerleme** — özkaynak ve maruziyet bu barın kapanışıyla işaretlenir.
 
 Sıra tersine dönseydi (önce karar, sonra fill) sinyal kendi barının açılışında dolardı —
 yani karar verilirken bilinmeyen bir fiyatla, gizli look-ahead.
+
+**Risk kararı sinyal barında verilir, fill barında değil.** Fill barında verilseydi risk
+motoru `t+1`in açılışını görmüş olurdu — kararı bilinmeyen bir fiyatla vermek, K-002'nin
+yasakladığı şeyin risk katmanındaki hâli.
 
 **`ok` olmayan barlarda ne olur (K-006, K-028):** ne karar verilir ne fill yapılır. Bir
 `suspect` barın açılışından doldurmak, şüpheli bir fiyattan gerçek bir P&L üretmek olurdu.
@@ -34,11 +43,20 @@ from scryne_quant.backtest.sonuc import VARSAYILAN_KALITE_ESIGI, Sonuc, VeriKiml
 from scryne_quant.common.maliyet import MaliyetModeli
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import KaliteDurumu
+from scryne_quant.features.indikator import atr as atr_hesapla
 from scryne_quant.portfolio.durum import Portfoy
+from scryne_quant.risk.motor import PiyasaOlcumu, RiskMotoru
+from scryne_quant.risk.niyet import OnayliNiyet
 from scryne_quant.strategy.baglam import PiyasaGorunumu
 from scryne_quant.strategy.kosu import gorunum_kur
 from scryne_quant.strategy.sinyal import Sinyal
 from scryne_quant.strategy.temel import Strateji
+
+#: Risk motorunun volatilite ölçüsünün penceresi. Stratejinin bildirdiği özelliklerden
+#: **bağımsız**: risk kendi ölçüsünü kendi alır (`PiyasaOlcumu`). 14, limitlerin
+#: kalibre edildiği pencere (`docs/Faz-5-Risk-Raporu.md`) — değiştirmek
+#: `volatilite_esigi` ve `ters_hareket_atr_carpani`yi yeniden ölçmeyi gerektirir.
+RISK_ATR_PENCERESI = 14
 
 
 class BacktestHatasi(ValueError):
@@ -62,6 +80,7 @@ class Backtest:
         baslangic_sermaye: float = 10_000.0,
         seed: int = 0,
         kalite_esigi: float = VARSAYILAN_KALITE_ESIGI,
+        risk: RiskMotoru | None = None,
     ) -> None:
         if baslangic_sermaye <= 0.0:
             raise BacktestHatasi(f"başlangıç sermayesi pozitif olmalı: {baslangic_sermaye}")
@@ -70,6 +89,19 @@ class Backtest:
         self.baslangic_sermaye = baslangic_sermaye
         self.seed = seed
         self.kalite_esigi = kalite_esigi
+
+        self.risk = risk
+        """Risk motoru. `None` = devre dışı, ve bu **araştırma** için kasıtlı bir seçenek.
+
+        Neden opsiyonel: Faz 1-4'ün tamamı risk motoru olmadan ölçüldü ve o ölçümler
+        karşılaştırma tabanı. Risk motorunu zorunlu kılmak, Faz 4'ün sonuçlarını yeniden
+        üretilemez hâle getirir — oysa `sq lab dogrula` tam olarak onu yapıyor.
+
+        Bu, "risk atlanabilir" demek **değil**: backtest bir simülasyondur, execution
+        değil. Gerçek emrin geçtiği kapı (`execution/kapi.py`) `OnayliNiyet` dışında
+        hiçbir şey kabul etmiyor ve paper/live modunda motor zorunlu. Atlanamayan şey
+        borsaya giden yol; ölçülebilir olan şey "risk limitleri bu stratejiye ne yapar".
+        """
 
     # ------------------------------------------------------------------ koşu
 
@@ -116,9 +148,21 @@ class Backtest:
         maruziyet = np.empty(n, dtype=np.float64)
         islemler: list[Islem] = []
         acik: Islem | None = None
-        bekleyen: Sinyal | None = None
+        # Bekleyen = (sinyal, riskin onayladığı hedef). Risk devre dışıysa hedef sinyalin
+        # kendi hedefi; devredeyse onun aşağı çekilmiş hâli.
+        bekleyen: tuple[Sinyal, float] | None = None
         atlanan: list[AtlamaSebebi] = []
         uretilen = 0
+
+        # Risk motorunun volatilite ölçüsü. Stratejinin bildirdiği özelliklerden bağımsız
+        # hesaplanıyor: strateji ATR bildirmese de guard çalışmak zorunda.
+        risk_atr = (
+            atr_hesapla(
+                gorunum.barlar["high"], gorunum.barlar["low"], kapanis, RISK_ATR_PENCERESI
+            )
+            if self.risk is not None
+            else None
+        )
 
         for i in range(n):
             bar_ok = str(kalite[i]) == KaliteDurumu.OK
@@ -128,8 +172,14 @@ class Backtest:
                 if not bar_ok:
                     atlanan.append(AtlamaSebebi.FILL_BARI_OK_DEGIL)
                 else:
+                    sinyal_b, hedef_b = bekleyen
                     sonuc = emir_hazirla(
-                        bekleyen, portfoy, float(acilis[i]), int(zamanlar[i]), self.maliyet
+                        sinyal_b,
+                        portfoy,
+                        float(acilis[i]),
+                        int(zamanlar[i]),
+                        self.maliyet,
+                        hedef_maruziyet=hedef_b,
                     )
                     if isinstance(sonuc, AtlamaSebebi):
                         atlanan.append(sonuc)
@@ -137,9 +187,17 @@ class Backtest:
                         portfoy, acik = self._uygula(sonuc, portfoy, acik, islemler)
                 bekleyen = None
 
-            # 2) Karar — strateji kapanmış barı görür, `ctx` `t`'de kesiktir (K-002).
+            fiyat = float(kapanis[i])
+
+            # 2) Risk durumunun bu barla güncellenmesi — **karardan önce.** Sonra olsaydı
+            #    drawdown ve günlük zarar bir bar gecikmeli ölçülür, yani limit bir bar
+            #    geç devreye girerdi.
+            if self.risk is not None:
+                self.risk.bar_isle(int(zamanlar[i]), portfoy.ozkaynak(fiyat))
+
+            # 3) Karar — strateji kapanmış barı görür, `ctx` `t`'de kesiktir (K-002).
             if bar_ok:
-                ctx = gorunum.baglam(i, portfoy.gorunum(float(kapanis[i])))
+                ctx = gorunum.baglam(i, portfoy.gorunum(fiyat))
                 sinyal = self.strateji.on_bar(ctx)
                 if sinyal is not None:
                     uretilen += 1
@@ -151,10 +209,15 @@ class Backtest:
                         # açıkça yasakladığı şey olurdu.
                         atlanan.append(AtlamaSebebi.SONRAKI_BAR_YOK)
                     else:
-                        bekleyen = sinyal
+                        hedef = self._risk_onayi(
+                            sinyal, portfoy, fiyat, int(zamanlar[i]), risk_atr, i
+                        )
+                        if hedef is None:
+                            atlanan.append(AtlamaSebebi.RISK_REDDETTI)
+                        else:
+                            bekleyen = (sinyal, hedef)
 
-            # 3) Değerleme — bu barın kapanışıyla işaretle.
-            fiyat = float(kapanis[i])
+            # 4) Değerleme — bu barın kapanışıyla işaretle.
             ozkaynak[i] = portfoy.ozkaynak(fiyat)
             maruziyet[i] = portfoy.maruziyet(fiyat)
 
@@ -195,12 +258,47 @@ class Backtest:
             uretilen_sinyal=uretilen,
             acik_pozisyon_sonda=portfoy.acik,
             kalite_esigi=self.kalite_esigi,
+            risk=None if self.risk is None else self.risk.ozet(),
         )
+
+    # ------------------------------------------------------------------ risk
+
+    def _risk_onayi(
+        self,
+        sinyal: Sinyal,
+        portfoy: Portfoy,
+        fiyat: float,
+        zaman_ms: int,
+        risk_atr: np.ndarray | None,
+        i: int,
+    ) -> float | None:
+        """Sinyali risk motoruna sunar. Onaylanırsa hedef maruziyet, reddedilirse `None`.
+
+        Risk devre dışıysa sinyalin kendi hedefi dönüyor — yani risksiz koşuda bu fonksiyon
+        kimliktir ve Faz 1-4'ün ölçümleri bit düzeyinde korunur.
+        """
+        if self.risk is None or risk_atr is None:
+            return sinyal.target_exposure
+
+        atr_degeri = float(risk_atr[i])
+        karar = self.risk.degerlendir(
+            sinyal,
+            PiyasaOlcumu(
+                fiyat=fiyat,
+                ozkaynak=portfoy.ozkaynak(fiyat),
+                mevcut_maruziyet=portfoy.maruziyet(fiyat),
+                bar_ms=zaman_ms,
+                # NaN (ısınma penceresi) "ölçülemedi" demek, sıfır değil: sıfır ATR
+                # volatilite guard'ını geçer ve boyut tavanını sonsuz yapardı.
+                atr=None if np.isnan(atr_degeri) else atr_degeri,
+            ),
+        )
+        return karar.onayli_maruziyet if isinstance(karar, OnayliNiyet) else None
 
     # ------------------------------------------------------------------ defter
 
-    @staticmethod
     def _uygula(
+        self,
         emir: Emir,
         portfoy: Portfoy,
         acik: Islem | None,
@@ -232,6 +330,11 @@ class Backtest:
 
         if not portfoy.acik:
             acik.kapanis_ms = emir.zaman_ms
+            # Risk motorunun ardışık kayıp sayacı kapanmış **turları** sayar, fill'leri
+            # değil: bir pozisyonu iki taksitte kapatmak iki kayıp olarak sayılsaydı
+            # cooldown limiti sessizce yarıya inerdi.
+            if self.risk is not None:
+                self.risk.islem_kapandi(acik.net_pnl, emir.zaman_ms)
             acik = None
         return portfoy, acik
 

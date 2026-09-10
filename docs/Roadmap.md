@@ -23,7 +23,7 @@ yanlış sonuç olarak geri döner.
 | 2 | İndikatör + strateji sözleşmesi | ✅ Tamamlandı | ≥6 indikatör referans değerle doğrulanmış; look-ahead testi ve import-izolasyon testi yeşil |
 | 3 | Backtest motoru | ✅ Tamamlandı | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ✅ Tamamlandı | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
-| 5 | Risk motoru + promotion | ⏳ Bekliyor | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
+| 5 | Risk motoru + promotion | ✅ Tamamlandı | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
 | 6 | Paper trading + dashboard | ⏳ Bekliyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
 | 7 | Execution sandbox (testnet) | ⏳ Bekliyor | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
 | 8 | Kontrollü live | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
@@ -328,7 +328,7 @@ bugünkü sonuca göre gevşetilmedi; gevşetilseydi kapı kaldırılmış olurd
   öyle çıktı.* Faz 5-8 bu tabloyu değiştirmiyor: sistemin işi cevabı ölçmekti ve ölçtü.
   Sermaye artırma veya live'a geçme kararı bu tabloya bakılarak verilmez.
 
-### Faz 5: Risk motoru + promotion
+### Faz 5: Risk motoru + promotion — ✅ kapandı 2026-09-11
 
 - **İşler:** Position sizing; exposure limiti; günlük zarar limiti; drawdown limiti;
   cooldown; volatilite guard; kill switch (K-008); SAFE_MODE; promotion kapıları (K-010);
@@ -340,7 +340,83 @@ bugünkü sonuca göre gevşetilmedi; gevşetilseydi kapı kaldırılmış olurd
   - Kill switch tetiklendiğinde K-008'deki beş davranışın hepsi gerçekleşiyor.
   - Promotion kapıları uygulanıyor; `dirty` veya `data_quality_warning` işaretli sonuç
     kapıdan geçemiyor.
-- **Notlar:**
+
+**Bitti kriteri karşılandı — ayrıntılı ölçümler `docs/Faz-5-Risk-Raporu.md`'de:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| Risk motoru atlanamıyor (testle kanıtlı) | ✅ **üç katman**: tip (kapı yalnızca `OnayliNiyet` alır), mühür (içeriğin HMAC'i), ve asıl zorlama olan **import kesme noktası** — `execution/`+`oms/`den strateji katmanına giden her yol `risk.niyet`ten geçiyor (`test_risk_bypass.py`) |
+| Her limit için ihlal senaryosu | ✅ sekiz limitin her biri için ihlal **ve** ihlal-olmayan vaka + sınır vakası (`test_risk_limitleri.py`) |
+| Kill switch'te K-008'in beş davranışı | ✅ her davranış kendi test sınıfında; "pozisyon kapatılmaz" maddesi `risk/` paketinin portföyü hiç import etmediğiyle **yapısal** olarak kanıtlı (`test_kill_switch.py`) |
+| `dirty` / `data_quality_warning` kapıdan geçemiyor | ✅ `test_promotion.py` + `sq promotion degerlendir` ile uçtan uca gösterildi |
+
+**Üretilen paketler:** `risk/` (`limitler`, `muhur`, `niyet`, `durum`, `motor`, `audit`,
+`promotion`, `kalibrasyon`), `execution/kapi.py`, `migrations/001_faz5.sql`, CLI:
+`sq risk {kalibre,limitler,durum,audit,serbest}`, `sq promotion {durum,degerlendir,onayla}`,
+`sq backtest --risk`.
+
+**Faz 5'in verdiği kararlar:** K-032 (risk onayı bir tip, bir mühür ve bir kesme
+noktasıdır), K-033 (her risk limiti kaynağını — `olculdu`/`istah` — ve gözden geçirme
+koşulunu taşır).
+
+**Ölçüm — BTC/USDT 1h, 45.576 bar; aynı veri, aynı maliyet, tek fark risk motoru:**
+
+| Strateji | Getiri → R-Getiri | maxDD → R-maxDD | Sharpe → R-Sharpe | R-ort.maruziyet |
+| --- | ---: | ---: | ---: | ---: |
+| **al_tut (kıyas)** | +%25,9 → **+%7,1** | %25,7 → **%9,4** | 0,38 → 0,31 | %8,6 |
+| sma_kesisim | −%13,3 → −%4,3 | %22,1 → %11,9 | −0,34 → −0,18 | %6,5 |
+| ema_kesisim | −%8,3 → **+%8,1** | %20,4 → %7,7 | −0,19 → **+0,37** | %6,5 |
+| rsi_donus | −%12,3 → −%10,5 | %18,5 → %13,4 | −0,28 → −0,62 | %4,9 |
+| donchian | −%9,2 → −%6,8 | %15,0 → %9,6 | −0,30 → −0,46 | %3,7 |
+| momentum | −%17,6 → −%10,2 | %24,8 → %13,1 | −0,49 → −0,56 | %5,8 |
+| cok_faktor | −%46,0 → −%19,1 | %49,4 → **%20,1** | −1,85 → −1,78 | %1,8 |
+
+**Tablonun en önemli satırı kıyas satırı.** Risk motoru yedi vakanın yedisinde de düşüşü
+azalttı, ama kıyasın getirisini de +%25,9'dan +%7,1'e indirdi. Yani risk motoru bir alfa
+kaynağı değil **varyans azaltıcı**: kaybedeni daha az kaybettirir, kazananı daha az
+kazandırır. Altı stratejinin zararının küçülmesi bir başarı kanıtı değil, maruziyetin
+küçülmesinin aritmetik sonucu.
+
+**Kill switch gerçek veride bir kez tetiklendi:** `cok_faktor` drawdown limitini (%20) aştı,
+SAFE_MODE açıldı, sonrasındaki **3.417 giriş sinyali** reddedildi ve çıkış sinyalleri
+geçmeye devam etti (K-008/3).
+
+**Limitlerin kalibrasyonu (K-033):** üç limit ölçüldü, beşi iştah olarak işaretlendi ve her
+biri bir gözden geçirme koşulu taşıyor. En dikkat çekici ölçüm: yaygın **"2×ATR" stop
+varsayımı bu veride riski hafife alıyor** — 24 barlık ufukta aleyhte hareketin medyanı 2,07
+ATR, p90'ı 6,39 ATR. 2,0 seçmek vakaların yarısında gerçek riskin altında kalmak olurdu
+(K-007).
+
+**Beklenmeyen bulgular:**
+
+1. **"Execution stratejiyi hiç görmüyor" iddiası yanlıştı ve testi kendi kırdı.**
+   `OnayliNiyet` sinyali içinde taşıdığı için `execution → risk.niyet → strategy.sinyal`
+   yolu kaçınılmaz — ve doğru: audit'in "strateji ne istedi, risk ne verdi"
+   karşılaştırması ikisi bir aradayken mümkün. Doğru iddia "o yol yok" değil, **"o yol
+   `risk.niyet`ten geçiyor"**. Test bir kesme-noktası testine çevrildi, ayrıca kesme
+   testinin kendi testi eklendi (yoksa `execution/`i silmek de geçirirdi).
+2. **Kayan nokta sınır testlerini sessizce kırıyordu.** `1 − 8000/10000` =
+   0,19999999999999996, yani "tam %20 düşüş" limiti aşmış görünüyor. Karşılaştırmalar
+   çıkarmadan çarpmaya çevrildi (`son < zirve × (1 − limit)`).
+3. **`SIFIR_BOYUT` red sebebi ölü koddu.** Boyutlandırma tavanı hiçbir zaman tam sıfıra
+   inmiyor; sebep hiç üretilemezdi. Risk motorunda ölü kod işe yaramaz değil **tehlikeli**:
+   sayımın kapsadığı sanılan bir durum kapsanmıyor demektir.
+4. **Limitler tavan değil tetikleyici, ve bu iki yerde ölçüldü.** `azami_maruziyet` %30
+   iken gerçekleşen maruziyet %30,14 (fill sonrası fiyat hareketi; sürekli yeniden
+   dengeleme yok). `drawdown_limiti` %20 iken `cok_faktor` %20,1 düştü — limit tam
+   tasarlandığı gibi çalıştı ama zaten olmuş bir düşüşü geri alamaz, çünkü K-008/2 açık
+   pozisyon kapatmayı yasaklıyor. Bu bulgu promotion kapısının **gerekçesini de düzeltti**.
+5. **Risk motoru girişi ATR ısınması kadar geciktiriyor.** `al_tut`un 15
+   değerlendirmesinden 14'ü `volatilite_olculemedi` ile reddedildi: ATR(14) ilk 14 barda
+   NaN ve ölçülemeyen guard geçilmiş sayılmıyor. NaN'ı sıfır saymak iki limiti birden
+   sessizce kaldırırdı.
+
+- **Notlar:** PostgreSQL **bağlanmadı**, şeması donduruldu (`migrations/001_faz5.sql`);
+  K-011 gerekçesi gereği eşzamanlı yazma ilk kez Faz 6'da gerekiyor. Audit bugün SQLite'a
+  yazıyor ve iki şemanın kolonları testle hizalı tutuluyor. Risk motoru backtest'te
+  **opsiyonel** (`--risk`): Faz 1-4'ün ölçümleri yeniden üretilebilir kalmalı ve risk
+  özeti `sonuc_hash`'e yalnızca varsa giriyor. Promotion zincirinde hiçbir strateji
+  `out_of_sample` aşamasını geçemiyor — K-019'un eşikleri gevşetilmedi.
 
 ### Faz 6: Paper trading + dashboard
 

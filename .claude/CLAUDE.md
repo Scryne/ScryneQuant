@@ -68,8 +68,13 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Kararlar.md` — **karar günlüğü (K-001…).** "Neden böyle" sorusunun tek adresi.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
 - `docs/Roadmap.md` — Faz 0-8, her fazın somut bitti kriteri.
-- `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md` — faz sonu ölçüm
-  raporları. Sayılar buradan alınır, tahmin edilmez.
+- `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,
+  `docs/Faz-5-Risk-Raporu.md` — faz sonu ölçüm raporları. Sayılar buradan alınır, tahmin
+  edilmez.
+- `config/risk.json` — yürürlükteki risk limitleri; her limit `olculdu`/`istah` kaynağını
+  ve (iştahsa) gözden geçirme koşulunu taşır (K-033). `sq risk limitler` ile okunur.
+- `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Henüz uygulanmadı**; Faz
+  6'da bağlanacak (K-011, K-032). `risk/audit.py`'nin SQLite şemasıyla hizalı tutuluyor.
 - `DESIGN.md` — arayüz kimliği. Token'lar Faz 6'da doldurulacak, karar katmanı şimdiden
   bağlayıcı.
 

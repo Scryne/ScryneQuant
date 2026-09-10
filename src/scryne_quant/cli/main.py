@@ -41,6 +41,12 @@ from scryne_quant.research import karsilastirma as karsilastirma_mod
 from scryne_quant.research import tarama as tarama_mod
 from scryne_quant.research import walkforward as wf_mod
 from scryne_quant.research.izgaralar import izgara as varsayilan_izgara
+from scryne_quant.risk import durum as risk_durum_mod
+from scryne_quant.risk import kalibrasyon as risk_kalibrasyon
+from scryne_quant.risk import limitler as limit_mod
+from scryne_quant.risk import promotion as promotion_mod
+from scryne_quant.risk.audit import OlayTuru, SqliteDefter
+from scryne_quant.risk.motor import RiskMotoru
 from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE, coz
 from scryne_quant.strategy.kutuphane import aile as _aile
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
@@ -64,6 +70,18 @@ lab_app = typer.Typer(
     help="Strateji laboratuvarı: tarama, walk-forward, Monte Carlo, stres, karşılaştırma.",
 )
 app.add_typer(lab_app)
+risk_app = typer.Typer(
+    name="risk",
+    help="Risk motoru: limitler, kalibrasyon, durum, audit, kill switch. (Faz 5)",
+)
+app.add_typer(risk_app)
+promotion_app = typer.Typer(
+    name="promotion", help="Promotion zinciri: aşama takibi ve elle onay. (K-010)"
+)
+app.add_typer(promotion_app)
+
+#: Audit defterinin varsayılan yeri (`.gitignore`'da).
+VARSAYILAN_AUDIT = Path("runs/audit.sqlite")
 
 Depo = Annotated[Path, typer.Option("--depo", help="Parquet depo kökü.")]
 JsonCikti = Annotated[bool, typer.Option("--json", help="Çıktıyı JSON olarak ver.")]
@@ -378,6 +396,12 @@ def backtest(
         bool, typer.Option("--kayit/--kayit-yok", help="Sonucu runs/ altına yaz.")
     ] = True,
     egri: Annotated[bool, typer.Option("--egri", help="Equity eğrisini de kaydet.")] = False,
+    risk: Annotated[
+        bool, typer.Option("--risk", help="Risk motorunu devreye al (Faz 5, config/risk.json).")
+    ] = False,
+    audit: Annotated[
+        Path | None, typer.Option("--audit", help="Risk kararlarını bu deftere yaz.")
+    ] = None,
     depo: Depo = VARSAYILAN_DEPO,
     json_cikti: JsonCikti = False,
 ) -> None:
@@ -385,19 +409,34 @@ def backtest(
 
     Faz 4'te strateji seçimi parametreleşecek; şimdilik tek referans strateji var ve
     komutu ona sabitlemek, olmayan bir esnekliği varmış gibi göstermekten iyi.
+
+    `--risk` risk motorunu devreye alır (Faz 5). Varsayılanın kapalı olması, Faz 1-4'ün
+    ölçümlerinin yeniden üretilebilir kalması için: risk motoru zorunlu olsaydı
+    `sq lab dogrula` eski deneylerin hash'ini doğrulayamazdı.
     """
     depo_nesnesi = ParquetDepo(depo)
     df = depo_nesnesi.oku(sembol, timeframe)
     model = maliyet_mod.yukle()
 
+    risk_motoru: RiskMotoru | None = None
+    defter = None
+    if risk:
+        defter = SqliteDefter(audit) if audit else None
+        risk_motoru = RiskMotoru(limit_mod.yukle(), timeframe, mod="backtest", defter=defter)
+
     strateji = SmaKesisim(hizli=hizli, yavas=yavas, maruziyet=maruziyet)
-    motor = Backtest(strateji, model, baslangic_sermaye=sermaye, seed=seed)
+    motor = Backtest(
+        strateji, model, baslangic_sermaye=sermaye, seed=seed, risk=risk_motoru
+    )
     sonuc = motor.calistir(
         sembol,
         timeframe,
         bar_dizileri(df),
         veri_sha256=depo_nesnesi.sha256(sembol, timeframe),
     )
+
+    if defter is not None:
+        defter.kapat()
 
     yol: Path | None = None
     if kayit:
@@ -437,6 +476,22 @@ def backtest(
     atlanan = {a: n for a, n in sonuc.atlanan.items() if n}
     if atlanan:
         typer.echo(f"  atlanan sinyal : {atlanan}")
+    typer.echo("")
+    if sonuc.risk is not None:
+        r = sonuc.risk
+        typer.echo("")
+        typer.echo(f"  risk motoru : {r['mod']} · limit {r['limit_kimligi'][:12]}")
+        typer.echo(f"    değerlendirilen: {r['degerlendirilen']:,}  onay: {r['onay']:,}")
+        redler = {a: n for a, n in r["red"].items() if n}
+        typer.echo(f"    red            : {redler or 'yok'}")
+        kisit = {a: n for a, n in r["kisitlayan"].items() if n}
+        typer.echo(f"    kısıtlayan     : {kisit or 'yok'}")
+        if r["durum"]["safe_mode"]:
+            typer.secho(
+                f"    SAFE_MODE: {r['durum']['safe_mode_sebep']} "
+                f"({utc_str(r['durum']['safe_mode_ms'])})",
+                fg=typer.colors.RED,
+            )
     typer.echo("")
     typer.echo(f"  config_hash : {sonuc.config_hash[:16]}")
     typer.echo(f"  sonuc_hash  : {sonuc.sonuc_hash[:16]}")
@@ -970,6 +1025,529 @@ def lab_kapilar(
             fg=typer.colors.YELLOW,
         )
     typer.echo(f"  deney: {yol}")
+
+
+# ----------------------------------------------------------------------- risk
+
+
+@risk_app.command("kalibre")
+def risk_kalibre(
+    sembol: Sembol = "BTCUSDT",
+    timeframe: Timeframe = "1h",
+    azami_maruziyet: Annotated[
+        float, typer.Option("--azami-maruziyet", help="İştah: portföyün bu semboldeki tavanı.")
+    ] = 0.30,
+    islem_basina_risk: Annotated[
+        float, typer.Option("--islem-riski", help="İştah: tek işlemin riske attığı kesir.")
+    ] = 0.005,
+    ardisik_kayip: Annotated[int, typer.Option("--ardisik-kayip")] = 10,
+    cooldown_bar: Annotated[int, typer.Option("--cooldown")] = 24,
+    drawdown: Annotated[float, typer.Option("--drawdown")] = 0.20,
+    ufuk: Annotated[int, typer.Option("--ufuk", help="Risk ufku (bar).")] = (
+        risk_kalibrasyon.VARSAYILAN_UFUK_BAR
+    ),
+    yaz: Annotated[bool, typer.Option("--yaz", help="config/risk.json'a yaz.")] = False,
+    depo: Depo = VARSAYILAN_DEPO,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Risk limitlerini gerçek veriden kalibre eder. (K-033)
+
+    Üç limit **ölçülür** (volatilite eşiği, aleyhte hareket çarpanı, günlük zarar limiti);
+    beşi iştah tercihidir ve seçenek olarak verilir. İştah değerlerinin ölçülmüş gibi
+    görünmemesi için her biri kayda `kaynak: istah` ve bir gözden geçirme koşuluyla
+    yazılıyor.
+    """
+    d = ParquetDepo(depo)
+    df = d.oku(sembol, timeframe)
+    veri_hash = d.sha256(sembol, timeframe)
+    diziler = bar_dizileri(df)
+    bugun = utc_str(simdi_ms())[:10]
+
+    vol = risk_kalibrasyon.volatilite_olc(
+        diziler["high"], diziler["low"], diziler["close"]
+    )
+    ters = risk_kalibrasyon.ters_hareket_olc(
+        diziler["open"], diziler["low"], diziler["high"], diziler["close"], ufuk_bar=ufuk
+    )
+    gunluk = risk_kalibrasyon.gunluk_zarar_olc(
+        diziler["open_time"], diziler["close"], azami_maruziyet=azami_maruziyet
+    )
+
+    limitler = limit_mod.RiskLimitleri(
+        azami_maruziyet=azami_maruziyet,
+        islem_basina_risk=islem_basina_risk,
+        ters_hareket_atr_carpani=round(ters.carpan, 4),
+        gunluk_zarar_limiti=gunluk.limit,
+        drawdown_limiti=drawdown,
+        ardisik_kayip_limiti=ardisik_kayip,
+        cooldown_bar=cooldown_bar,
+        volatilite_esigi=round(vol.esik, 6),
+        gerekceler={
+            "azami_maruziyet": limit_mod.Gerekce(
+                kaynak="istah",
+                metin=(
+                    f"Proje-Fikri §11'in 'BTC exposure <= 30%' örneği. Ölçülmüş bir sayı "
+                    f"değil, risk iştahı. Bu veride al-tut kıyası tam seride %77,2 düştü; "
+                    f"{azami_maruziyet:.0%} tavan o düşüşün yaklaşık {azami_maruziyet:.0%}'ini "
+                    "taşımak demek."
+                ),
+                gozden_gecirme=(
+                    "Faz 8 (kontrollü live) sonunda, backtest/paper/live drift ölçüsüyle "
+                    "birlikte. Sermaye artırma kararıyla aynı toplantıda konuşulur."
+                ),
+                olcum_tarihi=bugun,
+            ),
+            "islem_basina_risk": limit_mod.Gerekce(
+                kaynak="istah",
+                metin=(
+                    f"Proje-Fikri §42'nin 'risk_per_trade: 0.005' örneği. İştah. Ölçülen "
+                    f"aleyhte hareketle ({ters.carpan:.2f}×ATR) birleştiğinde tipik "
+                    f"volatilitede maruziyet tavanı "
+                    f"{islem_basina_risk / (ters.carpan * vol.dagilim['p50']):.1%} "
+                    "çıkıyor — yani pratikte bağlayıcı limit bu, azami maruziyet değil."
+                ),
+                gozden_gecirme=(
+                    "Faz 5 raporundaki maruziyet tablosuna bakılarak. Tavanın azami "
+                    "maruziyetin çok altına düşmesi bilinçli bir tercih mi, yoksa iki "
+                    "sayının birlikte düşünülmemiş sonucu mu — cevabı rapor veriyor."
+                ),
+                olcum_tarihi=bugun,
+            ),
+            "ters_hareket_atr_carpani": limit_mod.Gerekce(
+                kaynak="olculdu",
+                metin=(
+                    f"{ufuk} barlık risk ufkunda aleyhte hareketin p{ters.persentil:g}'ı "
+                    f"({ters.ornek_sayisi:,} örnek). Geleneksel '2×ATR' varsayımı bu veride "
+                    f"riski hafife alıyor: aynı ufukta medyan {ters.dagilim['p50']:.2f}×ATR. "
+                    "Ufuk, Faz 4'te ölçülen medyan tutma süresi (27 saat ≈ 24 bar); v1'de "
+                    "borsada duran bir stop emri olmadığı için risk ufku tutma süresidir."
+                ),
+                dagilim=ters.dagilim,
+                olcum_tarihi=bugun,
+                veri_sha256=veri_hash,
+            ),
+            "gunluk_zarar_limiti": limit_mod.Gerekce(
+                kaynak="olculdu",
+                metin=(
+                    f"{gunluk.gun_sayisi:,} günlük getiri dağılımı üzerinden seçildi: "
+                    f"{azami_maruziyet:.0%} maruziyet tavanında {gunluk.tetiklenen_gun} günde "
+                    f"({gunluk.tetikleme_orani:.2%}) tetikleniyor. Aday tablosu: "
+                    + ", ".join(f"{a}→{o:.2%}" for a, o in sorted(gunluk.aday_tablosu.items()))
+                    + ". Daha gevşek bir limit normal bir kötü günde stratejinin yerine karar "
+                    "verir; daha sıkı olanı neredeyse hiç çalışmaz."
+                ),
+                dagilim=gunluk.dagilim,
+                olcum_tarihi=bugun,
+                veri_sha256=veri_hash,
+            ),
+            "drawdown_limiti": limit_mod.Gerekce(
+                kaynak="istah",
+                metin=(
+                    f"K-019'un `max_drawdown` promotion kapısı "
+                    f"{limit_mod.PROMOTION_DRAWDOWN_KAPISI:.0%}; fren kapıdan **önce** "
+                    f"devreye girmek zorunda, yoksa canlıda bugün promote etmeyeceğimiz bir "
+                    f"düşüşe izin verilmiş olur. {drawdown:.0%} o sınırın altında."
+                ),
+                gozden_gecirme=(
+                    "K-019'un `max_drawdown` eşiği değişirse bu sayı da değişmek zorunda "
+                    "(limitler.py'deki tutarlılık kontrolü zorluyor)."
+                ),
+                olcum_tarihi=bugun,
+            ),
+            "ardisik_kayip_limiti": limit_mod.Gerekce(
+                kaynak="istah",
+                metin=(
+                    f"Faz 4'ün 6 stratejisinin 564 kayıp serisinde {ardisik_kayip}+ ardışık "
+                    "kayıp serilerin %5,9'unda görüldü (p95 = 10); 3+ ise %49,1'inde. "
+                    "Yani 10, 'olağan kötü gidiş' değil 'olağandışı' tarafta — daha düşük "
+                    "bir limit stratejinin normal davranışını cooldown'a sokardı."
+                ),
+                gozden_gecirme=(
+                    "Paper trading'de (Faz 6) gerçek cooldown tetikleme sıklığı ölçüldüğünde."
+                ),
+                olcum_tarihi=bugun,
+            ),
+            "cooldown_bar": limit_mod.Gerekce(
+                kaynak="istah",
+                metin=(
+                    f"{cooldown_bar} bar = 1h timeframe'de bir gün. Faz 4'te ölçülen medyan "
+                    "tutma süresi 27 saat; yani cooldown yaklaşık bir pozisyon ömrü kadar. "
+                    "Daha kısası 'ara vermek' sayılmaz, daha uzunu stratejiyi pencereden "
+                    "çıkarır."
+                ),
+                gozden_gecirme="Faz 6'da cooldown sonrası ilk işlemlerin sonucu ölçülünce.",
+                olcum_tarihi=bugun,
+            ),
+            "volatilite_esigi": limit_mod.Gerekce(
+                kaynak="olculdu",
+                metin=(
+                    f"ATR({risk_kalibrasyon.ATR_PENCERESI})/fiyat dağılımının "
+                    f"p{vol.persentil:g}'ı ({vol.bar_sayisi:,} bar). Medyan "
+                    f"{vol.dagilim['p50']:.3%}, yani eşik tipik volatilitenin "
+                    f"{vol.esik / vol.dagilim['p50']:.1f} katı. Guard'ın amacı olağandışı "
+                    "çalkantıda işlem yapmamak; olağandışının tanımı veriden geliyor."
+                ),
+                dagilim=vol.dagilim,
+                olcum_tarihi=bugun,
+                veri_sha256=veri_hash,
+            ),
+        },
+    )
+
+    yol: Path | None = limit_mod.yaz(limitler) if yaz else None
+    govde = {
+        "limitler": limitler.sozluk(),
+        "kimlik": limitler.kimlik(),
+        "olcumler": {
+            "volatilite": vol.sozluk(),
+            "ters_hareket": ters.sozluk(),
+            "gunluk_zarar": gunluk.sozluk(),
+        },
+        "veri": {"sembol": sembol, "timeframe": timeframe, "sha256": veri_hash},
+        "yazilan": str(yol) if yol else None,
+    }
+    if json_cikti:
+        _yaz_json(govde)
+        return
+
+    typer.echo(f"{sembol} {timeframe} · veri {veri_hash[:12]}")
+    typer.echo("")
+    typer.echo("  ölçülen:")
+    typer.echo(
+        f"    volatilite_esigi        : {limitler.volatilite_esigi:.4%}  "
+        f"(ATR/fiyat p{vol.persentil:g}, medyan {vol.dagilim['p50']:.3%})"
+    )
+    typer.echo(
+        f"    ters_hareket_atr_carpani: {limitler.ters_hareket_atr_carpani:.2f}×  "
+        f"({ufuk} bar ufuk, p{ters.persentil:g}; medyan {ters.dagilim['p50']:.2f}×)"
+    )
+    typer.echo(
+        f"    gunluk_zarar_limiti     : {limitler.gunluk_zarar_limiti:.2%}  "
+        f"({gunluk.tetiklenen_gun}/{gunluk.gun_sayisi} gün = {gunluk.tetikleme_orani:.2%})"
+    )
+    typer.echo("")
+    typer.echo("  iştah (ölçüm değil):")
+    for ad in ("azami_maruziyet", "islem_basina_risk", "drawdown_limiti"):
+        typer.echo(f"    {ad:<24}: {getattr(limitler, ad):.3%}")
+    typer.echo(f"    {'ardisik_kayip_limiti':<24}: {limitler.ardisik_kayip_limiti}")
+    typer.echo(f"    {'cooldown_bar':<24}: {limitler.cooldown_bar}")
+    typer.echo("")
+    tipik = limitler.islem_basina_risk / (
+        limitler.ters_hareket_atr_carpani * vol.dagilim["p50"]
+    )
+    typer.echo(
+        f"  tipik volatilitede bağlayıcı maruziyet tavanı: {min(tipik, azami_maruziyet):.1%}"
+        f"  ({'islem_basina_risk' if tipik < azami_maruziyet else 'azami_maruziyet'})"
+    )
+    typer.echo(f"  limit kimliği: {limitler.kimlik()[:16]}")
+    if yol:
+        typer.echo(f"  yazıldı: {yol}")
+    else:
+        typer.secho("  yazılmadı (--yaz ile yaz)", fg=typer.colors.YELLOW)
+
+
+@risk_app.command("limitler")
+def risk_limitler(json_cikti: JsonCikti = False) -> None:
+    """Yürürlükteki risk limitlerini gerekçeleriyle gösterir. (K-033)"""
+    limitler = limit_mod.yukle()
+    if json_cikti:
+        _yaz_json({"limitler": limitler.sozluk(), "kimlik": limitler.kimlik()})
+        return
+    typer.echo(f"risk limitleri · kimlik {limitler.kimlik()[:16]}")
+    for ad in limit_mod.LIMIT_ADLARI:
+        deger = getattr(limitler, ad)
+        g = limitler.gerekceler[ad]
+        isaret = "ölçüldü" if g.kaynak == "olculdu" else "İŞTAH"
+        bicim = f"{deger:.4%}" if isinstance(deger, float) and deger < 1 else f"{deger}"
+        typer.echo("")
+        typer.echo(f"  {ad} = {bicim}   [{isaret}]")
+        for satir in _sar(g.metin, 74):
+            typer.echo(f"      {satir}")
+        if g.gozden_gecirme:
+            typer.echo(f"      -> gözden geçirme: {g.gozden_gecirme}")
+
+
+@risk_app.command("durum")
+def risk_durum(
+    audit: Annotated[Path, typer.Option("--audit", help="Audit defteri yolu.")] = (
+        VARSAYILAN_AUDIT
+    ),
+    durum_yolu: Annotated[Path, typer.Option("--durum")] = (
+        risk_durum_mod.VARSAYILAN_DURUM_YOLU
+    ),
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Kalıcı risk durumu + audit özeti. SAFE_MODE açıksa bunu ilk satırda söyler."""
+    durum = risk_durum_mod.durum_oku(durum_yolu)
+    sayim: dict[str, int] = {}
+    zincir: bool | None = None
+    if audit.exists():
+        with SqliteDefter(audit) as defter:
+            sayim = defter.sayim()
+            zincir = defter.dogrula()
+
+    govde = {
+        "durum": durum.sozluk(),
+        "durum_yolu": str(durum_yolu),
+        "audit": {"yol": str(audit), "var": audit.exists(), "sayim": sayim, "zincir": zincir},
+    }
+    if json_cikti:
+        _yaz_json(govde)
+        return
+
+    if durum.safe_mode:
+        typer.secho(
+            f"SAFE_MODE AÇIK — sebep: {durum.safe_mode_sebep} "
+            f"({utc_str(durum.safe_mode_ms) if durum.safe_mode_ms else '?'})",
+            fg=typer.colors.RED,
+            bold=True,
+        )
+        typer.echo("  yeni pozisyon girişi durdu; çıkışlar çalışıyor (K-008)")
+        typer.echo("  çıkmak için: sq risk serbest --not '<gerekçe>'")
+    else:
+        typer.secho("SAFE_MODE kapalı", fg=typer.colors.GREEN)
+    typer.echo("")
+    typer.echo(f"  bar işlendi   : {durum.bar_sayisi:,} ({durum.gun_sayisi:,} gün)")
+    typer.echo(f"  özkaynak      : {durum.son_ozkaynak:,.2f}  (zirve {durum.zirve_ozkaynak:,.2f})")
+    typer.echo(f"  drawdown      : {durum.drawdown:.2%}")
+    typer.echo(f"  günlük getiri : {durum.gunluk_getiri:+.2%}")
+    typer.echo(f"  ardışık kayıp : {durum.ardisik_kayip} (kapanan işlem {durum.kapanan_islem:,})")
+    cooldown = (
+        "yok"
+        if durum.cooldown_bitis_ms is None
+        else f"{utc_str(durum.cooldown_bitis_ms)} sonuna kadar"
+    )
+    typer.echo(f"  cooldown      : {cooldown}")
+    typer.echo("")
+    if not audit.exists():
+        typer.echo(f"  audit defteri yok: {audit}")
+        return
+    typer.echo(f"  audit ({audit}):")
+    for tur, n in sorted(sayim.items()):
+        typer.echo(f"    {tur:<12}{n:>8,}")
+    if zincir:
+        typer.secho("    zincir tutarlı", fg=typer.colors.GREEN)
+    else:
+        typer.secho("    ZİNCİR BOZUK — audit kurcalanmış", fg=typer.colors.RED, bold=True)
+
+
+@risk_app.command("audit")
+def risk_audit(
+    tur: Annotated[str | None, typer.Option("--tur", help="Olay türü süzgeci.")] = None,
+    limit: Annotated[int, typer.Option("--limit")] = 20,
+    audit: Annotated[Path, typer.Option("--audit")] = VARSAYILAN_AUDIT,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Audit defterindeki son olayları gösterir."""
+    if not audit.exists():
+        raise typer.BadParameter(f"audit defteri yok: {audit}")
+    olay_turu = OlayTuru(tur) if tur else None
+    with SqliteDefter(audit) as defter:
+        kayitlar = defter.oku(tur=olay_turu)
+        zincir = defter.dogrula()
+    son = kayitlar[-limit:]
+
+    if json_cikti:
+        _yaz_json({"zincir": zincir, "toplam": len(kayitlar), "olaylar": son})
+        return
+    zincir_metni = "tutarli" if zincir else "BOZUK"
+    typer.echo(f"{len(kayitlar):,} olay · son {len(son)} · zincir {zincir_metni}")
+    for k in son:
+        g = k["govde"]
+        ek = (
+            f"red:{g.get('sebep')}"
+            if k["tur"] == "red"
+            else (
+                f"onay {g.get('onayli_maruziyet', 0):.1%}"
+                f"{' ←' + ','.join(g.get('kisitlayan', [])) if g.get('kisitlayan') else ''}"
+                if k["tur"] == "onay"
+                else str(g.get("sebep") or g.get("gerekce") or "")
+            )
+        )
+        typer.echo(f"  {k['zaman_utc']}  {k['tur']:<9}{k['sembol']:<9}{ek}")
+
+
+@risk_app.command("serbest")
+def risk_serbest(
+    not_metni: Annotated[
+        str, typer.Option("--not", help="SAFE_MODE'dan çıkış gerekçesi (≥10 karakter).")
+    ],
+    durum_yolu: Annotated[Path, typer.Option("--durum")] = (
+        risk_durum_mod.VARSAYILAN_DURUM_YOLU
+    ),
+    audit: Annotated[Path, typer.Option("--audit")] = VARSAYILAN_AUDIT,
+) -> None:
+    """SAFE_MODE'u **elle** kapatır. (K-008/4)
+
+    Kill switch'ten çıkışın tek yolu bu komut. Otomatik bir çıkış yolu yok ve olmayacak:
+    kendini kapatan bir kill switch, bir uyarıdır.
+    """
+    durum = risk_durum_mod.durum_oku(durum_yolu)
+    if not durum.safe_mode:
+        typer.secho("SAFE_MODE açık değil; yapılacak bir şey yok.", fg=typer.colors.YELLOW)
+        return
+
+    limitler = limit_mod.yukle()
+    with SqliteDefter(audit) as defter:
+        motor = RiskMotoru(limitler, "1h", defter=defter, durum=durum)
+        motor.serbest_birak(not_metni, simdi_ms())
+    risk_durum_mod.durum_yaz(durum, durum_yolu)
+    typer.secho("SAFE_MODE kapatıldı; gerekçe audit'e yazıldı.", fg=typer.colors.GREEN)
+
+
+# ------------------------------------------------------------------ promotion
+
+
+def _kanit_kur(
+    sonuc_yolu: Path | None, kapi_yolu: Path | None, strateji: str
+) -> promotion_mod.Kanit:
+    """Sonuç kaydı ve kapı değerlendirmesinden promotion kanıtı kurar.
+
+    Eksik dosya **hata değil**: kanıtın o kısmı `None` kalır ve ilgili aşama "ölçülemedi"
+    olur. Zorunlu kılmak, henüz ölçülemeyen bir aşamayı (örn. paper) hiç değerlendirilemez
+    yapardı; `None` ise zincirin nerede durduğunu söylüyor.
+    """
+    alanlar: dict[str, Any] = {}
+
+    if sonuc_yolu is not None:
+        kayit = json.loads(sonuc_yolu.read_text(encoding="utf-8"))
+        kimlik = kayit.get("kimlik", {})
+        alanlar |= {
+            "config_hash": kimlik.get("config_hash"),
+            "sonuc_hash": kimlik.get("sonuc_hash"),
+            "veri_sha256": kimlik.get("veri_sha256"),
+            "commit": kimlik.get("commit"),
+            "dirty": kimlik.get("dirty"),
+            "mutlak_engeller": tuple(kayit.get("promotion", {}).get("engeller", [])),
+        }
+        risk_govdesi = kayit.get("risk")
+        if risk_govdesi:
+            alanlar |= {
+                "risk_limit_kimligi": risk_govdesi.get("limit_kimligi"),
+                "risk_max_drawdown": kayit.get("metrikler", {}).get("max_drawdown"),
+                "risk_drawdown_limiti": risk_govdesi.get("limitler", {}).get(
+                    "drawdown_limiti"
+                ),
+            }
+
+    if kapi_yolu is not None:
+        deney = json.loads(kapi_yolu.read_text(encoding="utf-8"))
+        satir = deney.get("cikti", {}).get("stratejiler", {}).get(strateji)
+        if satir is None:
+            raise typer.BadParameter(
+                f"{kapi_yolu} içinde {strateji!r} için kapı değerlendirmesi yok"
+            )
+        alanlar["kapi_sonucu"] = satir["kapilar"]
+
+    return promotion_mod.Kanit(**alanlar)
+
+
+@promotion_app.command("durum")
+def promotion_durum(
+    strateji: Annotated[str | None, typer.Argument(help="Boşsa hepsi.")] = None,
+    kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Strateji(ler)in promotion zincirindeki yerini gösterir. (K-010)"""
+    defter = promotion_mod.PromotionDefteri(kok)
+    kayitlar = [defter.oku(strateji)] if strateji else defter.hepsi()
+
+    if json_cikti:
+        _yaz_json({"zincir": [str(a) for a in promotion_mod.SIRA],
+                   "kayitlar": [k.sozluk() for k in kayitlar]})
+        return
+
+    typer.echo("zincir: " + " -> ".join(str(a) for a in promotion_mod.SIRA[1:]))
+    typer.echo("")
+    if not kayitlar:
+        typer.secho(
+            "  hiçbir stratejinin promotion kaydı yok — yani hiçbiri canlıya yetkili değil",
+            fg=typer.colors.YELLOW,
+        )
+        return
+    for k in kayitlar:
+        renk = typer.colors.GREEN if k.asama is promotion_mod.Asama.LIVE else None
+        typer.secho(f"  {k.strateji:<14}{k.asama}", fg=renk)
+        if k.eksik_asamalar():
+            typer.echo(f"      eksik: {', '.join(str(a) for a in k.eksik_asamalar())}")
+
+
+@promotion_app.command("degerlendir")
+def promotion_degerlendir(
+    strateji: Annotated[str, typer.Argument(help="Strateji adı.")],
+    sonuc: Annotated[
+        Path | None, typer.Option("--sonuc", help="Backtest sonuç kaydı (runs/*.json).")
+    ] = None,
+    kapilar: Annotated[
+        Path | None, typer.Option("--kapilar", help="`sq lab kapilar` deney kaydı.")
+    ] = None,
+    kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Zinciri kanıtın götürdüğü yere kadar ilerletir. (K-010)
+
+    Her çağrı **tek** aşama ilerletir; tamamını denemek için komutu tekrar çalıştırın.
+    `elle_onay` aşamasında zincir durur — o adım makine tarafından geçilemez.
+    """
+    defter = promotion_mod.PromotionDefteri(kok)
+    kayit = defter.oku(strateji)
+    kanit = _kanit_kur(sonuc, kapilar, strateji)
+
+    adimlar: list[dict[str, Any]] = []
+    while True:
+        onceki = kayit.asama
+        sonuc_asama = kayit.ilerlet(kanit)
+        adimlar.append(sonuc_asama.sozluk())
+        if kayit.asama is onceki:
+            break
+    yol = defter.yaz(kayit)
+
+    if json_cikti:
+        _yaz_json({"kayit": kayit.sozluk(), "adimlar": adimlar, "yol": str(yol)})
+        return
+
+    typer.echo(f"{strateji} · aşama: {kayit.asama}")
+    typer.echo("")
+    for adim in adimlar:
+        isaret = {True: "+", False: "x", None: "?"}[adim["gecti"]]
+        typer.echo(f"  {isaret} {adim['asama']:<16}{adim['gerekce']}")
+    typer.echo("")
+    if kayit.asama is promotion_mod.Asama.LIVE:
+        typer.secho("  canlıya yetkili", fg=typer.colors.GREEN)
+    else:
+        typer.echo(f"  eksik: {', '.join(str(a) for a in kayit.eksik_asamalar())}")
+    typer.echo(f"  kayıt: {yol}")
+
+
+@promotion_app.command("onayla")
+def promotion_onayla(
+    strateji: Annotated[str, typer.Argument()],
+    not_metni: Annotated[str, typer.Option("--not", help="Onay gerekçesi (≥10 karakter).")],
+    kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
+) -> None:
+    """K-010'un kaldırılamaz elle onayı. Yalnızca `live_adayi` aşamasında verilebilir."""
+    defter = promotion_mod.PromotionDefteri(kok)
+    kayit = defter.oku(strateji)
+    sonuc = kayit.elle_onayla(not_metni)
+    yol = defter.yaz(kayit)
+    typer.secho(f"{strateji}: {sonuc.gerekce}", fg=typer.colors.GREEN)
+    typer.echo(f"  aşama: {kayit.asama}")
+    typer.echo(f"  kayıt: {yol}")
+
+
+def _sar(metin: str, genislik: int) -> list[str]:
+    """Basit kelime sarması. `textwrap` yerine: bağımlılık değil, tek ihtiyaç bu."""
+    satirlar: list[str] = []
+    mevcut = ""
+    for kelime in metin.split():
+        if mevcut and len(mevcut) + 1 + len(kelime) > genislik:
+            satirlar.append(mevcut)
+            mevcut = kelime
+        else:
+            mevcut = f"{mevcut} {kelime}".strip()
+    if mevcut:
+        satirlar.append(mevcut)
+    return satirlar
 
 
 @app.command("bilgi")
