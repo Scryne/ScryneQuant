@@ -53,3 +53,15 @@ config.local.*
 # Backtest çıktıları
 runs/
 artifacts/
+
+# --- Faz 6: dashboard (K-036) ------------------------------------------------
+# node_modules ve build ciktisi repoya girmez. `src/tokens.css` **girer**: DESIGN.md'den
+# uretiliyor (`npm run tokens`) ama deterministik ve kucuk; commit edilmesi build'i
+# aga bagimli olmaktan cikariyor.
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.vite/
+apps/web/*.tsbuildinfo
+
+# Paper/gozlem kosulari: calisma durumu, kaynak kod degil.
+/runs/paper/

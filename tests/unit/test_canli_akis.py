@@ -218,3 +218,33 @@ class TestPencereDogrulama:
             assert ad in diziler
         assert diziler["open_time"].dtype == np.int64
         assert diziler["close"].dtype == np.float64
+
+
+class TestRaporTutarliligi:
+    """Rapor ile motorun gördüğü bayraklar ayrışamaz.
+
+    Ayrıştıkları bir sürüm gerçekten yaşandı: `dogrula` sayımını bar-başına düzeltmeden
+    **önceki** bayraklardan yapıyordu, dolayısıyla dashboard "1000 bar ok" derken motor
+    aynı barları `backfilled` görüyordu. İki sayının aynı veriyi farklı anlatması bu
+    projede "neredeyse doğru"nun tarifi — ve rapor, ekranda okunan taraf.
+    """
+
+    def test_bayrak_sayimi_dizilerle_ayni(self) -> None:
+        p = BarPenceresi("BTC/USDT", "1h")
+        p.doldur(bar(i * SAAT, kaynak=Kaynak.BACKFILL) for i in range(5))
+        p.ekle(bar(5 * SAAT, kaynak=Kaynak.AKIS))
+
+        from collections import Counter
+
+        dizilerden = Counter(str(d) for d in p.diziler()["quality_status"])
+        assert dict(p.rapor().bayraklar) == dict(dizilerden)
+
+    def test_isinma_penceresi_ok_sayilmiyor(self) -> None:
+        # `sq paper baslat` ısınma barlarını depodan BACKFILL olarak yüklüyor; hepsinin
+        # `ok` görünmesi, süreç başlarken geçmişte işlem yapabileceği izlenimi verirdi.
+        p = BarPenceresi("BTC/USDT", "1h")
+        p.doldur(bar(i * SAAT, kaynak=Kaynak.BACKFILL) for i in range(20))
+        bayraklar = p.rapor().bayraklar
+        assert bayraklar.get(str(KaliteDurumu.OK), 0) == 0
+        assert bayraklar[str(KaliteDurumu.BACKFILLED)] == 20
+        assert p.son_bar_ok_mu() is False

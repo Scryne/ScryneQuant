@@ -22,8 +22,9 @@ uygulaması demek olurdu; ikinci uygulama er ya da geç birinciden ayrışır.
 
 from __future__ import annotations
 
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Iterable, Iterator
+from dataclasses import replace
 from typing import Any, Final
 
 import numpy as np
@@ -169,6 +170,14 @@ class BarPenceresi:
         )
         degistir = backfill & (durum == str(KaliteDurumu.OK))
         durum[degistir] = str(KaliteDurumu.BACKFILLED)
+
+        # Rapor **düzeltilmiş** bayraklarla yeniden sayılıyor. `dogrula` sayımını
+        # kendi ürettiği bayraklardan yapıyor ve o bayraklar bar-başına düzeltmeden
+        # önceki hâl; olduğu gibi bırakılsaydı dashboard "1000 bar ok" derken motor aynı
+        # barları `backfilled` görürdü. İki sayının aynı veriyi farklı anlatması, bu
+        # projede "neredeyse doğru"nun tarifi — ve rapor ekranda okunan taraf.
+        if degistir.any():
+            rapor = replace(rapor, bayraklar=dict(Counter(str(d) for d in durum)))
 
         diziler: dict[str, np.ndarray] = {
             "open_time": dogrulanmis["open_time"].to_numpy(dtype="int64"),

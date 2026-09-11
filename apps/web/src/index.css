@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Token'lar DESIGN.md'den **üretiliyor**, elle yazılmıyor: `npm run tokens`.
+   Aynı token iki yerde yaşamaz — kesin değerler DESIGN.md frontmatter'ında. */
+@import "./tokens.css";
+
+/* Karanlık tema tek tema. `prefers-color-scheme` dallanması yok ve bu bir karar:
+   bu arayüz bir ölçüm cihazı ve ölçüm cihazının iki görünümü olmaz. Açık temada
+   kalibre edilmemiş bir kontrast, yanlış okunan bir sayı demek. */
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    /* Z ekseni sabit ve sayılı: rastgele z-index tırmanışı, bir uyarının bir
+       tablonun altında kalmasıyla biter. */
+    --z-icerik: 0;
+    --z-yapiskan: 10;
+    --z-gezinme: 20;
+    --z-ortu: 40;
+    --z-modal: 50;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--color-background);
+    color: var(--color-primary);
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--text-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+
+  }
+
+  /* Arka plan gradient mesh'i **yalnızca bu katmanda** (DESIGN.md "Elevation & Depth").
+     Işık kaynağı tutarlı: sol-üst açık, sağ-alt koyu. Alfa çok düşük — camın arkasında
+     "bir şey" olması için yeterli, veriyi bozacak kadar değil.
+
+     Neden `body` üzerinde `background-attachment: fixed` değil: o kip her kaydırmada
+     arka planı yeniden boyatır. Ayrı bir `position: fixed` katman compositor'da kendi
+     katmanı olarak kalır ve kaydırma sırasında hiç boyanmaz — 30 gün açık duran bir
+     sekmede en ucuz jank kaynağını kapatıyor. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(60rem 40rem at 8% -8%, oklch(0.42 0.13 285 / 0.16), transparent 62%),
+      radial-gradient(48rem 36rem at 98% 4%, oklch(0.45 0.11 330 / 0.09), transparent 58%),
+      radial-gradient(70rem 50rem at 50% 118%, oklch(0.38 0.10 250 / 0.13), transparent 64%);
+  }
+
+  /* Sayısal her yüzey sabit genişlikli rakam kullanır: sütunda ondalık hizası tutar ve
+     sayı değiştiğinde satırın genişliği oynamaz (DESIGN.md "Typography"). */
+  .rakam {
+    font-family: var(--font-numeric), ui-monospace, monospace;
+    font-feature-settings: "tnum" 1, "zero" 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Klavyeyle gelen kullanıcı dört sayfa bağlantısını her sayfada yeniden geçmek
+     zorunda kalmasın. Görünmez ama odaklanınca görünür — gizlenmiş değil, beklemede. */
+  .atla {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+  }
+  .atla:focus {
+    left: var(--spacing-lg);
+    top: var(--spacing-lg);
+    z-index: var(--z-modal);
+    background: var(--color-surface-raised);
+    color: var(--color-primary);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-interactive);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-interactive);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  ::selection {
+    background: var(--color-interactive-surface);
+  }
+
+  /* Hareket yalnızca durum geçişlerinde var ve o bile kapatılabilir olmalı. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Risk şeridinin nabzı. **Tek** animasyon ve yalnızca SAFE_MODE'da çalışıyor:
+     "veri değişimini animasyonla gösterme" kuralı (DESIGN.md) sayılar için; bu bir sayı
+     değil, bir durum. Opacity üzerinden — compositor'da kalır, layout/paint tetiklemez. */
+  @keyframes nabiz {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .nabiz {
+    animation: nabiz 2.4s ease-in-out infinite;
+  }
+}
