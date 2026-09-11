@@ -64,6 +64,7 @@ def degerlendir(
     stratejiler: Sequence[str] | None = None,
     oos_orani: float = 0.30,
     olcut: str = "sharpe",
+    secim: str = "tepe",
     baslangic_sermaye: float = 10_000.0,
     egitim_bar: int = EGITIM_BAR,
     test_bar: int = TEST_BAR,
@@ -90,7 +91,7 @@ def degerlendir(
             sinif, izgara(ad), maliyet, sembol, timeframe, bar_dizileri, ins_pencere,
             olcut=olcut, baslangic_sermaye=baslangic_sermaye, asgari_islem=asgari,
         )
-        en_iyi = tarama_sonucu.en_iyi
+        en_iyi = tarama_sonucu.sec(secim)
         olcumler: dict[str, Any] = {}
 
         if en_iyi is not None:
@@ -113,7 +114,8 @@ def degerlendir(
 
         wf = walkforward.calistir(
             sinif, izgara(ad), maliyet, sembol, timeframe, bar_dizileri, katmanlar,
-            olcut=olcut, baslangic_sermaye=baslangic_sermaye, asgari_islem=asgari,
+            olcut=olcut, secim=secim, baslangic_sermaye=baslangic_sermaye,
+            asgari_islem=asgari,
         )
         basarili = wf.basarili_katmanlar
         pozitif = sum(1 for k in basarili if k.test_metrikler.toplam_getiri > 0.0)

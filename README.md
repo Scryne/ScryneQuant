@@ -52,6 +52,7 @@ kaç kötü stratejiyi elediğiyle ölçülür.
 | Proje ne yapacak? | [`docs/Final-Dokuman.md`](docs/Final-Dokuman.md) — **bağlayıcı** |
 | Neden böyle karar verildi? | [`docs/Kararlar.md`](docs/Kararlar.md) |
 | Timeframe denendi mi? | [`docs/Faz-4-Donus-1-Timeframe.md`](docs/Faz-4-Donus-1-Timeframe.md) — çürütüldü |
+| Seçim yöntemi denendi mi? | [`docs/Faz-4-Donus-2-Secim.md`](docs/Faz-4-Donus-2-Secim.md) — çürütüldü |
 | Kaç hipotez denendi? | [`docs/Hipotez-Defteri.jsonl`](docs/Hipotez-Defteri.jsonl) — `sq lab hipotezler` |
 | Sırada ne var? | [`docs/Roadmap.md`](docs/Roadmap.md) |
 | Özgün fikir neydi? | [`docs/Proje-Fikri.md`](docs/Proje-Fikri.md) |

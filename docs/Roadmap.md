@@ -337,6 +337,16 @@ yetmedi ve **kendi ayağına bastı**: timeframe'i uzatmak işlem sayısını 4 
 istatistiksel güç tabanının altında. Kapılardan geçen yok, eşikler değişmedi. Ayrıntı:
 `docs/Faz-4-Donus-1-Timeframe.md`.
 
+**Faz 4'e dönüş 2 (2026-09-11): parametre seçim yöntemi — çürütüldü.** Dönüş 1'in
+bulgusu üzerine: `oos_is_orani` her stratejide, her timeframe'de düşüyordu, yani sorun aile
+seçiminde değil **parametre seçiminde** olabilirdi. `en_iyi` saf argmax ve bir platonun
+tepesi tanımı gereği o platonun gürültü en çok lehe çalışan noktasıdır. Plato **merkezi**
+seçimi eklendi (`tarama.plato_merkezi`) ve ön kayıtla koşturuldu (hipotez 22-35). Sonuç:
+değişen altı vakanın **beşinde kötüleşti**, birinde iyileşti. Hipotez çürüdü; önceden
+yazılmış koşul gereği üçüncü bir seçim yöntemi denenmiyor. En yakına gelen `cok_faktor`
+4h/plato (OOS Sharpe 0,46 · eşik 0,50) ama üç kapıda daha düşüyor — ve 35 çekilişten biri.
+Ayrıntı: `docs/Faz-4-Donus-2-Secim.md`.
+
 ### Faz 5: Risk motoru + promotion — ✅ kapandı 2026-09-11
 
 - **İşler:** Position sizing; exposure limiti; günlük zarar limiti; drawdown limiti;

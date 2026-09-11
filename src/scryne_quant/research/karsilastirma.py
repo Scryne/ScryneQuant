@@ -112,6 +112,7 @@ def calistir(
     stratejiler: Sequence[str] | None = None,
     oos_orani: float = 0.30,
     olcut: str = "sharpe",
+    secim: str = "tepe",
     baslangic_sermaye: float = 10_000.0,
     veri_sha256: str = "",
 ) -> Karsilastirma:
@@ -146,7 +147,7 @@ def calistir(
             olcut=olcut, baslangic_sermaye=baslangic_sermaye,
             asgari_islem=0 if ad in KIYAS else ASGARI_ISLEM,
         )
-        en_iyi = tarama.en_iyi
+        en_iyi = tarama.sec(secim)
 
         oos_metrikler: Metrikler | None = None
         if en_iyi is not None:

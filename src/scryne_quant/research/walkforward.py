@@ -77,6 +77,10 @@ class WalkForwardSonucu:
 
     strateji_adi: str
     olcut: str
+    secim: str
+    """Parametre seçim yöntemi (`tepe` | `plato`). Kayda giriyor çünkü her katmanın
+    seçtiği parametre buna bağlı ve sonuç onsuz yeniden üretilemez (K-009, K-039)."""
+
     katmanlar: list[KatmanSonucu]
     bilesik_metrikler: Metrikler
     bilesik_ozkaynak: np.ndarray
@@ -150,6 +154,7 @@ def calistir(
     katmanlar: list[Katman],
     *,
     olcut: str = "sharpe",
+    secim: str = "tepe",
     baslangic_sermaye: float = 10_000.0,
     asgari_islem: int = ASGARI_ISLEM,
 ) -> WalkForwardSonucu:
@@ -187,7 +192,7 @@ def calistir(
             baslangic_sermaye=sermaye,
             asgari_islem=asgari_islem,
         )
-        en_iyi: Aday | None = egitim.en_iyi
+        en_iyi: Aday | None = egitim.sec(secim)
 
         if en_iyi is None:
             # Bu katmanda yeterli işlem yapan aday yok. Zorla bir aday seçmek, "hiçbir
@@ -250,6 +255,7 @@ def calistir(
     return WalkForwardSonucu(
         strateji_adi=getattr(strateji_sinifi, "ad", strateji_sinifi.__name__),
         olcut=olcut,
+        secim=secim,
         katmanlar=sonuclar,
         bilesik_metrikler=hesapla(
             bilesik,

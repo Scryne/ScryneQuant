@@ -37,6 +37,12 @@ from scryne_quant.strategy.temel import Strateji
 #: olabilir. Daha azı için "bu strateji kazanıyor" cümlesi kurulamaz. Kesin eşik K-019'da.
 ASGARI_ISLEM: Final = 20
 
+#: Plato bölgesinin genişliği: en iyi skorun bu kadarlık bir oranı kadar altındaki
+#: adaylar "plato" sayılır (skor aralığına oranla). %10 keyfi değil — `ust_yuzde_plato`
+#: Faz 4'ten beri aynı sayıyı raporluyor ve K-019'un duyarlılık kapısı o rapora bakıyor.
+#: İki yerde iki farklı plato tanımı olsaydı, raporlanan sayı seçilen bölgeyi anlatmazdı.
+PLATO_YUZDESI: Final = 0.10
+
 
 class TaramaHatasi(ValueError):
     """Tarama ızgarası veya ölçütü geçersiz."""
@@ -126,6 +132,69 @@ class TaramaSonucu:
         gecerli = self.gecerliler
         return max(gecerli, key=lambda a: a.skor) if gecerli else None
 
+    def plato_merkezi(self, yuzde: float = PLATO_YUZDESI) -> Aday | None:
+        """Plato bölgesinin **merkezindeki** aday. Geçerli aday yoksa `None`.
+
+        **Neden tepe yerine merkez.** Faz 4 ve Faz 4'e dönüş 1'de ölçülen desen tek
+        istisnasızdı: `oos_is_orani` her stratejide, her timeframe'de düştü. O kapı
+        overfitting dedektörü ve hepsinin aynı kapıda düşmesi, sorunun aile seçiminde
+        değil **parametre seçiminde** olduğunu söylüyor.
+
+        `en_iyi` saf argmax. Bir platonun tepesi, tanımı gereği, o platonun gürültü en
+        çok lehe çalışan noktasıdır — yani seçilen nokta sistematik olarak iyimserdir ve
+        o iyimserlik out-of-sample'da geri alınır. Bölgenin merkezi böyle bir yanlılık
+        taşımaz: komşularının hepsi de iyi olduğu için seçimi tek bir şanslı örneğe
+        dayanmaz.
+
+        **Merkez nasıl bulunuyor:** plato kümesindeki (en iyinin %`yuzde` yakınındaki
+        geçerli adaylar) her parametrenin **ızgaradaki sırası** alınır, sıraların medyanı
+        hesaplanır ve o medyana en yakın aday seçilir. Ham değer değil sıra kullanılıyor:
+        `pencere` 7-21 ile `ust` 60-80 aynı ölçekte değil ve ham mesafe büyük sayılı
+        parametreyi baskın yapardı. Eşitlikte skoru yüksek olan kazanır — merkez tek
+        başına bir ölçüt değil, tepe arasından seçim yapan bir **öncelik**.
+
+        Bu bir hipotezdir ve K-039'a göre ayrı bir çekiliş olarak kaydedilir: aynı veriye
+        yeni bir soru sormanın her biçimi sayılır.
+        """
+        plato = self.plato_adaylari(yuzde)
+        if not plato:
+            return None
+
+        # `Aday.parametreler` bir tuple çifti listesi (frozen/hashable olsun diye);
+        # sözlüğe çevirmeden indekslemek sessizce yanlış sonuç değil, doğrudan hata verir.
+        eksenler = sorted(plato[0].sozluk_parametreler)
+        siralar: dict[str, list[Any]] = {
+            ad: sorted({a.sozluk_parametreler[ad] for a in self.gecerliler})
+            for ad in eksenler
+        }
+
+        def konum(aday: Aday) -> np.ndarray:
+            p = aday.sozluk_parametreler
+            return np.array([siralar[ad].index(p[ad]) for ad in eksenler], dtype=float)
+
+        merkez = np.median(np.vstack([konum(a) for a in plato]), axis=0)
+        return min(plato, key=lambda a: (float(np.abs(konum(a) - merkez).sum()), -a.skor))
+
+    def plato_adaylari(self, yuzde: float = PLATO_YUZDESI) -> list[Aday]:
+        """En iyinin %`yuzde` yakınındaki geçerli adaylar."""
+        gecerli = self.gecerliler
+        if not gecerli:
+            return []
+        skorlar = np.array([a.skor for a in gecerli])
+        aralik = float(skorlar.max() - skorlar.min())
+        if aralik <= 0.0:
+            return list(gecerli)
+        esik = float(skorlar.max()) - yuzde * aralik
+        return [a for a in gecerli if a.skor >= esik]
+
+    def sec(self, yontem: str = "tepe", yuzde: float = PLATO_YUZDESI) -> Aday | None:
+        """Seçim yöntemine göre adayı verir. Yöntem kayda giriyor, varsayılan değil."""
+        if yontem == "tepe":
+            return self.en_iyi
+        if yontem == "plato":
+            return self.plato_merkezi(yuzde)
+        raise TaramaHatasi(f"bilinmeyen seçim yöntemi {yontem!r}; geçerli: tepe, plato")
+
     def duyarlilik(self) -> float:
         """Skorun parametreye duyarlılığı: geçerli adayların skor standart sapması.
 
@@ -139,7 +208,7 @@ class TaramaSonucu:
         skorlar = [a.skor for a in self.gecerliler]
         return float(np.std(skorlar, ddof=1)) if len(skorlar) > 1 else 0.0
 
-    def ust_yuzde_plato(self, yuzde: float = 0.10) -> float:
+    def ust_yuzde_plato(self, yuzde: float = PLATO_YUZDESI) -> float:
         """En iyi skorun %`yuzde` yakınındaki geçerli adayların oranı.
 
         "Tepe mi plato mu" sorusunun duyarlılıktan daha okunur hâli: 0,45 dönerse geçerli

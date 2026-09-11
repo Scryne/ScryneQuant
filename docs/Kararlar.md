@@ -1393,8 +1393,14 @@ yerine kapıya yeterince çok kez gitmek.
 **Karar — üç parça:**
 
 1. **Hipotez defteri** (`docs/Hipotez-Defteri.jsonl`, `research/hipotez.py`). Bir hipotez
-   = (strateji, timeframe, veri hash'i, parametre ızgarası). Aynı dördü ikinci kez yeni
-   bir çekiliş **değil**; ızgarayı genişletmek **yeni bir çekiliştir** ve sayılır.
+   = (strateji, timeframe, veri hash'i, parametre ızgarası, **parametre seçim yöntemi**).
+   Aynı beşlisi ikinci kez yeni bir çekiliş **değil**; ızgarayı genişletmek veya seçim
+   kuralını değiştirmek **yeni bir çekiliştir** ve sayılır.
+
+   *Seçim yöntemi kimliğe Faz 4'e dönüş 2'de eklendi:* kimliğin dışında bırakmak, "argmax
+   dene, olmadı platoyu dene, olmadı şunu dene" zincirini **bedava çekiliş** yapardı —
+   aynı ızgara, aynı veri, ama her seferinde yeni bir tahmin. Aynı veriye yeni bir soru
+   sormanın her biçimi sayılmak zorunda.
 2. **Ön kayıt zorunlu.** Hipotez sonucu görülmeden önce yazılır ve bir **gerekçe** taşır
    (≥20 karakter, zorunlu). Sonradan yazılan bir hipotez "zaten bunu bekliyordum" demenin
    kaydıdır, kanıt değil. Gerekçesiz bir hipotez, ızgarayı genişletmenin kibar adıdır.

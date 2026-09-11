@@ -47,6 +47,10 @@ from scryne_quant.common.zaman import simdi_ms, utc_str
 
 VARSAYILAN_YOL: Final = Path("docs/Hipotez-Defteri.jsonl")
 
+#: Tanınan parametre seçim yöntemleri. Yeni bir yöntem eklemek buraya yazmakla olur ve
+#: **her strateji için yeni bir çekiliş** demektir.
+SECIM_YONTEMLERI: Final[tuple[str, ...]] = ("tepe", "plato")
+
 
 class HipotezHatasi(ValueError):
     """Hipotez defteri kuralı ihlal edildi."""
@@ -65,6 +69,15 @@ class Hipotez:
     timeframe: str
     veri_sha256: str
     izgara: dict[str, list[Any]]
+    secim: str
+    """Parametre **seçim yöntemi** (`tepe` | `plato`). Kimliğin parçası ve bu bir karar.
+
+    Seçim yöntemini kimliğin dışında bırakmak, "argmax dene, olmadı platoyu dene, olmadı
+    şunu dene" zincirini **bedava çekiliş** yapardı: aynı ızgara, aynı veri, ama her
+    seferinde farklı bir kural — yani yeni bir tahmin. Aynı veriye yeni bir soru sormanın
+    her biçimi sayılmak zorunda.
+    """
+
     gerekce: str
     """Bu hipotezin **neden** denendiği. Sonuç görülmeden yazılıyor; boş bırakılamaz.
 
@@ -76,6 +89,11 @@ class Hipotez:
     def __post_init__(self) -> None:
         if not self.strateji or not self.timeframe:
             raise HipotezHatasi("hipotez strateji ve timeframe taşımalı")
+        if self.secim not in SECIM_YONTEMLERI:
+            raise HipotezHatasi(
+                f"bilinmeyen seçim yöntemi {self.secim!r}; geçerli: "
+                f"{', '.join(SECIM_YONTEMLERI)}"
+            )
         if len(self.gerekce.strip()) < 20:
             raise HipotezHatasi(
                 "hipotez bir gerekçe ister (≥20 karakter): gerekçesiz bir hipotez, "
@@ -92,6 +110,7 @@ class Hipotez:
                 "timeframe": self.timeframe,
                 "veri_sha256": self.veri_sha256,
                 "izgara": {a: list(d) for a, d in sorted(self.izgara.items())},
+                "secim": self.secim,
             }
         )
 
@@ -102,6 +121,7 @@ class Hipotez:
             "timeframe": self.timeframe,
             "veri_sha256": self.veri_sha256,
             "izgara": {a: list(d) for a, d in sorted(self.izgara.items())},
+            "secim": self.secim,
             "gerekce": self.gerekce,
             "zaman_ms": self.zaman_ms,
             "zaman_utc": utc_str(self.zaman_ms),
@@ -115,12 +135,14 @@ class Hipotez:
         veri_sha256: str,
         izgara: Mapping[str, Sequence[Any]],
         gerekce: str,
+        secim: str = "tepe",
     ) -> Hipotez:
         return cls(
             strateji=strateji,
             timeframe=timeframe,
             veri_sha256=veri_sha256,
             izgara={a: list(d) for a, d in izgara.items()},
+            secim=secim,
             gerekce=gerekce,
         )
 
@@ -203,6 +225,7 @@ class HipotezDefteri:
 
 
 __all__ = [
+    "SECIM_YONTEMLERI",
     "VARSAYILAN_YOL",
     "Hipotez",
     "HipotezDefteri",

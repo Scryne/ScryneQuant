@@ -514,3 +514,100 @@ class TestDeneyKaydi:
     def test_deney_kaydi_olmayan_sozluk(self):
         with pytest.raises(deney.DeneyHatasi, match="deney kaydı değil"):
             deney.dogrula({"kimlik": {}}, {})
+
+
+class TestPlatoSecimi:
+    """Plato merkezi seçimi. (Faz 4'e dönüş 2)
+
+    Hipotez çürüdü — plato seçimi `oos_is_orani`'nı iyileştirmedi — ama kod kaldı ve
+    doğru çalışmak zorunda: ölçümün kendisi ancak seçim doğru yapıldıysa bir şey anlatır.
+    Yanlış bir merkez, "hipotez çürüdü" sonucunu da geçersiz kılardı.
+    """
+
+    def aday(self, skor: float, **parametreler):
+        from scryne_quant.backtest.metrikler import Metrikler
+        from scryne_quant.research.tarama import Aday
+
+        return Aday(
+            parametreler=tuple(sorted(parametreler.items())),
+            skor=skor,
+            metrikler=Metrikler.bos() if hasattr(Metrikler, "bos") else None,
+            sonuc_hash="0" * 16,
+            gecerli=True,
+        )
+
+    def sonuc(self, adaylar):
+        from scryne_quant.research.tarama import TaramaSonucu
+
+        return TaramaSonucu(
+            strateji_adi="test",
+            olcut="sharpe",
+            adaylar=adaylar,
+            pencere={},
+            asgari_islem=0,
+        )
+
+    def test_tek_adaylik_platoda_merkez_tepedir(self):
+        # Plato kümesi tek adaysa merkez tepenin kendisidir — ve bu, deneyin ölçtüğü
+        # sınırın ta kendisi: 14 vakanın 8'inde böyle oldu.
+        s = self.sonuc([self.aday(1.0, a=1), self.aday(0.0, a=2), self.aday(-1.0, a=3)])
+        assert s.sec("plato").sozluk_parametreler == s.sec("tepe").sozluk_parametreler
+
+    def test_genis_platoda_merkez_seciliyor(self):
+        # a=1..5 platoda (kötü aday aralığı açıyor); merkez a=3, tepe a=1 olsa bile.
+        adaylar = [self.aday(1.00 - 0.01 * i, a=i) for i in range(5)]
+        adaylar.append(self.aday(0.0, a=5))
+        s = self.sonuc(adaylar)
+        assert s.sec("tepe").sozluk_parametreler["a"] == 0
+        assert s.sec("plato").sozluk_parametreler["a"] == 2
+
+    def test_plato_skor_araligina_oranli_ve_bu_deneyi_sinirladi(self):
+        """Plato "en iyinin %10 **yakını**" değil, "skor **aralığının** %10'u" demek.
+
+        Yani skorlar sıkışıksa plato daralır. Bu tanım Faz 4'ten beri `ust_yuzde_plato`
+        içinde ve bilerek değiştirilmedi: iki yerde iki farklı plato tanımı olsaydı,
+        K-019'a raporlanan sayı seçilen bölgeyi anlatmazdı.
+
+        Sonucu Faz 4'e dönüş 2'de doğrudan görüldü — 12-36 adaylık ızgaralarda plato
+        kümeleri 1-7 adaya düştü ve 14 vakanın 8'inde merkez tepenin kendisi oldu. Yani
+        deneyin gücünü sınırlayan şey bu tanımdı, ve bu test onu görünür tutuyor.
+        """
+        sikisik = self.sonuc([self.aday(1.0 - 0.001 * i, a=i) for i in range(5)])
+        assert len(sikisik.plato_adaylari()) == 1  # hepsi neredeyse eşit → plato dar
+
+        yayvan = self.sonuc(
+            [self.aday(1.0 - 0.01 * i, a=i) for i in range(5)] + [self.aday(0.0, a=5)]
+        )
+        assert len(yayvan.plato_adaylari()) == 5
+
+    def test_parametreler_sira_ile_olculuyor_ham_deger_ile_degil(self):
+        # `pencere` 7-21 ile `ust` 60-80 aynı ölçekte değil; ham mesafe büyük sayılı
+        # parametreyi baskın yapar ve merkez yanlış eksende bulunurdu.
+        adaylar = [
+            self.aday(1.00, kucuk=1, buyuk=1000),
+            self.aday(0.99, kucuk=2, buyuk=2000),
+            self.aday(0.98, kucuk=3, buyuk=3000),
+            self.aday(0.00, kucuk=4, buyuk=4000),
+        ]
+        s = self.sonuc(adaylar)
+        assert s.sec("plato").sozluk_parametreler == {"kucuk": 2, "buyuk": 2000}
+
+    def test_gecerli_aday_yoksa_none(self):
+        from scryne_quant.research.tarama import Aday
+
+        gecersiz = Aday(
+            parametreler=(("a", 1),), skor=1.0, metrikler=None,
+            sonuc_hash="0" * 16, gecerli=False,
+        )
+        s = self.sonuc([gecersiz])
+        assert s.sec("plato") is None
+        assert s.sec("tepe") is None
+
+    def test_bilinmeyen_yontem_hata(self):
+        import pytest as _pytest
+
+        from scryne_quant.research.tarama import TaramaHatasi
+
+        s = self.sonuc([self.aday(1.0, a=1)])
+        with _pytest.raises(TaramaHatasi, match="bilinmeyen seçim"):
+            s.sec("sihirli")

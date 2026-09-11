@@ -98,6 +98,13 @@ VARSAYILAN_PAPER_KOKU = Path("runs/paper")
 #: Audit defterinin varsayılan yeri (`.gitignore`'da).
 VARSAYILAN_AUDIT = Path("runs/audit.sqlite")
 
+Secim = Annotated[
+    str,
+    typer.Option(
+        "--secim",
+        help="Parametre seçimi: tepe (argmax) | plato (plato merkezi). Ayrı çekiliş (K-039).",
+    ),
+]
 Depo = Annotated[Path, typer.Option("--depo", help="Parquet depo kökü.")]
 JsonCikti = Annotated[bool, typer.Option("--json", help="Çıktıyı JSON olarak ver.")]
 
@@ -592,6 +599,7 @@ def lab_tara(
     timeframe: Timeframe = "1h",
     oos_orani: Annotated[float, typer.Option("--oos", help="OOS payı [0.1, 0.5].")] = 0.30,
     olcut: Olcut = "sharpe",
+    secim: Secim = "tepe",
     sermaye: Sermaye = 10_000.0,
     depo: Depo = VARSAYILAN_DEPO,
     deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
@@ -602,7 +610,7 @@ def lab_tara(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     secenekler = varsayilan_izgara(strateji)
-    _defteri_zorla([strateji], timeframe, veri_hash)
+    _defteri_zorla([strateji], timeframe, veri_hash, secim)
 
     ins, _ = karsilastirma_mod.ortak_pencereler(
         len(diziler["open_time"]), [strateji], oos_orani=oos_orani
@@ -628,7 +636,7 @@ def lab_tara(
         _yaz_json({"deney": str(yol), **sonuc.sozluk()})
         return
 
-    en_iyi = sonuc.en_iyi
+    en_iyi = sonuc.sec(secim)
     typer.echo(f"{strateji} · {sembol} {timeframe} · IS {ins.uzunluk:,} bar · ölçüt={olcut}")
     typer.echo(
         f"  aday {len(sonuc.adaylar)} "
@@ -661,6 +669,7 @@ def lab_walkforward(
         bool, typer.Option("--sabit-capa", help="Genişleyen eğitim penceresi.")
     ] = False,
     olcut: Olcut = "sharpe",
+    secim: Secim = "tepe",
     sermaye: Sermaye = 10_000.0,
     depo: Depo = VARSAYILAN_DEPO,
     deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
@@ -671,13 +680,13 @@ def lab_walkforward(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     secenekler = varsayilan_izgara(strateji)
-    _defteri_zorla([strateji], timeframe, veri_hash)
+    _defteri_zorla([strateji], timeframe, veri_hash, secim)
 
     n = len(diziler["open_time"])
     isinma = karsilastirma_mod.ortak_isinma([strateji])
     katmanlar = bolme.walk_forward(n, isinma, egitim, test, kaydirmali=not sabit_capa)
     sonuc = wf_mod.calistir(
-        sinif, secenekler, model, sembol, timeframe, diziler, katmanlar,
+        sinif, secenekler, model, sembol, timeframe, diziler, katmanlar, secim=secim,
         olcut=olcut, baslangic_sermaye=sermaye,
         # Kıyas ölçütünde optimize edilecek bir şey yok ve kapanmış tur da yok.
         asgari_islem=0 if strateji in KIYAS else tarama_mod.ASGARI_ISLEM,
@@ -735,6 +744,7 @@ def lab_montecarlo(
     timeframe: Timeframe = "1h",
     deneme: Annotated[int, typer.Option("--deneme")] = 1_000,
     seed: Annotated[int, typer.Option("--seed")] = 0,
+    secim: Secim = "tepe",
     sermaye: Sermaye = 10_000.0,
     depo: Depo = VARSAYILAN_DEPO,
     deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
@@ -745,7 +755,7 @@ def lab_montecarlo(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     pencere = _tam_pencere(diziler, strateji)
-    _defteri_zorla([strateji], timeframe, veri_hash)
+    _defteri_zorla([strateji], timeframe, veri_hash, secim)
 
     nesne = sinif()
     kosu_sonucu = tarama_mod.kosu(
@@ -790,6 +800,7 @@ def lab_stres(
     strateji: StratejiAdi,
     sembol: Sembol = "BTCUSDT",
     timeframe: Timeframe = "1h",
+    secim: Secim = "tepe",
     sermaye: Sermaye = 10_000.0,
     depo: Depo = VARSAYILAN_DEPO,
     deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
@@ -800,7 +811,7 @@ def lab_stres(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     pencere = _tam_pencere(diziler, strateji)
-    _defteri_zorla([strateji], timeframe, veri_hash)
+    _defteri_zorla([strateji], timeframe, veri_hash, secim)
 
     nesne = sinif()
     sonuc = analiz_mod.stres(
@@ -840,7 +851,9 @@ def lab_stres(
     typer.echo(f"  deney: {yol}")
 
 
-def _defteri_zorla(adlar: list[str], timeframe: str, veri_sha256: str) -> None:
+def _defteri_zorla(
+    adlar: list[str], timeframe: str, veri_sha256: str, secim: str = "tepe"
+) -> None:
     """Koşturulacak her strateji hipotez defterinde kayıtlı mı? (K-039)
 
     **Araç seviyesinde zorlanması şart, çünkü çekiliş burada yapılıyor.** K-039 ön kaydı
@@ -859,7 +872,12 @@ def _defteri_zorla(adlar: list[str], timeframe: str, veri_sha256: str) -> None:
         for ad in adlar
         if defter.sira(
             hipotez_mod.Hipotez.kur(
-                ad, timeframe, veri_sha256, varsayilan_izgara(ad), "kontrol amaçlı kurulum"
+                ad,
+                timeframe,
+                veri_sha256,
+                varsayilan_izgara(ad),
+                "kimlik kontrolü için kurulan geçici hipotez nesnesi",
+                secim=secim,
             )
         )
         is None
@@ -872,7 +890,8 @@ def _defteri_zorla(adlar: list[str], timeframe: str, veri_sha256: str) -> None:
     )
     raise hipotez_mod.HipotezHatasi(
         f"hipotez defterinde kayıtlı olmayan strateji(ler): {', '.join(eksik)} "
-        f"({timeframe}). Sonucu gördükten sonra kaydetmek ön kayıt değildir (K-039). "
+        f"({timeframe}, seçim={secim}). Sonucu gördükten sonra kaydetmek ön kayıt "
+        f"değildir (K-039). "
         f"Önce kaydedin:{chr(10)}{komutlar}"
     )
 
@@ -883,6 +902,7 @@ def lab_karsilastir(
     timeframe: Timeframe = "1h",
     oos_orani: Annotated[float, typer.Option("--oos", help="OOS payı [0.1, 0.5].")] = 0.30,
     olcut: Olcut = "sharpe",
+    secim: Secim = "tepe",
     sermaye: Sermaye = 10_000.0,
     depo: Depo = VARSAYILAN_DEPO,
     deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
@@ -892,7 +912,7 @@ def lab_karsilastir(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     adlar = [*KUTUPHANE, *KIYAS]
-    _defteri_zorla(adlar, timeframe, veri_hash)
+    _defteri_zorla(adlar, timeframe, veri_hash, secim)
 
     sonuc = karsilastirma_mod.calistir(
         model, sembol, timeframe, diziler, stratejiler=adlar,
@@ -1002,6 +1022,7 @@ def lab_kapilar(
         degerlendirme_mod.TEST_BAR
     ),
     olcut: Olcut = "sharpe",
+    secim: Secim = "tepe",
     sermaye: Sermaye = 10_000.0,
     depo: Depo = VARSAYILAN_DEPO,
     deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
@@ -1019,18 +1040,20 @@ def lab_kapilar(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     adlar = [*KUTUPHANE, *KIYAS]
-    _defteri_zorla(adlar, timeframe, veri_hash)
+    _defteri_zorla(adlar, timeframe, veri_hash, secim)
 
     sonuc = degerlendirme_mod.degerlendir(
         model, sembol, timeframe, diziler, stratejiler=adlar, oos_orani=oos_orani,
-        olcut=olcut, baslangic_sermaye=sermaye, egitim_bar=egitim, test_bar=test,
+        olcut=olcut, secim=secim, baslangic_sermaye=sermaye, egitim_bar=egitim,
+        test_bar=test,
     )
 
     yol = deney_mod.Deney(
         tip="degerlendirme", strateji="+".join(adlar), veri_sha256=veri_hash,
         girdi={
             "sembol": sembol, "timeframe": timeframe, "stratejiler": adlar,
-            "oos_orani": oos_orani, "olcut": olcut, "egitim_bar": egitim, "test_bar": test,
+            "oos_orani": oos_orani, "olcut": olcut, "secim": secim,
+            "egitim_bar": egitim, "test_bar": test,
             "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
         },
         cikti=sonuc,
@@ -1851,6 +1874,7 @@ def lab_hipotez_kaydet(
     ],
     sembol: Annotated[str, typer.Option("--sembol")] = "BTCUSDT",
     timeframe: Annotated[str, typer.Option("--timeframe", "-t")] = "1h",
+    secim: Secim = "tepe",
     depo: Depo = VARSAYILAN_DEPO,
     json_cikti: JsonCikti = False,
 ) -> None:
@@ -1867,7 +1891,9 @@ def lab_hipotez_kaydet(
     """
     izgara = varsayilan_izgara(strateji_adi)
     sha = ParquetDepo(depo).sha256(sembol, timeframe)
-    hipotez = hipotez_mod.Hipotez.kur(strateji_adi, timeframe, sha, izgara, gerekce)
+    hipotez = hipotez_mod.Hipotez.kur(
+        strateji_adi, timeframe, sha, izgara, gerekce, secim=secim
+    )
 
     defter = hipotez_mod.HipotezDefteri()
     onceki = defter.sira(hipotez)
