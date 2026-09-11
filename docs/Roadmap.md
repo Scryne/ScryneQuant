@@ -612,7 +612,7 @@ koşulu ve ikisi de strateji beklemiyordu:
 | --- | --- |
 | Pozisyon mutabakatı | ✅ **K-046** — değişmez çıpa + defter akışı vs borsa bakiyesi. `runs/testnet/poz-1`: fark tam sıfır; defterin bilmediği 0,0002 BTC'lik bir emir gönderilince **durdu** (−15,4368 USDT, çıkış kodu 1) |
 | Limit emri ve iptal | ✅ **K-047** — dört vaka gerçek testnet'te: açık limit para kilitliyor, iptal kilidi çözüyor, marketable limit limitten iyi fiyattan doluyor, dolmuş emrin iptali ağa hiç çıkmıyor |
-| PostgreSQL şeması (K-034) | ⏳ açık, Faz 8 |
+| PostgreSQL şeması (K-034) | ✅ **ölçüldü** — üç geri dönüş koşulunun üçü de uzak: tek yazıcı, audit 1.091 satır (eşik 10 M), `runs/` 3,7 MB (eşik 5 GB), tek sembol. Erteleme değil, ölçüm |
 | Uzun süreli dayanıklılık | ⏳ açık, Faz 8 |
 
 **İki iş birbirini buldu:** Faz 7'nin `bakiye()`si yalnızca `free` okuyordu ve market

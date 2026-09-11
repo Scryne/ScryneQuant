@@ -96,10 +96,17 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   duvar saati istiyor, koşu bitince o dosyaya yazılacak.
 - `config/risk.json` — yürürlükteki risk limitleri; her limit `olculdu`/`istah` kaynağını
   ve (iştahsa) gözden geçirme koşulunu taşır (K-033). `sq risk limitler` ile okunur.
-- `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Uygulanmadı; Faz 7'de de
-  ertelendi, karar Faz 8'e taşındı** (K-034): Faz 6 ve Faz 7'nin mimarisinde tek yazıcı var,
-  PostgreSQL'in gerekçesi olan eşzamanlı yazma doğmuyor. Şema dondurulmuş, `risk/audit.py`'nin SQLite şemasıyla hizalı
-  tutuluyor ve testle korunuyor.
+- `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Uygulanmadı ve bu artık bir
+  erteleme değil, bir ölçüm** (K-034, 2026-09-11): kararın kendi üç geri dönüş koşulu
+  ölçüldü, üçü de gerçekleşmemiş (tek yazıcı; audit 1.091 satır / eşik 10 M; `runs/`
+  3,7 MB / eşik 5 GB; tek sembol). Şema dondurulmuş, `risk/audit.py`'nin SQLite şemasıyla
+  hizalı tutuluyor ve testle korunuyor. Faz 8'e taşınan şey karar değil, bir sonraki ölçüm.
+- `src/scryne_quant/oms/pozisyon.py` — **pozisyon mutabakatı** (K-046). Değişmez açılış
+  çıpası + defter akışı vs borsa bakiyesi; açıklanamayan farkta koşu durur. `sq testnet
+  pozisyon` ile okunur. Faz 8'in "açıklanamayan pozisyon farkı: sıfır" kriteri buraya
+  bakar.
+- `runs/testnet/poz-1.*`, `runs/testnet/lim-1.*` — K-046 ve K-047'nin ölçüm koşuları.
+  `.gitignore`'da; sayılar `docs/Faz-7-Execution-Raporu.md` §9'a kopyalandı.
 - `runs/testnet/<kosu>.sqlite` + `.json` — Faz 7 execution ölçümlerinin emir defteri ve
   raporu. `sq testnet yuk` ve `sq testnet kesinti` üretir. `.gitignore`'da; sayılar
   `docs/Faz-7-Execution-Raporu.md`'ye kopyalanır.

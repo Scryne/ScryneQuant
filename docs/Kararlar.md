@@ -1182,6 +1182,32 @@ zaten öyleydi), `BIGSERIAL` yerine `INTEGER PRIMARY KEY`, ve append-only kural�
 `RULE`'ları yerine trigger + `RAISE(ABORT)` ile zorlanıyor. Şema ikizliği testle korunduğu
 için göç, bir bağlantı dizgisi ve bir toplu kopyalama olarak kalır.
 
+### Gözden geçirme ölçümü — 2026-09-11 (Faz 7'ye dönüş)
+
+Bu karar Faz 5'ten Faz 6'ya, Faz 6'dan Faz 7'ye, Faz 7'den Faz 8'e taşındı. Üçüncü
+taşımada sorulması gereken soru *"yine erteleyelim mi"* değil, **koşullar gerçekleşti
+mi** — çünkü koşullar zaten yukarıda yazılı ve ölçülebilir. Ölçüldüler:
+
+| # | Koşul | Eşik | **Ölçülen** | Gerçekleşti mi |
+| --- | --- | ---: | ---: | --- |
+| 1 | İkinci yazıcı süreç | — | Tek yazıcı (`live/kilit.py` zorluyor); `sq testnet` komutları kendi dosyalarına yazan ayrı koşular | **Hayır** |
+| 2a | Audit satır sayısı | 10.000.000 | **1.091** | **Hayır** (‰0,1) |
+| 2b | `runs/` toplam boyut | 5 GB | **3,7 MB** | **Hayır** (‰0,7) |
+| 3 | Çok sembollü çalışma | — | Tek sembol; çok sembollü arama K-045 ile kapandı | **Hayır** |
+
+**Üçü de uzak, ve ikisi *uzaklaşıyor*.** K-045 tek sembollü aramayı kapattığı için koşul
+3 kendiliğinden gerçekleşmiyor; Faz 8'in planlanan mimarisi (tek strateji, tek sembol, tek
+koşturucu) koşul 1'i de doğurmuyor. Koşul 2'nin eşiklerine bugünkü hızla ulaşmak, audit
+tarafında dört buçuk basamak büyüme ister.
+
+**Karar değişmiyor ve bu artık bir erteleme değil.** Aradaki fark K-039'un ayrımıyla aynı:
+erteleme, ölçülebilir bir şeyi ölçmemektir; bu ise ölçülmüş ve **koşulların
+gerçekleşmediği** görülmüştür. Faz 8'e taşınan şey karar değil, **bir sonraki ölçüm**.
+
+`migrations/001_faz5.sql` dondurulmuş kalıyor ve `tests/unit/test_audit.py`'nin kolon
+hizası testi sürüyor — göç yolu açık tutuluyor, ama açık tutmak ile kullanmak farklı
+şeyler.
+
 ---
 
 ## K-035 — Gözlem modu: promotion geçmemiş strateji canlı veride koşabilir, ama kanıt üretemez
@@ -2133,7 +2159,7 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-031 | Strateji sinyalinin kabul edildiğini varsayamaz | ✅ **kabul** | Faz 4 |
 | K-032 | Risk onayı bir tip, bir mühür ve bir kesme noktası | ✅ **kabul** | Faz 5 |
 | K-033 | Her risk limiti kaynağını ve gözden geçirme koşulunu taşır | ✅ **kabul** | Faz 5 |
-| K-034 | Operasyonel state SQLite (WAL); Postgres Faz 7'ye ertelendi | ✅ **kabul** | Faz 6 |
+| K-034 | Operasyonel state SQLite (WAL); Postgres'in koşulları ölçüldü, doğmadı | ✅ **kabul** | Faz 6, ölçüldü 2026-09-11 |
 | K-035 | Gözlem modu: kanıt üretmeyen canlı koşu | ✅ **kabul** | Faz 6 |
 | K-036 | Dashboard Vite+React SPA, FastAPI servis eder | ✅ **kabul** | Faz 6 |
 | K-037 | Engelleyen katman risk motorunun dışında olabilir, izin veren olamaz | ✅ **kabul** | Faz 6 |

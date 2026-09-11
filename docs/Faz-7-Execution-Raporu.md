@@ -135,10 +135,11 @@ hata yok, test yeşil — ve pozisyon hesabında her emirde biraz büyüyen sess
 
 - **Pozisyon mutabakatı.** ✅ **kapandı (K-046).** Koşu başındaki bakiyenin değişmez bir
   kaydı kuruldu; çıpa + defter akışı borsanın bakiyesiyle karşılaştırılıyor.
-- **PostgreSQL şeması.** ⏳ **açık.** K-034 ile Faz 7'ye ertelenmişti; Faz 7'de de tek
-  yazıcı var, yani şemanın gerekçesi olan eşzamanlı yazma hâlâ doğmadı.
-  `migrations/001_faz5.sql` dondurulmuş kalıyor ve `oms/defter.py` ile birlikte SQLite
-  üzerinde çalışılıyor. Karar Faz 8'e taşındı.
+- **PostgreSQL şeması.** ✅ **ölçüldü (K-034'ün gözden geçirme bloğu).** Üç geri dönüş
+  koşulunun üçü de ölçüldü ve hiçbiri gerçekleşmedi: tek yazıcı sürüyor, audit **1.091**
+  satır (eşik 10 M), `runs/` **3,7 MB** (eşik 5 GB), tek sembol. Bu artık bir erteleme
+  değil — ölçülmüş ve koşulların doğmadığı görülmüş bir karar. Faz 8'e taşınan şey karar
+  değil, **bir sonraki ölçüm**.
 - **Limit emri ve iptal.** ✅ **kapandı (K-047).** Dört vaka gerçek testnet'e karşı
   yürütüldü. Kısmi dolumun iptali hâlâ ölçülmedi ve o kayıtlı (K-047/7).
 - **Uzun süreli dayanıklılık.** ⏳ **açık.** 100 emir 2 dakikada gönderildi; günlerce
