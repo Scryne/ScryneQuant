@@ -120,6 +120,11 @@ niyet (§10). Exchange'e giden yol yoktur.
 
 **Var:**
 - Kripto **spot**, tek borsa (Binance), başlangıçta tek sembol (BTC/USDT)
+- **Veri kaynağı Faz 4'e dönüş 3'te genişledi (K-042):** BTC/USDT perpetual'ın
+  **funding rate** geçmişi bir *özellik* olarak kullanılıyor. İşlem hâlâ yalnızca spot
+  ve tek sembol; funding bir maliyet değil bilgi kaynağıdır. Diğer türev veri uçları
+  (open interest, long/short oranı) Binance'te ~31 gün saklandığı için kullanılamıyor
+  (Spike 5).
 - Tarihsel veri indirme, doğrulama, kalite raporu
 - İndikatör/feature motoru
 - Rule-based strateji ailesi: SMA/EMA crossover, RSI mean reversion, breakout, momentum

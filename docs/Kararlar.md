@@ -1625,6 +1625,87 @@ test bir şey kanıtlamaz.** `SahteBorsa` artık yön ve lot adımı kontrolü y
 
 ---
 
+## K-042 — Funding rate bir bilgi kaynağı olarak eklenir; üç hipotez, tek tur, geri dönüşsüz
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 4'e dönüş 3 · **Tamamlar:** K-039 ·
+**İlgili:** K-002, K-016, K-025, K-030 · **Kanıt:** `docs/spikes/05-funding-verisi.md`
+
+**Bağlam.** Faz 4 yedi hipotezi çürüttü, dönüş 1 (timeframe) ve dönüş 2 (parametre seçim
+yöntemi) de çürüdü. Üçü de **aynı kavanozdan** çekilişti: aynı veri, aynı fiyat geçmişi,
+yeni bir tahmin. K-039'un uyarısı tam olarak buna: yeterince çok çekmek, eşiğe dokunmadan
+kuralı delmektir. Bu yüzden dördüncü bir parametre denemesi **yapılmıyor**; devam edilecekse
+bilgi kaynağı değişmeli.
+
+### 1. Neden funding rate, neden çoklu sembol değil
+
+**Çoklu sembol + göreli güç reddedildi**: mimariyi kırıyor. Kapsam (v1) *"tek sembol
+(BTC/USDT)"* diyor; çoklu sembol portföy katmanı, sembol-arası korelasyon ve portföy düzeyi
+risk limitleri demek — Faz 5'in risk motorunu yeniden açmak. Büyük bir iş, ve başarısızlık
+olasılığı bu işi haklı çıkaracak kadar düşük değil.
+
+**Funding rate mimariye dokunmuyor**: BTC/USDT spot'ta tek pozisyon, tek sembol. Değişen tek
+şey stratejinin gördüğü bilgi — fiyat geçmişi yerine türev piyasasının **konumlanması**. Bu
+OHLCV'den türetilemeyen bir büyüklük, yani gerçekten yeni bir soru.
+
+**Spike 5 hipotez uzayını kendisi daralttı.** Dört aday kaynak ölçüldü, üçü elendi:
+`openInterestHist`, `globalLongShortAccountRatio` ve `takerlongshortRatio` Binance'te
+yalnızca **~31 gün** saklanıyor. Walk-forward kurulamaz. Geriye tek kanal kaldı: funding
+rate, 7,01 yıl, 8 saatte bir, sıfır boşluk.
+
+### 2. Funding bir maliyet değil, bir bilgidir
+
+Sistem **spot** işlem yapıyor; spot'ta funding ödenmez. Maliyet modeline (K-016, K-021,
+K-025) dokunulmuyor. Funding yalnızca özellik olarak girer. Bu ayrım yazılı olmalı çünkü
+sezgiye ters: funding kelimesi bir ödemeyi çağrıştırıyor ve bir gün biri onu maliyet modeline
+eklemeye kalkarsa, o değişiklik backtest sonuçlarını sessizce bozardı.
+
+### 3. Eşikler mutlak değil, persentil olmalı
+
+Ölçülen medyan funding **+0,0096% / 8 saat** — kalıcı pozitif. Mutlak bir eşik ("funding > 0")
+neredeyse her zaman doğru olur ve hiçbir şey ayırt etmez. Eşikler kayan pencere persentili
+olarak tanımlanıyor. Bu bir optimizasyon tercihi değil, verinin tanımından çıkan bir kısıt.
+
+### 4. Hizalama nedensel olmak zorunda
+
+`fundingTime` ödemenin **gerçekleştiği** an. `t` barı yalnızca `fundingTime <= t` olan
+kayıtları görebilir. 8 saatlik bir seriyi 1h barlara yaymak, dikkat edilmezse gelecekten
+bilgi sızdırır — K-002'nin kapattığı hata sınıfı. Hizalama geriye dönük (`merge_asof`
+backward) yapılıyor ve look-ahead testi bu alanı da kapsıyor. Funding kaydı yoksa alan
+`NaN` kalır, **uydurulmaz** (K-024).
+
+### 5. Durma kuralı — sonucu görmeden yazıldı
+
+**Üç hipotez, tek tur.** Ön kayıtla yazılır, ölçülür, biter.
+
+| # | Hipotez | Soru |
+| --- | --- | --- |
+| 1 | `funding_ters` | Kalabalıklaşma tersine mi çalışıyor? |
+| 2 | `funding_filtre` | Kalabalıklaşma, mevcut ailelerin OOS çöküşünü açıklıyor mu? |
+| 3 | `funding_egilim` | Birikimli funding bir rejim göstergesi mi? |
+
+Üçü de BTC/USDT **1h**, tek parametre ızgarası, seçim yöntemi **`tepe`**.
+
+**Hiçbiri K-019'un yedi kapısını geçemezse funding fikri kapanır.** Dördüncü aile yok,
+ikinci seçim yöntemi yok, timeframe varyasyonu yok, ızgara genişletmesi yok. Bunlardan
+herhangi biri yapılırsa **ayrıca sayılır** ve bu kararın ihlalidir.
+
+**"Yaklaşırsa devam" kuralı bilerek reddedildi.** Cazip görünüyor — yedi kapının beşini geçen
+bir aileden birkaç varyasyon daha çekmek. Ama o, sonucu gördükten sonra çekiliş sayısına karar
+vermektir; yani durma kuralının olmaması. K-039'un engellemeye çalıştığı şeyin tam olarak
+kibar hâli.
+
+Defter 35'ten **38**'e çıkıyor. K-039'un açık düzeltmesi (çoklu test) hâlâ açık ve ilk geçen
+strateji çıktığında verilecek — o an defterdeki sayı 38 olacak.
+
+### 6. Bu karar neyi vaat etmiyor
+
+Baz oran düşük. Faz 4 ve iki dönüş, aktif yönetimin bu veride al-tut'u yenemediğini ölçtü;
+funding'in bunu değiştireceğine dair bir kanıt **yok** — olsaydı hipoteze gerek kalmazdı.
+Üçüncü bir çürütme beklenen sonuçtur ve başarısızlık değildir: sistemin işi cevabı ölçmek,
+istenen cevabı üretmek değil.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
