@@ -59,7 +59,10 @@ bunlardan birini ihlal ediyorsa görev yanlıştır; kural değil.
 10. **Engelleyen katman risk motorunun dışında olabilir; izin veren katman olamaz.**
     Bayat veri ve `ok` olmayan bar sinyali eler, ama onay üreten tek yer risk motorudur.
     (K-037)
-11. **Toparlanma bir geri yükleme değil, yeniden üretimdir.** Diskten okunan durum
+11. **Kaç hipotez denendiği sayılır.** Kapılar strateji başına; "yeterince çok deneyip
+    birini geçirmek" eşiğe dokunmadan kuralı delmektir. Hipotez ön kayıtla deftere
+    yazılır, sayı promotion kanıtının parçasıdır. (K-039)
+12. **Toparlanma bir geri yükleme değil, yeniden üretimdir.** Diskten okunan durum
     bağımsız bir kaynaktan yeniden üretilip karşılaştırılır; uyuşmazlıkta koşu **durur**,
     tahmin yürütülmez. (K-038)
 
@@ -72,6 +75,9 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   çelişkide Final-Doküman kazanır.
 - `docs/Denetim.md` — fikir dokümanının denetimi: çelişkiler, eksikler, kapsam kesimleri.
 - `docs/Kararlar.md` — **karar günlüğü (K-001…).** "Neden böyle" sorusunun tek adresi.
+- `docs/Hipotez-Defteri.jsonl` — **kaç çekiliş yapıldığının kaydı (K-039).** Append-only,
+  sürüm kontrolünde. Faz 4'e her dönüşte denenecek hipotez **önce** buraya yazılır
+  (`sq lab hipotez-kaydet`); kaydedilmemiş bir hipotez `out_of_sample` aşamasını geçemez.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
 - `docs/Roadmap.md` — Faz 0-8, her fazın somut bitti kriteri.
 - `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,

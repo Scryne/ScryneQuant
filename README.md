@@ -51,6 +51,7 @@ kaç kötü stratejiyi elediğiyle ölçülür.
 | --- | --- |
 | Proje ne yapacak? | [`docs/Final-Dokuman.md`](docs/Final-Dokuman.md) — **bağlayıcı** |
 | Neden böyle karar verildi? | [`docs/Kararlar.md`](docs/Kararlar.md) |
+| Kaç hipotez denendi? | [`docs/Hipotez-Defteri.jsonl`](docs/Hipotez-Defteri.jsonl) — `sq lab hipotezler` |
 | Sırada ne var? | [`docs/Roadmap.md`](docs/Roadmap.md) |
 | Özgün fikir neydi? | [`docs/Proje-Fikri.md`](docs/Proje-Fikri.md) |
 | Fikirde ne düzeltildi? | [`docs/Denetim.md`](docs/Denetim.md) |
@@ -66,7 +67,7 @@ Strateji I/O yapamaz · Strateji geleceği göremez · Sinyal risk motorunu atla
 UTC · Fill bir sonraki barın açılışında · Slippage her zaman aleyhte · Aynı girdi aynı
 çıktı · Promotion kapıları kaldırılamaz · Kendi hesabı, kendi parası · Engelleyen katman
 risk motorunun dışında olabilir, izin veren olamaz · Toparlanma bir geri yükleme değil,
-yeniden üretimdir.
+yeniden üretimdir · Kaç hipotez denendiği sayılır.
 
 Gerekçeler: `docs/Kararlar.md`.
 
