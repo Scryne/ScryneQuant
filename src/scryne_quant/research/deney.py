@@ -35,7 +35,17 @@ VARSAYILAN_KOK: Final = Path("runs/deneyler")
 #: Tanınan deney tipleri. Serbest string kabul edilmiyor: kayıtları tipine göre aramak
 #: ("tüm walk-forward'ları listele") ancak tip kümesi kapalıysa mümkün.
 TIPLER: Final[frozenset[str]] = frozenset(
-    {"tarama", "walk_forward", "monte_carlo", "stres", "karsilastirma", "degerlendirme"}
+    {
+        "tarama",
+        "walk_forward",
+        "monte_carlo",
+        "stres",
+        "karsilastirma",
+        "degerlendirme",
+        # Çoklu test düzeltmesi (K-039). Diğerlerinden farkı: girdisi veri değil
+        # **defterin kendisi** — kaç çekiliş yapıldığını ölçüyor, bir stratejiyi değil.
+        "coklu_test",
+    }
 )
 
 

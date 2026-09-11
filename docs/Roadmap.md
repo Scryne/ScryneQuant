@@ -369,6 +369,23 @@ Kalabalıklaşma, OOS çöküşünün bir parçasını açıklıyor; tamamını 
 de K-042'nin sonucu görmeden yasakladığı şeydi: çekiliş sayısına sonucu gördükten sonra
 karar vermek. Ayrıntı: `docs/Faz-4-Donus-3-Funding.md`.
 
+**Faz 4'e dönüş 4 (2026-09-11): çoklu test düzeltmesi — K-039'un açık maddesi kapandı.**
+Bu dönüş yeni bir hipotez **denemedi**; ölçülen şey kapının kendisiydi. Defterdeki 31
+ölçülebilir çekiliş, edge'i olmayan bir dünyada yeniden koşturuldu (sinyal takvimi dairesel
+kaydırılıp gerçek motordan geçirildi; kaydırma iterasyon başına paylaşıldı ki stratejiler
+arası korelasyon bozulmasın).
+
+Sonuç: **`oos_sharpe` kapısı 0,50 → 1,02** (K-044). Eski eşiğin gerçek yanlış-pozitif oranı
+**%26,3**'tü — yani 0,50 hiçbir zaman %5'lik bir kapı değildi. Bağımsız çapraz kontrol
+(Deflated Sharpe) 0,92 veriyor, Bonferroni 1,30 — ikisinin arasında kalması beklenen yerde.
+
+**Asıl bulgu eşik değil:** projenin en iyi sonucu (`cok_faktor` 4h/plato, OOS Sharpe 0,4585)
+**şans beklentisinin altında**; p-değeri 0,296. 31 çekilişin Sharpe dağılımı ortalama −0,31,
+yalnızca 7'si pozitif. Ayrıntı: `docs/Faz-4-Donus-4-Coklu-Test.md`.
+
+**Eşik bir sabit değil, defterin fotoğrafı:** 31 çekilişte geçerli, defter büyürse yeniden
+ölçülmeli. `COKLU_TEST_CEKILIS_SAYISI` testle bağlı, sayı değişirse test kırılıyor.
+
 ### Faz 5: Risk motoru + promotion — ✅ kapandı 2026-09-11
 
 - **İşler:** Position sizing; exposure limiti; günlük zarar limiti; drawdown limiti;

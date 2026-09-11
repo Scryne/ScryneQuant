@@ -56,20 +56,41 @@ class Esik:
         }
 
 
+#: `oos_sharpe` kapısının çoklu test için düzeltilmiş sınırı. (K-044)
+#:
+#: Ölçüm: `sq lab coklu-test --deneme 4000`, 31 ölçülebilir çekiliş, %5 yanlış-pozitif.
+#: Rapor `docs/Faz-4-Donus-4-Coklu-Test.md`, ham kayıt `runs/deneyler/coklu_test/`.
+#:
+#: **Bu sayı defterin bir fotoğrafıdır, evrensel bir sabit değil.** 31 çekilişte geçerli;
+#: 39. hipotez kaydedildiğinde yeniden ölçülmeli. Sabiti elle büyütmek değil, ölçümü
+#: tekrarlamak gerekiyor — bu sayının değeri ölçülmüş olmasından geliyor.
+COKLU_TEST_ESIGI: Final = 1.02
+
+#: Düzeltmenin ölçüldüğü defter durumu. Defter bundan farklıysa `COKLU_TEST_ESIGI`
+#: **bayattır**: daha çok çekiliş, daha yüksek bir eşik demek (K-039, K-044).
+COKLU_TEST_CEKILIS_SAYISI: Final = 31
+
 #: K-019'un eşikleri. Her biri Faz 4'ün ölçümüne dayanıyor; gerekçeler
-#: `docs/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı.
+#: `docs/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı. `oos_sharpe` ayrıca K-044'ün
+#: çoklu test düzeltmesini taşıyor.
 ESIKLER: Final[tuple[Esik, ...]] = (
     Esik(
         ad="oos_sharpe",
         alan="oos_sharpe",
-        sinir=0.5,
+        sinir=COKLU_TEST_ESIGI,
         yon=">=",
         gerekce=(
-            "Out-of-sample Sharpe. 0,5 keyfi bir yuvarlak sayı değil: Faz 4'te al-tut "
-            "kıyasının in-sample Sharpe'ı 0,70 ölçüldü. Kıyasın altında kalan bir "
-            "stratejiyi live'a aday etmek, sermayeyi sadece tutmaktansa sistemde "
-            "tutmak için gerekçe üretemez. 0,5 o çizginin biraz altında — kıyası "
-            "geçmeyi şart koşmuyor ama sıfıra yakın Sharpe'ları eliyor."
+            "Out-of-sample Sharpe, **çoklu test için düzeltilmiş** (K-044). İlk değer "
+            "0,5'ti ve gerekçesi tek bir stratejiye bakmaktı: Faz 4'te al-tut kıyasının "
+            "in-sample Sharpe'ı 0,70 ölçülmüştü, 0,5 o çizginin biraz altında duruyordu. "
+            "O gerekçe yanlış değildi ama **eksikti**: kapıya kaç kez gidildiğini "
+            "saymıyordu. Defterdeki 31 ölçülebilir çekiliş, edge'i olmayan bir dünyada "
+            "yeniden koşturulduğunda en iyi çekiliş vakaların %26,3'ünde 0,5'i geçiyor "
+            "— yani 0,5, %5'lik bir kapı değil %26'lık bir kapıydı. Ölçülen %5 sınırı "
+            f"{COKLU_TEST_ESIGI} (%90 GA 0,975-1,055; 4.000 iterasyon). Bağımsız çapraz "
+            "kontrol (Deflated Sharpe) 0,92 veriyor, Bonferroni ise 1,30 — bağımsızlık "
+            "varsaydığı için fazla düzeltiyor. Eşik **defterin bugünkü hâline bağlı**: "
+            "çekiliş sayısı değişirse yeniden ölçülmeli (`sq lab coklu-test`)."
         ),
     ),
     Esik(

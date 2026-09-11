@@ -1371,7 +1371,7 @@ olurdu; o kapı bir kez aralandığında kapanmaz.
 
 ## K-039 — Kaç hipotez denendiği sayılır ve ön kayıt zorunludur
 
-**Durum:** kabul (düzeltme açık) · **Tarih:** 2026-09-11 · **Faz:** 6 · **Tamamlar:**
+**Durum:** kabul · **Düzeltme K-044 ile kapandı (2026-09-11).** · **Tarih:** 2026-09-11 · **Faz:** 6 · **Tamamlar:**
 K-010, K-018, K-019 · **Kanıt:** `tests/unit/test_hipotez.py`,
 `tests/unit/test_promotion.py::TestHipotezSayisi`
 
@@ -1776,6 +1776,121 @@ yoğunluğunu** düşürür. 30 günün kapanışında bu ayrım rapora yazılac
 
 ---
 
+## K-044 — Çoklu test düzeltmesi ölçüldü: eşik `0,50` → `1,02`
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 4'e dönüş 4 · **Kapatır:** K-039'un
+açık düzeltmesi · **Değiştirir:** K-019 (`oos_sharpe` sınırı) · **İlgili:** K-018, K-033,
+K-007 · **Kanıt:** `docs/Faz-4-Donus-4-Coklu-Test.md`, `tests/unit/test_coklu_test.py`,
+`runs/deneyler/coklu_test/`
+
+**Bağlam.** K-039 çekilişleri saymayı getirdi ama düzeltmeyi **açık bıraktı** ve sebebini
+yazdı: *"stratejiler bağımsız değil (aynı veri, örtüşen sinyaller, aynı rejim), yani
+düzeltme çarpanı bilinmiyor. Uydurulan bir çarpan, olmayan bir kesinlik iddia eder."*
+Düzeltmenin *"kapıları geçen ilk strateji çıktığında"* verileceği söylenmişti.
+
+**O erteleme artık savunulamaz ve sebebi ertelemenin kendisinde.** Düzeltmeyi geçen bir
+stratejiyi **gördükten sonra** tanımlamak, bu projenin başka her yerde yasakladığı şeydir:
+sonucu görüp kuralı ona göre ayarlamak (K-018, K-042'nin durma kuralı). Ertelemenin
+gerekçesi *"o an defterdeki sayı bilinecek"*ti — ve o an **şimdi**: K-042 ile funding
+kapandı, bekleyen çekiliş yok, defter 38'de dondu. Sayının bilindiği ve hiçbir sonucun
+görülmediği tek an bu.
+
+### 1. Çarpan uydurulmadı, ölçüldü
+
+Yöntem `research/coklu_test.py`de, özeti: defterdeki her çekilişin OOS **sinyal takvimi**
+çıkarılıyor, dairesel kaydırılıyor ve **gerçek backtest motorundan** geçiriliyor. Kaydırma
+işlem sayısını, tutma süresini ve piyasada kalma oranını koruyor; yok ettiği tek şey
+fiyatla hizalanma — yani edge.
+
+**Kaydırma iterasyon başına paylaşılıyor.** Bağımsız kaydırma kolay olurdu ve yanlış
+olurdu: stratejiler arası korelasyonu koparır, maksimumun dağılımını genişletir ve
+düzeltmeyi olduğundan büyük gösterirdi — K-039'un reddettiği uydurulmuş çarpanı arka
+kapıdan geri getirmek. Paylaşılan kaydırmada korelasyon ne ise o kalıyor; çarpan verinin
+kendi yapısından geliyor.
+
+**Maksimum, K-019'un ucuz kapılarını geçen çekilişler arasından alınıyor** (`asgari_islem`,
+`max_drawdown`). Bu bir hatanın düzeltmesi: ilk ölçümde maksimum 31'inin hepsinden
+alınıyordu ve null, rastgele bir stratejiye p99'da 4,2 Sharpe atfediyordu. Sebep ölçümle
+bulundu — uçların tamamı **az işlemli** çekilişlerdendi (14 işlemle ölçülen Sharpe'ın
+örneklem varyansı devasadır). Ama o çekiliş `asgari_islem ≥ 30` kapısında zaten ölüyor;
+onu maksimuma katmak, hiç geçemeyecek bir kapıdan geçme olasılığını hesaplamaktı.
+
+### 2. Ölçülen sayılar
+
+31 ölçülebilir çekiliş, 4.000 iterasyon, edge yok:
+
+| Yanlış-pozitif | Düzeltilmiş `oos_sharpe` | %90 GA |
+| --- | ---: | --- |
+| %20 | 0,589 | 0,574 – 0,605 |
+| %10 | 0,777 | 0,754 – 0,800 |
+| **%5 (seçilen)** | **1,017** | **0,975 – 1,055** |
+| %1 | 2,424 | 1,829 – 3,040 |
+
+**Eski eşik 0,50'nin gerçek yanlış-pozitif oranı %26,3.** Yani 0,50 hiçbir zaman %5'lik bir
+kapı değildi; 31 çekilişte dört denemeden birini şansa geçiren bir kapıydı. Eşik
+esnetilmemişti — eksik kalibre edilmişti, ve farkı yalnızca çekiliş sayısı ortaya
+çıkarabilirdi.
+
+**Sınır `1,02` olarak donduruluyor** (ölçülen 1,017, GA içinde kalan en yakın iki
+basamak). %5 bir **iştah** kararıdır (K-033), ölçüm değil: Scryne seçti, gerekçesi
+"bilimsel yayın standardı ve K-019'un mevcut eşikleriyle aynı ruhta". %1 ölçüldü ama
+seçilmedi — güven aralığı [1,83-3,04] o sayıyı 4.000 iterasyonda savunulamaz kılıyor.
+
+### 3. İki bağımsız yöntem birbirini doğruluyor
+
+| Yöntem | Sonuç | Varsayımı |
+| --- | ---: | --- |
+| Permütasyon null'ı (ölçülen) | **1,017** | yok — korelasyon veriden geliyor |
+| Deflated Sharpe (Bailey & López de Prado) | 0,922 | denemelerin Sharpe'ları normal dağılıyor |
+| Bonferroni | 1,300 | **bağımsızlık** — bu veride yanlış |
+
+İlk ikisi %10 içinde uyuşuyor; ikisi tamamen farklı varsayımlar yaptığı için bu anlamlı
+bir yakınsama. Bonferroni'nin yukarıda kalması K-039'un öngörüsünü doğruluyor: bağımsızlık
+varsaymak fazla düzeltiyor.
+
+### 4. Asıl bulgu eşik değil
+
+**Projenin en iyi sonucu, saf şans beklentisinin altında.** 31 çekilişin gerçek en iyisi
+`cok_faktor` 4h/plato ile 0,4585; p-değeri **0,296**. Yani hiçbir stratejinin edge'i
+olmasa bile, 31 çekiliş yapan biri vakaların yaklaşık üçte birinde bu kadar iyi bir sonuç
+görürdü. Deflated Sharpe daha da keskin: şans beklentisi 0,92, gerçek en iyi 0,46 — yani
+gözlenen sonuç, rastgeleliğin **üretmesi beklenenden daha kötü**.
+
+31 çekilişin OOS Sharpe dağılımı: ortalama −0,31, sapma 0,44, yalnızca 7'si pozitif.
+
+Bu, "aramanın başarısız olduğu" değil, **"aramanın henüz hiçbir şey bulmadığı"**nın
+ölçülmüş hâlidir. Fark önemli ve korunuyor (K-042/5 ile aynı ayrım).
+
+### 5. Eşik bir sabit değil, defterin fotoğrafı
+
+`COKLU_TEST_ESIGI = 1,02` **31 çekilişte** geçerli. Defter büyüdükçe gerçek eşik yükselir;
+sabit yerinde kalırsa kapı sessizce gevşer ve K-039'un engellemeye çalıştığı şey
+düzeltmenin kendi içinden geri gelir.
+
+Bu yüzden `COKLU_TEST_CEKILIS_SAYISI = 31` de koda yazıldı ve testle bağlandı: sayı
+değişirse test kırılır ve `sq lab coklu-test` yeniden koşturulmak zorunda kalır. Sabiti
+elle büyütmek, ölçülmemiş bir sayıya ölçülmüş süsü vermektir.
+
+### 6. Bu karar neyi vaat etmiyor
+
+**Düzeltme yalnızca `oos_sharpe` kapısına uygulandı.** Diğer altı kapı (`oos_is_orani`,
+`wf_katman_basari`, `parametre_kararliligi`, `asgari_islem`, `max_drawdown`,
+`stres_dayanikliligi`) düzeltilmedi çünkü ölçülmedi: her biri için ayrı bir null gerekir ve
+walk-forward ile stres kapıları iterasyon başına yeniden ölçülemeyecek kadar pahalı
+(tek bir tam değerlendirme dakikalar sürüyor). Yani **kapı kümesinin tamamının** yanlış
+pozitif oranı hâlâ bilinmiyor; bilinen, en çok konuşulan kapının oranı.
+
+Yön bilinçli olarak muhafazakâr: uygunluk süzgeci gerçek kapı kümesinden **gevşek**
+olduğu için ölçülen düzeltme gerçeğinden **büyük** çıkıyor (K-007, belirsizlikte kötü
+yöne yuvarla).
+
+**Ve 1d'nin yedi çekilişi ölçüme giremedi.** Faz 4'e dönüş 1'de walk-forward hiçbir
+katmanda geçerli aday bulamamış, araç sayı uydurmak yerine reddetmişti. Sayı üretmemiş bir
+çekiliş yanlış pozitif de üretemez, dolayısıyla maksimum istatistiğine giremez — ama
+defterden de silinmez: denendi, sayılır. Defter 38, ölçülebilir 31.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -1811,6 +1926,7 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-041 | Ağ hatası üç sınıfa ayrılır; imzanın zamanı borsadan gelir | ✅ **kabul** | Faz 7 |
 | K-042 | Funding bir bilgi kaynağıdır; üç hipotez, tek tur, geri dönüşsüz | ✅ **kabul** | Faz 4'e dönüş 3 |
 | K-043 | Planlı duruş kesinti değildir; ayıran şey bir bayrak dosyasıdır | ✅ **kabul** | Faz 6 |
+| K-044 | Çoklu test düzeltmesi ölçüldü: `oos_sharpe` 0,50 → 1,02 | ✅ **kabul** | Faz 4'e dönüş 4 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5
@@ -1820,10 +1936,12 @@ K-032/033'ü, Faz 6 K-034…039'u, Faz 7 K-040'ı ekledi.**
 sayısal eşikleri) Faz 4 sonunda gerçek veriyle kalibre edilip kapandı. Bundan sonraki
 kararlar yeni fazların kendi soruları olacak.
 
-**Açık bırakılan tek sayı K-039'un düzeltmesi.** Kaç hipotez denendiği artık sayılıyor,
-ama o sayının eşiklere nasıl yansıyacağı **ölçülmedi** ve uydurulmadı. Düzeltme, kapıları
-geçen ilk strateji çıktığında verilecek — o an defterdeki sayı bilinecek. K-019'un
-eşiklerinin Faz 4'e kadar açık bırakılmasıyla aynı kalıp.
+**K-039'un düzeltmesi kapandı (K-044, 2026-09-11).** Ölçüldü: 31 ölçülebilir çekilişte
+%5 yanlış-pozitif sınırı **1,02** (eski eşik 0,50'nin gerçek oranı %26,3). Erteleme
+gerekçesi *"kapıları geçen ilk strateji çıktığında"*ydı; o erteleme terk edildi çünkü
+düzeltmeyi bir geçeni **gördükten sonra** tanımlamak, projenin başka her yerde yasakladığı
+şeydir. Ölçüm, funding kapandıktan ve defter donduktan sonra — hiçbir sonuç görülmeden —
+yapıldı.
 
 **K-018/3'ün beşinci eşik adayı (paper/backtest drift üst sınırı) hâlâ ölçülmemiş.** Faz
 6'da ölçülebilir hâle gelecekti; K-035 bunun neden **hâlâ mümkün olmadığını** kaydediyor:

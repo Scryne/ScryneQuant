@@ -45,9 +45,11 @@ from scryne_quant.live.depo import KosuDeposu
 from scryne_quant.live.kilit import KilitAlinamadi, KosuKilidi
 from scryne_quant.research import analiz as analiz_mod
 from scryne_quant.research import bolme, tekrar
+from scryne_quant.research import coklu_test as coklu_mod
 from scryne_quant.research import degerlendirme as degerlendirme_mod
 from scryne_quant.research import deney as deney_mod
 from scryne_quant.research import hipotez as hipotez_mod
+from scryne_quant.research import kapilar as kapilar_mod
 from scryne_quant.research import karsilastirma as karsilastirma_mod
 from scryne_quant.research import tarama as tarama_mod
 from scryne_quant.research import walkforward as wf_mod
@@ -2087,6 +2089,226 @@ def lab_hipotez_kaydet(
         typer.echo(f"kaydedildi: {sira}. hipotez")
     typer.echo(f"kimlik : {hipotez.kimlik[:16]}")
     typer.echo(f"defter : {defter.sayi()} hipotez · {defter.yol}")
+
+
+def _coklu_test_cekilisleri(depo: Path, deney_kok: Path):
+    """Defterdeki hipotezleri **ölçülebilir** olanlarla eşleştirip yeniden üretir. (K-039)
+
+    Eşleşme anahtarı hipotez kimliğinin üç parçası: `(timeframe, secim, veri_sha256)`.
+    Parametre ızgarası anahtara girmiyor çünkü ızgara değişikliği zaten **yeni bir
+    hipotez** (K-039) ve yeni bir kimlik üretir.
+
+    **Ölçülemeyen çekiliş atlanır ve sebebi döner.** Faz 4'e dönüş 1'de 1d'nin yedi
+    çekilişi walk-forward'ı tamamlayamamıştı — araç sayı uydurmak yerine reddetmişti.
+    Sayı üretmemiş bir çekiliş yanlış pozitif de **üretemez**, dolayısıyla maksimum
+    istatistiğine giremez. Ama defterden silinmez: denendi, sayılır.
+    """
+    defter = hipotez_mod.HipotezDefteri()
+    indeks: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for yol in sorted(Path(deney_kok).glob("degerlendirme/*.json")):
+        kayit = json.loads(yol.read_text(encoding="utf-8"))
+        g = kayit["girdi"]
+        indeks[(g["timeframe"], g.get("secim", "tepe"), kayit["kimlik"]["veri_sha256"])] = kayit
+
+    diziler_ob: dict[str, Any] = {}
+    cekilisler: list[coklu_mod.Cekilis] = []
+    ayar: dict[str, dict[str, Any]] = {}
+    atlanan: list[dict[str, str]] = []
+
+    for h in defter.tumu():
+        tf, secim, sha = h["timeframe"], h["secim"], h["veri_sha256"]
+        kayit = indeks.get((tf, secim, sha))
+        blok = None if kayit is None else kayit["cikti"]["stratejiler"].get(h["strateji"])
+        if blok is None or blok["olcumler"].get("oos_sharpe") is None:
+            atlanan.append(
+                {
+                    "strateji": h["strateji"],
+                    "timeframe": tf,
+                    "secim": secim,
+                    "sebep": "değerlendirme kaydı yok" if kayit is None else "ölçüm üretilmedi",
+                }
+            )
+            continue
+
+        if tf not in diziler_ob:
+            diziler_ob[tf], _, _ = _lab_veri(depo, "BTCUSDT", tf)
+        m = kayit["girdi"]["maliyet"]
+        model = maliyet_mod.MaliyetModeli(
+            fee_taker_bps=m["fee_taker_bps"],
+            slippage_bps=m["slippage_bps"],
+            kalibrasyon=(
+                maliyet_mod.SlippageKalibrasyonu(**m["kalibrasyon"])
+                if m.get("kalibrasyon")
+                else None
+            ),
+        )
+        pw = kayit["cikti"]["pencereler"]["out_of_sample"]
+        pencere = bolme.Pencere(
+            ad=pw["ad"],
+            baslangic=pw["baslangic"],
+            bitis=pw["bitis"],
+            isinma_baslangic=pw["isinma_baslangic"],
+        )
+        secilen = blok["olcumler"]["secilen"]
+        strateji = coz(h["strateji"])(**secilen)
+        takvim, sonuc = coklu_mod.takvim_cikar(
+            strateji,
+            model,
+            "BTCUSDT",
+            tf,
+            diziler_ob[tf],
+            pencere,
+            baslangic_sermaye=kayit["girdi"]["baslangic_sermaye"],
+            veri_sha256=sha,
+        )
+        # Yeniden üretim kayıtla tutmuyorsa bu bir ölçüm değil tahmin olur (K-009).
+        kayitli = float(blok["olcumler"]["oos_sharpe"])
+        if abs(sonuc.metrikler.sharpe - kayitli) > 1e-9:
+            raise typer.BadParameter(
+                f"{h['strateji']}/{tf}/{secim} yeniden üretilemedi: kayıt {kayitli:.10f}, "
+                f"üretilen {sonuc.metrikler.sharpe:.10f}. Çoklu test bu çekilişi ölçemez."
+            )
+        c = coklu_mod.Cekilis(
+            kimlik=h["kimlik"],
+            strateji=h["strateji"],
+            timeframe=tf,
+            secim=secim,
+            secilen=secilen,
+            veri_sha256=sha,
+            gercek_sharpe=sonuc.metrikler.sharpe,
+            isinma_bar=strateji.isinma_bar(),
+            oos_bar=pencere.bitis - pencere.baslangic,
+            takvim_bar=pencere.bitis - pencere.isinma_baslangic,
+            takvim=takvim,
+        )
+        cekilisler.append(c)
+        ayar[c.kimlik] = {
+            "maliyet": model,
+            "pencere": pencere,
+            "sermaye": kayit["girdi"]["baslangic_sermaye"],
+        }
+
+    return cekilisler, ayar, diziler_ob, atlanan, defter.sayi()
+
+
+@lab_app.command("coklu-test")
+def lab_coklu_test(
+    deneme: Annotated[int, typer.Option("--deneme", "-n", help="Null iterasyon sayısı.")] = 1_000,
+    seed: Annotated[int, typer.Option("--seed")] = 0,
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """K-039'un açık düzeltmesi: kaç çekiliş yapıldıysa eşik ne olmalı? (K-039, K-019)
+
+    K-039 sayımı getirdi ama düzeltmeyi **açık bıraktı**: *"stratejiler bağımsız değil,
+    düzeltme çarpanı bilinmiyor, uydurulan bir çarpan olmayan bir kesinlik iddia eder."*
+    Bu komut çarpanı uydurmuyor — defterdeki çekilişleri, edge'i olmayan bir dünyada
+    yeniden koşturup **ölçüyor**.
+
+    Yöntem `research/coklu_test.py`de: her çekilişin OOS sinyal takvimi dairesel
+    kaydırılıp gerçek backtest motorundan geçiriliyor; kaydırma iterasyon başına
+    **paylaşılıyor** ki stratejiler arası korelasyon bozulmasın. Maksimum, K-019'un ucuz
+    kapılarını geçen çekilişler arasından alınıyor.
+
+    Pahalıdır (31 çekiliş × 1.000 iterasyon ≈ 15 dakika). Ucuz olmamalı: çıktısı bir
+    promotion eşiği.
+    """
+    cekilisler, ayar, diziler_ob, atlanan, defter_sayisi = _coklu_test_cekilisleri(
+        depo, deney_kok
+    )
+    if not cekilisler:
+        raise typer.BadParameter("ölçülebilir çekiliş yok")
+
+    asgari = next(e for e in kapilar_mod.ESIKLER if e.ad == "asgari_islem")
+    azami_dd = next(e for e in kapilar_mod.ESIKLER if e.ad == "max_drawdown")
+
+    def kosturucu(c, takvim):
+        a = ayar[c.kimlik]
+        r = tarama_mod.kosu(
+            coklu_mod.BetikStrateji(takvim, isinma=c.isinma_bar),
+            a["maliyet"],
+            "BTCUSDT",
+            c.timeframe,
+            diziler_ob[c.timeframe],
+            a["pencere"],
+            baslangic_sermaye=a["sermaye"],
+            veri_sha256=c.veri_sha256,
+        )
+        islem = len([i for i in r.islemler if i.kapali])
+        uygun = bool(asgari.gecti_mi(islem)) and bool(
+            azami_dd.gecti_mi(r.metrikler.max_drawdown)
+        )
+        return r.metrikler.sharpe, uygun
+
+    null = coklu_mod.null_dagilimi(cekilisler, kosturucu, deneme=deneme, seed=seed)
+
+    sharpe_kapisi = next(e for e in kapilar_mod.ESIKLER if e.ad == "oos_sharpe")
+    oranlar = (0.20, 0.10, 0.05, 0.01)
+    govde = {
+        "defter_sayisi": defter_sayisi,
+        "olculebilir": len(cekilisler),
+        "atlanan": atlanan,
+        "uygunluk_kapilari": [asgari.ad, azami_dd.ad],
+        "mevcut_esik": sharpe_kapisi.sinir,
+        "null": null.sozluk(),
+        "duzeltilmis_esikler": {f"{o:.2f}": null.duzeltilmis_esik(o) for o in oranlar},
+        "esik_guven_araliklari": {
+            f"{o:.2f}": list(null.esik_guven_araligi(o)) for o in oranlar
+        },
+        "mevcut_esigin_yanlis_pozitifi": float((null.azami >= sharpe_kapisi.sinir).mean()),
+        "cekilisler": [c.sozluk() for c in cekilisler],
+    }
+
+    yol = deney_mod.Deney(
+        tip="coklu_test",
+        strateji="+".join(sorted({c.strateji for c in cekilisler})),
+        veri_sha256=hashlib.sha256(
+            "|".join(sorted(c.veri_sha256 for c in cekilisler)).encode()
+        ).hexdigest(),
+        girdi={"deneme": deneme, "seed": seed, "defter_sayisi": defter_sayisi},
+        cikti=govde,
+        seed=seed,
+    ).yaz(deney_kok)
+
+    if json_cikti:
+        _yaz_json({"deney": str(yol), **govde})
+        return
+
+    typer.echo(
+        f"defter {defter_sayisi} hipotez · ölçülebilir {len(cekilisler)} · "
+        f"atlanan {len(atlanan)}"
+    )
+    for a in atlanan:
+        typer.echo(f"    atlandı: {a['strateji']:<15} {a['timeframe']:<3} {a['sebep']}")
+    typer.echo("")
+    typer.echo(
+        f"  null (edge yok, {len(cekilisler)} çekiliş, {deneme} iterasyon) — "
+        "en iyi çekilişin OOS Sharpe'ı:"
+    )
+    for ad, deger in null.azami_dagilimi.items():
+        typer.echo(f"    {ad}  {deger:>7.3f}")
+    typer.echo("")
+    typer.echo(f"  gerçek en iyi : {null.gercek_en_iyi:.4f} ({null.gercek_en_iyi_strateji})")
+    typer.secho(
+        f"  p-değeri      : {null.p_degeri:.3f}  — edge olmasa bile bu kadar iyi bir "
+        "sonucun çıkma olasılığı",
+        fg=typer.colors.YELLOW if null.p_degeri > 0.05 else typer.colors.GREEN,
+    )
+    typer.echo("")
+    typer.echo(
+        f"  mevcut eşik {sharpe_kapisi.sinir} → yanlış-pozitif "
+        f"{govde['mevcut_esigin_yanlis_pozitifi']:.1%}"
+    )
+    typer.echo("  düzeltilmiş eşik adayları (%90 bootstrap güven aralığıyla):")
+    for o in oranlar:
+        alt, ust = null.esik_guven_araligi(o)
+        typer.echo(
+            f"    yanlış-pozitif {o:>5.0%}  →  oos_sharpe ≥ {null.duzeltilmis_esik(o):.3f}"
+            f"   [{alt:.3f} – {ust:.3f}]"
+        )
+    typer.echo("")
+    typer.echo(f"  deney: {yol}")
 
 
 @lab_app.command("hipotezler")

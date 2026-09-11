@@ -78,6 +78,11 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Hipotez-Defteri.jsonl` — **kaç çekiliş yapıldığının kaydı (K-039).** Append-only,
   sürüm kontrolünde. Faz 4'e her dönüşte denenecek hipotez **önce** buraya yazılır
   (`sq lab hipotez-kaydet`); kaydedilmemiş bir hipotez `out_of_sample` aşamasını geçemez.
+  Sayı yalnızca kayıt değil, **eşiği belirleyen girdi**: K-044 düzeltmeyi ölçtü, yani
+  her yeni hipotez `oos_sharpe` kapısını yükseltiyor.
+- `docs/Faz-4-Donus-4-Coklu-Test.md` — **çoklu test düzeltmesi (K-044).** `oos_sharpe`
+  kapısı 0,50 → 1,02. Eşik defterdeki çekiliş sayısına bağlı; defter büyürse
+  `sq lab coklu-test` yeniden koşturulup `research/kapilar.py`deki sabit güncellenmeli.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
 - `docs/Roadmap.md` — Faz 0-8, her fazın somut bitti kriteri.
 - `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,
