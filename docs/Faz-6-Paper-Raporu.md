@@ -119,24 +119,34 @@ en yeni satır olduğu için) ve bunu testi yakaladı. Tarama `temiz_kapanmadi`y
 şekilde düzeltildi: bir kez kaydedilmiş kesinti kaydedilmiştir; sayacın iki kez artması
 olmayan bir kesinti uydurmak olurdu.
 
-## Koşuyu başlatırken çıkan kaza: tek-örnek koruması yoktu
+## Koşunun tek-örnek koruması yoktu
 
-Gözlem koşusu başlatılırken **iki süreç aynı koşu dosyasını açtı** ve hiçbir şey
-**çökmedi** — SQLite yazımları serileştirdi. Tehlikeli olan tam olarak buydu: iki trader
-döngüsü aynı barları işleseydi fill defteri çiftlenir, kontrol noktası birbirinin üstüne
-yazılır ve hata ancak bir sonraki toparlanmada, üstelik **yanlış sebeple** ("portföy fill
-defteriyle ayrıştı") görünürdü. Yani sistemin en iyi teşhis aracı yanlış yeri gösterirdi.
+`sq paper baslat` aynı koşu için iki kez çağrılabiliyordu ve hiçbir şey engellemiyordu —
+zamanlanmış görev koşuyu tutarken elle bir `sq paper baslat` yazmak yeterliydi. Sonuç bir
+çökme **olmazdı**: SQLite yazımları serileştirir. Tehlikeli olan da bu. İki trader döngüsü
+aynı barları işleseydi fill defteri çiftlenir, kontrol noktası birbirinin üstüne yazılır ve
+hata ancak bir sonraki toparlanmada, üstelik **yanlış sebeple** ("portföy fill defteriyle
+ayrıştı") görünürdü — yani sistemin en iyi teşhis aracı yanlış yeri gösterirdi.
 
 Çözüm işletim sistemi düzeyinde tavsiye kilidi (`live/kilit.py`), veritabanı satırı değil.
 Bir `kilit` tablosuna pid yazmak cazipti ama yanlış: süreç çökünce satır kalır ve "kilitli
 mi yoksa ölü mü" sorusu cevapsız kalır — `temiz_kapanmadi`nin çözmek zorunda kaldığı
 problemin ikinci kopyası. İşletim sistemi kilidini çekirdek bırakır; bayat kilit diye bir
-durum yoktur. Testi de bunu ölçüyor: kilidi tutan çocuk süreç öldürülüyor ve kilidin gittiği
-doğrulanıyor.
+durum yoktur. Test bunu ölçüyor: kilidi tutan çocuk süreç öldürülüyor ve kilidin gittiği
+doğrulanıyor. Gerçek koşuda da doğrulandı — ayakta bir koşu varken ikinci bir
+`sq paper baslat` reddediliyor.
 
-İlk yazımda kilit baytı dosyanın başındaydı; Windows kilitli bayt aralığını okutmadığı için
-**kilit tutulurken pid okunamıyordu** — yani "kim tutuyor" bilgisi tam da ihtiyaç duyulduğu
-anda erişilemezdi. Kilit baytı içeriğin dışına (4096) taşındı.
+**Bu bölümün ilk hâli yanlış bir gözleme dayanıyordu ve düzeltildi.** İki `python.exe`
+süreci görüp "iki koşu çalışıyor" diye okumuştum; oysa ikincisinin ebeveyni birincisiydi —
+`uv`'nin sanal ortam `python.exe`'si gerçek yorumlayıcıyı çocuk süreç olarak başlatan bir
+sarmalayıcı. Yani o an gerçek bir çakışma **yoktu**. Kilit yine de doğru ve gerekli, ama
+"yaşanmış bir kaza" olarak değil, "korumasız bırakılmış bir yol" olarak.
+
+**Pid hakkında ölçülen ikinci şey:** kilit dosyasına yazılan pid, kilit tutulurken
+dışarıdan **okunamıyor** — Windows dosyayı başka bir sürece hiç açtırmıyor, bayt aralığı
+kilidinden bağımsız olarak. Kilit baytını içeriğin dışına taşımak bunu değiştirmedi. Pid
+ölüm sonrası iz olarak kalıyor ("en son kim tutuyordu"); kilit tutulurken sorulan sorunun
+cevabı zaten hata mesajı.
 
 ## Bulunan hatalar
 
@@ -160,8 +170,8 @@ Yedisi de testler yazılırken veya uçtan uca doğrulamada çıktı.
    anlatan iki sayı — ve rapor, ekranda okunan taraf.
 5. **Çökme kesinti sayılmıyordu** — yukarıdaki bölüm. Kriterin kendisini ölçülebilir
    kılan düzeltme; koşu başlatılmadan önce yapıldı.
-6. **Koşunun tek-örnek koruması yoktu** — yukarıdaki bölüm. Koşuyu başlatırken, canlı
-   olarak yaşandı.
+6. **Koşunun tek-örnek koruması yoktu** — yukarıdaki bölüm. Koşuyu başlatırken fark
+   edildi (yanlış bir gözlem üzerinden; gözlem düzeltildi, bulgu geçerli kaldı).
 7. **Arayüzde üç denetim bulgusu:** `role="tablist"` gerekli ARIA kalıbı olmadan
    verilmişti; risk şeridi SAFE_MODE'da bile `role="status"` ile sıraya giriyordu;
    `background-attachment: fixed` her kaydırmada arka planı yeniden boyatıyordu.

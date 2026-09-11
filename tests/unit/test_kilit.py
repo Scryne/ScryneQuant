@@ -1,10 +1,10 @@
 """Koşu kilidi: bir koşu dosyasını aynı anda tek süreç yazabilir. (Faz 6)
 
-Bu dosya gerçek bir kazadan sonra yazıldı. Gözlem koşusu başlatılırken iki süreç aynı
-`runs/paper/<kosu>.sqlite` dosyasını açtı ve **hiçbir şey çökmedi** — SQLite yazımları
-serileştirdi. Tehlikeli olan tam olarak buydu: iki trader döngüsü aynı barları işleseydi
-fill defteri çiftlenir, kontrol noktası birbirinin üstüne yazılır ve hata ancak bir sonraki
-toparlanmada, üstelik **yanlış sebeple** ("portföy fill defteriyle ayrıştı") görünürdü.
+`sq paper baslat` aynı koşu için iki kez çağrılabiliyordu ve hiçbir şey engellemiyordu.
+Sonuç bir çökme **olmazdı** — SQLite yazımları serileştirir; tehlikeli olan da bu. İki
+trader döngüsü aynı barları işleseydi fill defteri çiftlenir, kontrol noktası birbirinin
+üstüne yazılır ve hata ancak bir sonraki toparlanmada, üstelik **yanlış sebeple**
+("portföy fill defteriyle ayrıştı") görünürdü.
 
 Kilidin işletim sistemi düzeyinde olması da bir karar: veritabanına pid yazmak, süreç
 çökünce bayat bir satır bırakır ve "kilitli mi yoksa ölü mü" sorusu cevapsız kalır — yani
@@ -50,15 +50,15 @@ class TestAyniSurec:
         KosuKilidi(yol).al().kapat()
         KosuKilidi(yol).al().kapat()
 
-    def test_pid_okunabilirlik_icin_yaziliyor(self, tmp_path) -> None:
-        # Kilidi tutan şey işletim sistemi, dosyanın içeriği değil — pid yalnızca
-        # "kim tutuyor" sorusunu elle cevaplayabilmek için.
-        k = KosuKilidi(tmp_path / "k.sqlite").al()
-        try:
-            icerik = k.yol.read_bytes()
-            assert f"pid={os.getpid()}".encode() in icerik
-        finally:
-            k.kapat()
+    def test_pid_olum_sonrasi_iz_olarak_yaziliyor(self, tmp_path) -> None:
+        # Pid **kilit tutulurken dışarıdan okunamıyor**: Windows dosyayı başka bir sürece
+        # hiç açtırmıyor. Ölçüldü ve kabul edildi — kilit tutulurken sorulan sorunun
+        # cevabı zaten `KilitAlinamadi` mesajı. Pid'in işe yaradığı yer ölüm sonrası:
+        # "en son kim tutuyordu".
+        yol = tmp_path / "k.sqlite"
+        k = KosuKilidi(yol).al()
+        k.kapat()
+        assert f"pid={os.getpid()}".encode() in k.yol.read_bytes()
 
 
 #: İkinci süreci taklit eden betik. Ayrı bir **süreç** şart: aynı süreç içinde ikinci bir

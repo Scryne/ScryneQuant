@@ -1,11 +1,12 @@
 """Koşu kilidi: bir koşu dosyasını aynı anda **tek** süreç yazabilir. (Faz 6)
 
-Bu modül gerçek bir kazadan sonra yazıldı: gözlem koşusu başlatılırken iki süreç aynı
-`runs/paper/<kosu>.sqlite` dosyasını açtı. SQLite yazımları serileştirdiği için hiçbir
-şey **çökmedi** — ve tehlikeli olan tam olarak buydu. İki trader döngüsü aynı barları
-işleseydi fill defteri çiftlenir, kontrol noktası birbirinin üstüne yazılır ve toparlanma
-"portföy fill defteriyle ayrıştı" diye durdururdu; yani hata ancak bir sonraki restart'ta,
-üstelik yanlış sebeple görünürdü.
+**Neden var:** `sq paper baslat` aynı koşu için iki kez çağrılabiliyordu ve hiçbir şey
+engellemiyordu — zamanlanmış görev koşuyu tutarken elle bir `sq paper baslat` yazmak
+yeterliydi. SQLite yazımları serileştirdiği için sonuç bir çökme **olmazdı**; tehlikeli
+olan da bu. İki trader döngüsü aynı barları işleseydi fill defteri çiftlenir, kontrol
+noktası birbirinin üstüne yazılır ve hata ancak bir sonraki toparlanmada, üstelik **yanlış
+sebeple** ("portföy fill defteriyle ayrıştı") görünürdü. Yani sistemin en iyi teşhis aracı
+yanlış yeri gösterirdi.
 
 **Mekanizma: işletim sistemi düzeyinde tavsiye kilidi, veritabanı satırı değil.**
 Bir `kilit` tablosuna pid yazmak cazipti ama yanlış: süreç çökünce satır kalır ve
@@ -30,10 +31,14 @@ from typing import Final
 #: (`runs/paper/` zaten dışlanmış).
 UZANTI: Final = ".lock"
 
-#: Kilit baytının dosyadaki yeri — **içeriğin dışında**, ve bu bir düzeltme. Windows'ta
-#: kilitli bir bayt aralığı okunamıyor; kilit baytı dosyanın başındayken kilit tutulurken
-#: pid'i okumak imkânsızdı. Yani "kim tutuyor" bilgisi tam da ihtiyaç duyulduğu anda
-#: erişilemez oluyordu. İçerik 0'dan başlıyor, kilit baytı çok uzakta.
+#: Kilit baytının dosyadaki yeri — içeriğin dışında, ki yazılan pid kilitli aralığa
+#: düşmesin. **Bunun dış okuyucuya faydası yok ve bu ölçüldü:** Windows'ta dosyanın
+#: kendisi başka bir süreç tarafından zaten açılamıyor (paylaşım kipi), bayt aralığı
+#: kilidinden bağımsız olarak. Yani pid, kilit tutulurken dışarıdan okunamıyor.
+#:
+#: Pid yine de yazılıyor ama **ölüm sonrası** için: süreç gittikten sonra dosya okunabilir
+#: hâle geliyor ve "en son kim tutuyordu" sorusu cevaplanabiliyor. Kilit **tutulurken**
+#: sorulan sorunun cevabı zaten `KilitAlinamadi` mesajı.
 KILIT_OFSETI: Final = 4096
 
 
@@ -85,9 +90,11 @@ class KosuKilidi:
     def al(self) -> KosuKilidi:
         """Kilidi alır. Başka bir süreç tutuyorsa `KilitAlinamadi`.
 
-        Kilit dosyasına pid yazılıyor ama **kimlik olarak değil, okunabilirlik için**:
-        kilidi tutan şey işletim sistemi, dosyanın içeriği değil. İçeriğe güvenmek,
-        dosyayı elle düzenleyen birinin kilidi atlatabilmesi demek olurdu.
+        Kilit dosyasına pid yazılıyor ama **kimlik olarak değil, ölüm sonrası iz olarak**:
+        kilidi tutan şey işletim sistemi, dosyanın içeriği değil. İçeriğe güvenmek, dosyayı
+        elle düzenleyen birinin kilidi atlatabilmesi demek olurdu. Windows dosyayı kilit
+        tutulurken zaten başka bir sürece açtırmıyor; pid ancak süreç öldükten sonra
+        okunabiliyor ve orada işe yarıyor (`KILIT_OFSETI` notu).
         """
         self.yol.parent.mkdir(parents=True, exist_ok=True)
         tanitici = os.open(self.yol, os.O_RDWR | os.O_CREAT, 0o644)
