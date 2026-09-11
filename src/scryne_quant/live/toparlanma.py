@@ -82,6 +82,34 @@ class ToparlanmaSonucu:
         }
 
 
+def _kapanis_kontrolu(motor: PaperMotoru) -> bool:
+    """Önceki oturum düzgün kapandı mı? Kapanmadıysa **geriye dönük** kaydeder.
+
+    Kaydın geriye dönük olması zorunlu: süreç çökerken, elektrik giderken veya sert
+    öldürülürken bir şey yazamaz. Yazabilecek tek an bir sonraki başlangıçtır. Bu kontrol
+    olmadan en sık gerçek kesinti türü sayımın dışında kalırdı — ve o hâlde *"30 gün
+    kesintisiz"* kriteri, ölçmediği bir şeyi ölçüyormuş gibi görünürdü.
+
+    Sebep yazılamıyor (bilinmiyor) ve bu kabul ediliyor: bilinmeyen bir sebep,
+    kaydedilmemiş bir kesintiden iyidir.
+    """
+    kapandi = motor.depo.onceki_oturum_kapandi_mi()
+    if kapandi is not False:
+        return False
+    motor.depo.olay_yaz(
+        KosuOlayi.TEMIZ_KAPANMADI,
+        bar_ms=None,
+        ayrinti={
+            "sebep": "bilinmiyor",
+            "aciklama": (
+                "önceki oturum `durdu` satırını yazamadan sonlandı: çökme, elektrik "
+                "kesintisi veya sert kill"
+            ),
+        },
+    )
+    return True
+
+
 def toparlan(motor: PaperMotoru, barlar: Sequence[Bar]) -> ToparlanmaSonucu:
     """Motoru kayıtlı durumdan toparlar. Uyuşmazlıkta `ToparlanmaAyrismasi` fırlatır.
 
@@ -91,12 +119,9 @@ def toparlan(motor: PaperMotoru, barlar: Sequence[Bar]) -> ToparlanmaSonucu:
     """
     kontrol = motor.depo.kontrol_noktasi_oku()
     motor.pencere.doldur(barlar)
+    _kapanis_kontrolu(motor)
 
     if kontrol is None:
-        motor.depo.olay_yaz(
-            KosuOlayi.BASLADI,
-            ayrinti={"temiz_baslangic": True, "pencere_bar": len(motor.pencere)},
-        )
         return ToparlanmaSonucu(
             temiz_baslangic=True,
             son_bar_ms=None,

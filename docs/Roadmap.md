@@ -436,7 +436,7 @@ ATR, p90'ı 6,39 ATR. 2,0 seçmek vakaların yarısında gerçek riskin altında
 
 | Kriter | Sonuç |
 | --- | --- |
-| 30 gün kesintisiz çalışma | ⏳ **koşu bekliyor** — tanım gereği duvar saati ister |
+| 30 gün kesintisiz çalışma | ⏳ **koşu bekliyor** — tanım gereği duvar saati ister. Kriterin kendisindeki bir boşluk koşu başlamadan kapatıldı: çökme/elektrik kesintisi hiçbir iz bırakmıyordu, artık geriye dönük `temiz_kapanmadi` olarak sayılıyor |
 | Restart sonrası state doğru toparlanıyor | ✅ toparlanma bir geri yükleme değil **yeniden üretim** (K-038); 60 barı kesintisiz işleyen koşu ile 30 barda öldürülüp yeniden başlatılan koşu birebir aynı sonucu veriyor |
 | Veri akışı kesilince yeni pozisyon açılmıyor | ✅ bayat-veri guard'ı (§24, K-037); azaltan niyetler geçiyor |
 | 4 sayfalık dashboard, risk ilk bakışta | ✅ Genel/Strateji/Pozisyon/Günlük; risk şeridi her sayfada aynı yerde ve boşken de görünür |
@@ -464,7 +464,7 @@ K-037 (engelleyen katman risk motorunun dışında olabilir, izin veren olamaz),
 **Üretilen paketler:** `live/` (akış, pencere, depo, motor, toparlanma, koşturucu, API,
 kurulum), `exchange/akis.py` (Binance WebSocket + resync), `backtest/defter.py` (Faz 3'ten
 taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,olaylar}`.
-867 test yeşil (Faz 5 sonunda 757'ydi).
+872 test yeşil (Faz 5 sonunda 757'ydi).
 
 ### Faz 7: Execution sandbox (Binance Spot Testnet)
 

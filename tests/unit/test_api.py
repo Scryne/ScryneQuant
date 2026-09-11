@@ -86,8 +86,9 @@ class TestLogs:
     def test_olay_kesinti_sayisiyla_geliyor(self, istemci) -> None:
         g = istemci.get("/api/olay").json()
         assert g["kesinti_sayisi"] == 0
-        assert any(o["tur"] == "basladi" for o in g["olaylar"])
         assert "kopma" in g["kesinti_turleri"]
+        # Süreç çökmesi kesinti sayılır ve geriye dönük yazılır (Faz 6 kriteri).
+        assert "temiz_kapanmadi" in g["kesinti_turleri"]
 
     def test_audit_zincir_gecerliligini_gosteriyor(self, istemci) -> None:
         # "Kurcalanmadı" bilgisi, ancak gösterildiğinde bir güvence (K-032).

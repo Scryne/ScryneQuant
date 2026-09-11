@@ -336,12 +336,26 @@ class TestPaper:
         assert govde["fill_sayisi"] == 0
 
     def test_olaylar_kesinti_sayisiyla(self, dolu_depo, tmp_path):
+        # `--ag-yok` yalnızca kurar: koşturucu hiç çalışmadığı için `basladi`/`durdu`
+        # çifti yazılmaz ve günlük boş kalır. Bu doğru davranış — kurulmuş ama
+        # başlatılmamış bir koşuyu "başladı" diye kaydetmek, sonraki başlangıcın onu
+        # temiz kapanmamış bir oturum sanmasına yol açardı.
         kok = tmp_path / "paper"
         self.kur(dolu_depo, kok)
         sonuc = calistir("paper", "olaylar", "t1", "--kok", str(kok), "--json")
         govde = json.loads(sonuc.stdout)
         assert govde["kesinti_sayisi"] == 0
-        assert any(o["tur"] == "basladi" for o in govde["olaylar"])
+        assert govde["olaylar"] == []
+
+    def test_kurulum_tek_basina_kesinti_uretmiyor(self, dolu_depo, tmp_path):
+        # Üst üste iki kurulum, olmayan bir çökme uydurmamalı.
+        kok = tmp_path / "paper"
+        self.kur(dolu_depo, kok)
+        self.kur(dolu_depo, kok)
+        govde = json.loads(
+            calistir("paper", "olaylar", "t1", "--kok", str(kok), "--json").stdout
+        )
+        assert govde["kesinti_sayisi"] == 0
 
     def test_olmayan_kosu_hata(self, tmp_path):
         assert calistir("paper", "durum", "yok", "--kok", str(tmp_path)).exit_code != 0

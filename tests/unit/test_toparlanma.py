@@ -67,7 +67,10 @@ class TestTemizBaslangic:
         assert sonuc.temiz_baslangic
         assert sonuc.son_bar_ms is None
         assert sonuc.pencere_bar == 10
-        assert [o["tur"] for o in m.depo.olaylar()] == [str(KosuOlayi.BASLADI)]
+        # `basladi`/`durdu` çiftini koşturucu yazıyor, toparlanma değil: temiz bir
+        # başlangıç hiçbir olay üretmemeli, yoksa "önceki oturum kapandı mı" kontrolü
+        # kendi yazdığı satırı okur.
+        assert m.depo.olaylar() == []
 
 
 class TestKesintiIzBirakmiyor:
@@ -266,3 +269,78 @@ class TestKosuKimligi:
             turler = [o["tur"] for o in d.olaylar()]
             assert str(KosuOlayi.KOD_DEGISTI) in turler
             assert d.kesinti_sayisi() == 0  # kesinti değil
+
+
+class TestTemizKapanmama:
+    """En sık gerçek kesinti türü: süreç `durdu` yazamadan ölüyor. (Faz 6 kriteri)
+
+    Bu olay **geriye dönük** yazılıyor — süreç çökerken bir şey yazamaz, yazabilecek tek
+    an bir sonraki başlangıçtır. Kontrol olmasaydı elektrik kesintisi veya sert kill
+    sayımın dışında kalırdı ve *"30 gün kesintisiz (kesinti olduysa sebebi kayıtlı)"*
+    kriteri ölçmediği bir şeyi ölçüyormuş gibi görünürdü.
+    """
+
+    def test_hic_oturum_yoksa_kesinti_yok(self, tmp_path) -> None:
+        m = motor_kur(depo=depo_ac(tmp_path))
+        toparlan(m, barlar(5))
+        assert m.depo.onceki_oturum_kapandi_mi() is None
+        assert m.depo.kesinti_sayisi() == 0
+
+    def test_durdu_yazilmadan_olen_oturum_kesinti_sayiliyor(self, tmp_path) -> None:
+        yol = tmp_path / "k.sqlite"
+        bl = barlar(30)
+
+        depo1 = KosuDeposu(yol)
+        m1 = motor_kur(TAKVIM, depo=depo1)
+        toparlan(m1, [])
+        depo1.olay_yaz(KosuOlayi.BASLADI, ayrinti={"kosu": "test"})
+        kosuyu_isle(m1, bl[:20])
+        depo1.kapat()  # `durdu` **yazılmadı**: çökme taklidi
+
+        depo2 = KosuDeposu(yol)
+        m2 = motor_kur(TAKVIM, depo=depo2)
+        toparlan(m2, bl[:20])
+
+        turler = [o["tur"] for o in depo2.olaylar()]
+        assert str(KosuOlayi.TEMIZ_KAPANMADI) in turler
+        assert depo2.kesinti_sayisi() == 1
+
+    def test_duzgun_kapanan_oturum_kesinti_sayilmiyor(self, tmp_path) -> None:
+        yol = tmp_path / "k.sqlite"
+        bl = barlar(30)
+
+        depo1 = KosuDeposu(yol)
+        m1 = motor_kur(TAKVIM, depo=depo1)
+        toparlan(m1, [])
+        depo1.olay_yaz(KosuOlayi.BASLADI, ayrinti={"kosu": "test"})
+        kosuyu_isle(m1, bl[:20])
+        depo1.olay_yaz(KosuOlayi.DURDU, ayrinti={"islenen_bar": 20})
+        depo1.kapat()
+
+        depo2 = KosuDeposu(yol)
+        m2 = motor_kur(TAKVIM, depo=depo2)
+        toparlan(m2, bl[:20])
+
+        turler = [o["tur"] for o in depo2.olaylar()]
+        assert str(KosuOlayi.TEMIZ_KAPANMADI) not in turler
+        assert depo2.kesinti_sayisi() == 0
+
+    def test_iki_kez_baslatmak_iki_kesinti_yazmiyor(self, tmp_path) -> None:
+        # Kontrol tersten tarayıp **ilk** basladi/durdu satırında duruyor; kendi yazdığı
+        # `temiz_kapanmadi` satırı o taramaya girmiyor.
+        yol = tmp_path / "k.sqlite"
+        bl = barlar(30)
+        depo1 = KosuDeposu(yol)
+        m1 = motor_kur(TAKVIM, depo=depo1)
+        toparlan(m1, [])
+        depo1.olay_yaz(KosuOlayi.BASLADI, ayrinti={})
+        kosuyu_isle(m1, bl[:20])
+        depo1.kapat()
+
+        for _ in range(2):
+            d = KosuDeposu(yol)
+            mm = motor_kur(TAKVIM, depo=d)
+            toparlan(mm, bl[:20])
+            son = d.kesinti_sayisi()
+            d.kapat()
+        assert son == 1

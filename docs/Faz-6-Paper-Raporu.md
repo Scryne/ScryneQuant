@@ -20,7 +20,7 @@ status: devam-ediyor
 | Veri akışı kesilince yeni pozisyon açılmıyor | ✅ | `tests/unit/test_paper_dongu.py::TestBayatVeriGuardi` |
 | Dashboard'un 4 sayfası çalışıyor, risk ilk bakışta görünüyor | ✅ | `tests/unit/test_api.py` + uçtan uca canlı doğrulama |
 
-Toplam **867 test** yeşil (Faz 5 sonunda 757'ydi).
+Toplam **872 test** yeşil (Faz 5 sonunda 757'ydi).
 
 ## Ölçülen şey ne, ölçülmeyen ne
 
@@ -100,9 +100,28 @@ K-037 asimetriyi açıkça yazdı: **engelleyen** katman risk motorunun dışın
 **izin veren** katman olamaz. §9.1/3'ün koruduğu şey "her sinyal risk motorunu görsün"
 değil, "borsaya giden yolda risk motorundan geçmemiş hiçbir şey olmasın".
 
+## Kriterin kendisinde bir boşluk vardı
+
+Koşu başlatılmadan önce fark edildi ve kapatıldı: **süreç çökerse, elektrik giderse veya
+sert öldürülürse hiçbir iz kalmıyordu.** `durdu` satırını yazacak olan sürecin kendisiydi
+ve ölürken yazamaz; yeniden başlayınca kayıtta yalnızca yeni bir `basladi` görünürdü. Yani
+**en sık gerçek kesinti türü kesinti sayımının dışında kalıyordu** ve *"30 gün kesintisiz
+(kesinti olduysa sebebi kayıtlı ve giderilmiş)"* kriteri, ölçmediği bir şeyi ölçüyormuş
+gibi görünecekti.
+
+Çözüm geriye dönük kayıt: her başlangıçta kayıttaki son `basladi`/`durdu` satırına bakılıyor
+ve `basladi` daha yeniyse `temiz_kapanmadi` yazılıyor — kesinti olarak sayılan dördüncü
+olay türü. Sebep "bilinmiyor" olarak geçiyor ve bu kabul ediliyor: bilinmeyen bir sebep,
+kaydedilmemiş bir kesintiden iyidir.
+
+İlk yazım aynı çökmeyi **iki kez** saydı (art arda iki toparlanma, aradaki `basladi` hâlâ
+en yeni satır olduğu için) ve bunu testi yakaladı. Tarama `temiz_kapanmadi`yi de kapsayacak
+şekilde düzeltildi: bir kez kaydedilmiş kesinti kaydedilmiştir; sayacın iki kez artması
+olmayan bir kesinti uydurmak olurdu.
+
 ## Bulunan hatalar
 
-Beşi de testler yazılırken veya uçtan uca doğrulamada çıktı.
+Altısı da testler yazılırken veya uçtan uca doğrulamada çıktı.
 
 1. **Canlı pencere kısayken ATR hesabı patlıyordu.** Backtest'te seri baştan sona elde ve
    ATR bir kez hesaplanıyor; canlıda pencere sıfırdan büyüyor ve ilk 15 barda seri
@@ -120,7 +139,9 @@ Beşi de testler yazılırken veya uçtan uca doğrulamada çıktı.
 4. **Pencere kalite raporu bar-başına düzeltmeden önceki bayrakları sayıyordu.** Dashboard
    "1000 bar `ok`" derken motor aynı barları `backfilled` görüyordu. Aynı veriyi iki farklı
    anlatan iki sayı — ve rapor, ekranda okunan taraf.
-5. **Arayüzde üç denetim bulgusu:** `role="tablist"` gerekli ARIA kalıbı olmadan
+5. **Çökme kesinti sayılmıyordu** — yukarıdaki bölüm. Kriterin kendisini ölçülebilir
+   kılan düzeltme; koşu başlatılmadan önce yapıldı.
+6. **Arayüzde üç denetim bulgusu:** `role="tablist"` gerekli ARIA kalıbı olmadan
    verilmişti; risk şeridi SAFE_MODE'da bile `role="status"` ile sıraya giriyordu;
    `background-attachment: fixed` her kaydırmada arka planı yeniden boyatıyordu.
 

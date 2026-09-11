@@ -71,6 +71,15 @@ class KosuOlayi(StrEnum):
     YENIDEN_BAGLANDI = "yeniden_baglandi"
     """Akış geri geldi ve eksik barlar tamamlandı (resync)."""
 
+    TEMIZ_KAPANMADI = "temiz_kapanmadi"
+    """Önceki oturum `durdu` satırını yazamadan öldü: çökme, elektrik kesintisi, sert kill.
+
+    **Bu olay geriye dönük yazılır** — süreç ölürken bir şey yazamaz, dolayısıyla kaydı bir
+    sonraki başlangıç atar. Olmasaydı en sık gerçek kesinti türü sayımın dışında kalırdı ve
+    *"30 gün kesintisiz (kesinti olduysa sebebi kayıtlı)"* kriteri, ölçmediği bir şeyi
+    ölçüyormuş gibi görünürdü. Sebep "bilinmiyor" olarak yazılıyor: bilinmeyen bir sebep,
+    kaydedilmemiş bir kesintiden iyidir."""
+
     KOD_DEGISTI = "kod_degisti"
     """Koşu, bir önceki başlatmadan farklı bir commit veya kütüphane kümesiyle devam etti.
 
@@ -90,7 +99,12 @@ class KosuOlayi(StrEnum):
 #: giderilmiş)"* kriterinin sayacı bunları sayıyor — `BAYAT_GIRIS` dahil değil, çünkü
 #: bayat veri koşuyu **bölmez**, yalnızca yeni girişi durdurur (§24).
 KESINTI_OLAYLARI: Final[frozenset[KosuOlayi]] = frozenset(
-    {KosuOlayi.KOPMA, KosuOlayi.HATA, KosuOlayi.TOPARLANMA_AYRISMASI}
+    {
+        KosuOlayi.KOPMA,
+        KosuOlayi.HATA,
+        KosuOlayi.TOPARLANMA_AYRISMASI,
+        KosuOlayi.TEMIZ_KAPANMADI,
+    }
 )
 
 _SEMA = """
@@ -563,6 +577,31 @@ class KosuDeposu:
             [str(t) for t in sorted(KESINTI_OLAYLARI)],
         )[0]
         return int(satir["n"])
+
+    def onceki_oturum_kapandi_mi(self) -> bool | None:
+        """Önceki oturum `durdu` ile mi bitti? `None` = hiç oturum yok.
+
+        Kayıt tersten taranıyor ve **ilk** ilgili satırda duruluyor: aradaki yüzlerce
+        bayatlık geçişini okumaya gerek yok, aranan şey en son hangisinin geldiği.
+
+        `TEMIZ_KAPANMADI` de taramaya dahil ve bu bir hata düzeltmesi: dahil olmasaydı,
+        art arda iki toparlanma (koşu başlatılmadan yapılan iki `sq paper baslat --ag-yok`
+        gibi) aynı çökmeyi iki kez sayardı. Bir kez kaydedilmiş kesinti kaydedilmiştir;
+        sayacın iki kez artması, olmayan bir kesinti uydurmak olurdu.
+        """
+        satir = self._sorgu(
+            "SELECT tur FROM olay WHERE tur IN (?, ?, ?) ORDER BY id DESC LIMIT 1",
+            [
+                str(KosuOlayi.BASLADI),
+                str(KosuOlayi.DURDU),
+                str(KosuOlayi.TEMIZ_KAPANMADI),
+            ],
+        )
+        if not satir:
+            return None
+        # `basladi` dışındaki her şey "kapanış hesaplanmış" demek: `durdu` düzgün kapanış,
+        # `temiz_kapanmadi` ise zaten sayılmış bir çökme.
+        return str(satir[0]["tur"]) != str(KosuOlayi.BASLADI)
 
     def ilk_olay_ms(self) -> int | None:
         satir = self._sorgu("SELECT MIN(zaman_ms) AS t FROM olay")[0]
