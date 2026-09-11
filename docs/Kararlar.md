@@ -1520,6 +1520,111 @@ yoldan buraya geldi" bir uyuşmazlık araştırmasının ilk sorusu.
 
 ---
 
+## K-041 — Ağ hatası üç sınıfa ayrılır; imzanın zamanı borsadan gelir
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 7 · **Tamamlar:** K-040 · **İlgili:**
+K-015, K-032, K-038 · **Kanıt:** `tests/unit/test_imzali.py`,
+`tests/unit/test_mutabakat.py`, `runs/testnet/faz7-100.json`,
+`runs/testnet/faz7-kesinti.json`
+
+K-040 duplicate korumasının üç mekanizmasını sabitledi ama bir soruyu açık bıraktı: bir
+gönderim başarısız olduğunda **hangi** duruma geçilir? Bu karar o eşlemeyi ve onu mümkün
+kılan iki alt kararı yazıyor.
+
+### 1. Bir ağ hatası üç ayrı şey söyleyebilir ve ayrımı **adaptör** yapar
+
+| Hata | Anlamı | Emir durumu | Yeniden gönderim |
+| --- | --- | --- | --- |
+| `GonderilemediHatasi` | İstek bayta hiç dökülmedi (ConnectTimeout, DNS) | `FAILED` | serbest |
+| `BorsaReddetti` | Borsa açıkça reddetti (4xx + hata kodu) | `REJECTED` | sebep giderilmeden hayır |
+| `BelirsizSonuc` | Yanıt kayboldu (ReadTimeout, kopan bağlantı, **5xx**) | `UNKNOWN` | **asla** |
+| `SaatSapmasi` | `-1021`; emir oluşmadı ama sebep saat | `FAILED` + koşu durur | saat düzelmeden hayır |
+
+**5xx'in `BelirsizSonuc` olması Binance'in kendi sözleşmesinden geliyor**, bizim ihtiyatımızdan
+değil: 503/504 açıkça "yürütme durumu bilinmiyor" demek. 4xx ile 5xx'i aynı kovaya koymak,
+oluşmuş bir emri oluşmamış saymaktır.
+
+**Ayrım neden çağırana bırakılamaz.** İsteğin bayta dökülüp dökülmediğini yalnızca transport
+bilir. Çağırana bırakılsaydı her çağıranın aynı doğru kararı vermesi gerekirdi — ve bir kez
+unutulan yerde duplicate emir doğardı.
+
+**Bu yüzden ccxt kullanılmadı.** Faz 1'in okuma adaptörü ccxt'yi transport olarak kullanıyor
+ve bu doğru bir karardı. Emir tarafında aynı tercih yanlış olurdu: ccxt `NetworkError`
+altında "gitmedi" ile "bilmiyorum"u **aynı sınıfa** koyuyor. Silinen ayrım duplicate emrin
+ta kendisi. Emir yolu ham `requests` istisnalarına bakıyor.
+
+### 2. İmzalı isteğin `timestamp`i yerel saatten değil, borsadan türer
+
+Ölçüm (2026-09-11, IPv4 zorlanmış, host başına 9 örnek): yerel saat borsadan **2.640 ms
+geride**, yayılım 46-247 ms, iki farklı host aynı değeri veriyor — yani sapma sunucuda değil
+**yerel makinede** ve kararlı.
+
+`recvWindow=5000` ile bu bugün çalışır. Ama saat kaymaya devam eder ve eşiği geçtiği gün
+imzalı istekler `-1021` ile **sessizce** reddedilir; sebep emir mantığında aranır.
+
+**İşletim sistemi saatini düzeltmek (`w32tm`) reddedildi** — sorunu çözmüyor, erteliyor.
+Bunun yerine fark açılışta bir kez ölçülüp `time.monotonic()` çıpasına bağlanıyor ve
+periyodik tazeleniyor. Sistem saati değişse bile (elle, NTP sıçraması) `monotonic`
+etkilenmez, yani imza geçerli kalır. Sapmanın kendisi bir **sağlık göstergesi** olarak
+raporlanıyor (`sq testnet durum`), gizlenmiyor.
+
+İki senkron arasında farkın kendisi 2.000 ms'den çok değişirse `SaatSapmasi` fırlıyor: o
+aralıkta üretilmiş imzalar güvenilmez ve bunu sessizce yeni değere geçerek örtmek, geçersiz
+bir pencereyi görünmez yapardı.
+
+**İmzalanan metin, gönderilen metin olmak zorunda.** Sorgu dizesi elle kurulup URL'ye
+gömülüyor; `requests`in `params=` yolu kullanılmıyor. İki ayrı kodlayıcının bugün aynı
+çıktıyı vermesi bir varsayımdır, ve ayrıştıkları gün hata `-1022` (geçersiz imza) olarak
+görünür — sebebi kodlamada aranmaz.
+
+### 3. Mutabakat çözebildiğini çözer, çözemediğinde **durur**
+
+Sınır bilgiye dayalı, keyfi değil: defterin *"bilmiyorum"* dediği yerde (`SUBMITTED`,
+`UNKNOWN`) borsa otoritedir ve cevabı yazılır. Defterin *"biliyorum"* dediği yerde
+(`ACKNOWLEDGED`) borsa başka bir şey söylüyorsa ortada çelişki vardır ve çözmenin tek
+dürüst yolu durmaktır (K-038'in kuralı).
+
+Borsada açık ama defterde olmayan bir emir de durdurur: sistemin üretmediği ya da kaydını
+kaybettiği bir emir, ikisinde de defter borsadaki maruziyeti eksik biliyor demektir.
+
+**Pozisyon mutabakatı bilerek yapılmıyor.** Bakiye farkını emirlerden türetmek, koşu
+başındaki bakiyenin bağımsız bir kaydını gerektirir; o kayıt yokken yapılan karşılaştırma
+"borsa ne diyorsa o" demenin süslü hâli olur. Faz 8'in *"açıklanamayan pozisyon farkı:
+sıfır"* kriteri o kaydı kurar. K-039'un "ölçülemedi ≠ kaldı" ayrımı burada da geçerli.
+
+### Ölçülen (2026-09-11, Binance Spot Testnet)
+
+| Kriter | Sonuç |
+| --- | --- |
+| 100 emir, elle müdahalesiz | **100/100 FILLED**, hata 0, belirsiz 0, süre 2 dk 4 sn |
+| Ara mutabakat | 5 kez, hepsi temiz |
+| Duplicate (gerçek borsa) | aynı niyet ikinci kez → **ağa hiç çıkmadı** |
+| Kesinti: emir oluştu, yanıt kayboldu | `UNKNOWN` → mutabakat → **`FILLED`** |
+| Kesinti: emir oluşmadı, yanıt kayboldu | `UNKNOWN` → mutabakat → **`FAILED`** |
+| Saat sapması (koşu boyunca) | −2.535 ms; hiçbir `-1021` yok |
+
+Son iki satır birlikte okunmalı: çağıran açısından **ayırt edilemez** iki durumdan iki farklı
+doğru sonuca varıldı. Mutabakatın tahmin yürütmediğinin kanıtı bu — cevabı borsadan alıyor.
+
+### İlk gerçek koşunun bulduğu iki hata
+
+Birim testlerin tamamı yeşilken gerçek testnet iki hata gösterdi, ve ikisinin de sebebi
+aynı: **sahte borsa gerçeğinden hoşgörülüydü.**
+
+1. **`FLAT` borsaya olduğu gibi gönderiliyordu** → `Invalid side`. `FLAT` bizim
+   sözlüğümüzde var (tam çıkış), Binance'te yok. Çeviri artık sözleşmenin kenarında
+   (`borsa_yonu`); defterde yön `FLAT` olarak kalıyor çünkü "tamamen kapat" ile "azalt"
+   farklı kararlardır ve audit'in ikisini ayırt etmesi gerekir.
+2. **Defter istenen miktarı yazıyordu, gönderilebileni değil.** Lot adımına yuvarlama
+   farkı küçük görünüyor ama sonucu şu: `FILLED` bir emrin `kalan`ı sıfır değil — tamamen
+   dolmuş ama defterde hâlâ bakiyesi olan bir emir, ve pozisyon hesabında sessizce biriken
+   bir fark. Tam olarak bu projenin "neredeyse doğru" dediği hata sınıfı.
+
+Ders kayda geçiyor: **bir sahte, gerçeğin reddettiğini kabul ediyorsa ona karşı yeşil olan
+test bir şey kanıtlamaz.** `SahteBorsa` artık yön ve lot adımı kontrolü yapıyor.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:

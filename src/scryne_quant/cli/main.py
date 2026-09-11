@@ -21,6 +21,7 @@ from typing import Annotated, Any
 import typer
 
 from scryne_quant.backtest.motor import Backtest
+from scryne_quant.cli.testnet import testnet_app
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.hash import git_durumu, ortam_kaydi
 from scryne_quant.common.zaman import simdi_ms, utc_str
@@ -89,6 +90,7 @@ paper_app = typer.Typer(
     help="Paper/gözlem koşusu: canlı veri, simüle emir, dashboard. (Faz 6)",
 )
 app.add_typer(paper_app)
+app.add_typer(testnet_app)
 
 #: Koşu dosyalarının varsayılan yeri. Koşu başına **tek** dosya: durum, fill defteri,
 #: koşu günlüğü ve risk audit'i aynı SQLite dosyasında (K-034). Koşuyu yedeklemek tek bir

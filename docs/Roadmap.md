@@ -25,7 +25,7 @@ yanlış sonuç olarak geri döner.
 | 4 | Strateji laboratuvarı | ✅ Tamamlandı | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ✅ Tamamlandı | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
 | 6 | Paper trading + dashboard | 🔄 Devam Ediyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
-| 7 | Execution sandbox (testnet) | 🔄 Devam Ediyor | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
+| 7 | Execution sandbox (testnet) | ✅ Tamamlandı | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
 | 8 | Kontrollü live | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
 
 ---
@@ -485,7 +485,7 @@ kurulum), `exchange/akis.py` (Binance WebSocket + resync), `live/kilit.py` (tek-
 taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,olaylar}`.
 881 test yeşil (Faz 5 sonunda 757'ydi).
 
-### Faz 7: Execution sandbox (Binance Spot Testnet) — 🔄 başladı 2026-09-11
+### Faz 7: Execution sandbox (Binance Spot Testnet) — ✅ kapandı 2026-09-11
 
 - **İşler:** Emir state machine (§33); idempotency key; retry ve timeout politikası;
   reconciliation (§25); execution engine; gerçek adapter üzerinden testnet emirleri.
@@ -503,19 +503,19 @@ taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,olayl
   Spike 1'de testnet'in canlı fiyatı %0,007 sapmayla takip ettiği ölçüldü — execution
   testleri için gerçekçi.
 
-**Durum — ilk parça bitti (2026-09-11): emir state machine + idempotency + emir defteri.**
+**Bitti kriteri karşılandı — ölçümlerin tamamı `docs/Faz-7-Execution-Raporu.md`'de:**
 
-Faz 4'e dönüş 1 ve 2 çürüdükten sonra Faz 7'ye geçildi ve bu bir yön kararı:
+| Kriter | Sonuç |
+| --- | --- |
+| Duplicate order üretilemiyor | ✅ **iki katman**: defter aynı kimliği tanıyınca istek borsaya hiç gitmiyor (fiyat sorgusu bile yapılmıyor); defter silinse bile kimlik içerikten türediği için borsa `-2010` ile reddediyor |
+| Reconciliation (süreç ortada ölünce) | ✅ **iki vakanın ikisi de** gerçek testnet'e karşı doğru çözüldü: emir oluştuysa `UNKNOWN → FILLED`, oluşmadıysa `UNKNOWN → FAILED` |
+| Testnet'te ≥100 emir | ✅ **100/100 FILLED**, elle müdahale gerektiren hata 0, süre 2 dk 4 sn, 5 ara mutabakat temiz |
+| Uyuşmazlıkta halt | ✅ borsa kabul ettiği emri tanımıyorsa, defterde olmayan açık emir varsa, ya da borsanın durumu state machine'de ulaşılamazsa koşu duruyor |
+
+Faz 4'e dönüş 1 ve 2 çürüdükten sonra Faz 7'ye geçildi ve bu bir yön kararıydı:
 **Faz 7 promotion geçmiş bir strateji gerektirmiyor.** Emir mantığı, idempotency ve
 reconciliation kendi başına doğrulanabilir; strateji arayışının azalan verimi altyapıyı
-bloke etmemeli.
-
-| Kriter | Durum |
-| --- | --- |
-| Duplicate order üretilemiyor | ✅ **ağsız yarısı** kanıtlı (`tests/unit/test_oms.py`, 33 test) |
-| Reconciliation (süreç ortada ölünce) | ⏳ sırada |
-| Testnet'te ≥100 emir | ⏳ **API anahtarı bekliyor** — Scryne'ın alması gerek |
-| Uyuşmazlıkta halt | ⏳ sırada |
+bloke etmemeli. Ölçüm bunu doğruladı — dört kriter de strateji olmadan kapandı.
 
 Duplicate koruması **üç yapısal mekanizma** (K-040): kimlik onaylı niyetin içeriğinden
 türüyor (mühür dahil değil, yoksa restart'ta çökerdi), defterde birincil anahtar, ve state
@@ -526,8 +526,32 @@ bilinmezlik: `FAILED` sayıp yeniden denemek duplicate üretmenin en kısa yolu.
 durum hiç gönderilmemiş bir emrin kaydı ve reconciliation onu kapatır. K-038'in aynı
 mantığı: kaydı erken yazmak geç yazmaktan güvenli.
 
-**Ön koşul hatırlatması:** `testnet.binance.vision` üzerinden API anahtarı (GitHub
-hesabıyla, KYC yok). O anahtar olmadan ≥100 emir kriteri ölçülemez.
+**Saat sorunu ölçüldü ve kodla çözüldü.** Yerel saat borsadan **2.640 ms geride** (kararlı,
+iki host aynı); Spike 1'in −153 ms'i artık geçerli değil. İşletim sistemi saatini düzeltmek
+reddedildi — sorunu ertelerdi. `timestamp` artık borsanın saatinden türüyor ve
+`time.monotonic()` çıpasına bağlı, yani sistem saati değişse bile imza geçerli kalıyor.
+100 emirlik koşuda tek bir `-1021` görülmedi. Ayrıntı: K-041/2.
+
+**Beklenmeyen bulgu — sahte borsa gerçeğinden hoşgörülüymüş.** 988 birim testin tamamı
+yeşilken ilk gerçek testnet koşusu iki hata gösterdi: `FLAT` borsaya olduğu gibi
+gönderiliyordu (`Invalid side`), ve defter istenen miktarı yazıyordu, gönderilebileni
+değil — yani `FILLED` bir emrin `kalan`ı sıfır değildi. İkincisi tam olarak bu projenin
+"neredeyse doğru" dediği sınıf: çökme yok, hata yok, test yeşil, ve pozisyon hesabında her
+emirde biraz büyüyen sessiz bir fark. Ders: **bir sahte, gerçeğin reddettiğini kabul
+ediyorsa ona karşı yeşil olan test bir şey kanıtlamaz.** `SahteBorsa` artık yön ve lot
+adımı doğruluyor; iki hata için de regresyon testi var.
+
+**Bu fazın ölçmediği şeyler** (raporun §7'si): pozisyon mutabakatı (koşu başı bakiyesinin
+bağımsız kaydı yok — Faz 8'in kriteri onu kuracak), limit emri ve iptal yolu, uzun süreli
+dayanıklılık. **K-034 yine ertelendi:** Faz 7'de de tek yazıcı var, PostgreSQL'in gerekçesi
+olan eşzamanlı yazma doğmadı; şema dondurulmuş kalıyor, karar Faz 8'e taşındı.
+
+**Üretilen paketler:** `exchange/` (`hatalar`, `kurallar`, `emir_adaptoru`, `imzali`),
+`execution/motor.py`, `oms/mutabakat.py`, CLI `sq testnet {durum,yuk,kesinti,mutabakat}`.
+**991 test yeşil** (Faz 6 sonunda 942'ydi).
+
+**Faz 7'nin verdiği karar:** K-041 (ağ hatası üç sınıfa ayrılır; imzanın zamanı borsadan
+gelir; mutabakat çözemediğinde durur).
 
 ### Faz 8: Kontrollü live
 

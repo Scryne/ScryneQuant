@@ -18,9 +18,11 @@ kural değildir.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 
 import pandas as pd
+
+from scryne_quant.exchange.hatalar import BorsaHatasi
+from scryne_quant.exchange.kurallar import SembolKurallari
 
 #: Bir kline çağrısında istenecek azami bar. Sabit: Binance'in weight tüketimi çağrı
 #: başınadır, `limit`ten bağımsız (Spike 1: 100 de olsa 1000 de olsa weight 2). Daha
@@ -28,26 +30,15 @@ import pandas as pd
 SAYFA_BOYU = 1000
 
 
-class BorsaHatasi(Exception):
-    """Borsa katmanının dışarı verdiği tek hata tipi.
+#: `BorsaHatasi` Faz 7'de `exchange/hatalar.py`ye taşındı ve burada yeniden dışa
+#: veriliyor. Sebep: emir yolundaki kod (`oms/`, `execution/`) bu hatayı yakalamak
+#: zorunda, ama bu modül pandas'a bağlı ve o paketlerde pandas yasak
+#: (`test_risk_bypass.py`). Mevcut `from ...temel import BorsaHatasi` importları
+#: kırılmasın diye isim burada duruyor.
 
-    Kütüphaneye özgü istisnalar (ccxt) burada sarılır: üst katmanlar `ccxt` import
-    etmek zorunda kalmasın, ve borsa değiştiğinde hata yakalayan kod değişmesin.
-    """
 
-
-@dataclass(frozen=True, slots=True)
-class SembolKurallari:
-    """Bir sembolün emir kuralları. Faz 7'nin ön koşulu, Faz 1'de yalnızca kaydedilir.
-
-    Spike 1'de BTCUSDT için ölçülen: tick 0,01 · step 0,00001 · minNotional 5,00.
-    """
-
-    sembol: str
-    tick_size: float
-    step_size: float
-    min_notional: float
-    durum: str
+#: `SembolKurallari` de Faz 7'de taşındı (`exchange/kurallar.py`) — aynı gerekçe:
+#: emir yolu onu kullanmak zorunda, bu modül pandas taşıyor.
 
 
 class BorsaAdaptoru(ABC):
@@ -76,3 +67,6 @@ class BorsaAdaptoru(ABC):
     @abstractmethod
     def sembol_kurallari(self, sembol: str) -> SembolKurallari:
         """Emir kuralları (tick, step, minNotional). Önbelleklenmesi beklenir."""
+
+
+__all__ = ["SAYFA_BOYU", "BorsaAdaptoru", "BorsaHatasi", "SembolKurallari"]

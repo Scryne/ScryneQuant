@@ -81,15 +81,19 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
 - `docs/Roadmap.md` — Faz 0-8, her fazın somut bitti kriteri.
 - `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,
-  `docs/Faz-5-Risk-Raporu.md`, `docs/Faz-6-Paper-Raporu.md` — faz sonu ölçüm raporları.
+  `docs/Faz-5-Risk-Raporu.md`, `docs/Faz-6-Paper-Raporu.md`,
+  `docs/Faz-7-Execution-Raporu.md` — faz sonu ölçüm raporları.
   Sayılar buradan alınır, tahmin edilmez. Faz 6 raporu **açık**: fazın 30 günlük kriteri
   duvar saati istiyor, koşu bitince o dosyaya yazılacak.
 - `config/risk.json` — yürürlükteki risk limitleri; her limit `olculdu`/`istah` kaynağını
   ve (iştahsa) gözden geçirme koşulunu taşır (K-033). `sq risk limitler` ile okunur.
-- `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Uygulanmadı ve Faz 7'ye
-  ertelendi** (K-034): Faz 6'nın mimarisinde tek yazıcı var, PostgreSQL'in gerekçesi olan
-  eşzamanlı yazma doğmuyor. Şema dondurulmuş, `risk/audit.py`'nin SQLite şemasıyla hizalı
+- `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Uygulanmadı; Faz 7'de de
+  ertelendi, karar Faz 8'e taşındı** (K-034): Faz 6 ve Faz 7'nin mimarisinde tek yazıcı var,
+  PostgreSQL'in gerekçesi olan eşzamanlı yazma doğmuyor. Şema dondurulmuş, `risk/audit.py`'nin SQLite şemasıyla hizalı
   tutuluyor ve testle korunuyor.
+- `runs/testnet/<kosu>.sqlite` + `.json` — Faz 7 execution ölçümlerinin emir defteri ve
+  raporu. `sq testnet yuk` ve `sq testnet kesinti` üretir. `.gitignore`'da; sayılar
+  `docs/Faz-7-Execution-Raporu.md`'ye kopyalanır.
 - `runs/paper/<kosu>.sqlite` — bir paper/gözlem koşusunun **tamamı**: koşu kimliği,
   kontrol noktası, fill defteri, koşu günlüğü ve risk audit'i tek dosyada. Koşuyu
   yedeklemek tek bir dosyayı kopyalamak demek. `.gitignore`'da.
