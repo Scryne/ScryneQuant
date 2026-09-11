@@ -272,3 +272,73 @@ class TestSozlesme:
         x = np.array([100.0, 110.0, 121.0])
         assert ind.roc(x, 1)[1] == pytest.approx(10.0)
         assert ind.roc(x, 2)[2] == pytest.approx(21.0)
+
+
+class TestFundingIndikatorleri:
+    """`persentil_sirasi` ve `kumulatif` — funding'in iki okuma biçimi. (K-042)
+
+    Bu ikisinin TA-Lib karşılığı yok, yani K-026'nın "bağımsız referansla doğrula" kuralı
+    burada elle kurulmuş beklenen değerlerle sağlanıyor. Küçük ve elle sayılabilir diziler
+    kullanılıyor: doğruluğu okuyan kişi de kontrol edebilmeli.
+    """
+
+    def test_persentil_elle_hesaplanan_degerle(self):
+        x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        out = ind.persentil_sirasi(x, 3)
+        # [1,2,3] -> 3 en büyük, 3/3; [2,3,4] -> 3/3; [3,4,5] -> 3/3
+        assert np.isnan(out[:2]).all()
+        np.testing.assert_allclose(out[2:], [1.0, 1.0, 1.0])
+
+    def test_persentil_dusen_seride(self):
+        x = np.array([5.0, 4.0, 3.0, 2.0, 1.0])
+        out = ind.persentil_sirasi(x, 3)
+        # her pencerede son değer en küçük: 1/3
+        np.testing.assert_allclose(out[2:], [1 / 3, 1 / 3, 1 / 3])
+
+    def test_persentil_ortada(self):
+        x = np.array([1.0, 3.0, 2.0])
+        # [1,3,2] içinde 2'den küçük/eşit olanlar: 1 ve 2 → 2/3
+        assert ind.persentil_sirasi(x, 3)[2] == pytest.approx(2 / 3)
+
+    def test_persentil_araligi_sifir_bir(self):
+        rng = np.random.default_rng(7)
+        out = ind.persentil_sirasi(rng.normal(size=500), 50)
+        gecerli = out[~np.isnan(out)]
+        assert gecerli.min() >= 1 / 50 and gecerli.max() <= 1.0
+
+    def test_persentil_seviyeden_bagimsiz(self):
+        """Seriye sabit eklemek persentil sırasını değiştirmemeli — K-042/3'ün gerekçesi.
+
+        Funding'in medyanı kalıcı pozitif; mutlak eşik bu kaymadan etkilenir, persentil
+        etkilenmez. Test o iddianın kendisi.
+        """
+        rng = np.random.default_rng(11)
+        x = rng.normal(size=200)
+        np.testing.assert_allclose(
+            ind.persentil_sirasi(x, 30), ind.persentil_sirasi(x + 100.0, 30)
+        )
+
+    def test_kumulatif_elle_hesaplanan_degerle(self):
+        x = np.array([1.0, 2.0, 3.0, 4.0])
+        out = ind.kumulatif(x, 2)
+        assert np.isnan(out[0])
+        np.testing.assert_allclose(out[1:], [3.0, 5.0, 7.0])
+
+    @pytest.mark.parametrize("fon", [ind.persentil_sirasi, ind.kumulatif])
+    def test_penceredeki_nan_sonucu_nan_yapiyor(self, fon):
+        """Boşluk uydurulmaz (K-024): eksik bir değer sıfır sayılmaz."""
+        x = np.array([1.0, np.nan, 3.0, 4.0, 5.0])
+        out = fon(x, 3)
+        assert np.isnan(out[2]) and np.isnan(out[3])
+        assert not np.isnan(out[4])
+
+    @pytest.mark.parametrize("fon", [ind.persentil_sirasi, ind.kumulatif])
+    def test_nedensel(self, fon):
+        """Geleceği bozmak geçmişi değiştirmemeli (K-002)."""
+        rng = np.random.default_rng(3)
+        x = rng.normal(size=120)
+        temiz = fon(x, 20)
+        bozuk_x = x.copy()
+        bozuk_x[80:] = 999.0
+        bozuk = fon(bozuk_x, 20)
+        np.testing.assert_array_equal(temiz[:80], bozuk[:80])

@@ -267,3 +267,80 @@ def roc(kapanis: np.ndarray, pencere: int = 10) -> np.ndarray:
         oran = np.where(onceki != 0.0, x[pencere:] / onceki - 1.0, np.nan)
     out[pencere:] = oran * 100.0
     return out
+
+
+def persentil_sirasi(degerler: np.ndarray, pencere: int) -> np.ndarray:
+    """Değerin kendi kayan penceresi içindeki persentil sırası, [0,1]. (K-042/3)
+
+    ``(pencerede x[t]'den küçük veya eşit değer sayısı) / pencere``. İlk geçerli değer
+    indeks ``pencere-1``; pencere `t` barını **içerir** ve içermesi gerekir — sorulan şey
+    "bugünkü değer, son N günün neresinde", ve bugünkü değer bugün biliniyor.
+
+    **Neden persentil, neden mutlak eşik değil (K-042/3).** Funding'in medyanı kalıcı
+    olarak pozitif (ölçülen: +0,0096% / 8 saat). "funding > 0" koşulu neredeyse her zaman
+    doğru olur ve hiçbir şey ayırt etmez. Persentil sırası seviyeyi değil **göreliliği**
+    ölçer: "bu, son N barın en yüksek %5'inde mi" sorusu, serinin ortalaması kaysa bile
+    aynı anlamı taşır.
+
+    `en_yuksek`/`en_dusuk`ün aksine burada **kaydırma yok** ve olmamalı: Donchian'da
+    karşılaştırılan şey fiyatın kanalı aşıp aşmadığıydı ve kanal `t`'yi içerince
+    karşılaştırma anlamsızlaşıyordu. Burada `t`, penceresinin içindeki yerini soruyor;
+    kendini dışlamak soruyu değiştirirdi.
+
+    Penceresinde `NaN` bulunan hiçbir nokta hesaplanmaz — boşluk uydurulmaz (K-024).
+    """
+    x = _dizi(degerler)
+    _pencere_kontrol(x.size, pencere)
+
+    out = np.full(x.size, YOK)
+    if pencere == 1:
+        # Tek elemanlı pencerede her değer kendi penceresinin tamamı: sıra her zaman 1,0.
+        out[:] = np.where(np.isnan(x), YOK, 1.0)
+        return out
+
+    gorunum = sliding_window_view(x, pencere)
+    gecerli = ~np.isnan(gorunum).any(axis=-1)
+    simdi = gorunum[:, -1]
+    sayim = (gorunum <= simdi[:, None]).sum(axis=-1)
+    out[pencere - 1 :] = np.where(gecerli, sayim / pencere, YOK)
+    return out
+
+
+def kumulatif(degerler: np.ndarray, pencere: int) -> np.ndarray:
+    """Kayan pencere toplamı. İlk geçerli değer indeks ``pencere-1``.
+
+    Funding için anlamı: son N bar boyunca **birikmiş** ödeme baskısı. Tek bir ölçüm
+    gürültülü; birikim, rejimi tek değerden daha kararlı gösterir — hipotez bu
+    (`funding_egilim`, K-042/5).
+
+    Penceresinde `NaN` varsa sonuç `NaN`; sıfır sayıp toplamak, olmayan bir ödemeyi
+    olmuş gibi göstermek olurdu (K-024).
+    """
+    x = _dizi(degerler)
+    _pencere_kontrol(x.size, pencere)
+
+    out = np.full(x.size, YOK)
+    gorunum = sliding_window_view(x, pencere)
+    gecerli = ~np.isnan(gorunum).any(axis=-1)
+    out[pencere - 1 :] = np.where(gecerli, gorunum.sum(axis=-1), YOK)
+    return out
+
+
+def kumulatif_persentil(
+    degerler: np.ndarray, birikim: int, pencere: int
+) -> np.ndarray:
+    """Önce kayan toplam, sonra o toplamın kendi penceresindeki persentil sırası.
+
+    İki adımı tek fonksiyonda birleştirmek bir kolaylık değil **zorunluluk**: özellik
+    motoru indikatörleri zincirleyemiyor — her kaydın girdisi bir *bar alanı*, başka bir
+    özellik değil (`features/motor.py`'nin `DEFTER`i). Zincirlemeyi motora eklemek,
+    hesaplama sırasına ve ad çözümlemesine bağlı yeni bir yüzey açardı; iki adımlık tek
+    bir soru için bu fazla pahalı.
+
+    İlk geçerli değer indeks ``birikim + pencere - 2``: önce toplam ısınır, sonra persentil.
+    """
+    x = _dizi(degerler)
+    _pencere_kontrol(x.size, birikim)
+    toplam = kumulatif(x, birikim)
+    _pencere_kontrol(toplam.size, pencere)
+    return persentil_sirasi(toplam, pencere)

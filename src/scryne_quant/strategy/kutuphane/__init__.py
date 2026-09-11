@@ -1,4 +1,4 @@
-"""Strateji kütüphanesi: Faz 4'ün beş ailesi. (Roadmap Faz 4, §9)
+"""Strateji kütüphanesi: Faz 4'ün beş ailesi + dönüş 3'ün altıncısı. (Roadmap Faz 4, §9)
 
 Amaç kâr bulmak değil — aynı veri ve aynı maliyet varsayımlarıyla karşılaştırılabilir
 beş hipotez ailesi kurmak. Aileler bilerek **basit** ve az parametreli: Faz 4'ün asıl
@@ -18,6 +18,9 @@ from scryne_quant.strategy.kutuphane.al_tut import AlTut
 from scryne_quant.strategy.kutuphane.breakout import DonchianKirilim
 from scryne_quant.strategy.kutuphane.cok_faktor import CokFaktor
 from scryne_quant.strategy.kutuphane.ema_kesisim import EmaKesisim
+from scryne_quant.strategy.kutuphane.funding_egilim import FundingEgilim
+from scryne_quant.strategy.kutuphane.funding_filtre import FundingFiltre
+from scryne_quant.strategy.kutuphane.funding_ters import FundingTers
 from scryne_quant.strategy.kutuphane.momentum import Momentum
 from scryne_quant.strategy.kutuphane.rsi_donus import RsiOrtalamaDonus
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
@@ -32,6 +35,11 @@ KUTUPHANE: Final[dict[str, type[Strateji]]] = {
     DonchianKirilim.ad: DonchianKirilim,
     Momentum.ad: Momentum,
     CokFaktor.ad: CokFaktor,
+    # Faz 4'e dönüş 3 (K-042). Fiyat geçmişinden değil türev piyasasının
+    # konumlanmasından beslenen tek aile; bu yüzden `kalabalik` diye ayrı duruyor.
+    FundingTers.ad: FundingTers,
+    FundingFiltre.ad: FundingFiltre,
+    FundingEgilim.ad: FundingEgilim,
 }
 
 #: Kıyas ölçütü. `KUTUPHANE`de **değil**: beş aileden biri değil, hepsinin karşısındaki
@@ -48,6 +56,7 @@ AILELER: Final[dict[str, tuple[str, ...]]] = {
     "kirilim": (DonchianKirilim.ad,),
     "momentum": (Momentum.ad,),
     "cok_faktor": (CokFaktor.ad,),
+    "kalabalik": (FundingTers.ad, FundingFiltre.ad, FundingEgilim.ad),
 }
 
 
@@ -85,6 +94,9 @@ __all__ = [
     "CokFaktor",
     "DonchianKirilim",
     "EmaKesisim",
+    "FundingEgilim",
+    "FundingFiltre",
+    "FundingTers",
     "Momentum",
     "RsiOrtalamaDonus",
     "SmaKesisim",

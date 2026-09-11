@@ -57,6 +57,14 @@ DEFTER: Final[dict[str, Kayit]] = {
     "en_yuksek": Kayit(("high",), ("pencere",), ("",), ind.en_yuksek),
     "en_dusuk": Kayit(("low",), ("pencere",), ("",), ind.en_dusuk),
     "roc": Kayit(("close",), ("pencere",), ("",), ind.roc),
+    # Girdisi bar fiyatı değil **funding** olan iki indikatör (K-042). `funding` alanı
+    # bar çerçevesine `data/funding.py::barlara_hizala` tarafından nedensel olarak
+    # ekleniyor; yoksa `hesapla` açık bir hata veriyor.
+    "funding_persentil": Kayit(("funding",), ("pencere",), ("",), ind.persentil_sirasi),
+    "funding_kumulatif": Kayit(("funding",), ("pencere",), ("",), ind.kumulatif),
+    "funding_kumulatif_persentil": Kayit(
+        ("funding",), ("birikim", "pencere"), ("",), ind.kumulatif_persentil
+    ),
     "bollinger": Kayit(
         ("close",),
         ("pencere", "katsayi"),
@@ -139,6 +147,13 @@ def hesapla(
         if cakisan:
             raise OzellikHatasi(f"özellik adı iki kez tanımlanmış: {', '.join(cakisan)}")
 
+        yok = [a for a in kayit.girdiler if a not in bar_dizileri]
+        if yok:
+            raise OzellikHatasi(
+                f"{tanim.ad}: `{tanim.indikator}` şu bar alan(lar)ını istiyor ama "
+                f"çerçevede yok: {', '.join(yok)}. `funding` için bar çerçevesi "
+                f"`data.funding.barlara_hizala` ile hazırlanmalı (K-042)."
+            )
         girdiler = [np.asarray(bar_dizileri[alan], dtype=np.float64) for alan in kayit.girdiler]
         sonuc = kayit.fonksiyon(*girdiler, **dict(tanim.parametreler))
 

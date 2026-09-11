@@ -252,3 +252,80 @@ class TestErisimSozlesmesi:
         ctx = self._ctx()
         with pytest.raises(TypeError):
             ctx.bar("close", True)
+
+
+class TestFundingLookAhead:
+    """Funding üzerinden sızıntı. (K-042, K-002)
+
+    **Bu sınıf olmadan funding stratejileri look-ahead testinden muaf olurdu.** Mevcut
+    bozmalar yalnızca fiyat ve hacim alanlarını eziyor; `funding` sütunu dokunulmadan
+    kalıyor, yani bir strateji gelecekteki funding'i görse bile hiçbir test kırılmazdı.
+
+    Sızıntının doğal kaynağı hizalama: funding 8 saatte bir, barlar 1 saatte bir. 8'e 1
+    yayarken yön yanlış seçilirse her bar kendi gelecek ödemesini görür. `data/funding.py`
+    bunu `merge_asof(backward)` ile kapatıyor; burada ölçülen, stratejinin o sözleşmeye
+    gerçekten uyup uymadığı.
+    """
+
+    KESME_NOKTASI = 400
+
+    def _girdi_funding(self, tohum: int = 7) -> dict[str, np.ndarray]:
+        df = bar_uret(n=BAR_SAYISI, tohum=tohum)
+        rng = np.random.default_rng(tohum)
+        adim = rng.normal(1e-4, 2e-4, size=(len(df) + 7) // 8).clip(-3e-3, 3e-3)
+        df = df.copy()
+        df["funding"] = np.repeat(adim, 8)[: len(df)]
+        return bar_dizileri(df)
+
+    @staticmethod
+    def _stratejiler():
+        from scryne_quant.strategy.kutuphane import (
+            FundingEgilim,
+            FundingFiltre,
+            FundingTers,
+        )
+
+        # Pencereler sentetik serinin uzunluğuna göre küçültüldü; ölçülen şey pencere
+        # boyu değil nedensellik.
+        return [
+            FundingTers(pencere=60, giris_p=0.2, cikis_p=0.8),
+            FundingFiltre(giris=40, cikis=20, funding_pencere=60, azami_p=0.8),
+            FundingEgilim(birikim=8, pencere=60, giris_p=0.2, cikis_p=0.8),
+        ]
+
+    @pytest.mark.parametrize("t", [200, 400, 598])
+    def test_gelecek_funding_bozulunca_sinyaller_ayni(self, t: int) -> None:
+        temiz = self._girdi_funding()
+        bozuk = {ad: np.array(seri) for ad, seri in temiz.items()}
+        bozuk["funding"][t + 1 :] = -0.003  # tanınmaz, tavanın dibinde
+
+        for strateji in self._stratejiler():
+            a = _sinyaller_t_kadar(strateji, temiz, t)
+            b = _sinyaller_t_kadar(strateji, bozuk, t)
+            assert a == b, (
+                f"{strateji.ad}: gelecek funding bozulunca `t`'ye kadarki sinyaller "
+                f"değişti (kesme={t}). Strateji funding üzerinden geleceği görüyor."
+            )
+
+    def test_hemen_sonraki_barin_fundingi_de_gorunmuyor(self) -> None:
+        """En sinsi durum: yalnızca `t+1`'in funding'i. Bir bar kayması burada yakalanır."""
+        t = self.KESME_NOKTASI
+        temiz = self._girdi_funding()
+        bozuk = {ad: np.array(seri) for ad, seri in temiz.items()}
+        bozuk["funding"][t + 1] = 0.003
+
+        for strateji in self._stratejiler():
+            assert _sinyaller_t_kadar(strateji, temiz, t) == _sinyaller_t_kadar(
+                strateji, bozuk, t
+            ), f"{strateji.ad}: `t+1`'in funding'ini görüyor"
+
+    def test_test_anlamsiz_degil(self) -> None:
+        """Stratejiler bu seride gerçekten sinyal üretiyor mu?
+
+        Üretmiyorlarsa yukarıdaki iki test boş kümeleri karşılaştırır ve hiçbir şey
+        kanıtlamaz — Faz 4'ün `al_tut` kıyasında tam olarak bu olmuştu (K-031).
+        """
+        temiz = self._girdi_funding()
+        for strateji in self._stratejiler():
+            sinyaller = _sinyaller_t_kadar(strateji, temiz, 598)
+            assert sinyaller, f"{strateji.ad} bu seride hiç sinyal üretmedi"

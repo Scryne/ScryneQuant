@@ -347,6 +347,28 @@ yazılmış koşul gereği üçüncü bir seçim yöntemi denenmiyor. En yakına
 4h/plato (OOS Sharpe 0,46 · eşik 0,50) ama üç kapıda daha düşüyor — ve 35 çekilişten biri.
 Ayrıntı: `docs/Faz-4-Donus-2-Secim.md`.
 
+**Faz 4'e dönüş 3 (2026-09-11): funding rate — çürütüldü.** İlk kez **farklı bir bilgi
+kaynağı** denendi: fiyat geçmişi değil, türev piyasasının konumlanması. Spike 5 dört adayı
+ölçtü ve üçünü eledi (open interest, long/short oranı, taker hacmi — Binance'te ~31 gün
+saklanıyor, walk-forward kurulamaz); geriye funding rate kaldı (7,01 yıl, sıfır boşluk).
+Üç hipotez ön kayıtla yazıldı (defter 36-38), üçü de kapılarda kaldı ve **K-042'nin durma
+kuralı gereği funding fikri kapandı** — dördüncü aile yok.
+
+Ama tablo Faz 4'ten beri görülmemiş bir şey içeriyor: `funding_egilim` projenin **ilk
+pozitif OOS Sharpe**'ını üretti (**+0,288**; önceki en iyi −0,348) ve yedi kapının dördünü
+geçti. Üç kapıda kaldı, en belirleyicisi `asgari_islem` **24 < 30** — dönüş 1'in tuzağının
+aynısı: 24 işlemle ölçülen bir Sharpe'a güvenilmez.
+
+`funding_filtre`nin mekanizması **ölçülebilir biçimde çalıştı**: aynı donchian kanalına tek
+bir funding koşulu eklemek OOS Sharpe'ı −0,348'den −0,094'e, OOS/IS oranını −0,439'dan
+−0,112'ye taşıdı, stres kapısını geçirdi — ve **işlem sayısını hiç düşürmedi** (56 → 56).
+Yani filtre elediği kırılımların yerine başkasını koymadı, sadece kötülerini eledi.
+Kalabalıklaşma, OOS çöküşünün bir parçasını açıklıyor; tamamını değil.
+
+**Izgara genişletilmedi, dördüncü aile denenmedi, 4h tekrarlanmadı.** Üçü de cazipti ve üçü
+de K-042'nin sonucu görmeden yasakladığı şeydi: çekiliş sayısına sonucu gördükten sonra
+karar vermek. Ayrıntı: `docs/Faz-4-Donus-3-Funding.md`.
+
 ### Faz 5: Risk motoru + promotion — ✅ kapandı 2026-09-11
 
 - **İşler:** Position sizing; exposure limiti; günlük zarar limiti; drawdown limiti;

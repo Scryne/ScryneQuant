@@ -137,9 +137,14 @@ class TestHesapla:
         assert hesapla(self._diziler(), []) == {}
 
     def test_defterdeki_her_indikator_hesaplanabiliyor(self):
-        """Deftere eklenip hiç denenmemiş bir kayıt, ilk backtest'te patlardı."""
-        d = self._diziler()
-        varsayilan = {"pencere": 14, "katsayi": 2.0}
+        """Deftere eklenip hiç denenmemiş bir kayıt, ilk backtest'te patlardı.
+
+        `funding` girdisi isteyen kayıtlar (K-042) için alan ayrıca veriliyor: o sütun
+        kanonik bar şemasında yok, laboratuvar boru hattında ekleniyor.
+        """
+        d = dict(self._diziler())
+        d["funding"] = np.linspace(-1e-4, 3e-4, d["close"].size)
+        varsayilan = {"pencere": 14, "katsayi": 2.0, "birikim": 5}
         for ad, kayit in DEFTER.items():
             tanim = OzellikTanimi(
                 "x", ad, {p: varsayilan[p] for p in kayit.parametreler}
@@ -147,6 +152,14 @@ class TestHesapla:
             out = hesapla(d, [tanim])
             assert set(out) == set(tanim.sutunlar)
             assert all(v.dtype == np.float64 for v in out.values())
+
+    def test_eksik_girdi_alani_acik_hata(self):
+        """`funding` olmadan funding indikatörü istemek sessizce KeyError vermemeli."""
+        with pytest.raises(OzellikHatasi, match="barlara_hizala"):
+            hesapla(
+                self._diziler(),
+                [OzellikTanimi("f", "funding_persentil", {"pencere": 14})],
+            )
 
     def test_determinizm(self):
         d = self._diziler()

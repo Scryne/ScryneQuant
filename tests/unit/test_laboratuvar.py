@@ -72,7 +72,16 @@ def diziler():
     eşikleri gerçek piyasaya göre yazılmış stratejiler sentetik veride sessizce
     "hiç işlem yapmadı" durumuna düşmesin.
     """
-    return bar_dizileri(_volatil_barlar(n=3_000, tohum=21))
+    df = _volatil_barlar(n=3_000, tohum=21)
+    # `kalabalik` ailesi (K-042) `funding` alanını okuyor; gerçek koşuda o sütun
+    # `data.funding.barlara_hizala` ile geliyor. Burada sentetik: 8 barda bir değişen,
+    # gerçek funding gibi kalıcı pozitif medyanlı bir seri. Sabit bir dizi kullanmak
+    # persentil indikatörlerini anlamsız kılardı (her pencerede aynı değer).
+    rng = np.random.default_rng(21)
+    adim = rng.normal(1e-4, 2e-4, size=(len(df) + 7) // 8).clip(-3e-3, 3e-3)
+    df = df.copy()
+    df["funding"] = np.repeat(adim, 8)[: len(df)]
+    return bar_dizileri(df)
 
 
 @pytest.fixture(scope="module")
@@ -86,9 +95,15 @@ def katmanlar(diziler):
 
 
 class TestKutuphane:
-    def test_bes_aile_kayitli(self):
-        """Roadmap Faz 4: beş strateji ailesi. Kıyas ölçütü aileden sayılmaz."""
-        assert len(AILELER) == 5
+    def test_alti_aile_kayitli(self):
+        """Faz 4'ün beş ailesi + dönüş 3'ün `kalabalik` ailesi (K-042).
+
+        Sayı burada sabit tutuluyor ki bir aile sessizce eklenmesin: yeni bir aile bir
+        çekiliş uzayı açar ve K-039 gereği kayda geçmesi gerekir. Bu testi güncellemek,
+        o kaydın yapıldığını onaylamaktır.
+        """
+        assert len(AILELER) == 6
+        assert "kalabalik" in AILELER
         assert "kiyas" not in AILELER
 
     def test_her_aile_uyesi_kutuphanede(self):

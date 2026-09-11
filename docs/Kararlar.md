@@ -1704,6 +1704,23 @@ funding'in bunu değiştireceğine dair bir kanıt **yok** — olsaydı hipoteze
 Üçüncü bir çürütme beklenen sonuçtur ve başarısızlık değildir: sistemin işi cevabı ölçmek,
 istenen cevabı üretmek değil.
 
+### 7. SONUÇ (2026-09-11, aynı gün): **çürütüldü, kural uygulandı**
+
+Üç hipotez ön kayıtla yazıldı (defter 36-38), ölçüldü, üçü de kapılarda kaldı. **Funding
+fikri kapandı.** Ayrıntı: `docs/Faz-4-Donus-3-Funding.md`.
+
+Sonuç beklenen yöndeydi ama tablo Faz 4'ten beri görülmemiş bir şey içeriyor:
+`funding_egilim` projenin **ilk pozitif OOS Sharpe**'ını üretti (+0,288) ve yedi kapının
+dördünü geçti; `funding_filtre`nin mekanizması ölçülebilir biçimde çalıştı — donchian'ın OOS
+Sharpe'ını −0,348'den −0,094'e taşıdı, işlem sayısını hiç düşürmeden.
+
+**Buna rağmen dördüncü bir çekiliş yapılmıyor** — ve bu kararın bütün değeri burada. Izgarayı
+genişletip `funding_egilim`i 24 işlemden 30'a çıkarmak, eşiğe dokunmadan kapıyı delmek
+olurdu. Durma kuralı tam olarak bu anı öngörerek, sonucu görmeden yazıldı.
+
+Funding'in "işe yaramadığı" **ölçülmedi**; ölçülen, bu ızgarada ve bu veride kapıları
+geçecek kadar güçlü olmadığı. Fark korunuyor.
+
 ---
 
 ## Açık kararlar

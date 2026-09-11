@@ -53,6 +53,34 @@ IZGARALAR: Final[dict[str, dict[str, Sequence[Any]]]] = {
         "cikis_esigi": (-1.0, -2.0, -4.0),
         "maruziyet": (SABIT_MARUZIYET,),
     },
+    # --- Faz 4'e dönüş 3: kalabalıklaşma ailesi (K-042) ---------------------
+    # Eşikler **persentil**, mutlak değil: funding'in medyanı kalıcı pozitif, mutlak bir
+    # eşik neredeyse hep doğru olur ve hiçbir şey ayırt etmez (K-042/3).
+    # Pencereler 1h barda: 120 = 5 gün, 240 = 10 gün, 480 = 20 gün.
+    "funding_ters": {
+        "pencere": (120, 240, 480),
+        "giris_p": (0.05, 0.10, 0.20),
+        "cikis_p": (0.80, 0.90, 0.95),
+        "maruziyet": (SABIT_MARUZIYET,),
+    },
+    # Kanal parametreleri `donchian`ın ızgarasından **daraltıldı** (55/20 ve 40/20):
+    # ölçülen fark tek bir şeye — funding filtresine — atfedilebilmeli. Kanalı da
+    # taramak, iki değişkeni aynı anda oynatmak ve hangisinin işe yaradığını
+    # bilememek olurdu.
+    "funding_filtre": {
+        "giris": (40, 55),
+        "cikis": (20,),
+        "funding_pencere": (120, 240, 480),
+        "azami_p": (0.60, 0.70, 0.80, 0.90),
+        "maruziyet": (SABIT_MARUZIYET,),
+    },
+    "funding_egilim": {
+        "birikim": (24, 72, 168),
+        "pencere": (240, 480),
+        "giris_p": (0.10, 0.20),
+        "cikis_p": (0.80, 0.90),
+        "maruziyet": (SABIT_MARUZIYET,),
+    },
     "cok_faktor": {
         "trend_pencere": (50, 100, 200),
         "roc_pencere": (12, 24, 48),

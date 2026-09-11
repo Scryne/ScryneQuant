@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime as dt
+import hashlib
 import json
 import sys
 from contextlib import suppress
@@ -25,6 +26,7 @@ from scryne_quant.cli.testnet import testnet_app
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.hash import git_durumu, ortam_kaydi
 from scryne_quant.common.zaman import simdi_ms, utc_str
+from scryne_quant.data import funding as funding_mod
 from scryne_quant.data.depo import ParquetDepo
 from scryne_quant.data.dogrulama import rapor_cikar
 from scryne_quant.data.indirici import TarihselIndirici
@@ -53,7 +55,7 @@ from scryne_quant.risk import limitler as limit_mod
 from scryne_quant.risk import promotion as promotion_mod
 from scryne_quant.risk.audit import OlayTuru, SqliteDefter
 from scryne_quant.risk.motor import RiskMotoru
-from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE, coz
+from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE, BilinmeyenStrateji, coz
 from scryne_quant.strategy.kutuphane import aile as _aile
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
 
@@ -531,10 +533,79 @@ def backtest(
 # ------------------------------------------------------------------------ lab
 
 
+def _funding_okuyor_mu(ad: str) -> bool:
+    """Bu strateji `funding` alanını okuyor mu? (K-042)
+
+    Stratejinin **bildirdiği özelliklerden** türetiliyor, bir isim listesinden değil: bir
+    liste, yeni bir funding stratejisi eklendiğinde güncellenmesi unutulacak yerdir — ve
+    unutulduğunda hata "alan yok" diye değil, sessizce yanlış bir veri kimliği olarak
+    görünürdü.
+    """
+    try:
+        sinif = coz(ad)
+    except BilinmeyenStrateji:
+        return False
+    return any("funding" in tanim.kayit.girdiler for tanim in sinif().ozellikler())
+
+
+def _veri_kimligi(ad: str, bar_hash: str, funding_hash: str | None) -> str:
+    """Bir stratejinin **tükettiği** verinin kimliği. (K-009, K-039, K-042)
+
+    Kimlik strateji başına, koşu başına değil. `sq lab kapilar` dokuz stratejiyi aynı
+    çerçevede koşturuyor ama `donchian` funding sütununa hiç bakmıyor; onun kimliğini
+    funding'le değiştirmek, verisi değişmemiş bir stratejiyi defterde **yeni bir çekiliş**
+    yapardı (K-039). Tersi de yanlış: funding okuyan bir stratejiyi yalnızca bar hash'iyle
+    kaydetmek, iki farklı girdiyi aynı kimlikle gösterirdi.
+    """
+    if funding_hash is None or not _funding_okuyor_mu(ad):
+        return bar_hash
+    return hashlib.sha256(f"{bar_hash}:{funding_hash}".encode()).hexdigest()
+
+
 def _lab_veri(depo: Path, sembol: str, timeframe: str):
-    """Depodan bar dizileri + veri kimliği. Her lab komutunun ilk adımı."""
+    """Depodan bar dizileri + veri kimlikleri. Her lab komutunun ilk adımı.
+
+    Döner: `(diziler, bar_hash, funding_hash)`. Funding deposu varsa sütun çerçeveye
+    **nedensel** olarak ekleniyor (`data/funding.py`, K-042/4); yoksa `funding_hash`
+    `None` ve funding okuyan bir strateji `features/motor.py`'de açık bir hata alıyor.
+
+    Sütunu her koşuda eklemek zararsız: okumayan strateji onu hiç görmüyor ve kimliği
+    `_veri_kimligi` ile bar hash'inde kalıyor.
+    """
     d = ParquetDepo(depo)
-    return bar_dizileri(d.oku(sembol, timeframe)), d.sha256(sembol, timeframe)
+    df = d.oku(sembol, timeframe)
+    bar_hash = d.sha256(sembol, timeframe)
+
+    funding_hash: str | None = None
+    try:
+        f = funding_mod.oku(sembol)
+    except funding_mod.FundingHatasi:
+        pass
+    else:
+        df = funding_mod.barlara_hizala(df, f)
+        funding_hash = _funding_hash(f)
+
+    return bar_dizileri(df), bar_hash, funding_hash
+
+
+def _funding_hash(f: Any) -> str:
+    """Funding serisinin içerik hash'i. Veri kimliğinin funding yarısı (K-009, K-042)."""
+    return hashlib.sha256(
+        f[["funding_time", "funding_rate"]].to_numpy().tobytes()
+    ).hexdigest()
+
+
+def _kosu_kimligi(adlar: list[str], bar_hash: str, funding_hash: str | None) -> str:
+    """Çok stratejili bir koşunun veri kimliği. (K-009)
+
+    Koşudaki **herhangi bir** strateji funding okuyorsa kimlik funding'i de kapsar.
+    Aksi hâlde funding deposu değiştiğinde `sq lab dogrula` aynı hash'e farklı sonuç
+    üretir — ve determinizm iddiası, doğrulayan komutun kendisi tarafından sessizce
+    çürütülmüş olur.
+    """
+    if funding_hash is not None and any(_funding_okuyor_mu(a) for a in adlar):
+        return hashlib.sha256(f"{bar_hash}:{funding_hash}".encode()).hexdigest()
+    return bar_hash
 
 
 def _maliyet_govdesi(model: maliyet_mod.MaliyetModeli) -> dict[str, Any]:
@@ -609,10 +680,11 @@ def lab_tara(
 ) -> None:
     """Bir stratejinin parametre ızgarasını in-sample penceresinde tarar."""
     sinif = coz(strateji)
-    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    diziler, veri_hash, funding_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     secenekler = varsayilan_izgara(strateji)
-    _defteri_zorla([strateji], timeframe, veri_hash, secim)
+    _defteri_zorla([strateji], timeframe, veri_hash, secim, funding_hash)
+    veri_hash = _veri_kimligi(strateji, veri_hash, funding_hash)
 
     ins, _ = karsilastirma_mod.ortak_pencereler(
         len(diziler["open_time"]), [strateji], oos_orani=oos_orani
@@ -679,10 +751,11 @@ def lab_walkforward(
 ) -> None:
     """Walk-forward: her katmanda optimize et, sonraki katmanda test et."""
     sinif = coz(strateji)
-    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    diziler, veri_hash, funding_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     secenekler = varsayilan_izgara(strateji)
-    _defteri_zorla([strateji], timeframe, veri_hash, secim)
+    _defteri_zorla([strateji], timeframe, veri_hash, secim, funding_hash)
+    veri_hash = _veri_kimligi(strateji, veri_hash, funding_hash)
 
     n = len(diziler["open_time"])
     isinma = karsilastirma_mod.ortak_isinma([strateji])
@@ -754,10 +827,11 @@ def lab_montecarlo(
 ) -> None:
     """İşlem sırasını karıştırıp düşüş dağılımını çıkarır."""
     sinif = coz(strateji)
-    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    diziler, veri_hash, funding_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     pencere = _tam_pencere(diziler, strateji)
-    _defteri_zorla([strateji], timeframe, veri_hash, secim)
+    _defteri_zorla([strateji], timeframe, veri_hash, secim, funding_hash)
+    veri_hash = _veri_kimligi(strateji, veri_hash, funding_hash)
 
     nesne = sinif()
     kosu_sonucu = tarama_mod.kosu(
@@ -810,10 +884,11 @@ def lab_stres(
 ) -> None:
     """Maliyet varsayımlarını bozup stratejinin dayanıklılığını ölçer. (§15.1)"""
     sinif = coz(strateji)
-    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    diziler, veri_hash, funding_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     pencere = _tam_pencere(diziler, strateji)
-    _defteri_zorla([strateji], timeframe, veri_hash, secim)
+    _defteri_zorla([strateji], timeframe, veri_hash, secim, funding_hash)
+    veri_hash = _veri_kimligi(strateji, veri_hash, funding_hash)
 
     nesne = sinif()
     sonuc = analiz_mod.stres(
@@ -854,7 +929,11 @@ def lab_stres(
 
 
 def _defteri_zorla(
-    adlar: list[str], timeframe: str, veri_sha256: str, secim: str = "tepe"
+    adlar: list[str],
+    timeframe: str,
+    veri_sha256: str,
+    secim: str = "tepe",
+    funding_hash: str | None = None,
 ) -> None:
     """Koşturulacak her strateji hipotez defterinde kayıtlı mı? (K-039)
 
@@ -876,7 +955,7 @@ def _defteri_zorla(
             hipotez_mod.Hipotez.kur(
                 ad,
                 timeframe,
-                veri_sha256,
+                _veri_kimligi(ad, veri_sha256, funding_hash),
                 varsayilan_izgara(ad),
                 "kimlik kontrolü için kurulan geçici hipotez nesnesi",
                 secim=secim,
@@ -911,10 +990,11 @@ def lab_karsilastir(
     json_cikti: JsonCikti = False,
 ) -> None:
     """Beş aileyi aynı veri ve aynı maliyetle IS/OOS olarak yan yana koyar. (Faz 4)"""
-    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    diziler, veri_hash, funding_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     adlar = [*KUTUPHANE, *KIYAS]
-    _defteri_zorla(adlar, timeframe, veri_hash, secim)
+    _defteri_zorla(adlar, timeframe, veri_hash, secim, funding_hash)
+    veri_hash = _kosu_kimligi(adlar, veri_hash, funding_hash)
 
     sonuc = karsilastirma_mod.calistir(
         model, sembol, timeframe, diziler, stratejiler=adlar,
@@ -989,7 +1069,10 @@ def lab_dogrula(
     yani bir betikten de çağrılabilir.
     """
     kayit = deney_mod.oku(kayit_yolu)
-    diziler, veri_hash = _lab_veri(depo, kayit["girdi"]["sembol"], kayit["girdi"]["timeframe"])
+    diziler, veri_hash, funding_hash = _lab_veri(
+        depo, kayit["girdi"]["sembol"], kayit["girdi"]["timeframe"]
+    )
+    veri_hash = _veri_kimligi(kayit["girdi"]["strateji"], veri_hash, funding_hash)
     yeniden = tekrar.tekrar_uret(kayit, diziler, veri_hash)
     ayni, aciklama = deney_mod.dogrula(kayit, yeniden)
 
@@ -1039,10 +1122,11 @@ def lab_kapilar(
     Pahalıdır (7 strateji, 5,2 yıllık veride birkaç dakika). Promotion kararı ucuz
     olmamalı.
     """
-    diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
+    diziler, veri_hash, funding_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     adlar = [*KUTUPHANE, *KIYAS]
-    _defteri_zorla(adlar, timeframe, veri_hash, secim)
+    _defteri_zorla(adlar, timeframe, veri_hash, secim, funding_hash)
+    veri_hash = _kosu_kimligi(adlar, veri_hash, funding_hash)
 
     sonuc = degerlendirme_mod.degerlendir(
         model, sembol, timeframe, diziler, stratejiler=adlar, oos_orani=oos_orani,
@@ -1892,7 +1976,14 @@ def lab_hipotez_kaydet(
     hipotez** sayılıyor.
     """
     izgara = varsayilan_izgara(strateji_adi)
-    sha = ParquetDepo(depo).sha256(sembol, timeframe)
+    # Kimlik, `_defteri_zorla`nın aradığıyla **aynı** kurala göre hesaplanmalı: funding
+    # okuyan bir stratejiyi yalnızca bar hash'iyle kaydetmek, kaydı defterde bulunamaz
+    # hâle getirir ve ön kayıt yapılmış olmasına rağmen koşu reddedilirdi.
+    bar_sha = ParquetDepo(depo).sha256(sembol, timeframe)
+    f_sha: str | None = None
+    if _funding_okuyor_mu(strateji_adi):
+        f_sha = _funding_hash(funding_mod.oku(sembol))
+    sha = _veri_kimligi(strateji_adi, bar_sha, f_sha)
     hipotez = hipotez_mod.Hipotez.kur(
         strateji_adi, timeframe, sha, izgara, gerekce, secim=secim
     )

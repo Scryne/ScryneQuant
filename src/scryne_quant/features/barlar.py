@@ -17,6 +17,18 @@ from scryne_quant.data.semalar import BAR_SUTUNLARI
 #: Diziye çevrilirken float64'e zorlanan sütunlar.
 SAYISAL: tuple[str, ...] = ("open", "high", "low", "close", "volume", "quote_volume")
 
+#: **Opsiyonel** sayısal sütunlar: varsa diziye çevrilir, yoksa sessizce atlanır.
+#:
+#: `funding` kanonik bar şemasının parçası **değil** ve olmamalı: depodaki parquet
+#: dosyaları Faz 1'de dondurulmuş ve dosya hash'i veri seti kimliğinin kendisi (K-009).
+#: Şemaya sütun eklemek o kimliği değiştirir, yani Faz 1-6'nın bütün sonuç kayıtlarını
+#: geçersiz kılardı. Bunun yerine funding, laboratuvar boru hattında çerçeveye
+#: **eklenerek** geliyor (`data/funding.py::barlara_hizala`) ve burada varsa alınıyor.
+#:
+#: "Varsa al" davranışı yumuşak görünüyor ama sessiz değil: funding isteyen bir özellik,
+#: alan yoksa `features/motor.py`'de açık bir hatayla karşılaşır.
+EK_SAYISAL: tuple[str, ...] = ("funding",)
+
 
 class BarHatasi(ValueError):
     """Bar çerçevesi motorun beklediği biçimde değil."""
@@ -46,6 +58,9 @@ def bar_dizileri(df: pd.DataFrame) -> dict[str, np.ndarray]:
     out: dict[str, np.ndarray] = {"open_time": zaman}
     for sutun in SAYISAL:
         out[sutun] = df[sutun].to_numpy(dtype="float64")
+    for sutun in EK_SAYISAL:
+        if sutun in df.columns:
+            out[sutun] = df[sutun].to_numpy(dtype="float64")
     out["trades"] = df["trades"].to_numpy(dtype="int64")
     out["quality_status"] = df["quality_status"].astype("string").to_numpy(dtype=object)
 
