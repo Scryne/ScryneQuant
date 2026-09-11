@@ -1447,6 +1447,79 @@ gerekçesiyle yazılır. Defter `sq lab hipotezler` ile okunur.
 
 ---
 
+## K-040 — Emir kimliği içerikten türer; yazım gönderimden önce; `UNKNOWN` yeniden gönderilmez
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 7 · **İlgili:** §33, §25, K-032,
+K-038 · **Kanıt:** `tests/unit/test_oms.py`
+
+Faz 7'nin bitti kriterlerinden biri: *"Aynı intent iki kez gönderildiğinde tek emir
+oluşuyor (duplicate order üretilemiyor)."* Bu karar o cümlenin üç mekanizmasını sabitliyor.
+Üçü de yapısal — hiçbiri bir dikkate bağlı değil.
+
+### 1. Emir kimliği onaylı niyetin **içeriğinden** türetilir
+
+İstemci emir kimliği (`newClientOrderId`) rastgele üretilmiyor, sayaçtan gelmiyor: onaylı
+niyetin içeriğinin hash'i. Aynı niyet → aynı kimlik → borsa ikincisini reddeder.
+
+**Mühür kimliğe girmiyor** ve bu ayrıntı belirleyici: mühür süreç başına rastgele (K-032).
+Girseydi, süreç yeniden başladığında aynı niyet farklı bir kimlik üretir ve koruma **tam da
+en çok gerektiği anda** — restart sonrasında — çökerdi. Testi bunu ölçüyor: mühür anahtarı
+döndürülüp aynı içerik yeniden mühürleniyor, kimlik değişmiyor.
+
+Kimlik 34 karakter (`sq` + 32 altıgen). Binance sınırı 36; 128 bit, çarpışma bu ölçekte
+anlamsız.
+
+### 2. İki katman, ikisi de gerekli
+
+| Katman | Neyi engelliyor |
+| --- | --- |
+| Emir defteri (yerel) | Aynı niyetin ikinci kez **gönderilmesini** |
+| Deterministik kimlik (borsa) | Defterin kaçırdığı bir gönderimin **emir olmasını** |
+
+Yalnızca borsa tarafına güvenmek yetmez: o reddi görebilmek için isteği **göndermiş** olman
+gerekir, ve gönderimin kendisi risk — yanıt kaybolursa emrin oluşup oluşmadığını bilemezsin.
+Defter bu riski hiç almamayı sağlıyor. Borsa tarafı ise defterin yedeği: dosya kaybolsa,
+elle silinse veya başka bir makineden koşulsa bile koruma ayakta.
+
+Defterde `istemci_kimligi` **birincil anahtar**, otomatik bir sayı değil. "Tek emir" iddiası
+bir veritabanı kısıtı olarak yaşıyor; otoartan bir anahtarla aynı kimlikten iki satır mümkün
+olurdu ve iddia bir koda bağlı kalırdı.
+
+### 3. `SUBMITTED` diske ağ çağrısından **önce** yazılır
+
+Ters sırada, gönderim ile yazım arasında ölen bir süreç **yetim emir** bırakırdı: borsada
+var olan ama sistemin hiç bilmediği bir emir. Onu bulmanın tek yolu borsayı sorgulamak
+olurdu ki sistem aramayı bile bilmezdi.
+
+Bu sırayla en kötü durum, hiç gönderilmemiş bir emrin kaydı — ve reconciliation onu borsaya
+sorup bulamayınca kapatır. **İki hatadan bilinen olanı seçiliyor.** Faz 6'nın kontrol
+noktası kararının (K-038) aynı mantığı: kaydı erken yazmak, kaydı geç yazmaktan güvenli.
+
+### 4. `UNKNOWN` bir başarısızlık değil, bir bilinmezliktir
+
+Gönderim yapıldı ama yanıt kaybolduysa (zaman aşımı, bağlantı koptu, süreç öldü) emir
+borsada olabilir de olmayabilir de.
+
+- `FAILED` = gönderim **hiç yapılamadı**, yani borsada emir olmadığı **biliniyor**.
+  Yeniden gönderilebilir.
+- `UNKNOWN` = gönderildi, sonuç bilinmiyor. **Yeniden gönderilemez.**
+
+`UNKNOWN`u `FAILED` sayıp yeniden denemek, duplicate emir üretmenin en kısa yoludur. State
+machine'de `UNKNOWN → SUBMITTED` diye bir geçiş **yok**: yeniden göndermek kod düzeyinde
+imkânsız. Çıkışın tek yolu borsayı **sorgulamak** (§25 reconciliation); varsayım yok.
+
+`UNKNOWN` bu yüzden "açık emir" kümesinde — reconciliation onu sormak zorunda. Bilinmezlik,
+yokluk değil.
+
+### 5. Emir silinemez, kimlik değiştirilemez
+
+İkisi de veritabanı tetikleyicisi. Bir emri silmek, reconciliation'ın karşılaştıracağı iki
+taraftan birini yok etmek demek; kimliği değiştirmek ise o emri başka bir emre dönüştürmek.
+Durum güncellemesi serbest ama geçilen yol `gecmis` sütununda birikiyor — "bu emir hangi
+yoldan buraya geldi" bir uyuşmazlık araştırmasının ilk sorusu.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -1478,10 +1551,11 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-037 | Engelleyen katman risk motorunun dışında olabilir, izin veren olamaz | ✅ **kabul** | Faz 6 |
 | K-038 | Toparlanma bir geri yükleme değil, yeniden üretimdir | ✅ **kabul** | Faz 6 |
 | K-039 | Kaç hipotez denendiği sayılır; ön kayıt zorunlu | ✅ **kabul** (düzeltme açık) | Faz 6 |
+| K-040 | Emir kimliği içerikten türer; yazım gönderimden önce; UNKNOWN yeniden gönderilmez | ✅ **kabul** | Faz 7 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5
-K-032/033'ü, Faz 6 K-034…039'u ekledi.**
+K-032/033'ü, Faz 6 K-034…039'u, Faz 7 K-040'ı ekledi.**
 
 **Açık karar kalmadı; iki açık *sayı* var** (aşağıda). Projenin son açık kararı olan **K-019** (promotion kapılarının
 sayısal eşikleri) Faz 4 sonunda gerçek veriyle kalibre edilip kapandı. Bundan sonraki

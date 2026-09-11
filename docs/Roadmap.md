@@ -25,7 +25,7 @@ yanlış sonuç olarak geri döner.
 | 4 | Strateji laboratuvarı | ✅ Tamamlandı | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ✅ Tamamlandı | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
 | 6 | Paper trading + dashboard | 🔄 Devam Ediyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
-| 7 | Execution sandbox (testnet) | ⏳ Bekliyor | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
+| 7 | Execution sandbox (testnet) | 🔄 Devam Ediyor | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
 | 8 | Kontrollü live | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
 
 ---
@@ -485,7 +485,7 @@ kurulum), `exchange/akis.py` (Binance WebSocket + resync), `live/kilit.py` (tek-
 taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,olaylar}`.
 881 test yeşil (Faz 5 sonunda 757'ydi).
 
-### Faz 7: Execution sandbox (Binance Spot Testnet)
+### Faz 7: Execution sandbox (Binance Spot Testnet) — 🔄 başladı 2026-09-11
 
 - **İşler:** Emir state machine (§33); idempotency key; retry ve timeout politikası;
   reconciliation (§25); execution engine; gerçek adapter üzerinden testnet emirleri.
@@ -502,6 +502,32 @@ taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,olayl
 - **Notlar:** Testnet periyodik olarak sıfırlanabilir; testler buna dayanıklı yazılmalı.
   Spike 1'de testnet'in canlı fiyatı %0,007 sapmayla takip ettiği ölçüldü — execution
   testleri için gerçekçi.
+
+**Durum — ilk parça bitti (2026-09-11): emir state machine + idempotency + emir defteri.**
+
+Faz 4'e dönüş 1 ve 2 çürüdükten sonra Faz 7'ye geçildi ve bu bir yön kararı:
+**Faz 7 promotion geçmiş bir strateji gerektirmiyor.** Emir mantığı, idempotency ve
+reconciliation kendi başına doğrulanabilir; strateji arayışının azalan verimi altyapıyı
+bloke etmemeli.
+
+| Kriter | Durum |
+| --- | --- |
+| Duplicate order üretilemiyor | ✅ **ağsız yarısı** kanıtlı (`tests/unit/test_oms.py`, 33 test) |
+| Reconciliation (süreç ortada ölünce) | ⏳ sırada |
+| Testnet'te ≥100 emir | ⏳ **API anahtarı bekliyor** — Scryne'ın alması gerek |
+| Uyuşmazlıkta halt | ⏳ sırada |
+
+Duplicate koruması **üç yapısal mekanizma** (K-040): kimlik onaylı niyetin içeriğinden
+türüyor (mühür dahil değil, yoksa restart'ta çökerdi), defterde birincil anahtar, ve state
+machine'de `UNKNOWN → SUBMITTED` geçişi **yok**. `UNKNOWN` bir başarısızlık değil bir
+bilinmezlik: `FAILED` sayıp yeniden denemek duplicate üretmenin en kısa yolu.
+
+`SUBMITTED` diske ağ çağrısından **önce** yazılıyor — yetim emir bırakmamak için; en kötü
+durum hiç gönderilmemiş bir emrin kaydı ve reconciliation onu kapatır. K-038'in aynı
+mantığı: kaydı erken yazmak geç yazmaktan güvenli.
+
+**Ön koşul hatırlatması:** `testnet.binance.vision` üzerinden API anahtarı (GitHub
+hesabıyla, KYC yok). O anahtar olmadan ≥100 emir kriteri ölçülemez.
 
 ### Faz 8: Kontrollü live
 
