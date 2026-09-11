@@ -20,7 +20,13 @@ from __future__ import annotations
 
 import pytest
 
-from scryne_quant.exchange.emir_adaptoru import BorsaEmri, EmirAdaptoru, borsa_yonu
+from scryne_quant.exchange.emir_adaptoru import (
+    BorsaEmri,
+    EmirAdaptoru,
+    Komisyon,
+    Varlik,
+    borsa_yonu,
+)
 from scryne_quant.exchange.hatalar import (
     BelirsizSonuc,
     BorsaReddetti,
@@ -43,7 +49,18 @@ KURALLAR = SembolKurallari(
     step_size=0.00001,
     min_notional=5.0,
     durum="TRADING",
+    taban_varlik="BTC",
+    kote_varlik="USDT",
 )
+
+#: Binance spot komisyon oranı (BNB indirimi yok). Sahte borsa bunu **gerçekten**
+#: uyguluyor: alınan varlıktan kesiyor ve bakiyeye o şekilde yansıtıyor. Komisyonsuz bir
+#: sahte, pozisyon mutabakatının ölçmek istediği tek şeyi yok ederdi.
+KOMISYON_ORANI = 0.001
+
+#: Sahte hesabın açılış bakiyesi.
+ACILIS_BTC = 1.0
+ACILIS_USDT = 10_000.0
 
 
 def niyet(hedef: float = 0.20, yon: Yon = Yon.BUY, zaman: int = T0):
@@ -77,6 +94,17 @@ class SahteBorsa(EmirAdaptoru):
         self.zaman_ms = zaman_ms
         self.hata: Exception | None = None
         self.sapma_ms = 0
+        # Bakiye **gerçekten** tutuluyor ve her fill onu değiştiriyor. Sabit bir bakiye
+        # döndüren bir sahte, pozisyon mutabakatını her koşuda "fark var" diye
+        # bağırtırdı — yani ölçüyü test edilemez kılardı. Faz 7'nin dersi: bir sahte,
+        # gerçeğin yaptığını yapmıyorsa ona karşı yeşil olan test bir şey kanıtlamaz.
+        self.varliklar: dict[str, Varlik] = {
+            "BTC": Varlik(serbest=ACILIS_BTC),
+            "USDT": Varlik(serbest=ACILIS_USDT),
+        }
+        self.islemler: dict[str, Komisyon] = {}
+        #: Komisyonu `POST` yanıtında **gizle** — `GET /api/v3/order`ın davranışı bu.
+        self.komisyonu_yanitta_gizle = False
 
     # -- sözleşme --------------------------------------------------------
 
@@ -115,9 +143,11 @@ class SahteBorsa(EmirAdaptoru):
         if abs(miktar / KURALLAR.step_size - round(miktar / KURALLAR.step_size)) > 1e-6:
             raise BorsaReddetti(f"Lot size hatası: {miktar}", kod=-1013)
 
+        borsa_kimligi = f"B{len(self.emirler) + 1}"
+        komisyon = self._doldur(borsa_kimligi, yon=yon, miktar=miktar, fiyat=FIYAT)
         emir = BorsaEmri(
             istemci_kimligi=istemci_kimligi,
-            borsa_kimligi=f"B{len(self.emirler) + 1}",
+            borsa_kimligi=borsa_kimligi,
             sembol=sembol,
             yon=yon,
             durum=EmirDurumu.FILLED,
@@ -126,6 +156,8 @@ class SahteBorsa(EmirAdaptoru):
             ortalama_fiyat=FIYAT,
             guncellendi_ms=self.zaman_ms,
             ham_durum="FILLED",
+            komisyon=() if self.komisyonu_yanitta_gizle else komisyon,
+            komisyon_kaynagi="" if self.komisyonu_yanitta_gizle else "yanit",
         )
         self.emirler[istemci_kimligi] = emir
         return emir
@@ -140,21 +172,53 @@ class SahteBorsa(EmirAdaptoru):
             if e.sembol == sembol and e.durum is EmirDurumu.ACKNOWLEDGED
         ]
 
-    def bakiye(self) -> dict[str, float]:
-        return {"USDT": 10_000.0, "BTC": 1.0}
+    def bakiye(self) -> dict[str, Varlik]:
+        return dict(self.varliklar)
+
+    def emir_islemleri(self, *, sembol: str, borsa_kimligi: str) -> Komisyon:
+        return self.islemler.get(borsa_kimligi, ())
+
+    # -- muhasebe --------------------------------------------------------
+
+    def _doldur(
+        self, borsa_kimligi: str, *, yon: str, miktar: float, fiyat: float
+    ) -> Komisyon:
+        """Fill'i bakiyeye işler ve komisyonu **alınan varlıktan** keser."""
+        kote = miktar * fiyat
+        if yon == "BUY":
+            kazanilan, harcanan = ("BTC", miktar), ("USDT", kote)
+        else:
+            kazanilan, harcanan = ("USDT", kote), ("BTC", miktar)
+
+        komisyon = round(kazanilan[1] * KOMISYON_ORANI, 12)
+        self._ekle(kazanilan[0], kazanilan[1] - komisyon)
+        self._ekle(harcanan[0], -harcanan[1])
+        toplam: Komisyon = ((kazanilan[0], komisyon),)
+        self.islemler[borsa_kimligi] = toplam
+        return toplam
+
+    def _ekle(self, varlik: str, miktar: float) -> None:
+        mevcut = self.varliklar.get(varlik, Varlik())
+        self.varliklar[varlik] = Varlik(
+            serbest=mevcut.serbest + miktar, kilitli=mevcut.kilitli
+        )
 
     # -- test yardımcıları -----------------------------------------------
 
     def sessizce_kabul_et(self, kimlik: str, *, durum=EmirDurumu.FILLED) -> None:
         """Emri borsaya yazar ama çağırana haber vermez — 'yanıt kayboldu' hâli."""
+        borsa_kimligi = f"B{len(self.emirler) + 1}"
+        dolan = 0.001 if durum is EmirDurumu.FILLED else 0.0
+        if dolan:
+            self._doldur(borsa_kimligi, yon="BUY", miktar=dolan, fiyat=FIYAT)
         self.emirler[kimlik] = BorsaEmri(
             istemci_kimligi=kimlik,
-            borsa_kimligi=f"B{len(self.emirler) + 1}",
+            borsa_kimligi=borsa_kimligi,
             sembol="BTCUSDT",
             yon="BUY",
             durum=durum,
             miktar=0.001,
-            dolan_miktar=0.001 if durum is EmirDurumu.FILLED else 0.0,
+            dolan_miktar=dolan,
             ortalama_fiyat=FIYAT if durum is EmirDurumu.FILLED else 0.0,
             guncellendi_ms=self.zaman_ms,
             ham_durum=str(durum),

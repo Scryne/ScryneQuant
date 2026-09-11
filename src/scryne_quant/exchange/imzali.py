@@ -42,8 +42,11 @@ from scryne_quant.exchange.binance import ipv4_zorla
 from scryne_quant.exchange.emir_adaptoru import (
     BorsaEmri,
     EmirAdaptoru,
+    Komisyon,
+    Varlik,
     borsa_yonu,
     durum_esle,
+    komisyon_topla,
 )
 from scryne_quant.exchange.hatalar import (
     BelirsizSonuc,
@@ -371,6 +374,8 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
             step_size=float(filtreler["LOT_SIZE"]["stepSize"]),
             min_notional=float(notional.get("minNotional", 0.0)),
             durum=str(s["status"]),
+            taban_varlik=str(s.get("baseAsset", "")),
+            kote_varlik=str(s.get("quoteAsset", "")),
         )
         self._kural_onbellek[sembol] = kural
         return kural
@@ -419,13 +424,37 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         govde = self._cagir("GET", "/api/v3/openOrders", {"symbol": sembol}, imzali=True)
         return [self._borsa_emri(e) for e in govde]
 
-    def bakiye(self) -> dict[str, float]:
+    def bakiye(self) -> dict[str, Varlik]:
         govde = self._cagir("GET", "/api/v3/account", imzali=True)
-        return {
-            str(b["asset"]): float(b["free"])
+        bakiyeler = {
+            str(b["asset"]): Varlik(
+                serbest=float(b["free"]), kilitli=float(b.get("locked", 0.0))
+            )
             for b in govde.get("balances", [])
-            if float(b["free"]) > 0.0 or float(b["locked"]) > 0.0
         }
+        # Sıfır bakiyeli varlıklar eleniyor — testnet hesabı yüzlercesiyle geliyor ve
+        # hepsini taşımak çıktıyı okunamaz yapıyor. Eleme `toplam` üzerinden: yalnızca
+        # `serbest`e bakmak, tamamı bir limit emrinde kilitli bir varlığı yok sayardı.
+        return {a: v for a, v in bakiyeler.items() if v.toplam > 0.0}
+
+    def emir_islemleri(self, *, sembol: str, borsa_kimligi: str) -> Komisyon:
+        """`/api/v3/myTrades` ile emrin komisyonu. Boş `borsa_kimligi` için boş döner.
+
+        `orderId` ile filtreleniyor: aynı emrin bütün fill'leri tek çağrıda gelir. Emir
+        kimliği yoksa (emir hiç kabul edilmemiş) borsaya sorulacak bir şey de yoktur.
+        """
+        if not borsa_kimligi:
+            return ()
+        govde = self._cagir(
+            "GET",
+            "/api/v3/myTrades",
+            {"symbol": sembol, "orderId": borsa_kimligi},
+            imzali=True,
+        )
+        return komisyon_topla(
+            (str(t.get("commissionAsset", "")), float(t.get("commission", 0.0) or 0.0))
+            for t in govde
+        )
 
     # ---------------------------------------------------------------- çeviri
 
@@ -444,6 +473,24 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         zaman = (
             govde.get("updateTime") or govde.get("transactTime") or govde.get("time") or 0
         )
+        # `fills` yalnızca `POST /api/v3/order` yanıtında (newOrderRespType=FULL) var;
+        # `GET` yanıtında **yok**. Alanın yokluğu ile boş olması aynı şey değil: yoksa
+        # komisyon bilinmiyordur, varsa (emir dolmuşsa) ölçülmüştür. `kaynak` bu ikisini
+        # ayırıyor ve pozisyon mutabakatı ona bakıyor.
+        fills = govde.get("fills")
+        if fills is None:
+            komisyon: Komisyon = ()
+            kaynak = ""
+        else:
+            komisyon = komisyon_topla(
+                (
+                    str(f.get("commissionAsset", "")),
+                    float(f.get("commission", 0.0) or 0.0),
+                )
+                for f in fills
+            )
+            kaynak = "yanit"
+
         return BorsaEmri(
             istemci_kimligi=str(govde.get("clientOrderId", "")),
             borsa_kimligi=str(govde.get("orderId", "")),
@@ -455,6 +502,8 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
             ortalama_fiyat=(kote / dolan) if dolan > 0.0 else 0.0,
             guncellendi_ms=int(zaman),
             ham_durum=ham,
+            komisyon=komisyon,
+            komisyon_kaynagi=kaynak,
         )
 
 

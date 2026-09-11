@@ -35,12 +35,19 @@ import requests
 import typer
 
 from scryne_quant.common.zaman import simdi_ms, utc_str
+from scryne_quant.exchange.emir_adaptoru import Varlik
 from scryne_quant.exchange.hatalar import BorsaHatasi
 from scryne_quant.exchange.imzali import BinanceImzaliAdaptoru
 from scryne_quant.execution.motor import EmirMotoru, SaatEngeli
 from scryne_quant.oms.defter import EmirDefteri
 from scryne_quant.oms.emir import EmirDurumu
 from scryne_quant.oms.mutabakat import Uyusmazlik, mutabakat
+from scryne_quant.oms.pozisyon import (
+    CipaYok,
+    PozisyonUyusmazligi,
+    cipa_at,
+    pozisyon_mutabakati,
+)
 from scryne_quant.risk import limitler as limitler_mod
 from scryne_quant.risk.motor import PiyasaOlcumu, RiskMotoru
 from scryne_quant.risk.niyet import OnayliNiyet
@@ -106,7 +113,7 @@ def testnet_durum(json_cikti: JsonCikti = False) -> None:
         },
         # Testnet hesabı yüzlerce varlıkla geliyor; tamamını basmak çıktıyı okunamaz
         # yapıyor. İşlem çifti ayrıca veriliyor, geri kalanı yalnızca sayılıyor.
-        "bakiye": {k: bakiye[k] for k in ("BTC", "USDT") if k in bakiye},
+        "bakiye": {k: bakiye[k].sozluk() for k in ("BTC", "USDT") if k in bakiye},
         "diger_varlik_sayisi": len([k for k in bakiye if k not in ("BTC", "USDT")]),
         "acik_emir": len(a.acik_emirler("BTCUSDT")),
     }
@@ -128,7 +135,10 @@ def testnet_durum(json_cikti: JsonCikti = False) -> None:
     typer.echo(f"fiyat     : {govde['son_fiyat']:.2f}")
     typer.echo(
         "bakiye    : "
-        + " · ".join(f"{v:.8g} {k}" for k, v in sorted(govde["bakiye"].items()))
+        + " · ".join(
+            f"{v['toplam']:.8g} {k} (kilitli {v['kilitli']:.8g})"
+            for k, v in sorted(govde["bakiye"].items())
+        )
         + f"  (+{govde['diger_varlik_sayisi']} başka varlık)"
     )
     typer.echo(f"açık emir : {govde['acik_emir']}")
@@ -199,8 +209,78 @@ class _YazmayanDefter:
     def al(self, istemci_kimligi: str):
         return self._defter.al(istemci_kimligi)
 
+    def tumu(self, *, limit: int | None = None):
+        return self._defter.tumu(limit=limit)
+
+    def acilis_oku(self):
+        return self._defter.acilis_oku()
+
     def gecir(self, *_: Any, **__: Any):
         return None
+
+    def komisyon_yaz(self, istemci_kimligi: str, *_: Any, **__: Any):
+        # Rapor modunda öğrenilen komisyon **yazılmıyor**, ve bunun bir bedeli var:
+        # eksik komisyon eksik kalır, yani rapor "hesaplanamadı" der. Bu doğru olan:
+        # `--sadece-rapor` defteri değiştirmeyeceğini söylüyor ve komisyon yazmak onu
+        # değiştirmek olurdu. Düzeltmek isteyen `--duzelt` ile çağırır.
+        return self._defter.al(istemci_kimligi)
+
+
+# ------------------------------------------------------------------- pozisyon
+
+
+@testnet_app.command("pozisyon")
+def testnet_pozisyon(
+    kosu_adi: Annotated[str, typer.Argument(help="Koşu adı.")],
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_KOK,
+    duzelt: Annotated[
+        bool,
+        typer.Option(
+            "--duzelt/--sadece-rapor",
+            help="Borsadan öğrenilen komisyonu deftere yaz. Rapor modunda defter değişmez.",
+        ),
+    ] = False,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Çıpa + defter akışını borsanın bakiyesiyle karşılaştırır. (Faz 8 kriteri)
+
+    `mutabakat` komutundan **farklı bir soru** soruyor. O, defterdeki emirlerin borsada
+    hangi durumda olduğuna bakar; bu, hesabın defterin söylediği yerde olup olmadığına.
+    Bütün emirleri doğru bilen bir defter bile dışarıdan gelen bir yatırmayı, elle
+    yapılmış bir işlemi ya da başka bir sürecin emrini göremez — ve para o yollardan da
+    hareket eder.
+
+    Çıkış kodu 1: açıklanamayan fark var ya da komisyon eksikliği yüzünden hesap
+    yapılamadı. İkisi ayrı satırlarda raporlanıyor; biri bir bulgu, diğeri bir
+    ölçülemezlik.
+    """
+    yol = kok / f"{kosu_adi}.sqlite"
+    if not yol.exists():
+        raise typer.BadParameter(f"koşu bulunamadı: {yol}")
+
+    a = _adaptor()
+    with EmirDefteri(yol) as defter:
+        hedef = defter if duzelt else _YazmayanDefter(defter)
+        try:
+            sonuc = pozisyon_mutabakati(hedef, a, "BTCUSDT", durdur=False)
+        except CipaYok as hata:
+            typer.secho(str(hata), fg=typer.colors.RED)
+            raise typer.Exit(code=1) from hata
+
+    if json_cikti:
+        _yaz(sonuc.sozluk())
+    else:
+        for fark in sonuc.farklar:
+            typer.echo(
+                f"{fark.varlik:<6}: çıpa {fark.acilis:.8f} + defter {fark.akis:+.8f} "
+                f"= {fark.beklenen:.8f} · borsa {fark.gercek:.8f} · "
+                f"fark {fark.fark:+.10f}"
+            )
+        typer.secho(
+            sonuc.ozet(), fg=typer.colors.RED if sonuc.halt else typer.colors.GREEN
+        )
+    if sonuc.halt:
+        raise typer.Exit(code=1)
 
 
 # ------------------------------------------------------------------- kesinti
@@ -297,6 +377,7 @@ def testnet_kesinti(
             raise typer.BadParameter(f"risk motoru reddetti: {karar.sebep}")
 
         with EmirDefteri(yol) as defter:
+            cipa_at(defter, saglam, not_metni=f"kesinti testi {etiket}")
             sonuc = EmirMotoru(defter, kesintili).gonder(karar, notional / fiyat)
             kesinti_durumu = sonuc.emir.durum
 
@@ -400,7 +481,12 @@ def testnet_yuk(
 
     fiyat = a.son_fiyat("BTCUSDT")
     bakiye = a.bakiye()
-    ozkaynak = bakiye.get("USDT", 0.0) + bakiye.get("BTC", 0.0) * fiyat
+    # Özkaynak **toplam** bakiyeden: kilitli para da hesabın parası. Yalnızca serbeste
+    # bakmak, açık bir emir varken özkaynağı olduğundan küçük gösterir ve risk motoruna
+    # yanlış bir taban verir.
+    ozkaynak = (
+        bakiye.get("USDT", Varlik()).toplam + bakiye.get("BTC", Varlik()).toplam * fiyat
+    )
     if notional < kural.min_notional:
         raise typer.BadParameter(
             f"--notional {notional} minNotional {kural.min_notional} altında; "
@@ -419,6 +505,10 @@ def testnet_yuk(
     )
 
     with EmirDefteri(defter_yolu) as defter:
+        # Çıpa **ilk emirden önce**: pozisyon mutabakatının bizim tarafımızdaki tek
+        # bağımsız kaydı bu. Koşu bittikten sonra atılan bir çıpa, ölçülecek farkı
+        # tanımı gereği sıfırlar (`oms/pozisyon.py`).
+        cipa_at(defter, a, not_metni=f"testnet yuk kosusu {kosu_adi}")
         rapor = _kosu(
             defter=defter,
             adaptor=a,
@@ -546,12 +636,15 @@ def _kosu(
         duplicate_engellendi = not tekrar.gonderildi
 
     mutabakatlar.append(_mutabakat_adimi(defter, adaptor, emir_sayisi, hatalar, son=True))
+    pozisyon = _pozisyon_adimi(defter, adaptor, hatalar)
 
     sayim = defter.sayim()
     gonderilen = sum(
         n for d, n in sayim.items() if d not in (str(EmirDurumu.CREATED),)
     )
-    uyusmazlik_var = any(h.get("tur") == "Uyusmazlik" for h in hatalar)
+    uyusmazlik_var = any(
+        h.get("tur") in ("Uyusmazlik", "PozisyonUyusmazligi") for h in hatalar
+    )
     return {
         "kosu_adi": kosu_adi,
         "baslangic_ms": baslangic_ms,
@@ -564,6 +657,7 @@ def _kosu(
         "reddedilen_sinyal": reddedilen_sinyal,
         "hatalar": hatalar,
         "mutabakatlar": mutabakatlar,
+        "pozisyon_mutabakati": pozisyon,
         "duplicate_denendi": duplicate_denendi,
         "duplicate_engellendi": duplicate_engellendi,
         "saat_sapmasi_ms": adaptor.saat_sapmasi_ms(),
@@ -574,6 +668,11 @@ def _kosu(
             and not belirsiz
             and not hatalar
             and duplicate_engellendi
+            # Pozisyon mutabakatı kriterin **parçası**, ekli bir rapor değil: 100 emri
+            # hatasız göndermek, hesabın o 100 emrin söylediği yerde olduğunu
+            # göstermez. Faz 8'in "açıklanamayan pozisyon farkı: sıfır" kriteri burada
+            # ilk kez ölçülüyor.
+            and not pozisyon.get("halt", True)
         ),
         "not": (
             "Gözlem modu (K-035): bu koşunun hiçbir kaydı promotion kanıtı değildir. "
@@ -599,6 +698,30 @@ def _mutabakat_adimi(
     return {"sira": sira, "son": son, **sonuc.sozluk()}
 
 
+def _pozisyon_adimi(
+    defter: EmirDefteri,
+    adaptor: BinanceImzaliAdaptoru,
+    hatalar: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Koşu sonunda çıpa + defter akışını borsanın bakiyesiyle karşılaştırır.
+
+    Emir mutabakatı *"defterdeki emirler borsada ne durumda"* sorusunu cevaplıyor; bu
+    ondan bağımsız bir soru soruyor: *"hesap, defterin söylediği yerde mi"*. İkisi ayrı
+    çünkü bütün emirleri doğru bilen bir defter bile, dışarıdan gelen bir yatırma ya da
+    elle yapılmış bir işlemi göremez.
+    """
+    try:
+        return pozisyon_mutabakati(defter, adaptor, "BTCUSDT").sozluk()
+    except PozisyonUyusmazligi as hata:
+        hatalar.append({"tur": "PozisyonUyusmazligi", "mesaj": str(hata)})
+        typer.secho(hata.sonuc.ozet(), fg=typer.colors.RED)
+        return hata.sonuc.sozluk()
+    except CipaYok as hata:
+        hatalar.append({"tur": "CipaYok", "mesaj": str(hata)})
+        typer.secho(str(hata), fg=typer.colors.RED)
+        return {"halt": True, "cipa_yok": True}
+
+
 def _rapor_yaz(rapor: dict[str, Any], yol: Path) -> None:
     typer.echo("")
     typer.echo(f"rapor        : {yol}")
@@ -608,6 +731,16 @@ def _rapor_yaz(rapor: dict[str, Any], yol: Path) -> None:
         f"{'engellendi ✓' if rapor['duplicate_engellendi'] else 'ENGELLENEMEDİ ✗'}"
     )
     typer.echo(f"belirsiz     : {len(rapor['belirsiz_kalan'])}")
+    pozisyon = rapor.get("pozisyon_mutabakati") or {}
+    typer.secho(
+        "pozisyon     : "
+        + (
+            "AÇIKLANAMAYAN FARK ✗"
+            if pozisyon.get("halt", True)
+            else "çıpa + defter = borsa ✓"
+        ),
+        fg=typer.colors.RED if pozisyon.get("halt", True) else typer.colors.GREEN,
+    )
     typer.echo(f"hata         : {len(rapor['hatalar'])}")
     typer.echo(f"saat sapması : {rapor['saat_sapmasi_ms']} ms")
     if rapor["kriter_saglandi"]:

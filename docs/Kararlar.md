@@ -1984,6 +1984,130 @@ kontrollü live hiç başlamadı. Bu bir borç değil, kapının çalıştığı
 
 ---
 
+## K-046 — Pozisyon mutabakatı üç taraflıdır; çıpa tazelenemez, komisyon tahmin edilemez
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 7'ye dönüş (Faz 8 hazırlığı) ·
+**Kapatır:** Faz 7 §7'nin "pozisyon mutabakatı ölçülmedi" maddesi · **İlgili:** K-038,
+K-040, K-041 · **Kanıt:** `tests/unit/test_pozisyon.py`, `runs/testnet/poz-1.json`
+
+**Bağlam.** Faz 7 emir mutabakatını kurdu ve pozisyon tarafını bilerek açık bıraktı.
+Gerekçesi `oms/mutabakat.py`de yazılıydı ve hâlâ doğru:
+
+> *"Bakiye farkını emirlerden türetmek, koşunun başındaki bakiyenin bağımsız bir kaydını
+> gerektirir; o kayıt yoksa yapılan karşılaştırma 'borsa ne diyorsa o' demenin süslü hâli
+> olur."*
+
+Faz 8'in bitti kriterlerinden biri *"açıklanamayan pozisyon farkı: sıfır"* diyor. O kriter
+ölçülebilir olmadan Faz 8 başlayamaz — ve ölçülebilir kılan şey, eksik olan o kayıt.
+
+### 1. Üç taraf, iki taraf değil
+
+| Taraf | Nereden | Değişmez mi |
+| --- | --- | --- |
+| **Çıpa** — açılış bakiyesi | Borsadan, ilk emirden önce | **Evet** |
+| **Akış** — defterin fill'leri | Bizim kaydımız | Hayır, koşuyla büyür |
+| **Gerçek** — bugünkü bakiye | Borsadan, şimdi | — |
+
+`çıpa + akış` bizim **iddiamız**, `gerçek` borsanın beyanı. İki taraflı bir karşılaştırma
+(defterin emirleri ↔ borsanın emirleri) zaten var ve başka bir soru soruyor: *"emirler ne
+durumda"*. Bu üçüncü taraf yeni bir soru soruyor: *"hesap, defterin söylediği yerde mi"*.
+İkisi ayrı olmak zorunda, çünkü **bütün emirlerini doğru bilen bir defter bile** dışarıdan
+gelen bir yatırmayı, elle yapılmış bir işlemi ya da başka bir sürecin emrini göremez. Para
+o yollardan da hareket eder.
+
+### 2. Çıpanın değişmezliği, ölçümün tamamı
+
+Açılış kaydı yazılıp bırakılıyor: `oms/defter.py`de iki SQLite tetiği hem `UPDATE` hem
+`DELETE` reddediyor, ve `acilis_yaz` deftere emir girmişse yazmayı da reddediyor.
+
+Bu bir titizlik değil, mekanizmanın kendisi. Çıpa yazılabilir olsaydı, açıklanamayan bir
+farkla karşılaşan herkesin elinde *"çıpayı tazele"* düğmesi olurdu; fark araştırılmak
+yerine sıfırlanır ve kriter her koşuda kendiliğinden geçerdi. **Bir kapıyı elle
+açılabilir yapmak, o kapıyı kaldırmaktır** (K-010'un aynı mantığı).
+
+Çıpanın ilk emirden **önce** atılması da aynı sebepten zorunlu: emirler varken atılan bir
+çıpa o emirlerin etkisini içine alır, akış onları bir kez daha sayar, ve fark tam olarak
+o emirler kadar çıkar.
+
+### 3. Komisyon bir muhasebe büyüklüğüdür ve tahmin edilemez
+
+Binance komisyonu **alınan varlıktan** keser. 0,001 BTC'lik bir alımda hesaba 0,001 BTC
+girmez, 0,000999 girer. Komisyonu hesaba katmayan bir "beklenen bakiye" her alımda ~%0,1
+yanılır — ve bu, bu projenin *"neredeyse doğru"* dediği sınıfın ta kendisi: çökme yok,
+hata yok, sadece emir sayısıyla birlikte büyüyen sessiz bir fark.
+
+O yüzden komisyon defterde iki sütun: **rakam** ve **nereden geldiği**. Kaynak boşken
+komisyon "sıfır" değil **"bilinmiyor"** demektir, ve ikisi diskte bile ayrı tutuluyor.
+
+**Bilinmeyen komisyon varken beklenen bakiye hesaplanmıyor, tahmin edilmiyor.**
+`%0,1 varsaydım` diyen bir satır yazmak yerine mutabakat *"ölçülemedi"* diyor ve koşu
+duruyor. `oms/pozisyon.py`de `VARSAYILAN_ORAN` diye bir sabit bilerek yok.
+
+Komisyonun iki kaynağı var ve biri diğerinin yedeği: `POST /api/v3/order` yanıtının
+`fills` dizisi (normal yol, ek ağ çağrısı yok) ve `/api/v3/myTrades` (yanıtı kaybolmuş —
+`UNKNOWN → FILLED`e çözülmüş — emirlerin **tek** kaynağı, çünkü `GET /api/v3/order`
+komisyon taşımaz). İlk ölçüm **üzerine yazılmaz**: ikinci bir kaynağın farklı bir sayı
+söylemesi sessizce kabul edilecek bir şey değil.
+
+### 4. Bakiye `serbest` değil `toplam`
+
+`EmirAdaptoru.bakiye()` artık `dict[str, float]` değil `dict[str, Varlik]` döndürüyor
+(serbest + kilitli). Değişiklik bilerek **kırıcı**: eski hâli yalnızca `free` okuyordu,
+yani açık bir limit emri hesabın bir kısmını görünmez yapıyordu ve pozisyon mutabakatı
+her açık emirde haksız yere dururdu. Faz 7 yalnızca market emri kullandığı için bu vaka o
+fazda hiç doğmadı — limit yolu açılırken doğuyor (K-047).
+
+Tipi değiştirmek her çağıranı yeniden okumaya zorlar; alanın anlamını sessizce
+genişletmek ise okunmamış bir çağıranda "neredeyse doğru" bir bakiye bırakırdı.
+
+### 5. Tolerans türetildi, seçilmedi
+
+`tolerans = max(1e-8, (brüt_ciro + |çıpa|) × 1e-9)`
+
+İki taraf da kayan nokta taşıyor, o yüzden tolerans sıfır olamaz. **Brüt ciroyla**
+ölçekleniyor, net pozisyonla değil: hata her işlemde birikir, net bakiyede değil. `1e-9`
+oranı `float` epsilon'unun ~10 milyon katı (asla yanlış alarm vermez) ama bir lot adımının
+(1e-5) on binde biri — yani gerçekleşebilecek en küçük gerçek farkı bile yutamaz. Test
+ikisini de ölçüyor: bir lot adımlık fark **yakalanıyor**, 1e-13'lük gürültü **yakalanmıyor**.
+
+### 6. Ölçüm: gerçek testnet'e karşı, iki yönde
+
+`runs/testnet/poz-1` — 20 emir (10 alım/10 satım), gözlem modu:
+
+| Varlık | Çıpa | Defter akışı | Beklenen | Borsada | Fark | Tolerans |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| BTC | 1,00048 | 0,0 | 1,00048 | 1,00048 | **0,0** | 1,0e-8 |
+| USDT | 9963,0282472 | −0,000012 | 9963,0282352 | 9963,0282352 | **0,0** | 1,01e-5 |
+
+Ama temiz geçmek tek başına bir şey kanıtlamaz — ölçünün **bozulduğunda bozulduğu** da
+gösterilmeli. Defterin bilmediği bir emir (doğrudan adaptörden, `EmirMotoru`'na
+uğramadan, 0,0002 BTC market alımı) gönderildi ve mutabakat **durdu**:
+
+```
+AÇIKLANAMAYAN FARK — BTC : fark +0,0002000000 (tolerans 0,0000000100)
+AÇIKLANAMAYAN FARK — USDT: fark −15,4368020000 (tolerans 0,0000101482)
+```
+
+Sayılar kuruşuna kadar tutuyor: 0,0002 × 77.184,01 = 15,43680. Çıkış kodu 1.
+
+Market emri anında dolduğu için **açık emir listesinde hiç görünmedi**; yani bu farkı
+emir mutabakatı yakalayamazdı. Pozisyon mutabakatının kendi başına gerekli olduğunun
+kanıtı bu vaka.
+
+### 7. Ölçülemeyen: komisyonun kendisi
+
+**Testnet komisyon kesmiyor** — ölçüldü, varsayılmadı: `/api/v3/myTrades` yanıtında
+`commission: '0.00000000'`, `commissionAsset: 'USDT'`. Yani yukarıdaki temiz sonuç,
+komisyon yolu **hiç çalışmadan** da aynı çıkardı.
+
+Bu kayda geçiyor çünkü tam olarak Faz 7'nin dersinin tekrarı, yönü değişmiş hâliyle:
+*"bir sahte, gerçeğin reddettiğini kabul ediyorsa ona karşı yeşil olan test bir şey
+kanıtlamaz."* Burada **testnet** sahtenin rolünde: gerçek hesabın keseceği bedeli
+kesmiyor. Komisyon mantığı birim testlerde ölçülüyor (`SahteBorsa` %0,1 kesiyor ve
+bakiyeye yansıtıyor) ama gerçeğe karşı ölçülmesi Faz 8'e kalıyor — ve Faz 8'in ilk
+pozisyon mutabakatı, o yolun ilk gerçek sınavı olacak.
+
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -2021,6 +2145,7 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-043 | Planlı duruş kesinti değildir; ayıran şey bir bayrak dosyasıdır | ✅ **kabul** | Faz 6 |
 | K-044 | Çoklu test düzeltmesi ölçüldü: `oos_sharpe` 0,50 → 1,02 | ✅ **kabul** | Faz 4'e dönüş 4 |
 | K-045 | Maliyet duvarı bağlayıcı değil; tek sembollü yönlü arama kapandı | ✅ **kabul** | Faz 4'e dönüş 5 |
+| K-046 | Pozisyon mutabakatı üç taraflı; çıpa tazelenemez, komisyon tahmin edilemez | ✅ **kabul** | Faz 7'ye dönüş |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5

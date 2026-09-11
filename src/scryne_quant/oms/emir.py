@@ -30,6 +30,7 @@ sayısı bir muhasebe sorusu değil, bir tahmin.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Any, Final
@@ -46,6 +47,43 @@ KIMLIK_UZUNLUGU: Final = 32
 #: içeriğinden türemeli. Koşu adı girseydi, aynı niyeti farklı bir koşu adıyla yeniden
 #: göndermek yeni bir kimlik üretir ve duplicate koruması bir yazım hatasıyla delinirdi.
 KIMLIK_ONEKI: Final = "sq"
+
+
+#: Bir emirde kesilen komisyon: `(varlık, miktar)` çiftleri, varlık adına göre sıralı.
+#:
+#: **Neden tek bir sayı değil.** Binance komisyonu alınan varlıktan keser: BTC alırken
+#: BTC'den, satarken USDT'den; hesapta BNB varsa ikisinin yerine BNB'den. Tek bir sayı
+#: hangi varlığın azaldığını söylemez — ve pozisyon mutabakatı varlık bazında yapılır.
+#: Sözlük yerine sıralı çift: değişmez, deterministik, JSON'a olduğu gibi yazılır.
+#:
+#: Bu tip `exchange/` değil `oms/` altında çünkü komisyon bir **muhasebe** büyüklüğü:
+#: emrin kaydının parçası, borsa protokolünün ayrıntısı değil. `emir_adaptoru` buradan
+#: import ediyor; ters yön (oms'un exchange'i import etmesi) hem döngü hem katman ihlali
+#: olurdu.
+Komisyon = tuple[tuple[str, float], ...]
+
+
+def komisyon_topla(kalemler: Iterable[tuple[str, float]]) -> Komisyon:
+    """Fill başına gelen komisyon kalemlerini varlık bazında toplar.
+
+    Tek emir birden çok fill'e bölünebilir ve her fill kendi komisyonunu taşır; hatta
+    hesaptaki BNB biterse aynı emrin bir kısmı BNB'den, kalanı alınan varlıktan kesilir.
+    Toplamayı çağırana bırakmak o vakayı bir kez unutmaya bakardı.
+    """
+    toplam: dict[str, float] = {}
+    for varlik, miktar in kalemler:
+        if not varlik:
+            continue
+        toplam[varlik] = toplam.get(varlik, 0.0) + float(miktar)
+    return tuple(sorted((v, m) for v, m in toplam.items() if m != 0.0))
+
+
+#: `Emir.komisyon_kaynagi` alabileceği değerler.
+#:
+#: Boş dize **"komisyon yok" değil "komisyon bilinmiyor"** demek, ve bu ayrım pozisyon
+#: mutabakatının tamamını taşıyor: bilinmeyeni sıfır saymak her alımda ~%0,1'lik sessiz
+#: bir fark bırakır ve fark emir sayısıyla büyür.
+KOMISYON_KAYNAKLARI: Final[frozenset[str]] = frozenset({"", "yanit", "islemler"})
 
 
 class EmirHatasi(ValueError):
@@ -227,6 +265,12 @@ class Emir:
     gecmis: tuple[str, ...] = field(default=())
     """Geçilen durumların sırası. Uyuşmazlık araştırmasının ilk baktığı yer."""
 
+    komisyon: Komisyon = ()
+    """Bu emirde kesilen komisyon. Boşsa `komisyon_kaynagi`ye bakılır."""
+
+    komisyon_kaynagi: str = ""
+    """`yanit`, `islemler`, ya da boş: **bilinmiyor.** (`KOMISYON_KAYNAKLARI`)"""
+
     hata: str = ""
 
     def __post_init__(self) -> None:
@@ -236,6 +280,25 @@ class Emir:
             raise EmirHatasi(
                 f"dolan miktar [0, miktar] aralığında olmalı: {self.dolan_miktar} / {self.miktar}"
             )
+        if self.komisyon_kaynagi not in KOMISYON_KAYNAKLARI:
+            raise EmirHatasi(
+                f"bilinmeyen komisyon kaynağı: {self.komisyon_kaynagi!r}. "
+                f"Geçerli: yanit, islemler, '' (bilinmiyor)"
+            )
+        if self.komisyon and not self.komisyon_kaynagi:
+            raise EmirHatasi(
+                "kaynaksız komisyon yazılamaz: bir rakam, nereden geldiği bilinmeden "
+                "muhasebeye giremez"
+            )
+
+    @property
+    def komisyon_bilinmiyor(self) -> bool:
+        """Dolmuş ama komisyonu öğrenilmemiş bir emir mi?
+
+        Dolmamış emrin komisyonu zaten yoktur; soru yalnızca dolmuş emirler için anlamlı.
+        Pozisyon mutabakatı bu emirleri **eksik** sayar, sıfır komisyonlu saymaz.
+        """
+        return self.dolan_miktar > 0.0 and not self.komisyon_kaynagi
 
     @property
     def acik(self) -> bool:
@@ -258,6 +321,8 @@ class Emir:
         borsa_kimligi: str | None = None,
         dolan_miktar: float | None = None,
         ortalama_fiyat: float | None = None,
+        komisyon: Komisyon | None = None,
+        komisyon_kaynagi: str | None = None,
         hata: str = "",
     ) -> Emir:
         """Yeni duruma geçmiş **yeni** bir emir döndürür. Yasal olmayan geçiş hatadır."""
@@ -267,6 +332,11 @@ class Emir:
                 f"(emir {self.istemci_kimligi}). Geçerli: "
                 f"{', '.join(sorted(GECISLER[self.durum])) or 'yok (nihai durum)'}"
             )
+        # Komisyon **üzerine yazılmaz, yalnızca boşken doldurulur.** Bir emrin komisyonu
+        # bir kez ölçülür; ikinci bir kaynağın farklı bir sayı söylemesi sessizce kabul
+        # edilecek bir şey değil, araştırılacak bir çelişkidir. Kaynak yazılıysa yeni
+        # değer yok sayılıyor — ilk ölçüm korunuyor.
+        yazilabilir = not self.komisyon_kaynagi
         return replace(
             self,
             durum=durum,
@@ -274,6 +344,14 @@ class Emir:
             dolan_miktar=self.dolan_miktar if dolan_miktar is None else dolan_miktar,
             ortalama_fiyat=(
                 self.ortalama_fiyat if ortalama_fiyat is None else ortalama_fiyat
+            ),
+            komisyon=(
+                komisyon if yazilabilir and komisyon is not None else self.komisyon
+            ),
+            komisyon_kaynagi=(
+                komisyon_kaynagi
+                if yazilabilir and komisyon_kaynagi
+                else self.komisyon_kaynagi
             ),
             guncellendi_ms=zaman_ms,
             gecmis=(*self.gecmis, str(durum)),
@@ -296,6 +374,9 @@ class Emir:
             "olusturuldu_ms": self.olusturuldu_ms,
             "guncellendi_ms": self.guncellendi_ms,
             "gecmis": list(self.gecmis),
+            "komisyon": [list(k) for k in self.komisyon],
+            "komisyon_kaynagi": self.komisyon_kaynagi,
+            "komisyon_bilinmiyor": self.komisyon_bilinmiyor,
             "hata": self.hata,
         }
 
@@ -325,12 +406,15 @@ __all__ = [
     "GECISLER",
     "KIMLIK_ONEKI",
     "KIMLIK_UZUNLUGU",
+    "KOMISYON_KAYNAKLARI",
     "NIHAI",
     "Emir",
     "EmirDurumu",
     "EmirHatasi",
     "GecersizGecis",
+    "Komisyon",
     "emir_kur",
     "gecis_yasal_mi",
     "istemci_kimligi",
+    "komisyon_topla",
 ]

@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from scryne_quant.exchange.kurallar import SembolKurallari
-from scryne_quant.oms.emir import EmirDurumu
+from scryne_quant.oms.emir import EmirDurumu, Komisyon, komisyon_topla
 
 #: Binance emir durumlarının bizim state machine'imize eşlenmesi.
 #:
@@ -58,6 +58,32 @@ BINANCE_DURUM: dict[str, EmirDurumu] = {
 #: tamamen kapat" ile "pozisyonu azalt" farklı kararlardır ve audit'in ikisini ayırt
 #: edebilmesi gerekir. Defteri borsanın sözlüğüne indirgemek o farkı kalıcı olarak silerdi.
 BORSA_YONU: dict[str, str] = {"BUY": "BUY", "SELL": "SELL", "FLAT": "SELL"}
+
+
+@dataclass(frozen=True, slots=True)
+class Varlik:
+    """Bir varlığın borsadaki bakiyesi: serbest ve emirlerde kilitli.
+
+    **İkisi ayrı taşınıyor çünkü pozisyon mutabakatı `toplam`ı ister, ekran `serbest`i.**
+    Açık bir limit emri parayı `serbest`ten `kilitli`ye taşır ve hesaptaki toplamı
+    değiştirmez; yalnızca `serbest`e bakan bir mutabakat, her açık limit emrinde
+    "açıklanamayan fark" bulup koşuyu **haksız yere** durdururdu. Faz 7 yalnızca market
+    emri kullandığı için bu ayrım o fazda hiç doğmadı — limit yolu açılırken doğuyor.
+    """
+
+    serbest: float = 0.0
+    kilitli: float = 0.0
+
+    @property
+    def toplam(self) -> float:
+        return self.serbest + self.kilitli
+
+    def sozluk(self) -> dict[str, float]:
+        return {
+            "serbest": self.serbest,
+            "kilitli": self.kilitli,
+            "toplam": self.toplam,
+        }
 
 
 class GecersizYon(ValueError):
@@ -114,6 +140,23 @@ class BorsaEmri:
     guncellendi_ms: int
     ham_durum: str = ""
 
+    komisyon: Komisyon = ()
+    """Bu emrin fill'lerinde kesilen komisyon. Boş demek **sıfır değil, bilinmiyor**.
+
+    Ayrım pozisyon mutabakatının tamamını taşıyor: komisyonu bilinmeyen bir emri
+    "komisyonu yoktu" saymak, her alımda %0,1 kadar sessiz bir fark üretir — ve o fark
+    emir sayısıyla birlikte büyür. `kaynak` alanı bu ikisini ayırıyor.
+    """
+
+    komisyon_kaynagi: str = ""
+    """Komisyonun nereden geldiği: `yanit`, `islemler` veya boş (bilinmiyor).
+
+    `POST /api/v3/order` yanıtı `fills` taşır ve komisyonu oradan okumak tek ağ çağrısına
+    mal olmaz. Ama `GET /api/v3/order` **taşımaz**: mutabakatla `UNKNOWN → FILLED`e
+    çözülen bir emrin komisyonu o yoldan öğrenilemez. O emirler için otorite
+    `emir_islemleri` (`/api/v3/myTrades`), ve öğrenilene kadar komisyon bilinmiyordur.
+    """
+
     def sozluk(self) -> dict[str, Any]:
         return {
             "istemci_kimligi": self.istemci_kimligi,
@@ -126,6 +169,8 @@ class BorsaEmri:
             "dolan_miktar": self.dolan_miktar,
             "ortalama_fiyat": self.ortalama_fiyat,
             "guncellendi_ms": self.guncellendi_ms,
+            "komisyon": [list(k) for k in self.komisyon],
+            "komisyon_kaynagi": self.komisyon_kaynagi,
         }
 
 
@@ -184,17 +229,40 @@ class EmirAdaptoru(ABC):
         """
 
     @abstractmethod
-    def bakiye(self) -> dict[str, float]:
-        """Varlık → serbest miktar. Pozisyon mutabakatının borsa tarafı."""
+    def bakiye(self) -> dict[str, Varlik]:
+        """Varlık → bakiye (serbest + kilitli). Pozisyon mutabakatının **borsa tarafı**.
+
+        Dönüş tipi Faz 8 hazırlığında `float`tan `Varlik`e çevrildi ve bu bilerek
+        **kırıcı** bir değişiklik: eski hâli yalnızca `free` döndürüyordu, yani açık bir
+        limit emri varken hesabın bir kısmını görünmez yapıyordu. Tipi değiştirmek her
+        çağıranı yeniden okumaya zorlar; alanın anlamını sessizce genişletmek ise
+        okunmamış bir çağıranda "neredeyse doğru" bir bakiye bırakırdı.
+        """
+
+    @abstractmethod
+    def emir_islemleri(self, *, sembol: str, borsa_kimligi: str) -> Komisyon:
+        """Bir emrin fill'lerinde kesilen komisyonun **otoriter** kaynağı.
+
+        `GET /api/v3/order` komisyon taşımaz; `POST` yanıtının `fills` dizisi taşır ama o
+        yanıt kaybolmuş olabilir (`BelirsizSonuc`) — tam da mutabakatın devreye girdiği
+        durum. O emirlerin komisyonu yalnızca buradan (`/api/v3/myTrades`) öğrenilebilir.
+
+        Boş dönmek **"komisyon yoktu" demek değildir**; borsa bu emre ait işlem
+        tanımıyorsa emir hiç dolmamıştır, ve o zaten `dolan_miktar = 0` demektir. Çağıran
+        ikisini karıştırmamak zorunda: dolmuş bir emrin boş komisyonu bir **çelişkidir**.
+        """
 
 
 __all__ = [
     "BINANCE_DURUM",
     "BORSA_YONU",
     "BilinmeyenDurum",
-    "GecersizYon",
     "BorsaEmri",
     "EmirAdaptoru",
+    "GecersizYon",
+    "Komisyon",
+    "Varlik",
     "borsa_yonu",
     "durum_esle",
+    "komisyon_topla",
 ]

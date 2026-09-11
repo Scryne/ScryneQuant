@@ -34,12 +34,13 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Final
 
-from scryne_quant.oms.emir import ACIK, Emir, EmirDurumu, EmirHatasi
+from scryne_quant.oms.emir import ACIK, Emir, EmirDurumu, EmirHatasi, Komisyon
 
 BELLEK: Final = ":memory:"
 
@@ -65,10 +66,40 @@ CREATE TABLE IF NOT EXISTS emir (
     olusturuldu_ms  INTEGER NOT NULL,
     guncellendi_ms  INTEGER NOT NULL,
     gecmis          TEXT    NOT NULL,
-    hata            TEXT    NOT NULL
+    hata            TEXT    NOT NULL,
+
+    -- Komisyon iki sütun: rakam ve **nereden geldiği**. Kaynak boşken komisyon
+    -- "sıfır" değil "bilinmiyor" demektir (`oms/emir.KOMISYON_KAYNAKLARI`) ve pozisyon
+    -- mutabakatı ikisini farklı işler. Tek sütun olsaydı, ölçülmemiş bir komisyon ile
+    -- ölçülüp sıfır çıkmış bir komisyon diskte ayırt edilemezdi.
+    komisyon        TEXT    NOT NULL DEFAULT '[]',
+    komisyon_kaynagi TEXT   NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS emir_durum ON emir (durum);
 CREATE INDEX IF NOT EXISTS emir_karar ON emir (karar_ms);
+
+-- Koşunun **açılış bakiyesi**: pozisyon mutabakatının bizim tarafımızdaki çıpası.
+--
+-- Tek satır (`tek = 1`) ve **yazılıp bırakılır**: iki tetik hem güncellemeyi hem silmeyi
+-- reddediyor. Yazılabilir olsaydı pozisyon mutabakatının anlamı kalmazdı — açıklanamayan
+-- bir farkla karşılaşan herkesin elinde "çıpayı tazele" diye bir düğme olurdu ve fark,
+-- araştırılmak yerine sıfırlanırdı. Çıpanın değişmezliği, karşılaştırmayı bir ölçüm
+-- yapan tek şey.
+CREATE TABLE IF NOT EXISTS acilis_bakiyesi (
+    tek        INTEGER PRIMARY KEY CHECK (tek = 1),
+    varliklar  TEXT    NOT NULL,
+    borsa_ms   INTEGER NOT NULL,
+    yerel_ms   INTEGER NOT NULL,
+    not_metni  TEXT    NOT NULL
+);
+
+CREATE TRIGGER IF NOT EXISTS acilis_degismez
+BEFORE UPDATE ON acilis_bakiyesi
+BEGIN SELECT RAISE(ABORT, 'açılış bakiyesi değiştirilemez: çıpa tazelenirse fark ölçülemez'); END;
+
+CREATE TRIGGER IF NOT EXISTS acilis_silinmez
+BEFORE DELETE ON acilis_bakiyesi
+BEGIN SELECT RAISE(ABORT, 'açılış bakiyesi silinemez: koşunun başlangıç kaydı'); END;
 
 -- Emir **silinemez**. Bir emri silmek, olmuş bir gönderimi kayıttan çıkarmak demek —
 -- ve reconciliation'ın (§25) karşılaştıracağı iki taraftan birini yok etmek.
@@ -108,6 +139,29 @@ class EmirDefteri:
             self._baglanti.execute("PRAGMA journal_mode=WAL")
             self._baglanti.execute("PRAGMA synchronous=FULL")
         self._baglanti.executescript(_SEMA)
+        self._gocu_uygula()
+
+    # -------------------------------------------------------------------- göç
+
+    def _gocu_uygula(self) -> None:
+        """Faz 7'de açılmış defterlere komisyon sütunlarını ekler.
+
+        `CREATE TABLE IF NOT EXISTS` var olan bir tabloya sütun **eklemez**: Faz 7'nin
+        100 emirlik koşusu gibi mevcut dosyalar şemanın eski hâliyle açılır ve ilk
+        `INSERT`te "no such column" ile patlardı. Göç `DEFAULT` değerleriyle geliyor, yani
+        eski satırlar *"komisyon bilinmiyor"* olarak açılıyor — ve bu doğru: o emirlerin
+        komisyonu gerçekten kaydedilmemişti. Sıfır yazmak, ölçülmemiş bir şeyi ölçülmüş
+        göstermek olurdu.
+        """
+        mevcut = {
+            str(s["name"]) for s in self._baglanti.execute("PRAGMA table_info(emir)")
+        }
+        for sutun, tanim in (
+            ("komisyon", "TEXT NOT NULL DEFAULT '[]'"),
+            ("komisyon_kaynagi", "TEXT NOT NULL DEFAULT ''"),
+        ):
+            if sutun not in mevcut:
+                self._baglanti.execute(f"ALTER TABLE emir ADD COLUMN {sutun} {tanim}")
 
     # ------------------------------------------------------------------ işlem
 
@@ -142,8 +196,8 @@ class EmirDefteri:
             b.execute(
                 "INSERT INTO emir (istemci_kimligi, sembol, yon, miktar, durum, "
                 "borsa_kimligi, dolan_miktar, ortalama_fiyat, karar_ms, olusturuldu_ms, "
-                "guncellendi_ms, gecmis, hata) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "guncellendi_ms, gecmis, hata, komisyon, komisyon_kaynagi) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     emir.istemci_kimligi,
                     emir.sembol,
@@ -158,6 +212,8 @@ class EmirDefteri:
                     emir.guncellendi_ms,
                     json.dumps(list(emir.gecmis), ensure_ascii=False),
                     emir.hata,
+                    _komisyon_metni(emir.komisyon),
+                    emir.komisyon_kaynagi,
                 ),
             )
         return emir, True
@@ -171,6 +227,8 @@ class EmirDefteri:
         borsa_kimligi: str | None = None,
         dolan_miktar: float | None = None,
         ortalama_fiyat: float | None = None,
+        komisyon: Komisyon | None = None,
+        komisyon_kaynagi: str | None = None,
         hata: str = "",
     ) -> Emir:
         """Emri yeni duruma geçirip **aynı transaction'da** yazar.
@@ -192,11 +250,14 @@ class EmirDefteri:
                 borsa_kimligi=borsa_kimligi,
                 dolan_miktar=dolan_miktar,
                 ortalama_fiyat=ortalama_fiyat,
+                komisyon=komisyon,
+                komisyon_kaynagi=komisyon_kaynagi,
                 hata=hata,
             )
             b.execute(
                 "UPDATE emir SET durum = ?, borsa_kimligi = ?, dolan_miktar = ?, "
-                "ortalama_fiyat = ?, guncellendi_ms = ?, gecmis = ?, hata = ? "
+                "ortalama_fiyat = ?, guncellendi_ms = ?, gecmis = ?, hata = ?, "
+                "komisyon = ?, komisyon_kaynagi = ? "
                 "WHERE istemci_kimligi = ?",
                 (
                     str(yeni.durum),
@@ -206,10 +267,106 @@ class EmirDefteri:
                     yeni.guncellendi_ms,
                     json.dumps(list(yeni.gecmis), ensure_ascii=False),
                     yeni.hata,
+                    _komisyon_metni(yeni.komisyon),
+                    yeni.komisyon_kaynagi,
                     istemci_kimligi,
                 ),
             )
         return yeni
+
+    def komisyon_yaz(
+        self, istemci_kimligi: str, komisyon: Komisyon, *, kaynak: str
+    ) -> Emir:
+        """Komisyonu **durum değiştirmeden** yazar. Yalnızca boş kaynağı doldurur.
+
+        Ayrı bir metot çünkü komisyonun öğrenilmesi bir durum geçişi değil: `FILLED` bir
+        emrin komisyonu sonradan `/api/v3/myTrades`ten gelir ve emir nihai durumda olduğu
+        için `gecir` çağrılamaz (nihai durumdan geçiş yok, ve olmaması doğru).
+
+        Kaynak zaten yazılıysa **hiçbir şey yapmaz** — ilk ölçüm korunur. İkinci bir
+        kaynağın farklı bir sayı söylemesi sessizce kabul edilecek bir şey değil.
+        """
+        with self._islem() as b:
+            satir = b.execute(
+                "SELECT * FROM emir WHERE istemci_kimligi = ?", (istemci_kimligi,)
+            ).fetchone()
+            if satir is None:
+                raise DefterHatasi(f"emir defterde yok: {istemci_kimligi}")
+            mevcut = _satirdan(satir)
+            if mevcut.komisyon_kaynagi:
+                return mevcut
+            if kaynak not in ("yanit", "islemler"):
+                raise DefterHatasi(
+                    f"komisyon kaynağı 'yanit' ya da 'islemler' olmalı: {kaynak!r}"
+                )
+            b.execute(
+                "UPDATE emir SET komisyon = ?, komisyon_kaynagi = ? "
+                "WHERE istemci_kimligi = ?",
+                (_komisyon_metni(komisyon), kaynak, istemci_kimligi),
+            )
+        return replace(mevcut, komisyon=komisyon, komisyon_kaynagi=kaynak)
+
+    # ------------------------------------------------------- açılış bakiyesi
+
+    def acilis_yaz(
+        self,
+        varliklar: Mapping[str, tuple[float, float]],
+        *,
+        borsa_ms: int,
+        yerel_ms: int,
+        not_metni: str = "",
+    ) -> None:
+        """Koşunun açılış bakiyesini **bir kez** yazar. İkinci çağrı hatadır.
+
+        Varlıklar `{varlık: (serbest, kilitli)}` — ikisi ayrı, çünkü pozisyon mutabakatı
+        toplamı kullanır ama farkın hangi tarafta doğduğunu görmek için ayrımı ister.
+
+        İkinci çağrının hata olması bir kolaylık kaybı değil, mekanizmanın kendisi: bir
+        koşunun tek bir başlangıcı vardır. `zaten_var` ile önce sorulabilir.
+        """
+        if self.acilis_oku() is not None:
+            raise DefterHatasi(
+                "açılış bakiyesi zaten yazılmış. Bir koşunun tek bir başlangıcı vardır; "
+                "yeni bir çıpa isteyen yeni bir koşu açar."
+            )
+        # Çıpa **ilk emirden önce** atılmak zorunda. Emirler varken yazılan bir açılış
+        # bakiyesi, aradaki emirlerin etkisini içine almış olur: o emirler bir kez
+        # bakiyeye, bir kez de beklenen hesabına girer ve fark tam olarak onlar kadar
+        # çıkar. Sessizce izin vermek, mutabakatı ilk koşuda yanlış yapan bir kurulum
+        # hatasını kalıcı kılardı.
+        if self._sorgu("SELECT 1 FROM emir LIMIT 1"):
+            raise DefterHatasi(
+                "açılış bakiyesi emirlerden sonra yazılamaz: çıpa koşunun başlangıcını "
+                "göstermeli. Deftere emir girmişse o koşunun başlangıcı kaçırılmıştır."
+            )
+        govde = {
+            varlik: {"serbest": float(s), "kilitli": float(k)}
+            for varlik, (s, k) in sorted(varliklar.items())
+        }
+        with self._islem() as b:
+            b.execute(
+                "INSERT INTO acilis_bakiyesi (tek, varliklar, borsa_ms, yerel_ms, "
+                "not_metni) VALUES (1, ?, ?, ?, ?)",
+                (
+                    json.dumps(govde, ensure_ascii=False, sort_keys=True),
+                    int(borsa_ms),
+                    int(yerel_ms),
+                    not_metni,
+                ),
+            )
+
+    def acilis_oku(self) -> dict[str, Any] | None:
+        """Açılış kaydı; hiç yazılmadıysa `None`."""
+        satirlar = self._sorgu("SELECT * FROM acilis_bakiyesi WHERE tek = 1")
+        if not satirlar:
+            return None
+        satir = satirlar[0]
+        return {
+            "varliklar": json.loads(satir["varliklar"]),
+            "borsa_ms": int(satir["borsa_ms"]),
+            "yerel_ms": int(satir["yerel_ms"]),
+            "not_metni": str(satir["not_metni"]),
+        }
 
     # ------------------------------------------------------------------ okuma
 
@@ -272,8 +429,16 @@ def _satirdan(satir: sqlite3.Row) -> Emir:
         olusturuldu_ms=int(satir["olusturuldu_ms"]),
         guncellendi_ms=int(satir["guncellendi_ms"]),
         gecmis=tuple(json.loads(satir["gecmis"])),
+        komisyon=tuple(
+            (str(v), float(m)) for v, m in json.loads(satir["komisyon"] or "[]")
+        ),
+        komisyon_kaynagi=str(satir["komisyon_kaynagi"] or ""),
         hata=str(satir["hata"]),
     )
+
+
+def _komisyon_metni(komisyon: Komisyon) -> str:
+    return json.dumps([list(k) for k in komisyon], ensure_ascii=False)
 
 
 __all__ = ["BELLEK", "DefterHatasi", "EmirDefteri"]

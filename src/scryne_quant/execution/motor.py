@@ -252,6 +252,11 @@ class EmirMotoru:
         )
         if yanit.durum is EmirDurumu.ACKNOWLEDGED:
             return guncel
+        # Komisyon **yalnızca burada**, `POST` yanıtının `fills` dizisinden okunabiliyor;
+        # `GET /api/v3/order` onu taşımıyor. Bu satırı atlamak, komisyonu sonradan
+        # `/api/v3/myTrades` ile toplamak zorunda bırakırdı — her emir için fazladan bir
+        # imzalı çağrı, ve hiç yapılmazsa pozisyon mutabakatında her alımda ~%0,1'lik
+        # açıklanamayan bir fark.
         return self._defter.gecir(
             emir.istemci_kimligi,
             yanit.durum,
@@ -259,6 +264,8 @@ class EmirMotoru:
             borsa_kimligi=yanit.borsa_kimligi,
             dolan_miktar=yanit.dolan_miktar,
             ortalama_fiyat=yanit.ortalama_fiyat,
+            komisyon=yanit.komisyon,
+            komisyon_kaynagi=yanit.komisyon_kaynagi or None,
         )
 
     def _zaman_ms(self) -> int:

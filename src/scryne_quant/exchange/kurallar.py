@@ -46,6 +46,20 @@ class SembolKurallari:
     min_notional: float
     durum: str
 
+    taban_varlik: str = ""
+    """`BTCUSDT`in `BTC`si — emirde **miktarı** ölçülen varlık."""
+
+    kote_varlik: str = ""
+    """`BTCUSDT`in `USDT`si — emirde **fiyatı** ölçülen varlık.
+
+    İkisi de borsanın `exchangeInfo` yanıtından geliyor, sembol adı **kesilerek değil**.
+    "USDT ile biter" kuralı BTCUSDT'de doğru çalışır ve BNBBTC'de sessizce yanlış cevap
+    verir; pozisyon mutabakatı hangi varlığın arttığını bu iki alandan öğreniyor, o yüzden
+    burada bir tahmin bir muhasebe hatasına doğrudan dönüşürdü. Faz 1'in veri tarafı bu
+    alanları doldurmuyor (ihtiyacı yok) — boşluğu pozisyon mutabakatı yüksek sesle
+    reddediyor, sessizce varsaymıyor.
+    """
+
     @property
     def islenebilir(self) -> bool:
         return self.durum == "TRADING"
