@@ -1891,6 +1891,99 @@ defterden de silinmez: denendi, sayılır. Defter 38, ölçülebilir 31.
 
 ---
 
+## K-045 — Maliyet duvarı bağlayıcı kısıt değil; tek sembollü yönlü arama kapanıyor
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 4'e dönüş 5 · **Kapatır:** tek sembollü
+yönlü strateji araması · **İlgili:** K-016, K-021, K-039, K-042, K-044 · **Kanıt:**
+`docs/Faz-4-Donus-5-Tavan.md`
+
+**Bağlam.** K-044 çoklu test düzeltmesini ölçtükten sonra ortada şu tablo vardı: 38 hipotez
+denendi, hiçbiri geçmedi, ve en iyi sonuç şans beklentisinin altındaydı. Doğal bir itiraz
+duruldu: **38 çekilişin 38'i de sinyal tarafındaydı; maliyet tarafına hiç bakılmadı.**
+Gidiş-dönüş maliyet %0,306 (10 bps komisyon + 5,3 bps slippage, iki yön) ve bu her
+stratejinin aşması gereken bir duvar. Maker yürütmeyle yarıya inebilirdi.
+
+Bu itiraz ciddiydi ve test edilmeden reddedilemezdi.
+
+### 1. Haftalarca yürütme modeli yazmak yerine tavan ölçüldü
+
+Maker yürütme modeli kurmak (doluluk olasılığı, dolmama yolu, testnet ölçümü) haftalar
+alırdı. Onun yerine **üst sınır** ölçüldü: maliyet **sıfır** kabul edilip aynı çekilişler
+yeniden koşturuldu.
+
+Sıfır maliyet fiziksel olarak imkânsızdır ve amaç tam olarak budur — hiçbir yürütme
+iyileştirmesi bu sonuçları geçemez. Tavan tabandan alçaksa, aradaki her şey boştur.
+
+**Bu bir hipotez çekilişi değildir ve K-039'a girmez.** Strateji seçilmiyor, parametre
+aranmıyor, yeni bir soru sorulmuyor; sorulan tek şey *"tavan kapıdan yüksek mi"*. Bir üst
+sınır ölçümü, bir bahis değil.
+
+### 2. Sonuç: tavan kapının yarısında
+
+| | En iyi strateji | OOS Sharpe | Kapı | Geçen |
+| --- | --- | ---: | ---: | --- |
+| 1h, maliyet 0x | `funding_filtre` | 0,526 | 1,02 | **hiçbiri** |
+| 4h, maliyet 0x | `ema_kesisim` (19 işlem) | 0,691 | 1,02 | **hiçbiri** |
+| 1h, maliyet 0,25x | `funding_egilim` | 0,433 | 1,02 | **hiçbiri** |
+
+**İki olası itiraz önden kapatıldı:**
+
+*"Kapıyı K-044 ile yükselttin, tabii geçen olmaz."* — Eski, düzeltilmemiş 0,50 kapısına
+göre de geçen yok. `funding_filtre` 0,526 ile Sharpe kapısını geçiyor ama `oos_is_orani`
+ve `wf_katman_basari`'da kalıyor; `ema_kesisim` 4h 0,691 ile geçiyor ama 19 işlemle
+`asgari_islem`'de kalıyor. Kapılar bir **konjonksiyon**dur ve tek kapı yeterli değildir.
+
+*"Kapı gerçek maliyetle ölçüldü, sıfır maliyetli sonuçla karşılaştırmak haksız."* — Tersi
+doğru: sıfır maliyette null stratejiler de maliyet ödemez, yani düzeltilmiş kapı 1,02'nin
+**üstüne** çıkardı. Test stratejiler lehine cömert ve sonuç yine de olumsuz.
+
+### 3. Kararın kendisi
+
+**Maliyet duvarı bağlayıcı kısıt değilmiş.** Yürütmeyi iyileştirmek — maker emirler, BNB
+indirimi, VIP kademe — ölçülen tavanı kapıya yaklaştırmıyor. Dolayısıyla:
+
+1. **Maker yürütme modeli yazılmayacak.** Gerekçesi ortadan kalktı.
+2. **Tek sembollü yönlü strateji araması kapanıyor.** BTC/USDT üzerinde klasik teknik
+   göstergelerle yönlü tahmin, bu veri ve bu kapılarla tükendi — ve tükendiği ölçüldü,
+   tahmin edilmedi.
+
+### 4. Neden yeni bir arama programı da açılmıyor
+
+Çoklu sembol (cross-sectional) cazip ve gerçekten farklı bir bilgi kaynağı. Yine de
+açılmıyor, ve gerekçe K-044'ün kendisinden geliyor: **her yeni çekiliş kapıyı yükseltiyor.**
+31 çekilişte %5 sınırı 1,02; 60 çekilişte daha yüksek olacak. Büyük bir yeni arama
+programı, bulduğu şeyi geçirmek için kendi diktiği duvarı aşmak zorunda kalır.
+
+Yeni bir kaynak ancak **marjinal değil belirgin** biçimde daha iyiyse açılmalı. Çoklu
+sembolün böyle olduğuna dair elimizde ölçüm yok — yalnızca literatür var, ve bu proje
+literatürle değil ölçümle karar veriyor.
+
+### 5. Bu bir başarısızlık kaydı değil, bir ölçüm kaydı
+
+Sistem yanlış çalışmadı. Tam tersine: **doğru çalıştığı için "burada bir şey yok"
+diyebildi.** 1102 test, look-ahead koruması, deterministik backtest, atlatılamayan risk
+motoru ve çoklu test düzeltmesi — bunların toplam işlevi, olmayan bir edge'i var
+göstermemekti. O işlevi yerine getirdiler.
+
+Ölçülen alternatif maliyeti somut: `ema_kesisim` ile canlıya geçilseydi OOS beklentisi
+**−%4,2**'ydi. Aramanın durdurulması bir kayıp değil, o kaybın önlenmesidir.
+
+### 6. Ne korunuyor, ne kapanıyor
+
+**Kapanan:** tek sembollü yönlü strateji araması, maker yürütme çalışması, dördüncü bir
+parametre/aile çekilişi.
+
+**Korunan:** altyapının tamamı. Faz 6'nın 30 günlük koşusu devam ediyor (altyapı kanıtı,
+bedeli yok). Piyasa koşulları değişirse — funding rejimi dönerse, komisyon yapısı
+değişirse, yeni bir veri kaynağı erişilebilir olursa — aynı altyapı **saatler içinde**
+yeniden ölçüm yapabilir. `sq lab kapilar`, `sq lab coklu-test` ve hipotez defteri
+yerinde duruyor.
+
+**Kapanmayan tek şey Faz 8'dir ve kapanamaz:** promotion'u geçen strateji olmadığı için
+kontrollü live hiç başlamadı. Bu bir borç değil, kapının çalıştığının kanıtı (K-010).
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -1927,6 +2020,7 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-042 | Funding bir bilgi kaynağıdır; üç hipotez, tek tur, geri dönüşsüz | ✅ **kabul** | Faz 4'e dönüş 3 |
 | K-043 | Planlı duruş kesinti değildir; ayıran şey bir bayrak dosyasıdır | ✅ **kabul** | Faz 6 |
 | K-044 | Çoklu test düzeltmesi ölçüldü: `oos_sharpe` 0,50 → 1,02 | ✅ **kabul** | Faz 4'e dönüş 4 |
+| K-045 | Maliyet duvarı bağlayıcı değil; tek sembollü yönlü arama kapandı | ✅ **kabul** | Faz 4'e dönüş 5 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5

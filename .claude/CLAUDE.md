@@ -83,6 +83,10 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Faz-4-Donus-4-Coklu-Test.md` — **çoklu test düzeltmesi (K-044).** `oos_sharpe`
   kapısı 0,50 → 1,02. Eşik defterdeki çekiliş sayısına bağlı; defter büyürse
   `sq lab coklu-test` yeniden koşturulup `research/kapilar.py`deki sabit güncellenmeli.
+- `docs/Faz-4-Donus-5-Tavan.md` — **tavan testi (K-045).** Maliyet sıfırken bile kapıları
+  geçen strateji yok; maliyet duvarı bağlayıcı kısıt değilmiş. Tek sembollü yönlü arama
+  **kapandı**. Yeni bir strateji/aile/parametre çekilişi yapılmayacak — istisna, ölçüyle
+  gerekçelendirilmiş belirgin biçimde farklı bir bilgi kaynağı.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
 - `docs/Roadmap.md` — Faz 0-8, her fazın somut bitti kriteri.
 - `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,

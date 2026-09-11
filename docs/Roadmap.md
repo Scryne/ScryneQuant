@@ -386,6 +386,19 @@ yalnızca 7'si pozitif. Ayrıntı: `docs/Faz-4-Donus-4-Coklu-Test.md`.
 **Eşik bir sabit değil, defterin fotoğrafı:** 31 çekilişte geçerli, defter büyürse yeniden
 ölçülmeli. `COKLU_TEST_CEKILIS_SAYISI` testle bağlı, sayı değişirse test kırılıyor.
 
+**Faz 4'e dönüş 5 (2026-09-11): tavan testi — arama kapandı (K-045).** "38 çekilişin
+hepsi sinyal tarafındaydı, maliyet tarafına bakılmadı" itirazı test edildi. Maker yürütme
+modeli yazmak yerine **üst sınır** ölçüldü: maliyet sıfır kabul edilip çekilişler yeniden
+koşturuldu.
+
+Sonuç: maliyet sıfırken bile geçen yok. 1h'te en iyi 0,526, 4h'te 0,691; kapı 1,02.
+Maliyeti tamamen silmek Sharpe'a yalnızca +0,24 katıyor. Eski 0,50 kapısına göre de geçen
+yok (kapılar bir konjonksiyon; tek kapı yetmiyor).
+
+**Maliyet duvarı bağlayıcı kısıt değilmiş.** Tek sembollü yönlü strateji araması kapandı;
+maker yürütme çalışması iptal. Funding carry de ölçüldü ve sıkışmış (son 1 yıl %3,40 brüt,
+maliyet sonrası ~%2,8) — önerilmiyor. Ayrıntı: `docs/Faz-4-Donus-5-Tavan.md`.
+
 ### Faz 5: Risk motoru + promotion — ✅ kapandı 2026-09-11
 
 - **İşler:** Position sizing; exposure limiti; günlük zarar limiti; drawdown limiti;
