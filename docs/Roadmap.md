@@ -12,6 +12,11 @@ Durum sütunu session-start hook'u tarafından otomatik okunur — format bozulm
 Bu roadmap `docs/Proje-Fikri.md` §61'in ilk somut hedefi üzerine kuruldu, §60'ın kapsamlı
 tanımı üzerine değil. Fazlar §53'ün Phase 0-8'ini takip eder; farklar `docs/Kararlar.md`de.
 
+**v2 eki (2026-09-12, K-048).** `docs/Proje-Fikri-v2.md` kapsamı genişletti; roadmap
+**numaralandırma değiştirmeden** genişledi: Faz 0-8 olduğu yerde duruyor (kararlar, raporlar
+ve commit'ler onlara referans veriyor), v2'nin işleri Faz 9-16 olarak eklendi. Dokümanın
+kendi faz numaralarıyla eşleme `docs/Denetim-v2.md` §0.4'te.
+
 **Faz geçiş kuralı:** bir faz, bitti kriterinin **tamamı** karşılanmadan kapanmaz. "Neredeyse
 bitti" diye geçilen faz, sonraki fazın üstüne borç bırakır — ve bu projede o borç sessiz
 yanlış sonuç olarak geri döner.
@@ -27,6 +32,19 @@ yanlış sonuç olarak geri döner.
 | 6 | Paper trading + dashboard | 🔄 Devam Ediyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
 | 7 | Execution sandbox (testnet) | ✅ Tamamlandı | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
 | 8 | Kontrollü live | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
+| 9 | Veri platformu v2 (PIT + evren + kimlik) | ⏳ Bekliyor | Delist dahil çoklu sembol indirilmiş; PIT evren tablosu üretiliyor; kimlik kırılması yakalanıyor; `available_time` kesmesi testli |
+| 10 | Çok enstrümanlı araştırma çekirdeği | ⏳ Bekliyor | Tek enstrüman özel hâlde bit düzeyinde aynı; çok enstrümanlı bağımsız referans tutuyor; evren look-ahead testi yeşil |
+| 11 | Doğrulama v2 | ⏳ Bekliyor | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
+| 12 | Araştırma programları (cross-sectional, türev, makro) | ⏳ Bekliyor | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
+| 13 | Haber/olay zekâsı + ML (koşullu) | ⏳ Bekliyor | Açılma koşulu: veri bütçesi kararı + kaynak spike'ı. Açılırsa: LLM kesim tarihi kayıtlı, `leak_riski` uygulanıyor |
+| 14 | Üretim sertleştirme | ⏳ Bekliyor | Süreç dışı kill switch testnet'te kanıtlı; dört gözlem boyutu ayakta; her alarmın runbook'u var; toparlanma tatbikatı yapılmış |
+| 15 | İkinci varlık sınıfı (US equities/ETF) | ⏳ Bekliyor | Açılma koşulu: broker/lisans spike'ı. Açılırsa: aynı kod yolu ikinci varlık sınıfında paper koşuyor |
+| 16 | Sürekli araştırma | ⏳ Bekliyor | Kapanmaz; her tur bir program kaydı ve bir rapor bırakır |
+
+**Faz 8 sıraya değil tetiklenmeye bağlıdır.** Promotion zincirini geçen ilk strateji
+çıktığında başlar — hangi fazda olunursa olunsun. Ön koşulları (süreç dışı kill switch,
+hukuki doğrulama, canlı hesap/KYC, shadow adımı, kademeli sermaye tablosu) Faz 8
+bölümünde.
 
 ---
 
@@ -507,7 +525,7 @@ ATR, p90'ı 6,39 ATR. 2,0 seçmek vakaların yarısında gerçek riskin altında
 
 | Kriter | Sonuç |
 | --- | --- |
-| 30 gün kesintisiz çalışma | 🔄 **koşuyor** — `gozlem-1` başladı 2026-09-11, `ema_kesisim`, zamanlanmış görevle. Tanım gereği duvar saati ister. Kriterin kendisindeki bir boşluk koşu başlamadan kapatıldı: çökme/elektrik kesintisi hiçbir iz bırakmıyordu, artık geriye dönük `temiz_kapanmadi` olarak sayılıyor |
+| 30 gün kesintisiz çalışma | 🔄 **koşuyor** — `gozlem-2` (ilk deneme `gozlem-1` denetim sonrası sıfırlandı, bkz. Faz 6 raporu) başladı 2026-09-11 12:21 UTC, `ema_kesisim`, zamanlanmış görevle; hedef ≈2026-10-11. Tanım gereği duvar saati ister. Kriterin kendisindeki bir boşluk koşu başlamadan kapatıldı: çökme/elektrik kesintisi hiçbir iz bırakmıyordu, artık geriye dönük `temiz_kapanmadi` olarak sayılıyor |
 | Restart sonrası state doğru toparlanıyor | ✅ toparlanma bir geri yükleme değil **yeniden üretim** (K-038); 60 barı kesintisiz işleyen koşu ile 30 barda öldürülüp yeniden başlatılan koşu birebir aynı sonucu veriyor |
 | Veri akışı kesilince yeni pozisyon açılmıyor | ✅ bayat-veri guard'ı (§24, K-037); azaltan niyetler geçiyor |
 | 4 sayfalık dashboard, risk ilk bakışta | ✅ Genel/Strateji/Pozisyon/Günlük; risk şeridi her sayfada aynı yerde ve boşken de görünür |
@@ -647,5 +665,177 @@ live arasındaki gerçek operasyon farkı.
 - **Ön koşul (Faz 0'dan):** Canlı Binance hesabı açılmış, KYC tamamlanmış, spot işlem
   yetkili API anahtarı üretilmiş olmalı. **Spike 1'in kimlik doğrulama kısmı bu gerçek
   anahtarla tekrarlanır** — bugünkü kanıt "yol açık" der, "hesap çalışıyor" demez.
+
+**v2'nin eklediği ön koşullar (2026-09-12):**
+
+1. **Süreç dışı kill switch çalışıyor olmalı** (Denetim-v2 A8). Bugünkü kill switch risk
+   motorunun, yani trader sürecinin içinde; süreç kilitlenirse kill switch de kilitlenir.
+   Paper'da bunun bedeli yok, canlıda var. Faz 14'ün ilk kalemi, ama Faz 8 ondan **önce**
+   tetiklenirse bu tek kalem yine de önce yapılır.
+2. **Shadow adımı** (doküman §3: paper → shadow → micro-live). Canlı modun tamamı, emir
+   gönderimi hariç: gerçek bakiye okunur, emir kurulur, doğrulanır, deftere "gönderilmedi"
+   yazılır. Paper'ın ölçemediğini ölçer — gerçek bakiye, gerçek sembol kuralları,
+   karar→emir gecikmesi.
+3. **Kademeli sermaye tablosu** (K-050/3): her kademe için asgari kesintisiz canlı gün,
+   `|paper − live|` drift üst sınırı, açıklanamayan pozisyon farkı sıfır (K-046) ve elle
+   onay. Kademe atlanamaz; ihlalde sermaye **otomatik** bir kademe iner.
+4. **Venue'nun hukuki statüsü doğrulanmış olmalı** (Denetim-v2 D2): K-015 teknik erişimi
+   ölçtü (451 yok), hukuki erişimi ölçmedi. SPK'nın 2025 düzenlemesi sonrası kullanılan
+   borsanın Türkiye yerleşiğine hizmet statüsü kaynaklı olarak kaydedilir. Proje K-014
+   içinde kaldığı sürece hizmet sağlayıcı değildir; doğrulanan şey venue'nun durumu.
+
 - **Notlar:** Sermaye artırma kararı bu fazın çıktısına bakılarak verilir; fazın içinde
-  değil. Drift beklenenden büyükse sermaye artmaz, Faz 3-4'e geri dönülür.
+  değil, ve artık K-050/3'ün sayısal kuralıyla. Drift beklenenden büyükse sermaye artmaz,
+  Faz 3-4'e (v2'de Faz 10-12'ye) geri dönülür.
+
+---
+
+# v2 — Faz 9-16
+
+Bu bölüm `docs/Proje-Fikri-v2.md` ve `docs/Denetim-v2.md` üzerine kuruldu; kararları K-048…
+K-054. Faz geçiş kuralı aynen geçerli: bir faz, bitti kriterinin **tamamı** karşılanmadan
+kapanmaz.
+
+**Sıra neden bu.** Dokümanın kendi önerisi (§32): *Data/Research Foundation → Cost-aware
+Backtest → Validation Framework → alpha aileleri → Paper → Risk/Execution → Micro-live →
+Multi-asset.* Bizde backtest, paper, risk ve execution zaten kapalı; sıranın v2'ye düşen
+kısmı **veri → çekirdek → doğrulama → araştırma**. Doğrulama araştırmadan **önce** geliyor ve
+bu bilinçli: kapıları sonuçları gördükten sonra tanımlamak, bu projenin her yerde yasakladığı
+şey.
+
+### Faz 9: Veri platformu v2 — PIT, evren, enstrüman kimliği
+
+- **İşler:** Kanonik enstrüman kimliği (geçerlilik aralıklı) ve kimlik kırılması tespiti;
+  çoklu sembol indirici (delist edilenler dahil, `data.binance.vision` arşivinden); PIT evren
+  tablosu (aylık üyelik + likidite kuralı, **kendi barlarımızdan** hesaplanan hacimle);
+  kaynak başına **veri sözleşmesi** (şema, cadence, timestamp semantiği, tamlık, revizyon,
+  lisans) ve katman başına tamlık kontrolü; bar olmayan gözlemler için PIT deposu
+  (`event_time`/`available_time`/`ingested_time`/`effective_from|to`); K-034 ve K-011'in
+  yeniden ölçümü.
+- **Girdi:** Spike 6 (`docs/spikes/06-coklu-sembol-evren.md`) — 659 aday sembol, ≈0,86 GB,
+  ≈8 dk indirme, ölçülmüş hayatta kalma yanlılığı (ayda medyan %18).
+- **Bitti Kriteri:**
+  - Aday evrenin 1h geçmişi indirilmiş (delist edilenler dahil), indirme **idempotent**, her
+    dosyanın SHA-256'sı kayıtlı.
+  - `sq data evren` PIT evren tablosu üretiyor: bir ayın üyeliği yalnızca o aya kadarki
+    veriyle hesaplanıyor. **Testle kanıtlı:** gelecekteki veri bozulduğunda geçmiş üyelik bit
+    düzeyinde değişmiyor.
+  - **Kimlik kırılması yakalanıyor:** `LUNAUSDT` 2022-05 vakası (kapanış 0,00005 → 17 gün
+    boşluk → açılış 1,00) fixture olarak testte, seri iki kimliğe bölünüyor.
+  - Bar olmayan bir gözlem `available_time`e göre kesiliyor; `event_time`e göre kesen bir
+    uygulama testle **reddediliyor**. Gün çözünürlüklü kaynak gün sonuna yuvarlanıyor.
+  - Her veri kaynağının sözleşme dosyası var ve tamlık kontrolü otomatik koşuyor; arşivin
+    `1mo` katmanındaki eksiklik (Spike 6 §4b) bu kontrolle yakalanıyor.
+  - **K-034 yeniden ölçüldü** ve sonuç (geçiş veya kalma) karar günlüğüne yazıldı.
+- **Notlar:** Bu faz strateji içermez ve içermemeli. Veri katmanı yanlışsa üstündeki her ölçüm
+  yanlış olur — ve bu projede yanlış ölçüm, ölçüm yokluğundan tehlikelidir.
+
+### Faz 10: Çok enstrümanlı araştırma çekirdeği
+
+- **İşler:** Evren `ctx`i (t anında üyelik + her enstrümanın kesilmiş görünümü); hedef portföy
+  sözleşmesi; portföy kurma (oynaklık ayarlı boyut, korelasyon ve konsantrasyon limitleri,
+  turnover cezası, nakit bir pozisyondur); çok enstrümanlı backtest motoru; metrik genişlemesi
+  (kapasite/ADV oranı, VaR/CVaR); risk motorunun portföy düzeyi.
+- **Bitti Kriteri:**
+  - **Tek enstrüman özel hâldir:** Faz 3'ün bağımsız referans fixture'ı yeni motorda **bit
+    düzeyinde** aynı sonucu veriyor. (K-052/2 — bu kriter düşerse K-001 düşer.)
+  - **Çok enstrümanlı bağımsız referans:** ≥2 enstrüman, ≥10 işlem içeren senaryonun beklenen
+    P&L'i motordan bağımsız hesaplanıp `tests/fixtures/` altına sabitlenmiş; motorun çıktısı
+    birebir uyuşuyor. Üretici `scryne_quant`ı import etmiyor (K-029).
+  - **Evren look-ahead testi yeşil:** t sonrası fiyat **ve** t sonrası listeleme/delist bilgisi
+    bozulduğunda sonuç bit düzeyinde değişmiyor.
+  - Determinizm: aynı veri + config iki koşuda aynı `sonuc_hash`.
+  - Risk motoru çok enstrümanlı hedef portföyü onaylıyor/reddediyor; bypass testi
+    (`test_risk_bypass.py`) hâlâ yeşil; portföy kurma **izin veren** bir katman değil.
+- **Notlar:** Portföy kurma yöntemi bir **çekiliştir** (K-051/4) — bu fazda yöntem *kurulur*,
+  strateji aranmaz.
+
+### Faz 11: Doğrulama v2
+
+- **İşler:** K-054'ün dört kapısı (`rejim_kararliligi`, `evren_dayanikliligi`,
+  `parametre_perturbasyonu`, `pbo`); PBO'nun CSCV uygulaması; DSR, kapasite ve kalibrasyonun
+  raporlanması; `leak_riski` mutlak engeli; program kaydı ve arama bütçesi komutları
+  (`sq lab program-kaydet`, `sq lab bütçe`).
+- **Bitti Kriteri:**
+  - Dört kapı da hesaplanıyor ve her eşik **gerekçesiyle** sabitlenmiş (K-019 kalıbı: sayı
+    nereden geliyor, hangi ölçüme dayanıyor).
+  - Eşikler bugünkü sonuçlara göre ayarlanmadı: gevşetmeyi yakalayan bir test var
+    (`test_faz4_olcumlerinden_hicbiri_gecmiyor`in kardeşi).
+  - Defterdeki mevcut 38 çekiliş yeni kapılardan da geçirilmiş ve sonuç raporlanmış — geçen
+    olsa da olmasa da.
+  - `leak_riski` taşıyan bir sonuç kapıdan geçemiyor (testle).
+  - **Program kaydı olmadan bir araştırma programı koşturulamıyor** (K-051/2, testle).
+- **Notlar:** Bu fazda strateji aranmaz. Kapıyı, geçecek adayı görmeden tanımlamak K-044'ün
+  dersi.
+
+### Faz 12: Araştırma programları — cross-sectional, türev, makro
+
+- **Ön koşul:** Faz 9-11 kapalı. Her program için K-051'in program kaydı: gerekçe, kaynağın
+  neden belirgin biçimde farklı olduğu (ölçüyle — K-045'in istisnası), azami çekiliş sayısı,
+  durma kuralı, eşik tahmini.
+- **İşler:** (a) **Cross-sectional**: evren içi göreli güç/değer/oynaklık sıralamaları;
+  (b) **Türev**: evren geneli funding/basis — tek sembolde ölçülen mekanizma
+  (`funding_filtre`, K-042) evrende tekrar ediyor mu; (c) **Makro**: ücretsiz PIT kaynakları
+  (ALFRED vintage, ECB) ile rejim/risk-iştahı bağlamı; (d) **Rejim motoru**: filtrelenmiş
+  olasılık, katman başına eğitim, engelleyici kullanım (K-052).
+- **Bitti Kriteri:**
+  - Her program **kendi bütçesi içinde** kapanmış; bütçe aşımı yok.
+  - Her programın sonucu kapılara karşı raporlanmış (`docs/Faz-12-*`), geçen olmasa da.
+  - Defter büyümesi sonrası `sq lab coklu-test` yeniden koşmuş ve `oos_sharpe` eşiği
+    güncellenmiş (K-044); `COKLU_TEST_CEKILIS_SAYISI` testi buna bağlı.
+  - Rejim motoru kullanıldıysa: yumuşatılmış olasılık kullanılmadığı testle kanıtlı.
+- **Notlar:** Bu fazın çıktısı "kârlı strateji" olmayabilir ve bu bir başarısızlık değildir —
+  Faz 4'ün dersi aynen geçerli. Sistemin işi cevabı ölçmek.
+- **FRED API anahtarı** (ücretsiz, kayıt gerektirir) makro programının ön koşulu; Scryne'dan.
+
+### Faz 13: Haber/olay zekâsı + ML — **koşullu**
+
+- **Açılma koşulu (ikisi de gerekli):** (1) veri/altyapı bütçesi kararı (Final-Doküman
+  "Bütçeler" — bugün açık); (2) kaynak spike'ı: geçmişe dönük, **ilk yayın zamanı doğru** ve
+  lisansı kullanıma uygun bir haber arşivi var mı, maliyeti ne. Ücretsiz akışların geçmişi
+  yoktur; ileriye biriktirmek yıllar alır ve bu fazın sorusunu cevaplamaz (Spike 5'in dersi).
+- **İşler (açılırsa):** Kaynak → varlık → olay → yenilik → sürpriz → etki grafiği zinciri
+  (doküman §8); semantic AI **yetkisiz** (K-049/1); predictive ML yalnızca kapılardan sonra;
+  LLM çıktısı dondurulmuş veri kaynağı (K-049/5).
+- **Bitti Kriteri (açılırsa):** LLM eğitim kesim tarihi önceden kayıtlı ve ölçüm penceresi o
+  tarihten sonrası; kesim öncesi türetim `leak_riski` taşıyor ve kapıdan geçemiyor; her LLM
+  çıktısı model kimliği + prompt hash + girdi hash ile dondurulmuş ve backtest yalnızca
+  dondurulmuş dosyayı okuyor; ML modelleri hipotez defterinde çekiliş olarak sayılıyor.
+
+### Faz 14: Üretim sertleştirme
+
+- **İşler:** **Süreç dışı kill switch** (borsadaki açık emirleri iptal eden, trader sürecini
+  sonlandıran, yeniden başlamayı SAFE_MODE'a kilitleyen bağımsız komut — Denetim-v2 A8);
+  izleme dört boyutta (sistem, veri, trading, model) + risk; alarm ve **runbook**; günlük
+  operasyon döngüsü ve gün sonu (UTC 00:00) anlık görüntüsü; yedek ve **geri yükleme
+  tatbikatı** (K-038: geri yükleme değil yeniden üretim); sır yönetimi (okuma/işlem anahtarı
+  ayrımı, çekim yetkisi kapalı, IP allowlist); uzun süreli dayanıklılık (Faz 7'nin açık
+  kalemi); CI.
+- **Bitti Kriteri:**
+  - Kill switch, trader süreci **askıdayken** (yapay olarak dondurulmuş) çalışıyor ve
+    testnet'te kanıtlanmış: açık emirler iptal edilmiş, süreç durmuş, yeniden başlatma
+    SAFE_MODE'da açılmış.
+  - Dört gözlem boyutu dashboard'da görünüyor ve her alarmın bir runbook satırı var.
+  - Toparlanma tatbikatı: koşu dosyası yedekten geri getirilip state **yeniden üretiliyor** ve
+    karşılaştırma temiz.
+  - Anahtar ayrımı ve çekim yetkisinin kapalı olduğu ekran görüntüsü/çıktıyla kayıtlı.
+
+### Faz 15: İkinci varlık sınıfı (US equities / ETF) — **koşullu**
+
+- **Açılma koşulu:** Broker/lisans spike'ı (K-053): Türkiye yerleşiğinin hesap uygunluğu,
+  veri lisansının kapsamı ve maliyeti (ücretsiz plan IEX ile sınırlı — doküman §27), PIT
+  corporate action verisi, gerçek komisyon tarifesi. Veri/altyapı bütçesi kararı.
+- **İşler (açılırsa):** Broker adaptörü (Alpaca veya IBKR); seans/takvim/tatil modeli; tick ve
+  lot kuralları; corporate action bilinçli kanonik seri; varlık sınıfına özel maliyet modeli;
+  cross-asset portföy.
+- **Bitti Kriteri (açılırsa):** Aynı kod yolu (K-001) ikinci varlık sınıfında paper koşuyor;
+  corporate action fixture'ı (split/temettü) testte; seans dışı sinyal üretilmiyor; maliyet
+  modeli o piyasa için ayrıca kalibre edilmiş (K-021 kalıbı).
+
+### Faz 16: Sürekli araştırma
+
+- **Kapanmaz.** Her tur şunu bırakır: bir program kaydı (gerekçe + bütçe), bir ölçüm raporu ve
+  gerekirse bir karar. Piyasa koşulu değişimleri (funding rejimi, komisyon yapısı, yeni veri
+  kaynağı) bu turların tetikleyicisidir.
+- **Kural:** Tur açmak K-051'e tabidir. "Sadece bakıyorum" diye koşturulan bir strateji de bir
+  çekiliştir.

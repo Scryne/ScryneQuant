@@ -1,32 +1,54 @@
 ---
 proje: ScryneQuant
 created: 2026-09-08
+guncellendi: 2026-09-12
+surum: 2
 type: final-dokuman
 status: aktif
 ---
-# ScryneQuant — Final Doküman
+# ScryneQuant — Final Doküman (v2)
 
-> Bu dosya **bağlayıcı** olandır. `docs/Proje-Fikri.md` ile çeliştiği her yerde bu dosya
-> geçerlidir. Kararların gerekçeleri `docs/Kararlar.md`'de, denetim bulguları
-> `docs/Denetim.md`'de.
+> Bu dosya **bağlayıcı** olandır. `docs/Proje-Fikri.md` (v1) ve `docs/Proje-Fikri-v2.md`
+> ile çeliştiği her yerde bu dosya geçerlidir. Kararların gerekçeleri `docs/Kararlar.md`'de,
+> denetim bulguları `docs/Denetim.md` (v1) ve `docs/Denetim-v2.md`'de.
+>
+> **v2 (2026-09-12, K-048):** kapsam genişledi, çekirdek değişmedi. v1'in bütün kararları,
+> testleri ve değişmez kuralları yürürlükte. Aşağıda "v1" diye işaretli olan her şey
+> **kapanmış ve ölçülmüş** iştir, geçersiz kılınmış değil.
 
 ## Özet
 
-ScryneQuant, kripto spot piyasasında trading hipotezlerini veri üzerinde araştırmak,
-deterministik biçimde backtest etmek, risk kurallarıyla sınırlandırmak, paper trading ile
-doğrulamak ve ancak yapısal kapılardan geçtikten sonra kontrollü biçimde otomatik uygulamak
-için geliştirilen, tek kişilik ve tek hesaplık bir quant araştırma ve execution
-platformudur. Ürünün asıl çıktısı bir strateji değil, **bir stratejiye güvenilip
-güvenilemeyeceğini ölçen altyapıdır.**
+ScryneQuant, birden fazla bilgi kaynağından (fiyat, türev, makro, olay) beslenen trading
+hipotezlerini veri üzerinde araştıran, deterministik biçimde backtest eden, arama sayısını
+sayarak düzelten, risk kurallarıyla sınırlandıran, paper trading ile doğrulayan ve ancak
+yapısal kapılardan geçtikten sonra kontrollü biçimde otomatik uygulayan, tek kişilik ve tek
+hesaplık bir **quant araştırma ve execution platformudur.**
 
-## v1'in tanımı (§61'den)
+Ürünün asıl çıktısı bir strateji değil, **bir stratejiye güvenilip güvenilemeyeceğini ölçen
+altyapıdır.** Bu cümle v1'den beri aynı ve v2 onu değiştirmiyor — genişlettiği şey, güvenin
+ölçüleceği bilgi kaynaklarının sayısı ve enstrüman evreninin genişliği.
+
+## v1 neydi, ne oldu
 
 > BTC/USDT spot verisini güvenilir biçimde toplayabilen, birkaç rule-based stratejiyi
 > deterministik olarak backtest edebilen, işlem maliyeti ve slippage hesaplayabilen, risk
 > kurallarını uygulayabilen ve aynı stratejileri gerçek zamanlı veri üzerinde paper trading
 > ile çalıştırabilen bir platformun ilk üretilebilir sürümü.
 
-Live trading bunun **ardından** gelir ve promotion kapılarından (K-010) geçmek zorundadır.
+**Kuruldu ve ölçtü.** Faz 0-5 ve 7 kapandı, Faz 6'nın 30 günlük koşusu sürüyor. Ölçtüğü
+sonuç olumsuz ve bu bir başarısızlık değil: 38 hipotez denendi, hiçbiri promotion kapılarını
+geçmedi; en iyi sonuç şans beklentisinin altında çıktı (K-044); maliyet sıfır kabul edilse
+bile geçen olmadı (K-045). Tek sembollü yönlü arama bu ölçümle kapandı.
+
+**v2 tam olarak buradan başlıyor:** altyapı çalışıyor ve "burada bir şey yok" diyebiliyor.
+Eksik olan şey altyapı değil, **bakılan yerin darlığı**.
+
+## v2'nin tanımı
+
+Çok enstrümanlı (önce kripto evreni), çok bilgi kaynaklı (fiyat + türev + makro + olay),
+point-in-time doğru, portföy kuran, arama sayısını fiyatlayan ve ikinci bir varlık sınıfına
+açılabilir bir araştırma + execution platformu. Live trading yine **ardından** gelir ve
+promotion kapılarından (K-010, K-019, K-054) geçmek zorundadır.
 
 ---
 
@@ -34,171 +56,225 @@ Live trading bunun **ardından** gelir ve promotion kapılarından (K-010) geçm
 
 | Katman | Seçim | Gerekçe |
 | --- | --- | --- |
-| Dil | Python 3.12 | Araştırma ekosistemi (pandas, numpy) ve exchange kütüphaneleri burada |
-| Veri işleme | pandas, numpy, pyarrow | Standart; ayrıca Parquet için pyarrow zaten gerekli |
-| Tarihsel veri | **Parquet dosyaları + DuckDB** | K-011 — sunucu süreci yok, hash'lenebilir, sürümlenebilir |
-| Operasyonel state | **SQLite (WAL)**; PostgreSQL Faz 7'ye ertelendi | K-034 — tek yazıcı, çok okuyucu. Ayakta tutulacak ikinci bir servis, 30 günlük kesintisizlik ölçümünün paydası olurdu |
-| Backtest | **Kendi event-driven motorumuz** | K-001 — backtest = paper = live, tek kod yolu |
-| Exchange | **CCXT** + Binance spot adapter | Adapter arkasında; borsa değiştirilebilir kalsın |
-| Doğrulama | **Pydantic v2** | Signal / config / veri sözleşmelerinde tip garantisi |
-| Zamanlama | **APScheduler** (tek proses) | Celery/Redis/Temporal v1'de yok — K-011 |
-| API | **FastAPI** (Faz 6+), trader sürecinin **içinde**, salt-okunur | Yazma ucu yok: risk limitleri koşu kimliğinin parçası (K-009), SAFE_MODE çıkışı elle onay ister (K-008/4) |
-| Frontend | **Vite + React + TypeScript + Tailwind** (Faz 6+) | K-012, K-036 — SSR'ın getirisi yok (tek kullanıcı, localhost, canlı veri); statik build'i FastAPI servis ediyor, yani tek süreç |
-| Grafik | **lightweight-charts** | Mum ve equity curve'ün ikisini de yapar; tek kütüphane |
-| Log | **structlog** (JSON) + SQLite audit tablosu (zincir hash'li) | Prometheus/Grafana/Sentry v1'de yok. Şema `migrations/001_faz5.sql` ile hizalı (K-034) |
+| Dil | Python 3.12 | Araştırma ekosistemi ve exchange kütüphaneleri burada |
+| Veri işleme | pandas, numpy, pyarrow | Standart; Parquet için pyarrow zaten gerekli. **Polars alınmadı**: ölçülmüş bir darboğaz yok |
+| Tarihsel veri | **Parquet + DuckDB** | K-011. Spike 6 çok sembolde yeniden ölçtü: toplam ≈0,86 GB, en büyük dosya 2 MB — düzen değişmiyor |
+| Operasyonel state | **SQLite (WAL)** | K-034. Çok sembollü çalışma 3. geri dönüş koşulunu tetikliyor → **Faz 9'da yeniden ölçülecek**, otomatik geçiş yok (K-052/6) |
+| Backtest | **Kendi event-driven motorumuz** | K-001 — backtest = paper = live, tek kod yolu. Çok enstrümanlı motor ikinci motor değil, genişlemesidir (K-052/2) |
+| Exchange | **CCXT** + Binance spot adapter | Adapter arkasında; venue değiştirilebilir kalsın (doküman §23) |
+| Doğrulama | **Pydantic v2** | Sinyal / config / veri sözleşmelerinde tip garantisi |
+| Zamanlama | **APScheduler** (tek proses) | Celery/Redis/Temporal yok — K-011 |
+| API | **FastAPI**, trader sürecinin içinde, **salt-okunur** | Yazma ucu yok (K-036, K-043); kill switch süreç dışından gelir (Faz 14) |
+| Frontend | **Vite + React + TypeScript + Tailwind** | K-012, K-036 |
+| Grafik | **lightweight-charts** | Mum ve equity curve |
+| Log | **structlog** (JSON) + SQLite audit (zincir hash'li) | Prometheus/Grafana/Sentry yok; izleme Faz 14'te ölçülmüş ihtiyaca göre |
 | Test | **pytest** | Determinizm ve look-ahead testleri birinci sınıf |
-| Paket yönetimi | **uv** + `uv.lock` | Kilitli sürümler; K-009'un ortam kaydının kaynağı |
+| Paket yönetimi | **uv** + `uv.lock` | K-022 — K-009'un ortam kaydının kaynağı |
 | Lint/format | **ruff** | `docs/` ve `research/` hariç |
-| Notebook | Jupyter (yalnızca araştırma) | Notebook'tan production koduna içe aktarma yok, tersi var |
+| ML (Faz 13+, koşullu) | scikit-learn + gradient boosting | K-049. **PyTorch yok**; derin öğrenmenin bu veri ölçeğinde gerekçesi ölçülmedi |
 
-**v1'de bilerek yok:** VectorBT, TimescaleDB, Redis, Celery, Temporal, Docker, Prometheus,
-Grafana, Sentry, Kubernetes, ML/LLM katmanı. Gerekçeler: K-001, K-011, K-013.
+**Koşullu olanlar (K-034 kalıbı — koşul gerçekleşince karar *yeniden verilir*, otomatik
+kabul edilmez):** PostgreSQL, Redis, object storage, message bus, Docker, CI.
+
+**Bilerek yok:** VectorBT (K-001), TimescaleDB, Kubernetes, mikroservis mimarisi (K-052/1),
+ayrı feature store (K-001'in tek kod yolu online/offline parity'yi zaten veriyor).
 
 ---
 
 ## Mimari
 
-Veri akışı, Proje-Fikri §2.2'deki hattı korur:
+Doküman v2 §6'nın akışı, v1'in hattının genişletilmiş hâli:
 
 ```
-Market Data → Ingestion/Validation → Historical Store → Feature Engine
-           → Strategy (Signal Intent) → Risk Engine (Approved Intent)
-           → Portfolio/OMS → Execution → Exchange Adapter
+Kaynaklar → Ingestion/Doğrulama → Kanonik Veri (PIT) → Feature/Evren
+        → Rejim → Strateji (Sinyal Niyeti) → Portföy Kurma
+        → Risk Motoru (Onaylı Niyet) → OMS → Execution → Venue
+        → Fill/PnL → Post-trade → Araştırma geri beslemesi
 ```
 
-**Modüler monolith** (§32 kabul edildi). Tek Python paketi, içeride sert modül sınırları:
+**Modüler monolith** (K-052/1). Doküman §19'un bileşenleri paketlere şöyle eşleniyor:
+
+| Doküman bileşeni (§19) | Paket |
+| --- | --- |
+| Data Gateway | `exchange/`, `data/indirici.py` |
+| Normalizer | `data/semalar.py`, `data/dogrulama.py`, (Faz 9: `instruments/`) |
+| Feature Service | `features/` — online/offline parity K-001'den gelir |
+| Research Engine | `research/` |
+| Model Registry | (Faz 13, koşullu) |
+| Signal Engine | `strategy/` |
+| Portfolio Engine | `portfolio/` (Faz 10'da portföy kurma buraya) |
+| Risk Engine | `risk/` |
+| Execution Engine | `execution/`, `oms/` |
+| Monitoring | `live/api.py` + `apps/web/` (Faz 14'te genişler) |
+| Control Plane | `cli/`, `config/` |
+| Audit Store | `risk/audit.py` |
 
 ```
 scryne-quant/
 ├── src/scryne_quant/
-│   ├── common/        # tipler, zaman (K-005), config, hash yardımcıları
-│   ├── data/          # indirme, doğrulama, kalite bayrakları (K-006), Parquet deposu
-│   ├── features/      # indikatörler, feature engine
-│   ├── strategy/      # Strategy ABC, ctx sözleşmesi (K-002), stratejiler
-│   ├── backtest/      # event loop, fill modeli (K-004), maliyet modeli (K-007), metrikler
-│   ├── risk/          # limitler, sizing, kill switch (K-008)
-│   ├── portfolio/     # pozisyon ve exposure state
-│   ├── oms/           # emir state machine, idempotency
-│   ├── execution/     # execution engine + exchange adapter arayüzü
-│   ├── exchange/      # CCXT/Binance adapter (strategy buraya erişemez — K-003)
-│   ├── research/      # deney kaydı, promotion kapıları (K-010)
-│   ├── live/          # canlı akış, paper/gözlem döngüsü, toparlanma, API (Faz 6)
-│   └── cli/           # Faz 1-5'in tek arayüzü (K-012)
-├── apps/web/          # dashboard SPA (Faz 6, K-036)
-├── research/          # notebooks, experiments, datasets (git'e girmez)
+│   ├── common/      # tipler, zaman (K-005), config, hash
+│   ├── data/        # indirme, doğrulama, kalite (K-006), Parquet deposu, PIT gözlem (Faz 9)
+│   ├── features/    # indikatörler, feature engine
+│   ├── strategy/    # Strategy ABC, ctx (K-002), stratejiler
+│   ├── backtest/    # event loop, fill (K-004), maliyet (K-007), metrikler
+│   ├── risk/        # limitler, sizing, kill switch (K-008), promotion
+│   ├── portfolio/   # pozisyon/exposure state; portföy kurma (Faz 10)
+│   ├── oms/         # emir state machine, idempotency, mutabakat
+│   ├── execution/   # execution engine + adapter arayüzü
+│   ├── exchange/    # CCXT/Binance (strateji buraya erişemez — K-003)
+│   ├── research/    # deney kaydı, kapılar, çoklu test, hipotez defteri
+│   ├── live/        # canlı akış, paper/gözlem, toparlanma, API
+│   └── cli/         # tek arayüz (K-012)
+├── apps/web/        # dashboard SPA (K-036)
+├── research/        # notebooks, spikes (git'e girmez)
 ├── tests/
 └── docs/
 ```
 
 ### Değişmez mimari kurallar
 
-Bunlar tercih değil, testle zorlanan kısıtlardır:
+Tercih değil, testle zorlanan kısıtlar. 1-6 v1'den, 7-10 v2'nin eklediği:
 
 1. **Strateji I/O yapamaz.** `strategy/` paketi `exchange/`, `execution/`, ağ veya dosya
-   sistemine erişemez. Import grafiği testle taranır. (K-003)
-2. **Strateji geleceği göremez.** `ctx` yalnızca t anına kadar keser; t sonrası veri
-   bozulduğunda sonuç değişmemelidir. (K-002)
-3. **Sinyal risk motorunu atlayamaz.** Execution'a giden tek yol Risk Engine'in
-   onayladığı intent'tir. Strateji "emir" değil "niyet" üretir. (§9.1, §10)
-4. **Zaman UTC'dir.** Bar timestamp'i açılış zamanıdır. (K-005)
+   sistemine erişemez. İmport grafiği testle taranır. (K-003, K-027)
+2. **Strateji geleceği göremez.** `ctx` yalnızca t anına kadar keser. (K-002)
+3. **Sinyal risk motorunu atlayamaz.** Execution'a giden tek yol onaylanmış niyettir. (K-032)
+4. **Zaman UTC'dir; bar timestamp'i açılış zamanıdır.** (K-005)
 5. **Fill bir sonraki barın açılışındadır.** (K-004)
-6. **Aynı girdi aynı çıktıyı verir.** Aynı veri + config + seed = bit düzeyinde aynı sonuç.
+6. **Aynı girdi aynı çıktıyı verir.** (K-009)
+7. **Evren de geleceği göremez.** `ctx` t anında yalnızca o an listelenmiş ve evren kuralını
+   t'ye kadarki veriyle sağlayan enstrümanları gösterir. (K-052/3, Spike 6)
+8. **Enstrüman kimliği ticker değildir.** Kanonik kimlik geçerlilik aralığı taşır; kimlik
+   kırılması işaretlenir. (K-052/4)
+9. **Bar olmayan gözlemde kesme `available_time`e göredir**, `event_time`e göre değil;
+   bilinmiyorsa gün sonuna yuvarlanır. (K-052/5)
+10. **Otomasyon asimetriktir:** riski azaltan otomatik, izni artıran kapı + elle onay.
+    (K-050)
 
 ### Strateji sözleşmesi
 
 ```
-Strategy.on_bar(ctx) -> Signal | None
+Strategy.on_bar(ctx) -> Signal | None            # tek enstrüman (v1)
+Strategy.on_bar(ctx) -> HedefPortfoy | None      # evren (Faz 10)
 ```
 
-`ctx`: t anına kadar kesilmiş salt-okunur görünüm + pozisyon durumu + parametreler.
-`Signal`: `{symbol, side, target_exposure, confidence, reason, timestamp}` — emir değil
-niyet (§10). Exchange'e giden yol yoktur.
+`ctx`: t anına kadar kesilmiş salt-okunur görünüm + evren üyeliği + pozisyon durumu +
+parametreler. Çıktı bir **emir değil niyettir**; exchange'e giden yol yoktur. Tek enstrüman,
+evren sözleşmesinin özel hâlidir (K-052/2).
 
 ---
 
-## Kapsam (v1)
+## Kapsam (v2)
 
-**Var:**
-- Kripto **spot**, tek borsa (Binance), başlangıçta tek sembol (BTC/USDT)
-- **Veri kaynağı Faz 4'e dönüş 3'te genişledi (K-042):** BTC/USDT perpetual'ın
-  **funding rate** geçmişi bir *özellik* olarak kullanılıyor. İşlem hâlâ yalnızca spot
-  ve tek sembol; funding bir maliyet değil bilgi kaynağıdır. Diğer türev veri uçları
-  (open interest, long/short oranı) Binance'te ~31 gün saklandığı için kullanılamıyor
-  (Spike 5).
-- Tarihsel veri indirme, doğrulama, kalite raporu
-- İndikatör/feature motoru
-- Rule-based strateji ailesi: SMA/EMA crossover, RSI mean reversion, breakout, momentum
-- Deterministik event-driven backtest; fee + slippage modeli
-- Performans metrikleri, equity curve, trade listesi
-- Walk-forward ve out-of-sample doğrulama
-- Deney kaydı ve reproducibility (K-009)
-- Risk motoru: sizing, exposure limiti, günlük zarar limiti, drawdown limiti, kill switch
-- Promotion kapıları (K-010)
-- Paper trading (gerçek zamanlı veri, simüle emir) + **gözlem modu** (K-035: promotion
-  geçmemiş strateji canlı veride koşabilir ama promotion kanıtı üretemez)
-- 4 sayfalık dashboard (K-012)
-- Audit log
+**Var (kapalı ve ölçülmüş — v1):** kripto spot tek sembol veri temeli, indikatör/feature
+motoru, 6 rule-based strateji + funding aileleri, deterministik backtest, maliyet modeli,
+walk-forward/OOS, deney kaydı, risk motoru + 8 limit + kill switch, promotion kapıları,
+çoklu test düzeltmesi, hipotez defteri, paper/gözlem koşusu, 4 sayfalık dashboard, audit,
+testnet execution + emir/pozisyon mutabakatı, limit emri ve iptal.
 
-**Yok (v1 dışı):** HFT, kaldıraç, futures, opsiyon, borsalar arası arbitraj, market making,
-çoklu borsa, ML/LLM, copy trading, müşteri hesabı, saklama, kamuya açık servis.
+**Var (v2'de açılıyor, roadmap sırasıyla):**
 
-**Mutlak yasak (hukuki):** başkasının parası, sinyal satışı/paylaşımı, ücretli erişim.
-(K-014)
+- Çoklu sembol kripto evreni, hayatta kalma yanlılığı olmadan (Spike 6, K-053)
+- Kanonik enstrüman kimliği + PIT gözlem modeli + veri sözleşmeleri (Faz 9)
+- Çok enstrümanlı motor + portföy kurma (Faz 10)
+- Dört yeni doğrulama kapısı + PBO/DSR/kapasite metrikleri (Faz 11, K-054)
+- Araştırma programları: cross-sectional, evren geneli türev, makro (Faz 12, K-051)
+- Rejim motoru — filtrelenmiş, engelleyici, çekiliş sayılır (Faz 12, K-052)
+- Haber/olay zekâsı ve ML — **koşullu**, bütçe ve kaynak spike'ına bağlı (Faz 13, K-049)
+- Üretim sertleştirme: bağımsız kill switch, izleme, runbook, dayanıklılık (Faz 14)
+- İkinci varlık sınıfı: US equities/ETF, spike'tan sonra (Faz 15, K-053)
+
+**Yok (v2 dışı, gerekçesi K-048'de):** HFT, market making, mikro yapı alfası, **kaldıraç ve
+kısa pozisyon**, perpetual ile işlem (bilgi kaynağı olarak kalır), opsiyon, BIST, alternatif
+veri, çoklu kripto venue, mikroservisler, ML'de derin öğrenme.
+
+**Mutlak yasak (hukuki, K-014):** başkasının parası, sinyal satışı/paylaşımı, copy trading,
+ücretli erişim, kamuya açık servis.
 
 ---
 
-## Riskler ve Doğrulamalar
+## Araştırma programları ve arama bütçesi
 
-| Risk | Savunma | Nerede |
+v2'nin merkezinde bir aritmetik var: **her yeni hipotez promotion kapısını yükseltiyor**
+(K-044: 31 çekilişte `oos_sharpe` sınırı 1,02). Bu yüzden yeni bilgi kaynakları serbestçe
+denenmiyor; **program** olarak açılıyor (K-051):
+
+1. Program kaydı deftere yazılır: gerekçe + kaynağın neden belirgin biçimde farklı olduğu
+   (ölçüyle) + **azami çekiliş sayısı** + durma kuralı.
+2. Bütçe dahil edildiğinde eşiğin nereye çıkacağının tahmini kaydedilir (kapı değil, uyarı).
+3. Program biter, `sq lab coklu-test` yeniden koşar, gerçek eşik ölçülür.
+4. Bütçe aşılmaz; aşmak yeni bir program kaydı ve yeni bir gerekçe ister.
+
+Hipotez kimliği: (strateji, timeframe, veri hash'i, ızgara, seçim yöntemi, **evren tanımı**,
+**portföy yöntemi**, **rejim tanımı**).
+
+---
+
+## Doğrulama kapıları
+
+**Yürürlükte (K-019, gevşetilmez):** `oos_sharpe` ≥ 1,02 (K-044), `oos_is_orani` ≥ 0,50,
+`wf_katman_basari` ≥ 0,60, `parametre_kararliligi` ≤ 0,35, `asgari_islem` ≥ 30,
+`max_drawdown` ≤ 0,25, `stres_dayanikliligi` ≤ 0,15.
+
+**Ekleniyor (K-054, eşikleri Faz 11'de kalibre edilecek):** `rejim_kararliligi`,
+`evren_dayanikliligi`, `parametre_perturbasyonu`, `pbo`.
+
+**Mutlak engeller:** `dirty` (K-009), `data_quality_warning` (K-006),
+`gecici_maliyet_modeli` (K-021), **`leak_riski`** (K-049).
+
+**Ölçülemeyen kapı geçilmiş sayılmaz.**
+
+---
+
+## Riskler ve doğrulamalar
+
+| Risk (doküman §28) | Savunma | Nerede |
 | --- | --- | --- |
-| Look-ahead bias | ctx sözleşmesi + bozulmuş-gelecek testi | K-002, Faz 2 |
-| Overfitting | Walk-forward, OOS, promotion kapıları | K-010, Faz 4 |
-| Gerçekçi olmayan fill | t+1 açılış + aleyhte slippage | K-004, K-007 |
-| Veri boşluğu | Kalite bayrakları + backtest engeli | K-006 |
-| Reproduce edilemezlik | Commit + hash + seed kaydı, dirty engeli | K-009 |
-| Duplicate order | Idempotency key + emir state machine | Faz 7 |
-| State desync | Reconciliation + halt | Faz 7 |
-| Risk motoru bypass | Import grafiği testi | K-003 |
-| Sabırsızlık / erken live | Promotion kapıları, kaldırılamaz elle onay | K-010 |
-| Saat kayması | UTC-only + clock drift kontrolü | K-005 |
-| Regülasyon | Kendi hesabı / kendi parası kuralı | K-014 |
+| Look-ahead bias | `ctx` sözleşmesi + bozulmuş-gelecek testi | K-002, Faz 2 |
+| …evren üzerinden | PIT evren üyeliği + listeleme bozma testi | K-052/3, Faz 9-10 |
+| …LLM eğitim verisi üzerinden | Kesim tarihi kuralı + `leak_riski` engeli | K-049/4 |
+| Backtest overfit | Walk-forward, OOS, kapılar, PBO | K-010, K-019, K-054 |
+| Data snooping | Hipotez defteri, ön kayıt, ölçülmüş düzeltme, arama bütçesi | K-039, K-044, K-051 |
+| Survivorship bias | Delist dahil evren; ölçülen büyüklük: ayda medyan %18 | Spike 6, K-052/3 |
+| Corporate action / kimlik | Kanonik kimlik + kırılma tespiti (LUNAUSDT vakası) | K-052/4, Faz 9 |
+| Maliyetin hafife alınması | Kalibre slippage + stres senaryoları + tavan testi | K-007, K-021, K-045 |
+| Regime shift | Rejim motoru + bozulma izleme | Faz 12, Faz 14 |
+| Execution failure | Emir state machine + mutabakat + halt | K-040, K-041, K-046 |
+| Model drift | Drift izleme + yeniden eğitim kapıları | Faz 13-14 (ML açılırsa) |
+| Operasyonel kesinti | Kill switch + devre kesiciler + toparlanma | K-008, K-038, Faz 14 |
+| API anahtarı sızıntısı | Sır ayrımı, en az yetki, çekim kapalı, IP allowlist | Faz 14, Faz 8 ön koşulu |
+| Sabırsızlık / erken live | Promotion kapıları + kaldırılamaz elle onay + kademeli sermaye | K-010, K-050 |
+| Regülasyon | Kendi hesabı / kendi parası + venue statüsü doğrulaması | K-014, Faz 8 ön koşulu |
 
-**Faz 0'da doğrulandı (2026-09-08).** Dört spike da kapandı; raporlar `docs/spikes/`
-altında, gerekçeler `docs/Kararlar.md`'de:
+---
 
-| Bilinmeyen | Sonuç |
-| --- | --- |
-| Binance erişimi ve testnet (K-015) | Coğrafi engel yok; rate limit darboğaz değil; testnet ayakta |
-| Fee/slippage (K-016) | `fee_taker_bps = 10.0` ölçüldü; slippage Faz 1'e devredildi (K-021) |
-| Veri hacmi ve birincil timeframe (K-017) | **1h** — 5 yıl = 1,66 MB, 1000 parametrelik tarama 25 sn |
-| Saklama (K-011) | Parquet+zstd + DuckDB doğrulandı; parquet yazımı bit düzeyinde deterministik |
+## Bütçeler (doküman §27) — **açık**
 
-**Faz 0'ın stack'e getirdiği düzeltmeler:**
+Üç bütçe ayrı tutulur ve trading sermayesi diğer ikisini görünmez biçimde karşılamaz:
 
-- **CCXT yerinde kalıyor**, iki ayarla: `load_markets()` önbelleğe alınır (3,2 s sürüyor,
-  4.619 marketin tamamını çekiyor) ve kapanmışlık kontrolü `open_time + timeframe` üzerinden
-  bizde hesaplanır. *Faz 1 düzeltmesi (K-023):* tarihsel barlar `fetch_ohlcv` ile değil,
-  ccxt'nin ham `publicGetKlines` ucuyla çekiliyor — `fetch_ohlcv` `quote_volume` ve `trades`
-  alanlarını düşürüyor, ikisi de `BAR_SEMASI`'nda zorunlu.
-- **Kapanmamış bar depoya yazılmaz.** REST her zaman devam eden barı son eleman olarak
-  döndürüyor ve o bar çağrılar arasında değişiyor — atılmazsa Faz 1'in idempotency
-  kriteri sağlanamaz.
-- **Veri seti hash'i = Parquet dosyasının SHA-256'sı** (K-009 için ayrı bir mekanizma
-  gerekmiyor).
-- **Bağımlılıklar `uv` + `uv.lock` ile kilitli** — K-009'un istediği kütüphane sürümü
-  kaydının tek doğruluk kaynağı.
+| Bütçe | Durum | Neyi belirler |
+| --- | --- | --- |
+| Araştırma | **açık** | Zaman; program sayısı |
+| Veri / altyapı | **açık** | Faz 13 (haber arşivi) ve Faz 15 (US equity verisi) açılabilir mi |
+| Risk sermayesi | **açık** | Faz 8'in ilk kademesinin büyüklüğü (K-050/3) |
+
+Bu sayılar yalnızca Scryne'dan gelebilir. Gelene kadar Faz 13 ve 15 **açılmaz**; Faz 8 ise
+zaten promotion'u geçen bir strateji bekliyor.
 
 ---
 
 ## Başarı ölçütü
 
-Bu proje **net PnL ile ölçülmez.** v1 başarılı sayılır eğer:
+Bu proje **net PnL ile ölçülmez.** v2 başarılı sayılır eğer:
 
 1. Bir hipotez fikirden ölçülmüş sonuca kadar tek bir komutla götürülebiliyorsa,
 2. Aynı backtest altı ay sonra bit düzeyinde yeniden üretilebiliyorsa,
 3. Bir strateji promotion kapılarını elle müdahale olmadan geçemiyorsa,
 4. Paper trading 30 gün kesintisiz çalışıp restart sonrası state'i doğru toparlıyorsa,
-5. Ve **kötü stratejilerin çoğu bu sistem tarafından eleniyorsa.**
+5. Bir araştırma programı **kaç çekiliş yaptığını ve bunun eşiğe ne yaptığını** baştan
+   biliyorsa,
+6. Ve **kötü stratejilerin çoğu bu sistem tarafından eleniyorsa.**
 
-Beşincisi asıl olandır. Bir quant altyapısının değeri kazandırdığı işlemlerde değil,
-**yaptırmadığı işlemlerde** ölçülür.
+Altıncısı asıl olandır. Bir quant altyapısının değeri kazandırdığı işlemlerde değil,
+**yaptırmadığı işlemlerde** ölçülür. v1 bunu 38 hipotezde yaptı; v2'nin işi aynı şeyi daha
+geniş bir evrende, daha fazla bilgi kaynağıyla ve sayacı bozmadan yapmak.

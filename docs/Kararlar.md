@@ -2328,3 +2328,250 @@ alınan varlıktan kesiliyor.
   olacağı için orada da doğal olarak doğmayabilir.
 - **Uzun süre açık kalan emir.** Ölçümdeki emir saniyeler içinde iptal edildi; günlerce
   açık kalan bir emrin davranışı (borsa tarafında süre aşımı, sunucu bakımı) ölçülmedi.
+
+---
+
+## K-048 — Vizyon v2: kapsam genişliyor, v1 çekirdeği duruyor
+
+**Durum:** kabul · **Tarih:** 2026-09-12 · **Kaynak:** `docs/Proje-Fikri-v2.md` ·
+**Denetim:** `docs/Denetim-v2.md` · **Tadil eder:** Final-Doküman "Kapsam (v1)" ·
+**İlgili:** K-008, K-013, K-014, K-045
+
+**Karar.** Projenin hedefi *"kripto spot, tek sembol araştırma ve execution platformu"*ndan
+*"multi-asset autonomous trading research & execution platform"*a genişler. Genişleme
+**kümülatiftir**: v1'in kararları, testleri ve değişmez kuralları yürürlükte kalır. Hiçbir
+karar "eski sürüm" gerekçesiyle kaldırılmaz; değişen bir kararın yerine yenisi yazılır.
+
+**Kapsama giren (aşamalı, roadmap sırasıyla):** çok enstrümanlı araştırma çekirdeği; yeni
+bilgi kaynakları (cross-sectional, türev, makro, olay takvimi, haber); portföy kurma; rejim
+motoru; yetkisi sınırlı ML/LLM (K-049); üretim sertleştirme; ikinci varlık sınıfı (K-053).
+
+**Kapsama girmeyen, gerekçesiyle:**
+
+| Dışarıda | Gerekçe |
+| --- | --- |
+| HFT, market making, alfa olarak mikro yapı | Doküman da ilk hedef saymıyor (§4); altyapı ve maliyet başka bir iş. Mikro yapı yalnızca execution kalitesi için |
+| **Kaldıraç, kısa pozisyon, perpetual ile işlem** | K-008'in tüm gerekçesi *"spot'ta likidasyon yok, pozisyonu tutmak güvenli"*. Likidasyon varken tutmak güvenli değil. Perpetual **bilgi kaynağı** olarak kalır (K-042), işlem aracı olmaz — açılması likidasyon-bilinçli yeni bir kill switch kararı ister |
+| Opsiyon | Vol yüzeyi verisi ücretli; risk modeli ayrı bir iş |
+| Borsa İstanbul | Doküman da *"canlı erişim uygunluğu doğrulanınca"* diyor |
+| Alternatif veri | Doküman da *"yalnızca kanıtlanırsa"* diyor |
+| Başkasının parası, sinyal paylaşımı, ücretli erişim | K-014 — hukuki sınır, tartışmaya açık değil |
+
+**Neden şimdi ve neden bu bir yeniden başlatma değil.** K-045 tek sembollü yönlü aramayı
+kapatırken tek bir kapı bırakmıştı: *"ölçüyle gerekçelendirilmiş, belirgin biçimde farklı bir
+bilgi kaynağı."* Yeni dokümanın getirdiği şey tam olarak bu — fiyat geçmişinin dışında dört
+kaynak. Ama "belirgin biçimde farklı" iddiası program başına ölçülür, peşinen kabul edilmez
+(K-051).
+
+Denetim-v2'nin ölçtüğü şey de bunu destekliyor: dokümanın MVP tanımındaki 12 maddenin 9'u
+zaten karşılanmış, üç alpha ailesi zaten test edilmiş ve üçü de kalmış. Yani değişen temel
+değil, **kapsam**.
+
+**Dokümanın Faz 0'ı (kavramların anlaşılması) alınmıyor:** K-018 o fazı kaldırdı ve zorunlu
+sonucunu yazdı — hiçbir güvenlik kontrolü operatörün piyasa bilgisine dayanamaz. K-018
+yürürlükte.
+
+---
+
+## K-049 — AI/ML yetki sınırları; LLM'in eğitim verisi bir look-ahead kaynağıdır
+
+**Durum:** kabul · **Tarih:** 2026-09-12 · **Değiştirir:** K-013 · **İlgili:** K-002, K-009,
+K-039, K-044, K-051 · **Kaynak:** Proje-Fikri-v2 §8, §11; Denetim-v2 A2, B5
+
+**Karar — beş madde:**
+
+1. **Yetki tablosu bağlayıcıdır.** Semantic AI (haber/olay/varlık çıkarımı) **yetkisizdir**,
+   yapılandırılmış kanıt üretir. Predictive ML yalnızca doğrulama kapılarından sonra üretim
+   yetkisi alır. Research AI (hipotez üretimi, kod iskeleti, deney analizi) **yetkisizdir**.
+   LLM açıklaması yalnızca audit metnidir ve hiçbir karara girmez.
+2. **ML bir strateji gibi kapılardan geçer ve ayrıcalığı yoktur.** Her model ailesi, özellik
+   kümesi ve hiperparametre seçimi **birer çekiliştir** (K-039, K-051). "Model denedim,
+   tutmadı, başkasını denedim" zinciri tam olarak K-039'un saydığı şeydir.
+3. **Sıra değişmez:** önce ekonomik hipotez, sonra özellik, sonra model. Kural tabanlı aileler
+   yeni bilgi kaynaklarında ölçülmeden ML programı açılmaz.
+4. **LLM'in eğitim verisi geçmiş için gelecektir.** 2023 haberini okuyan 2026 modeli o
+   haberden sonra ne olduğunu biliyor; bu sızıntı **veride değil ağırlıklarda** olduğu için
+   K-002'nin look-ahead testi onu yakalayamaz — kodda tek satır kural çiğnenmez. Kural:
+   - Geçmişe dönük LLM türetimi yalnızca modelin **eğitim kesim tarihinden sonraki** dönem
+     için kanıt sayılır.
+   - Kesim öncesi dönem için üretilmiş türetim `leak_riski` bayrağı taşır ve bu bayrak
+     promotion'un **mutlak engelidir** (`dirty`, `data_quality_warning`,
+     `gecici_maliyet_modeli` ile aynı sınıf).
+   - Bu yüzden LLM kullanan bir program, kullanacağı modelin kesim tarihini **önceden**
+     kaydeder; ölçülebilir pencere o tarihten sonrasıdır.
+5. **LLM çıktısı bir hesaplama değil, bir veri kaynağıdır.** Backtest içinde canlı LLM
+   çağrısı **yasak**: çıktı sürüme ve örneklemeye bağlı olduğu için K-009'un *"aynı girdi aynı
+   çıktı"* kuralını sağlamaz. Çıktı bir kez üretilir; ham değişmez bölgeye model kimliği,
+   prompt hash'i, girdi hash'i ve üretim zamanıyla yazılır; backtest **dondurulmuş dosyayı**
+   okur ve veri seti hash'i o dosyanın SHA-256'sıdır.
+
+**K-013 neden değişiyor.** K-013'ün gerekçesi *"ML overfitting yüzeyini büyütür; önce sağlam
+bir araştırma disiplini"* idi ve doğruydu. O disiplin kuruldu **ve fiyatlandı**: K-044 her
+çekilişin kapıyı yükselttiğini ölçtü. ML artık bedava bir deneme değil, sayacı büyüten ve
+kendi duvarını yükselten bir program. K-013 kaldırılmıyor; **ödeme planına bağlanıyor.**
+
+---
+
+## K-050 — Otomasyon asimetriktir: riski azaltan otomatik, izni artıran kapı + onay
+
+**Durum:** kabul · **Tarih:** 2026-09-12 · **İlgili:** K-008, K-010, K-018, K-037, K-046 ·
+**Kaynak:** Proje-Fikri-v2 §1 ile §3/§21'in gerilimi; Denetim-v2 A1, B6
+
+**Karar:**
+
+1. **Riski azaltan her eylem otomatik olabilir ve olmalıdır:** sinyali reddetmek, SAFE_MODE'a
+   geçmek, maruziyeti küçültmek, koşuyu durdurmak, uyuşmazlıkta halt etmek.
+2. **İzni artıran hiçbir eylem otomatik olamaz:** canlıya alma, sermaye artırma, limit
+   gevşetme, yeni enstrüman/venue açma, kapı eşiği değiştirme. Sırası değişmez: **sayısal
+   kapı → elle onay.** K-010'un son adımı yerinde kalır.
+3. **Kademeli sermaye sayısal bir kuraldır**, insan yargısı değil (K-018). Biçimi şimdi
+   sabitleniyor, sayıları Faz 8'in ilk koşusunda kalibre edilecek. Bir kademe şunları ister:
+   (a) asgari kesintisiz canlı gün, (b) o kademede ölçülmüş `|paper − live|` drift üst sınırı,
+   (c) açıklanamayan pozisyon farkı **sıfır** (K-046), (d) elle onay. Kademe atlanamaz.
+   İhlalde sermaye bir kademe **otomatik iner** — 1. madde gereği, çünkü inmek riski azaltır.
+
+**"Autonomous" sözcüğünün anlamı burada sabitleniyor:** operasyon otonomdur, **yetki
+değildir.** Bu yeni bir ilke değil; K-037'nin *"engelleyen katman risk motorunun dışında
+olabilir, izin veren olamaz"* kuralının yetki düzeyine taşınmış hâli.
+
+---
+
+## K-051 — Defter tektir; her araştırma programı ön kayıtlı arama bütçesiyle açılır
+
+**Durum:** kabul · **Tarih:** 2026-09-12 · **Tamamlar:** K-039, K-042, K-044, K-045 ·
+**Kaynak:** Denetim-v2 A3, B4
+
+**Sorun.** v2 dört yeni bilgi kaynağı ve "continuous research" istiyor. K-044 ise ölçtü: 31
+çekilişte %5'lik `oos_sharpe` sınırı 1,02 — ve **her yeni çekiliş bu sınırı yükseltiyor.**
+Bir araştırma programı, bulduğu şeyi geçiremeyeceği bir duvarı kendisi örebilir ve bunu
+ancak sonunda öğrenir.
+
+**Karar:**
+
+1. **Defter tek ve globaldir.** Varlık sınıfı, veri kaynağı veya program başına ikinci bir
+   defter açılmaz. Gerekçe basit: seçim en sonunda hepsinin arasından yapılıyor. Defteri
+   bölmek, seçimi yapan kişi için sayacı sıfırlamaktır.
+2. **Program kaydı ön koşuldur.** Bir araştırma programı açılırken deftere yazılır: gerekçe;
+   bilgi kaynağının **neden belirgin biçimde farklı olduğu** (K-045'in istisna şartı, iddiayla
+   değil ölçüyle); planlanan **azami çekiliş sayısı** (arama bütçesi); ve durma kuralı (K-042
+   kalıbı). Bütçe aşılamaz — aşmak yeni bir program kaydı ve yeni bir gerekçe ister.
+3. **Duvar önceden tahmin edilir.** Program başlamadan, bütçe dahil edildiğinde eşiğin nereye
+   çıkacağının mertebe tahmini (DSR / Bonferroni) kaydedilir. Bu tahmin **kapı değildir**;
+   kapı bitiminde `sq lab coklu-test` ile ölçülür (K-044). Amacı, programın kendi dikeceği
+   duvarı baştan görmesi.
+4. **Hipotez kimliği genişler.** K-039'un beşlisine üç alan ekleniyor: **evren tanımı**,
+   **portföy kurma yöntemi**, **rejim tanımı**. Üçü de "aynı veriye yeni bir soru sormanın"
+   biçimleri; kimliğin dışında kalırlarsa bedava çekiliş olurlar — Faz 4'e dönüş 2'de seçim
+   yöntemi için yaşanan düzeltmenin aynısı.
+
+**Bu karar büyümeyi yasaklamıyor; fiyatını önceden görünür kılıyor.**
+
+---
+
+## K-052 — Tek kod yolu çok enstrümana genişler; monolit korunur; servisler ölçüme bağlı
+
+**Durum:** kabul · **Tarih:** 2026-09-12 · **Tamamlar:** K-001, K-002, K-003, K-005, K-007,
+K-011, K-027, K-032, K-034, K-037 · **Kaynak:** Proje-Fikri-v2 §6, §7.2, §9, §18, §19, §29;
+Denetim-v2 A4-A7, B1-B3; Spike 6
+
+**Karar — altı madde:**
+
+1. **Modüler monolit korunur.** Dokümanın §29 servis düzeni alınmıyor. Bu projenin güvenlik
+   garantileri **import sınırlarında statik olarak kanıtlanıyor** (K-003 izolasyon, K-027 izin
+   listesi, K-032 kesme noktası). Servislere bölmek bu kanıtı ağ protokolüne taşır ve
+   kanıtlanabilir olmaktan çıkarır. §19'un bileşen tablosu mevcut paketlere eşleniyor (tablo:
+   Final-Doküman).
+2. **Çok enstrümanlı motor ikinci bir motor değildir** (K-001). Tek enstrüman onun **özel
+   hâlidir**; Faz 3'ün bağımsız referans testleri o özel hâlde **bit düzeyinde** aynı sonucu
+   vermek zorundadır. Aksi hâlde `backtest = paper = live` iddiası ikiye bölünür ve K-001'in
+   bütün gerekçesi düşer.
+3. **Evren üyeliği point-in-time bir zaman serisidir.** `ctx` t anında yalnızca o an
+   listelenmiş ve evren kuralını **yalnızca t'ye kadarki veriyle** sağlayan enstrümanları
+   gösterir. Bugünkü listeden kurulan bir evren, Spike 6'nın ölçtüğü gibi her ayın likit
+   isimlerinin medyan %18'ini — sonradan başarısız olanları — atar. Evren seçimi stratejinin
+   içinde yapılamaz (K-003); `ctx`e hazır gelir.
+4. **Enstrüman kimliği ticker değildir.** Kanonik kimlik geçerlilik aralığı taşır. Uzun bir
+   boşluk + imkânsız bir fiyat oranı **kimlik kırılması şüphesi** olarak işaretlenir. Ölçülmüş
+   vaka: `LUNAUSDT` 73 ay kesintisiz görünüyor, ama 2022-05-13 kapanışı 0,00005 ve 17 gün
+   sonraki açılış 1,00 — aynı ticker altında iki farklı varlık, 20.000 katlık sahte bir getiri
+   (Spike 6 §4a).
+5. **PIT gözlem modeli.** Bar olmayan her gözlem `event_time`, `available_time`,
+   `ingested_time`, `effective_from/to` ve revizyon geçmişi taşır. **`ctx` `available_time`e
+   göre keser** — `event_time`e göre kesmek, açıklanmamış veriyi kullanmaktır. Available_time
+   yalnızca gün çözünürlüğünde biliniyorsa **gün sonuna** (UTC 23:59:59.999) yuvarlanır:
+   K-007'nin *"belirsizlikte aleyhte"* ilkesinin zaman eksenindeki karşılığı.
+6. **Servisler koşulludur.** PostgreSQL, Redis, object storage, message bus, Docker: K-034'ün
+   kalıbı geçerli. Çok sembollü çalışma K-034'ün 3. koşulunu **gerçekleştiriyor** — ama bir
+   koşulun gerçekleşmesi kararın *yeniden verilmesi* demektir, otomatik kabul değil. Ölçüm Faz
+   9'da, gerçek yazma deseni belli olduğunda yapılır. K-011'in dosya düzeni Spike 6'da ölçüldü
+   ve **değişmiyor**: toplam ≈0,86 GB, en büyük dosya 2 MB (eşik 500 MB).
+
+**Rejim motorunun bağlayıcı kısıtları** (tasarımı Faz 12, kuralı bugün):
+
+- Yalnızca **filtrelenmiş** (t'ye kadarki veriyle hesaplanan) olasılık kullanılır.
+  Yumuşatılmış (smoothed) rejim etiketi tüm serinin ışığında üretilir ve backtest'i kusursuz
+  gösterir — bu bir look-ahead'dir.
+- Rejim modeli walk-forward'ın her katmanında **yalnızca eğitim penceresinde** kurulur.
+- Rejim **engelleyici** olabilir ("stres rejiminde yeni giriş yok"), **izin verici** olamaz
+  (K-037).
+- Rejim tanımı bir çekiliştir (K-051/4).
+
+---
+
+## K-053 — İlk genişleme kripto içinde; ikinci varlık sınıfı ölçülmeden açılmaz
+
+**Durum:** kabul · **Tarih:** 2026-09-12 · **Kaynak:** Spike 6
+(`docs/spikes/06-coklu-sembol-evren.md`) · **İlgili:** K-015, K-042, K-048
+
+**Karar.** v2'nin ilk araştırma programları **Binance kripto** üzerinde kurulur: çoklu sembol
+(cross-sectional), türev (evren geneli funding/basis), makro (ücretsiz PIT kaynakları).
+İkinci varlık sınıfı (US equities/ETF; broker olarak Alpaca veya IBKR) **kendi spike'ından
+sonra** açılır — ölçülecekler: Türkiye yerleşiğinin hesap uygunluğu, veri lisansının kapsamı
+ve maliyeti, PIT corporate action verisi, gerçek komisyon tarifesi.
+
+**Gerekçe dokümanın kendi ölçütü.** §5 diyor ki: ilk piyasa *"en kolay olduğu için değil,
+araştırma/uygulama maliyetleri ve veri kalitesi proje sermayesine uygun olduğu için"*
+seçilmeli. Kriptoda bu ölçüldü:
+
+- Veri maliyeti **sıfır** ve kapsam ölçüldü: 659 aday sembol, hayatta kalma yanlılığı olmadan,
+  ≈0,86 GB, ≈8 dakikada indirilebilir (Spike 6).
+- Altyapının tamamı bu venue'ye karşı çalışıyor ve ölçüldü: indirici, doğrulama, backtest,
+  risk motoru, execution, mutabakat, testnet'te 100/100 emir.
+- US equities tarafında ücretsiz veri planı IEX ile sınırlı (doküman §27), hesap uygunluğu ve
+  lisans kapsamı **doğrulanmadı** (Denetim-v2 D3).
+
+**Bu bir "kripto daha iyi piyasa" kararı değil, bir sıra kararı:** ölçülmüş yoldan başlanıyor,
+ölçülmemiş olan spike'a bırakılıyor. Dokümanın §5 tablosu US equities'i "birincil aday"
+diyor ve sıra tersine çevrilebilir — ama ancak spike'ın sayıları geldikten sonra, araştırma
+sonuçları görüldükten sonra değil.
+
+---
+
+## K-054 — Doğrulama kapıları v2: dört yeni kapı, eşikleri açık
+
+**Durum:** kabul (eşikler **açık**) · **Tarih:** 2026-09-12 · **Tamamlar:** K-019, K-044 ·
+**Kaynak:** Proje-Fikri-v2 §15.1, §16; Denetim-v2 §0.2
+
+**Karar.** K-019'un yedi kapısı yürürlükte ve **gevşetilmiyor**. Dokümanın 12 kapılık
+listesiyle karşılaştırıldığında dördü eksik; ekleniyor. Eşikleri **açık** ve ilgili ölçüm
+yapılmadan sayı yazılmıyor — K-019'un kendi kalıbı (*"eşikler Faz 4 sonunda gerçek veriyle
+kalibre edilir"*).
+
+| Yeni kapı | Ne ölçer | Nerede kalibre edilir |
+| --- | --- | --- |
+| `rejim_kararliligi` | Performansın rejimler arası dağılımı; tek bir boğa/ayı dönemine bağımlılık | Faz 11 (rejim tanımı Faz 12) |
+| `evren_dayanikliligi` | Sonuç kaç enstrümana bağlı; en iyi k enstrüman çıkarıldığında geriye ne kalıyor | Faz 11 |
+| `parametre_perturbasyonu` | Komşu parametrede performans çöküyor mu (§15.1/6). Mevcut `parametre_kararliligi` **başka bir şey** ölçüyor: katmanlar arası seçim değişkenliği | Faz 11 |
+| `pbo` | Backtest overfitting olasılığı (CSCV) | Faz 11 |
+
+**Mutlak engel listesine `leak_riski` ekleniyor** (K-049/4): eğitim kesimi öncesi dönem için
+üretilmiş LLM türetimi taşıyan hiçbir sonuç kapıdan geçemez.
+
+**Raporlanan ama kapı olmayan metrikler genişliyor** (§16): VaR/CVaR, kapasite (ADV oranı),
+olasılık kalibrasyonu, Deflated Sharpe. Kapı olmamalarının sebebi K-019'unkiyle aynı: eşiği
+ölçülmemiş bir sayı kapı değildir.
+
+**"Ölçülemeyen kapı geçilmiş sayılmaz"** yeni kapılar için de geçerli ve bir sonucu var:
+`evren_dayanikliligi` tek bir sembolde **ölçülemez** — aynı kuralların evrenin geri kalanına
+uygulanmasıyla ölçülür. Yani tek sembolde geliştirilen bir strateji de artık evrene karşı
+sınanmak zorunda. Bu bilinçli: K-045 tek sembollü yönlü aramayı zaten kapatmıştı.

@@ -19,6 +19,13 @@ Raporlar — **dördü de tamamlandı (2026-09-08):**
 | `03-parquet-duckdb.md` | K-011 ✅ | Parquet+zstd + DuckDB doğrulandı; parquet yazımı bit düzeyinde deterministik → veri seti hash'i = dosya SHA-256 |
 | `04-maliyet-tarifesi.md` | K-016 ✅ | `fee_taker_bps = 10.0`; slippage Faz 1'e devredildi (K-020 → **K-021**) |
 
+**Faz 0'dan sonra ölçülen spike'lar** — aynı kural, farklı faz:
+
+| Dosya | Kapatır | Sonuç |
+| --- | --- | --- |
+| `05-funding-verisi.md` | K-042 ✅ | Dört türev veri ucundan üçü elendi (~31 gün saklama); geriye funding rate kaldı (7,01 yıl, sıfır boşluk) |
+| `06-coklu-sembol-evren.md` | K-053 ✅ | Hayatta kalma yanlılığı olmayan çoklu sembol evreni ücretsiz veriden kurulabiliyor: 659 aday, delist edilen 192'nin 191'inin geçmişi indirilebilir, ≈0,86 GB. Yanlılığın büyüklüğü ölçüldü: ayda medyan %18 |
+
 **Ham ölçüm çıktıları:** `research/spikes/out/` (JSON, gitignore'da — raporlardaki sayılar
 oradan geliyor).
 

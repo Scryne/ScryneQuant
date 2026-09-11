@@ -5,6 +5,11 @@ type: proje-fikri
 status: denetlendi
 ---
 
+> **Not (2026-09-12):** Bu doküman **v1**'dir. 2026-09-12'de gelen ikinci konsept dokümanı
+> (`docs/Proje-Fikri-v2.md`) projenin yürürlükteki vizyonudur ve kapsamı genişletir (K-048);
+> bu dosya tarihsel kayıt olarak durur. Çelişkide sıra: Final-Doküman > Proje-Fikri-v2 >
+> Proje-Fikri.
+>
 > **Not (2026-09-08):** Bu dosya Scryne'ın yazdığı özgün konsept dokümanının tamamıdır,
 > içeriği değiştirilmemiştir. Denetim aşamasında bulunan çelişkiler ve eksikler
 > `docs/Denetim.md` dosyasında; bunların sonucunda verilen nihai kararlar

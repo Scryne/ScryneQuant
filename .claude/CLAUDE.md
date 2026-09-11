@@ -13,8 +13,9 @@ bittiğinde `asama` alanını sırayla güncelle: `fikir` → `denetim` → `fin
 
 ## Dosyalar
 
-- `docs/Proje-Fikri.md` — ilk fikir
-- `docs/Final-Dokuman.md` — nihai kararlar (teknoloji stack, mimari, riskler)
+- `docs/Proje-Fikri.md` — ilk fikir (v1, tarihsel)
+- `docs/Proje-Fikri-v2.md` — **yürürlükteki vizyon** (2026-09-12, multi-asset platform)
+- `docs/Final-Dokuman.md` — nihai kararlar (teknoloji stack, mimari, riskler) — **v2**
 - `docs/Roadmap.md` — fazlı yol haritası; her faz "Durum" sütunuyla takip edilir, hook bunu
   otomatik okur
 - `DESIGN.md` (proje kökünde) — bu projeye özel frontend kimliği (accent palet, tipografi,
@@ -65,30 +66,58 @@ bunlardan birini ihlal ediyorsa görev yanlıştır; kural değil.
 12. **Toparlanma bir geri yükleme değil, yeniden üretimdir.** Diskten okunan durum
     bağımsız bir kaynaktan yeniden üretilip karşılaştırılır; uyuşmazlıkta koşu **durur**,
     tahmin yürütülmez. (K-038)
+13. **Evren de geleceği göremez.** `ctx` t anında yalnızca o an listelenmiş ve evren
+    kuralını t'ye kadarki veriyle sağlayan enstrümanları gösterir; bugünkü listeden kurulan
+    evren hayatta kalma yanlılığıdır (ölçüldü: ayda medyan %18). (K-052, Spike 6)
+14. **Enstrüman kimliği ticker değildir**; kanonik kimlik geçerlilik aralığı taşır ve kimlik
+    kırılması işaretlenir. (K-052)
+15. **Bar olmayan gözlemde kesme `available_time`e göredir**, `event_time`e göre değil;
+    bilinmiyorsa gün sonuna yuvarlanır. (K-052)
+16. **Otomasyon asimetriktir:** riski azaltan otomatik olabilir, izni artıran (canlıya alma,
+    sermaye artırma, limit gevşetme) sayısal kapı + elle onay ister. (K-050)
+17. **AI yetkisi sınırlıdır:** semantic/research AI yetkisiz; predictive ML yalnız kapıdan
+    sonra; LLM çıktısı backtest içinde hesaplanmaz, dondurulmuş veri kaynağıdır; LLM'in
+    eğitim kesimi öncesi dönem için ürettiği türetim `leak_riski` taşır ve kapıdan geçemez.
+    (K-049)
 
 Yeni bir mimari karar verildiğinde `docs/Kararlar.md`'ye K-0XX olarak yazılır ve ilgili
 commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 
 ## Dosya haritası
 
-- `docs/Proje-Fikri.md` — Scryne'ın özgün konsept dokümanı (2627 satır). Tarihsel kayıt;
+- `docs/Proje-Fikri.md` — Scryne'ın özgün konsept dokümanı (2627 satır, v1). Tarihsel kayıt;
   çelişkide Final-Doküman kazanır.
-- `docs/Denetim.md` — fikir dokümanının denetimi: çelişkiler, eksikler, kapsam kesimleri.
+- `docs/Proje-Fikri-v2.md` — **2026-09-12'de gelen ikinci konsept dokümanı** (multi-asset
+  autonomous trading platform). Yürürlükteki vizyon; kapsamı genişletir, v1 çekirdeğini
+  geçersiz kılmaz (K-048).
+- `docs/Denetim-v2.md` — v2'nin denetimi: dokümanın istediğinin ne kadarı zaten var, ne
+  çelişiyor, ne eksik. K-048…K-054'ün kaynağı.
+- `docs/spikes/06-coklu-sembol-evren.md` — **çoklu sembol evreni ölçüldü** (K-053): 659 aday,
+  delist edilenlerin geçmişi indirilebiliyor, hayatta kalma yanlılığı ayda medyan %18,
+  ≈0,86 GB.
+- `docs/Denetim.md` — v1 fikir dokümanının denetimi: çelişkiler, eksikler, kapsam kesimleri.
 - `docs/Kararlar.md` — **karar günlüğü (K-001…).** "Neden böyle" sorusunun tek adresi.
 - `docs/Hipotez-Defteri.jsonl` — **kaç çekiliş yapıldığının kaydı (K-039).** Append-only,
   sürüm kontrolünde. Faz 4'e her dönüşte denenecek hipotez **önce** buraya yazılır
   (`sq lab hipotez-kaydet`); kaydedilmemiş bir hipotez `out_of_sample` aşamasını geçemez.
   Sayı yalnızca kayıt değil, **eşiği belirleyen girdi**: K-044 düzeltmeyi ölçtü, yani
-  her yeni hipotez `oos_sharpe` kapısını yükseltiyor.
+  her yeni hipotez `oos_sharpe` kapısını yükseltiyor. **v2 ile (K-051):** defter tek ve
+  global kalır (program başına ikinci defter yok); her araştırma programı ön kayıtlı bir
+  **arama bütçesiyle** açılır; hipotez kimliğine evren tanımı, portföy yöntemi ve rejim
+  tanımı eklenir.
 - `docs/Faz-4-Donus-4-Coklu-Test.md` — **çoklu test düzeltmesi (K-044).** `oos_sharpe`
   kapısı 0,50 → 1,02. Eşik defterdeki çekiliş sayısına bağlı; defter büyürse
   `sq lab coklu-test` yeniden koşturulup `research/kapilar.py`deki sabit güncellenmeli.
 - `docs/Faz-4-Donus-5-Tavan.md` — **tavan testi (K-045).** Maliyet sıfırken bile kapıları
   geçen strateji yok; maliyet duvarı bağlayıcı kısıt değilmiş. Tek sembollü yönlü arama
   **kapandı**. Yeni bir strateji/aile/parametre çekilişi yapılmayacak — istisna, ölçüyle
-  gerekçelendirilmiş belirgin biçimde farklı bir bilgi kaynağı.
+  gerekçelendirilmiş belirgin biçimde farklı bir bilgi kaynağı. **v2 tam olarak bu
+  istisnayı kullanıyor** (K-048): cross-sectional, evren geneli türev ve makro programları
+  K-051'in program kaydı + arama bütçesiyle açılır, serbest çekilişle değil.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
-- `docs/Roadmap.md` — Faz 0-8, her fazın somut bitti kriteri.
+- `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri. Faz 0-8 v1 (7'si kapalı),
+  Faz 9-16 v2. **Faz 8 sıraya değil tetiklenmeye bağlıdır:** promotion'u geçen ilk strateji
+  çıktığında başlar.
 - `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,
   `docs/Faz-5-Risk-Raporu.md`, `docs/Faz-6-Paper-Raporu.md`,
   `docs/Faz-7-Execution-Raporu.md` — faz sonu ölçüm raporları.

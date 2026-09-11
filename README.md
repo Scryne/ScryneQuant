@@ -1,13 +1,20 @@
 # ScryneQuant
 
-Kripto spot piyasasında trading hipotezlerini veri üzerinde araştıran, deterministik olarak
-backtest eden, risk kurallarıyla sınırlandıran, paper trading ile doğrulayan ve ancak
-yapısal kapılardan geçtikten sonra kontrollü biçimde otomatik uygulayan tek kişilik quant
-araştırma ve execution platformu.
+Birden fazla bilgi kaynağından (fiyat, türev, makro, olay) beslenen trading hipotezlerini
+veri üzerinde araştıran, deterministik olarak backtest eden, arama sayısını sayarak
+düzelten, risk kurallarıyla sınırlandıran, paper trading ile doğrulayan ve ancak yapısal
+kapılardan geçtikten sonra kontrollü biçimde otomatik uygulayan tek kişilik quant araştırma
+ve execution platformu.
 
-**Durum:** Faz 6 (paper trading + dashboard) — altyapı bitti, **30 günlük koşu bekliyor.**
-Faz 0-5 kapandı. Sıradaki: gözlem koşusunu başlatmak, paralelde Faz 4'e dönüp promotion
-kapılarını geçen bir strateji aramak.
+**Durum:** Faz 0-5 ve 7 kapandı; Faz 6'nın 30 günlük gözlem koşusu sürüyor (`gozlem-2`,
+2026-09-11 → ≈2026-10-11). Faz 8 (kontrollü live) promotion'u geçen bir strateji bekliyor —
+38 hipotezin hiçbiri geçmedi (K-044, K-045) ve bu kapının çalıştığının kanıtı.
+
+**2026-09-12 — vizyon v2 (K-048):** kapsam *multi-asset autonomous trading research &
+execution platform*'a genişledi. Çekirdek değişmedi; genişleyen şey bilgi kaynakları ve
+enstrüman evreni. Sıradaki iş **Faz 9**: PIT veri platformu, hayatta kalma yanlılığı olmayan
+çoklu sembol evreni ve kanonik enstrüman kimliği (Spike 6 ölçtü: 659 aday sembol, ≈0,86 GB,
+bugünkü listeden kurulan bir evren her ayın likit isimlerinin medyan %18'ini atıyor).
 
 ## Kurulum ve ilk komutlar
 
@@ -49,8 +56,10 @@ kaç kötü stratejiyi elediğiyle ölçülür.
 
 | Soru | Dosya |
 | --- | --- |
-| Proje ne yapacak? | [`docs/Final-Dokuman.md`](docs/Final-Dokuman.md) — **bağlayıcı** |
-| Neden böyle karar verildi? | [`docs/Kararlar.md`](docs/Kararlar.md) |
+| Proje ne yapacak? | [`docs/Final-Dokuman.md`](docs/Final-Dokuman.md) — **bağlayıcı (v2)** |
+| Neden böyle karar verildi? | [`docs/Kararlar.md`](docs/Kararlar.md) — K-001…K-054 |
+| Yeni vizyon ne? | [`docs/Proje-Fikri-v2.md`](docs/Proje-Fikri-v2.md) · denetimi [`docs/Denetim-v2.md`](docs/Denetim-v2.md) |
+| Çoklu sembol evreni kurulabilir mi? | [`docs/spikes/06-coklu-sembol-evren.md`](docs/spikes/06-coklu-sembol-evren.md) — evet, ölçüldü |
 | Timeframe denendi mi? | [`docs/Faz-4-Donus-1-Timeframe.md`](docs/Faz-4-Donus-1-Timeframe.md) — çürütüldü |
 | Seçim yöntemi denendi mi? | [`docs/Faz-4-Donus-2-Secim.md`](docs/Faz-4-Donus-2-Secim.md) — çürütüldü |
 | Kaç hipotez denendi? | [`docs/Hipotez-Defteri.jsonl`](docs/Hipotez-Defteri.jsonl) — `sq lab hipotezler` |
@@ -69,7 +78,9 @@ Strateji I/O yapamaz · Strateji geleceği göremez · Sinyal risk motorunu atla
 UTC · Fill bir sonraki barın açılışında · Slippage her zaman aleyhte · Aynı girdi aynı
 çıktı · Promotion kapıları kaldırılamaz · Kendi hesabı, kendi parası · Engelleyen katman
 risk motorunun dışında olabilir, izin veren olamaz · Toparlanma bir geri yükleme değil,
-yeniden üretimdir · Kaç hipotez denendiği sayılır.
+yeniden üretimdir · Kaç hipotez denendiği sayılır · **Evren de geleceği göremez** ·
+**Enstrüman kimliği ticker değildir** · **Kesme `available_time`e göredir** · **Otomasyon
+asimetriktir: riski azaltan otomatik, izni artıran kapı + onay** · **AI yetkisi sınırlıdır.**
 
 Gerekçeler: `docs/Kararlar.md`.
 
