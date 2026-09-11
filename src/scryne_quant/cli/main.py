@@ -1918,6 +1918,12 @@ def paper_durdur(
 
     Komut bir bayrak dosyası bırakıp sürecin **kilidi bıraktığını** doğrulayarak bekler;
     kilidin serbest kalması kapanışın gerçekten tamamlandığının tek dış kanıtı.
+
+    **Koşu kapalı kalmaz.** `ScryneQuant-Paper` zamanlanmış görevi onu birkaç dakika
+    içinde yeniden başlatır — ve bu istenen davranış: kodu güncellemek için durdurulan bir
+    koşunun yeni sürümle kendiliğinden geri gelmesi, elle başlatmayı unutma riskini
+    ortadan kaldırıyor. Gerçekten kapalı kalması gerekiyorsa görev de durdurulmalı:
+    `Disable-ScheduledTask -TaskName ScryneQuant-Paper`.
     """
     yol = _paper_yolu(kosu_adi, kok)
     if not yol.exists():
@@ -1955,6 +1961,10 @@ def paper_durdur(
         return
     if durdu:
         typer.secho("koşu düzgün kapandı; kesinti sayılmadı", fg=typer.colors.GREEN)
+        typer.echo(
+            "not: zamanlanmış görev koşuyu birkaç dakika içinde yeniden başlatır. "
+            "Kapalı kalması gerekiyorsa: Disable-ScheduledTask -TaskName ScryneQuant-Paper"
+        )
         return
     typer.secho(
         f"{bekle_s:.0f} s içinde kapanmadı. Bayrak duruyor, süreç bir sonraki yoklamada "

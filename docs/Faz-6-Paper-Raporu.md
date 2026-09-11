@@ -282,8 +282,16 @@ O kural koşunun **ortasındaki** bir kod değişikliğini kesinti saymamak içi
 `KOD_DEGISTI` ile kaydediyor; buradaki durum bir yan değişiklik değil, ölçülen mekanizmanın
 kendisinin düzeltilmesi — ve zaten temiz devretme imkânı da yoktu.
 
-Bundan sonrası için kapı açık: `sq paper durdur gozlem-2 --sebep "..."` planlı bir duruşu
-`durdu` satırıyla kapatıyor, kesinti sayacına dokunmuyor (K-043).
+Bundan sonrası için kapı açık ve **uçtan uca doğrulandı**: `sq paper durdur gozlem-2
+--sebep "..."` çalışan süreci düzgün kapattı, `durdu` satırı sebebiyle birlikte yazıldı,
+kesinti sayacı 0'da kaldı ve zamanlanmış görev koşuyu ~2 dakika içinde geri getirdi
+(`basladi` → `durdu` → `basladi`, kesinti **0**). Aynı testte WAL'ın da gerçekten
+checkpoint'lendiği görüldü: ana dosya 4 KB → 48 KB, `-wal` ve `-shm` kayboldu — `gozlem-1`
+kapanışında olmayan davranış.
+
+**Koşu `durdur` sonrası kapalı kalmaz** ve bu istenen: kodu güncellemek için durdurulan bir
+koşu yeni sürümle kendiliğinden geri gelir. Gerçekten kapalı kalması gerekiyorsa görev de
+durdurulmalı (`Disable-ScheduledTask -TaskName ScryneQuant-Paper`).
 
 ## Sırada ne var
 
