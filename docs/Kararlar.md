@@ -1930,11 +1930,13 @@ Faz 0 kapandığında (2026-09-08) durum:
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5
-K-032/033'ü, Faz 6 K-034…039'u, Faz 7 K-040'ı ekledi.**
+K-032/033'ü, Faz 6 K-034…039'u, Faz 7 K-040/041'i, Faz 4'e dönüşler K-042/043/044'ü
+ekledi.**
 
-**Açık karar kalmadı; iki açık *sayı* var** (aşağıda). Projenin son açık kararı olan **K-019** (promotion kapılarının
-sayısal eşikleri) Faz 4 sonunda gerçek veriyle kalibre edilip kapandı. Bundan sonraki
-kararlar yeni fazların kendi soruları olacak.
+**Açık karar kalmadı; geriye *tek* açık sayı kaldı** (aşağıda) — ve o da ölçülemiyor,
+ertelenmiş değil. Projenin son açık kararı olan **K-019** (promotion kapılarının sayısal
+eşikleri) Faz 4 sonunda gerçek veriyle kalibre edilip kapandı; K-039'un açık düzeltmesi
+K-044 ile ölçülüp kapandı. Bundan sonraki kararlar yeni fazların kendi soruları olacak.
 
 **K-039'un düzeltmesi kapandı (K-044, 2026-09-11).** Ölçüldü: 31 ölçülebilir çekilişte
 %5 yanlış-pozitif sınırı **1,02** (eski eşik 0,50'nin gerçek oranı %26,3). Erteleme
@@ -1948,6 +1950,13 @@ yapıldı.
 drift'in büyüklüğü stratejiye bağlı, ve promotion'a girecek bir strateji henüz yok. Gözlem
 koşusu ölçüm **yönteminin** çalıştığını gösterir, eşiğin sayısını vermez. Eşik, kapıları
 geçen ilk stratejinin paper koşusunda kalibre edilecek.
+
+**Bu sayının açık kalması bir erteleme değil, bir engeldir ve ikisi farklı.** K-039'un
+düzeltmesi ertelenmişti — ölçülebilirdi, ölçülmemişti, ve K-044 onu ölçtü. Drift eşiği ise
+**bugün ölçülemez**: ölçmek için promotion kapılarını geçmiş bir stratejinin gerçek `paper`
+koşusu gerekiyor ve öyle bir strateji yok (K-044 bunu sayıyla da gösterdi — en iyi aday
+şans beklentisinin altında). Bir sayı uydurmak yerine açık bırakmak, bu projede tercih
+değil kural.
 
 ### Faz 0'dan çıkan, karar olmayan ama bağlayıcı gereksinimler
 
