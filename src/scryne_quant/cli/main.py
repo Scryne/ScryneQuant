@@ -10,6 +10,7 @@ sonucu başka bir komuta veya bir teste giremez.
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import json
 import sys
@@ -33,6 +34,8 @@ from scryne_quant.data.kalibrasyon import (
 )
 from scryne_quant.exchange.binance import BinanceAdaptoru
 from scryne_quant.features.barlar import bar_dizileri
+from scryne_quant.live import baslat as baslat_mod
+from scryne_quant.live.depo import KosuDeposu
 from scryne_quant.research import analiz as analiz_mod
 from scryne_quant.research import bolme, tekrar
 from scryne_quant.research import degerlendirme as degerlendirme_mod
@@ -79,6 +82,16 @@ promotion_app = typer.Typer(
     name="promotion", help="Promotion zinciri: aşama takibi ve elle onay. (K-010)"
 )
 app.add_typer(promotion_app)
+paper_app = typer.Typer(
+    name="paper",
+    help="Paper/gözlem koşusu: canlı veri, simüle emir, dashboard. (Faz 6)",
+)
+app.add_typer(paper_app)
+
+#: Koşu dosyalarının varsayılan yeri. Koşu başına **tek** dosya: durum, fill defteri,
+#: koşu günlüğü ve risk audit'i aynı SQLite dosyasında (K-034). Koşuyu yedeklemek tek bir
+#: dosyayı kopyalamak demek.
+VARSAYILAN_PAPER_KOKU = Path("runs/paper")
 
 #: Audit defterinin varsayılan yeri (`.gitignore`'da).
 VARSAYILAN_AUDIT = Path("runs/audit.sqlite")
@@ -1548,6 +1561,239 @@ def _sar(metin: str, genislik: int) -> list[str]:
     if mevcut:
         satirlar.append(mevcut)
     return satirlar
+
+
+# --------------------------------------------------------------------- paper (Faz 6)
+
+
+def _paper_yolu(kosu_adi: str, kok: Path) -> Path:
+    return kok / f"{kosu_adi}.sqlite"
+
+
+@paper_app.command("baslat")
+def paper_baslat(
+    kosu_adi: Annotated[str, typer.Argument(help="Koşunun adı; dosya adı da bu olur.")],
+    strateji_adi: Annotated[
+        str, typer.Option("--strateji", "-s", help="Kütüphanedeki strateji adı.")
+    ] = "sma_kesisim",
+    mod: Annotated[
+        str,
+        typer.Option(
+            "--mod",
+            help="gozlem | paper. `paper` promotion zinciri gerektirir (K-010, K-035).",
+        ),
+    ] = "gozlem",
+    sembol: Annotated[str, typer.Option("--sembol")] = "BTCUSDT",
+    timeframe: Annotated[str, typer.Option("--timeframe", "-t")] = "1h",
+    sermaye: Annotated[float, typer.Option("--sermaye")] = 10_000.0,
+    parametre: Annotated[
+        list[str] | None,
+        typer.Option("--parametre", "-p", help="ad=deger; birden çok kez verilebilir."),
+    ] = None,
+    port: Annotated[int, typer.Option("--port", help="Dashboard portu.")] = 8787,
+    host: Annotated[str, typer.Option("--host")] = "127.0.0.1",
+    web: Annotated[
+        Path | None, typer.Option("--web", help="SPA build dizini (apps/web/dist).")
+    ] = None,
+    kok: Annotated[Path, typer.Option("--kok", help="Koşu dosyalarının dizini.")] = (
+        VARSAYILAN_PAPER_KOKU
+    ),
+    depo: Depo = VARSAYILAN_DEPO,
+    kapasite: Annotated[int, typer.Option("--pencere", help="Kayan pencere bar sayısı.")] = 1000,
+    ag: Annotated[
+        bool, typer.Option("--ag/--ag-yok", help="Borsaya bağlan. Kapalıysa yalnızca kurar.")
+    ] = True,
+) -> None:
+    """Paper/gözlem koşusunu başlatır; kayıt varsa toparlanarak devam eder. (Faz 6)
+
+    Aynı `kosu_adi` ile ikinci kez çalıştırmak **yeni bir koşu açmaz**: kayıtlı durumdan
+    toparlanır. Toparlanma bir geri yükleme değil, yeniden üretimdir (K-038) — portföy
+    fill defterinden, bekleyen karar stratejiden yeniden üretilip kayıtlıyla
+    karşılaştırılır, ayrışma varsa koşu başlamaz.
+
+    Konfigürasyon (strateji, parametreler, risk limitleri, sermaye) koşunun kimliğinin
+    parçası ve **değişmez** (K-009). Farklı bir konfigürasyon istiyorsanız yeni bir koşu
+    adı verin; aynı ada farklı konfigürasyon yazmak hata verir.
+
+    `--mod gozlem` promotion zincirini atlar ama **kanıt üretmez** (K-035): o koşunun
+    günleri `paper` aşamasına sayılmaz.
+    """
+    if mod not in ("gozlem", "paper"):
+        raise typer.BadParameter("mod `gozlem` veya `paper` olmalı (K-035)")
+
+    sinif = coz(strateji_adi)
+    kwargs = _parametreleri_coz(parametre)
+    strateji = sinif(**kwargs)
+
+    model = maliyet_mod.yukle()
+    limitler = limit_mod.yukle()
+    adaptor = BinanceAdaptoru() if ag else None
+
+    kimlik = baslat_mod.kimlik_kur(
+        kosu_adi=kosu_adi,
+        mod=mod,
+        sembol=sembol,
+        timeframe=timeframe,
+        strateji=strateji,
+        maliyet=model,
+        limitler=limitler,
+        baslangic_sermaye=sermaye,
+    )
+    kurulum, uygulama = baslat_mod.kur(
+        kimlik=kimlik,
+        strateji=strateji,
+        maliyet=model,
+        limitler=limitler,
+        kosu_yolu=_paper_yolu(kosu_adi, kok),
+        depo_kok=depo,
+        adaptor=adaptor,
+        promotion_kok=VARSAYILAN_KOSU_KOKU / "promotion",
+        kapasite=kapasite,
+        web_kok=web,
+    )
+
+    t = kurulum.toparlanma
+    typer.echo(f"koşu     : {kosu_adi} ({mod}) {sembol} {timeframe}")
+    typer.echo(f"strateji : {strateji_adi} {kwargs or ''}")
+    typer.echo(
+        "başlangıç: temiz"
+        if t.temiz_baslangic
+        else f"toparlandı: son bar {utc_str(t.son_bar_ms)}, {t.fill_sayisi} fill"
+    )
+    typer.echo(f"pencere  : {t.pencere_bar} bar")
+    if mod == "gozlem":
+        typer.secho(
+            "uyarı    : gözlem modu promotion kanıtı üretmez (K-035)",
+            fg=typer.colors.YELLOW,
+        )
+    if kimlik.dirty:
+        typer.secho("uyarı    : kirli çalışma ağacı — bu koşu promotion'a giremez (K-009)",
+                    fg=typer.colors.YELLOW)
+
+    if not ag:
+        typer.echo("ağ kapalı: koşu kuruldu ama başlatılmadı (--ag ile başlatın)")
+        return
+
+    typer.echo(f"dashboard: http://{host}:{port}")
+    sonuc = asyncio.run(baslat_mod.calistir(kurulum, uygulama, host=host, port=port))
+    ozet = sonuc.get("ozet") or {}
+    typer.echo(
+        f"durdu    : {ozet.get('islenen_bar', 0)} bar işlendi, "
+        f"{ozet.get('sure_gun', 0.0):.2f} gün"
+    )
+
+
+@paper_app.command("durum")
+def paper_durum(
+    kosu_adi: Annotated[str, typer.Argument()],
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Çalışmayan bir koşunun kayıtlı durumunu okur. (Faz 6)
+
+    Koşu ayaktayken dashboard'a bakılır; bu komut süreç kapalıyken "nerede kalmıştık"
+    sorusunun cevabı. Dosyayı yalnızca **okur**, hiçbir şey değiştirmez.
+    """
+    yol = _paper_yolu(kosu_adi, kok)
+    if not yol.exists():
+        raise typer.BadParameter(f"koşu bulunamadı: {yol}")
+
+    with KosuDeposu(yol) as depo:
+        kimlik = depo.kosu_oku()
+        kontrol = depo.kontrol_noktasi_oku()
+        ilk = depo.ilk_olay_ms()
+        govde = {
+            "kosu": None if kimlik is None else kimlik.sozluk(),
+            "kontrol_noktasi": None if kontrol is None else kontrol.sozluk(),
+            "fill_sayisi": depo.fill_sayisi(),
+            "kesinti_sayisi": depo.kesinti_sayisi(),
+            "ilk_olay_ms": ilk,
+            "calisma_gun": None if ilk is None else (simdi_ms() - ilk) / 86_400_000,
+        }
+
+    if json_cikti:
+        _yaz_json(govde)
+        return
+
+    k = govde["kosu"] or {}
+    typer.echo(
+        f"koşu     : {k.get('kosu_adi')} ({k.get('mod')}) "
+        f"{k.get('sembol')} {k.get('timeframe')}"
+    )
+    typer.echo(f"strateji : {(k.get('strateji') or {}).get('ad')}")
+    if govde["calisma_gun"] is not None:
+        typer.echo(f"çalışma  : {govde['calisma_gun']:.2f} gün")
+    typer.echo(f"kesinti  : {govde['kesinti_sayisi']}")
+    typer.echo(f"fill     : {govde['fill_sayisi']}")
+    kn = govde["kontrol_noktasi"]
+    if kn is None:
+        typer.echo("durum    : henüz bar işlenmemiş")
+        return
+    p = kn["portfoy"]
+    typer.echo(f"son bar  : {kn['son_bar_utc']}")
+    typer.echo(f"portföy  : nakit {p['nakit']:.2f} · miktar {p['miktar']:.8f}")
+    if kn["risk"].get("safe_mode"):
+        typer.secho(
+            f"SAFE_MODE: {kn['risk'].get('safe_mode_sebep')} — çıkış `sq risk serbest` (K-008/4)",
+            fg=typer.colors.RED,
+        )
+
+
+@paper_app.command("olaylar")
+def paper_olaylar(
+    kosu_adi: Annotated[str, typer.Argument()],
+    limit: Annotated[int, typer.Option("--limit", "-n")] = 30,
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Koşu günlüğü: başlangıç, toparlanma, bayatlık, kopma, hata, kapanış. (Faz 6)
+
+    *"30 gün kesintisiz (kesinti olduysa sebebi kayıtlı ve giderilmiş)"* kriterinin
+    okunacağı yer burası.
+    """
+    yol = _paper_yolu(kosu_adi, kok)
+    if not yol.exists():
+        raise typer.BadParameter(f"koşu bulunamadı: {yol}")
+
+    with KosuDeposu(yol) as depo:
+        olaylar = depo.olaylar(limit=limit)
+        kesinti = depo.kesinti_sayisi()
+
+    if json_cikti:
+        _yaz_json({"olaylar": olaylar, "kesinti_sayisi": kesinti})
+        return
+
+    for o in olaylar:
+        ayrinti = json.dumps(o["ayrinti"], ensure_ascii=False)
+        typer.echo(f"{o['zaman_utc']}  {o['tur']:<22} {ayrinti}")
+    typer.echo(f"\nkesinti sayısı: {kesinti}")
+
+
+def _parametreleri_coz(ciftler: list[str] | None) -> dict[str, Any]:
+    """`ad=deger` çiftlerini sözlüğe çevirir; sayıları sayıya döndürür.
+
+    Tip çıkarımı bilinçli olarak dar: int, float, bool ve string. Daha fazlası (liste,
+    sözlük) gerekirse o parametre bir konfigürasyon dosyasına aittir — komut satırında
+    JSON ayrıştırmak, yazım hatasının sessizce farklı bir koşu üretmesi demek.
+    """
+    sonuc: dict[str, Any] = {}
+    for cift in ciftler or []:
+        if "=" not in cift:
+            raise typer.BadParameter(f"parametre `ad=deger` biçiminde olmalı: {cift!r}")
+        ad, _, ham = cift.partition("=")
+        sonuc[ad.strip()] = _deger_coz(ham.strip())
+    return sonuc
+
+
+def _deger_coz(ham: str) -> Any:
+    if ham.lower() in ("true", "false"):
+        return ham.lower() == "true"
+    for tip in (int, float):
+        try:
+            return tip(ham)
+        except ValueError:
+            continue
+    return ham
 
 
 @app.command("bilgi")

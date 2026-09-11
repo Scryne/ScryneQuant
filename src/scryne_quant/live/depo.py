@@ -30,12 +30,13 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Iterator
+import threading
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, ClassVar, Final
 
 from scryne_quant.common.zaman import simdi_ms, utc_str
 
@@ -69,6 +70,14 @@ class KosuOlayi(StrEnum):
 
     YENIDEN_BAGLANDI = "yeniden_baglandi"
     """Akış geri geldi ve eksik barlar tamamlandı (resync)."""
+
+    KOD_DEGISTI = "kod_degisti"
+    """Koşu, bir önceki başlatmadan farklı bir commit veya kütüphane kümesiyle devam etti.
+
+    Kesinti değil ama koşunun yeniden üretilebilirlik iddiasını zayıflatan bir olgu ve
+    kaydedilmeden geçilmemeli: 30 günlük bir koşunun ortasında kodun değişmiş olması,
+    "bu sonuç hangi kodla üretildi" sorusunun tek bir cevabı olmadığı anlamına gelir
+    (K-009)."""
 
     HATA = "hata"
     """Beklenmeyen hata. Koşuyu böldüyse kesinti sayılır."""
@@ -185,6 +194,33 @@ class KosuKimligi:
     kutuphaneler: dict[str, Any]
     olusturuldu_ms: int
 
+    #: Koşuyu **tanımlayan** alanlar. Bir koşunun "aynı koşu" olup olmadığı bunlara
+    #: bakılarak söylenir; `commit_sha`, `dirty`, `kutuphaneler` ve `olusturuldu_ms`
+    #: **bu kümede değil** çünkü onlar koşunun değil, o süreç başlatmasının kimliği.
+    #: Hepsini karşılaştırsaydık aynı koşu hiçbir zaman yeniden başlatılamazdı —
+    #: `olusturuldu_ms` her başlatmada farklı.
+    KONFIGURASYON: ClassVar[tuple[str, ...]] = (
+        "kosu_adi",
+        "mod",
+        "sembol",
+        "timeframe",
+        "strateji",
+        "maliyet",
+        "limitler",
+        "limit_kimligi",
+        "baslangic_sermaye",
+    )
+
+    #: Süreç başlatmasının kimliği (K-009). Değişmesi koşuyu durdurmaz ama **kaydedilir**:
+    #: `KosuOlayi.KOD_DEGISTI`.
+    KOKEN: ClassVar[tuple[str, ...]] = ("commit_sha", "dirty", "kutuphaneler")
+
+    def konfigurasyon(self) -> dict[str, Any]:
+        return {ad: getattr(self, ad) for ad in self.KONFIGURASYON}
+
+    def koken(self) -> dict[str, Any]:
+        return {ad: getattr(self, ad) for ad in self.KOKEN}
+
     def sozluk(self) -> dict[str, Any]:
         return {
             "kosu_adi": self.kosu_adi,
@@ -254,16 +290,27 @@ class KosuDeposu:
     güvenmemek bilinçli: DDL'in transaction'ı sessizce commit ettiği ve `BEGIN`in gizli
     kaldığı bir kipte, "portföy ve risk durumu **birlikte** yazıldı mı" sorusunun cevabı
     kütüphane sürümüne bağlı olurdu.
+
+    **İş parçacığı güvenliği açıkça sağlanıyor, topolojiye bırakılmıyor.** SQLite
+    bağlantıları varsayılan olarak yaratıldıkları iş parçacığına bağlı. Trader döngüsü ve
+    API aynı olay döngüsünde çalıştığı sürece bu bir sorun değil — ama "aynı döngüde
+    çalışıyorlar" bir varsayım, ve bu projede varsayıma dayanan güvenlik sınırı
+    olmamalı. `check_same_thread=False` + bir `RLock`, kısıtı kapatmak yerine
+    **taşıyor**: eşzamanlı çağrı hâlâ yok, ama artık hangi iş parçacığından geldiğine
+    bağlı değil. Kilit yeniden girişli çünkü `kosu_yaz` kendi içinde `kosu_oku` çağırıyor.
     """
 
-    __slots__ = ("yol", "_baglanti")
+    __slots__ = ("yol", "_baglanti", "_kilit")
 
     def __init__(self, yol: str | Path = BELLEK) -> None:
         bellekte = str(yol) == BELLEK
         self.yol = Path(str(yol))
         if not bellekte:
             self.yol.parent.mkdir(parents=True, exist_ok=True)
-        self._baglanti = sqlite3.connect(str(yol), isolation_level=None)
+        self._kilit = threading.RLock()
+        self._baglanti = sqlite3.connect(
+            str(yol), isolation_level=None, check_same_thread=False
+        )
         self._baglanti.row_factory = sqlite3.Row
         self._baglanti.execute("PRAGMA foreign_keys=ON")
         if not bellekte:
@@ -279,13 +326,22 @@ class KosuDeposu:
 
     @contextmanager
     def _islem(self) -> Iterator[sqlite3.Connection]:
-        self._baglanti.execute("BEGIN IMMEDIATE")
-        try:
-            yield self._baglanti
-        except BaseException:
-            self._baglanti.execute("ROLLBACK")
-            raise
-        self._baglanti.execute("COMMIT")
+        """Açık transaction. Kilit `BEGIN`den önce alınıyor: iki transaction'ın iç içe
+        geçmesi, ikisinin de yarım commit edilmesi demek olurdu."""
+        with self._kilit:
+            self._baglanti.execute("BEGIN IMMEDIATE")
+            try:
+                yield self._baglanti
+            except BaseException:
+                self._baglanti.execute("ROLLBACK")
+                raise
+            self._baglanti.execute("COMMIT")
+
+    def _sorgu(self, sorgu: str, parametreler: Sequence[Any] = ()) -> list[sqlite3.Row]:
+        """Okuma. Kilit altında ve **tamamen tüketilerek**: tembel bir imleci kilidin
+        dışına çıkarmak, satırları başka bir transaction'ın ortasında okumak olurdu."""
+        with self._kilit:
+            return list(self._baglanti.execute(sorgu, parametreler))
 
     # ------------------------------------------------------------------ koşu
 
@@ -293,11 +349,21 @@ class KosuDeposu:
         """Koşu kimliğini yazar. İkinci kez farklı bir kimlik yazmak hatadır."""
         mevcut = self.kosu_oku()
         if mevcut is not None:
-            if mevcut != kimlik:
+            kayitli, verilen = mevcut.konfigurasyon(), kimlik.konfigurasyon()
+            if kayitli != verilen:
+                farklar = sorted(a for a in kayitli if kayitli[a] != verilen[a])
                 raise DepoHatasi(
-                    "bu depo başka bir koşuya ait: "
-                    f"kayıtlı {mevcut.kosu_adi!r}/{mevcut.mod}, verilen "
-                    f"{kimlik.kosu_adi!r}/{kimlik.mod}. Yeni konfigürasyon yeni koşudur (K-009)"
+                    f"bu depo başka bir koşuya ait; farklı alan(lar): {', '.join(farklar)}. "
+                    "Yeni konfigürasyon yeni koşudur — aynı ada farklı konfigürasyon "
+                    "yazmak, kaydı 'hangi konfigürasyonla üretildi' sorusuna cevapsız "
+                    "bırakırdı (K-009)"
+                )
+            # Konfigürasyon aynı ama kod değişmiş olabilir. Bu koşuyu durdurmaz (durdursa
+            # bir commit atmak 30 günlük ölçümü sıfırlardı) ama sessizce de geçilmez.
+            if mevcut.koken() != kimlik.koken():
+                self.olay_yaz(
+                    KosuOlayi.KOD_DEGISTI,
+                    ayrinti={"onceki": mevcut.koken(), "yeni": kimlik.koken()},
                 )
             return
         with self._islem() as b:
@@ -323,7 +389,8 @@ class KosuDeposu:
             )
 
     def kosu_oku(self) -> KosuKimligi | None:
-        satir = self._baglanti.execute("SELECT * FROM kosu WHERE id = 1").fetchone()
+        satirlar = self._sorgu("SELECT * FROM kosu WHERE id = 1")
+        satir = satirlar[0] if satirlar else None
         if satir is None:
             return None
         return KosuKimligi(
@@ -417,7 +484,8 @@ class KosuDeposu:
             raise DepoHatasi("kontrol noktası yok: bekleyen karar yazılamaz")
 
     def kontrol_noktasi_oku(self) -> KontrolNoktasi | None:
-        satir = self._baglanti.execute("SELECT * FROM durum WHERE id = 1").fetchone()
+        satirlar = self._sorgu("SELECT * FROM durum WHERE id = 1")
+        satir = satirlar[0] if satirlar else None
         if satir is None:
             return None
         bekleyen = satir["bekleyen"]
@@ -439,14 +507,14 @@ class KosuDeposu:
         sorgu = "SELECT * FROM fill ORDER BY id DESC"
         if limit is not None:
             sorgu += f" LIMIT {int(limit)}"
-        kayitlar = [dict(s) for s in self._baglanti.execute(sorgu)]
+        kayitlar = [dict(s) for s in self._sorgu(sorgu)]
         for k in kayitlar:
             k["kisitlayan"] = json.loads(k["kisitlayan"])
             k["zaman_utc"] = utc_str(int(k["zaman_ms"]))
         return kayitlar
 
     def fill_sayisi(self) -> int:
-        return int(self._baglanti.execute("SELECT COUNT(*) AS n FROM fill").fetchone()["n"])
+        return int(self._sorgu("SELECT COUNT(*) AS n FROM fill")[0]["n"])
 
     # ------------------------------------------------------------------ olay
 
@@ -481,7 +549,7 @@ class KosuDeposu:
         if limit is not None:
             sorgu += " LIMIT ?"
             parametreler.append(int(limit))
-        kayitlar = [dict(s) for s in self._baglanti.execute(sorgu, parametreler)]
+        kayitlar = [dict(s) for s in self._sorgu(sorgu, parametreler)]
         for k in kayitlar:
             k["ayrinti"] = json.loads(k["ayrinti"])
             k["zaman_utc"] = utc_str(int(k["zaman_ms"]))
@@ -490,20 +558,21 @@ class KosuDeposu:
     def kesinti_sayisi(self) -> int:
         """Koşuyu **bölen** olayların sayısı. Bayat veri buna dahil değil (§24)."""
         isaretler = ",".join("?" * len(KESINTI_OLAYLARI))
-        satir = self._baglanti.execute(
+        satir = self._sorgu(
             f"SELECT COUNT(*) AS n FROM olay WHERE tur IN ({isaretler})",
             [str(t) for t in sorted(KESINTI_OLAYLARI)],
-        ).fetchone()
+        )[0]
         return int(satir["n"])
 
     def ilk_olay_ms(self) -> int | None:
-        satir = self._baglanti.execute("SELECT MIN(zaman_ms) AS t FROM olay").fetchone()
+        satir = self._sorgu("SELECT MIN(zaman_ms) AS t FROM olay")[0]
         return None if satir["t"] is None else int(satir["t"])
 
     # ------------------------------------------------------------------ ömür
 
     def kapat(self) -> None:
-        self._baglanti.close()
+        with self._kilit:
+            self._baglanti.close()
 
     def __enter__(self) -> KosuDeposu:
         return self

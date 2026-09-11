@@ -4,14 +4,20 @@ version = "0.1.0"
 description = "Bir stratejiye güvenilip güvenilemeyeceğini ölçen quant altyapısı"
 requires-python = "==3.12.*"
 dependencies = [
+    # aiohttp ccxt'nin bagimliligi ama burada acikca yaziliyor: canli akis
+    # (exchange/akis.py) onu dogrudan kullaniyor ve gecisli bir bagimliliga guvenmek,
+    # ccxt bir gun HTTP istemcisini degistirdiginde sessizce kirilmak demek.
+    "aiohttp>=3.14.3",
     "ccxt>=4.5.78",
     "duckdb>=1.5.5",
+    "fastapi>=0.121.0",
     "numpy>=2.5.3",
     "pandas>=3.0.5",
     "pyarrow>=25.0.1",
     "pydantic>=2.12.0",
     "structlog>=25.5.0",
     "typer>=0.20.0",
+    "uvicorn>=0.40.0",
 ]
 
 [project.scripts]
@@ -19,6 +25,9 @@ sq = "scryne_quant.cli.main:main"
 
 [dependency-groups]
 dev = [
+    # FastAPI'nin TestClient'i httpx uzerine kurulu; API testleri icin gerekli,
+    # calisma zamaninda degil.
+    "httpx>=0.28.0",
     "pytest>=9.0.2",
     "ruff>=0.15.4",
 ]

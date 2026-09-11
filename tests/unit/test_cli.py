@@ -272,3 +272,83 @@ class TestBacktest:
     def test_olmayan_veri_hata_verir(self, dolu_depo):
         sonuc = calistir("backtest", "ETHUSDT", "--depo", str(dolu_depo))
         assert sonuc.exit_code != 0
+
+
+class TestPaper:
+    """`sq paper` komutları. (Faz 6, K-034, K-035, K-038)
+
+    Hepsi `--ag-yok` ile: koşuyu kurar ama başlatmaz. Ağa çıkan tek yol `--ag`, ve o yolun
+    testi bir borsa gerektirirdi — kurulum ile koşturmayı ayırmanın sebebi de bu.
+    """
+
+    def kur(self, dolu_depo, kok, *ek: str, ad: str = "t1"):
+        return calistir(
+            "paper", "baslat", ad,
+            "--strateji", "sma_kesisim",
+            "--parametre", "hizli=5",
+            "--parametre", "yavas=20",
+            "--depo", str(dolu_depo),
+            "--kok", str(kok),
+            "--pencere", "200",
+            "--ag-yok",
+            *ek,
+        )
+
+    def test_kurulum_temiz_baslangic(self, dolu_depo, tmp_path):
+        sonuc = self.kur(dolu_depo, tmp_path / "paper")
+        assert sonuc.exit_code == 0, sonuc.stdout
+        assert "temiz" in sonuc.stdout
+        assert (tmp_path / "paper" / "t1.sqlite").exists()
+
+    def test_gozlem_modu_uyarisi_gorunuyor(self, dolu_depo, tmp_path):
+        # K-035: gözlem koşusunun kanıt üretmediği ekranda yazmıyorsa ekran yanıltır.
+        sonuc = self.kur(dolu_depo, tmp_path / "paper")
+        assert "kanıtı üretmez" in sonuc.stdout
+
+    def test_gecersiz_mod_reddediliyor(self, dolu_depo, tmp_path):
+        sonuc = self.kur(dolu_depo, tmp_path / "paper", "--mod", "live")
+        assert sonuc.exit_code != 0
+
+    def test_ayni_ada_farkli_konfigurasyon_hata(self, dolu_depo, tmp_path):
+        # Konfigürasyon koşu kimliğinin parçası ve değişmez (K-009).
+        kok = tmp_path / "paper"
+        assert self.kur(dolu_depo, kok).exit_code == 0
+        ikinci = calistir(
+            "paper", "baslat", "t1",
+            "--strateji", "ema_kesisim",
+            "--depo", str(dolu_depo), "--kok", str(kok), "--ag-yok",
+        )
+        assert ikinci.exit_code != 0
+
+    def test_ayni_konfigurasyon_toparlaniyor(self, dolu_depo, tmp_path):
+        kok = tmp_path / "paper"
+        assert self.kur(dolu_depo, kok).exit_code == 0
+        assert self.kur(dolu_depo, kok).exit_code == 0
+
+    def test_durum_okunuyor(self, dolu_depo, tmp_path):
+        kok = tmp_path / "paper"
+        self.kur(dolu_depo, kok)
+        sonuc = calistir("paper", "durum", "t1", "--kok", str(kok), "--json")
+        assert sonuc.exit_code == 0
+        govde = json.loads(sonuc.stdout)
+        assert govde["kosu"]["mod"] == "gozlem"
+        assert govde["kesinti_sayisi"] == 0
+        assert govde["fill_sayisi"] == 0
+
+    def test_olaylar_kesinti_sayisiyla(self, dolu_depo, tmp_path):
+        kok = tmp_path / "paper"
+        self.kur(dolu_depo, kok)
+        sonuc = calistir("paper", "olaylar", "t1", "--kok", str(kok), "--json")
+        govde = json.loads(sonuc.stdout)
+        assert govde["kesinti_sayisi"] == 0
+        assert any(o["tur"] == "basladi" for o in govde["olaylar"])
+
+    def test_olmayan_kosu_hata(self, tmp_path):
+        assert calistir("paper", "durum", "yok", "--kok", str(tmp_path)).exit_code != 0
+
+    def test_parametre_bicimi_zorlaniyor(self, dolu_depo, tmp_path):
+        sonuc = calistir(
+            "paper", "baslat", "t2", "--parametre", "hizli5",
+            "--depo", str(dolu_depo), "--kok", str(tmp_path), "--ag-yok",
+        )
+        assert sonuc.exit_code != 0

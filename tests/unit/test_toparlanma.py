@@ -219,3 +219,50 @@ def _boz(yol, sorgu: str, deger: str) -> None:
     b.execute(sorgu, (deger,))
     b.commit()
     b.close()
+
+
+class TestKosuKimligi:
+    """Koşunun kimliği ile süreç başlatmasının kimliği ayrı şeyler. (K-009)"""
+
+    def test_konfigurasyon_ayni_olunca_toparlaniyor(self, tmp_path) -> None:
+        # `olusturuldu_ms` her başlatmada farklı; tam eşitlik arasaydık aynı koşu hiçbir
+        # zaman yeniden başlatılamazdı.
+        from dataclasses import replace
+
+        from tests.unit.test_paper_dongu import kimlik as kimlik_kur
+
+        yol = tmp_path / "k.sqlite"
+        ilk = kimlik_kur("gozlem")
+        with KosuDeposu(yol) as d:
+            d.kosu_yaz(ilk)
+        with KosuDeposu(yol) as d:
+            d.kosu_yaz(replace(ilk, olusturuldu_ms=ilk.olusturuldu_ms + 99_999))
+            assert d.kosu_oku().olusturuldu_ms == ilk.olusturuldu_ms
+
+    def test_konfigurasyon_degisince_hata(self, tmp_path) -> None:
+        from dataclasses import replace
+
+        from tests.unit.test_paper_dongu import kimlik as kimlik_kur
+
+        yol = tmp_path / "k.sqlite"
+        ilk = kimlik_kur("gozlem")
+        with KosuDeposu(yol) as d:
+            d.kosu_yaz(ilk)
+        with KosuDeposu(yol) as d, pytest.raises(Exception, match="başka bir koşuya ait"):
+            d.kosu_yaz(replace(ilk, baslangic_sermaye=5_000.0))
+
+    def test_kod_degisirse_kaydediliyor_ama_durdurmuyor(self, tmp_path) -> None:
+        # Bir commit atmak 30 günlük ölçümü sıfırlamamalı; ama sessizce de geçilmemeli.
+        from dataclasses import replace
+
+        from tests.unit.test_paper_dongu import kimlik as kimlik_kur
+
+        yol = tmp_path / "k.sqlite"
+        ilk = kimlik_kur("gozlem")
+        with KosuDeposu(yol) as d:
+            d.kosu_yaz(ilk)
+        with KosuDeposu(yol) as d:
+            d.kosu_yaz(replace(ilk, commit_sha="b" * 40, dirty=True))
+            turler = [o["tur"] for o in d.olaylar()]
+            assert str(KosuOlayi.KOD_DEGISTI) in turler
+            assert d.kesinti_sayisi() == 0  # kesinti değil

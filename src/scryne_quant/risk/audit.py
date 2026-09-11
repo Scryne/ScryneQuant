@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
@@ -173,7 +174,13 @@ class SqliteDefter:
         self.yol = Path(yol) if str(yol) != ":memory:" else Path(":memory:")
         if str(yol) != ":memory:":
             self.yol.parent.mkdir(parents=True, exist_ok=True)
-        self._baglanti = sqlite3.connect(str(yol), isolation_level=None)
+        # `check_same_thread=False` + kilit: Faz 6'da bu defter dashboard'un `/api/audit`
+        # ucundan da okunuyor ve "okuyan ile yazan aynı iş parçacığında" bir varsayım.
+        # Kısıt kapatılmıyor, kilide taşınıyor (`live/depo.py`deki aynı gerekçe, K-034).
+        self._kilit = threading.RLock()
+        self._baglanti = sqlite3.connect(
+            str(yol), isolation_level=None, check_same_thread=False
+        )
         self._baglanti.row_factory = sqlite3.Row
         # WAL: Faz 6'da okuyan bir dashboard ile yazan bir süreç aynı dosyaya bakacak.
         # Şimdi açmak, o gün şaşırmamak için.
@@ -184,6 +191,10 @@ class SqliteDefter:
     # ------------------------------------------------------------------ yazma
 
     def yaz(self, olay: Olay) -> str:
+        with self._kilit:
+            return self._yaz(olay)
+
+    def _yaz(self, olay: Olay) -> str:
         onceki = self._son_hash()
         satir_hash = olay.icerik_hash(onceki)
         self._baglanti.execute(
@@ -220,14 +231,18 @@ class SqliteDefter:
         if limit is not None:
             sorgu += " LIMIT ?"
             parametreler.append(limit)
-        return [self._satir(s) for s in self._baglanti.execute(sorgu, parametreler)]
+        with self._kilit:
+            return [self._satir(s) for s in self._baglanti.execute(sorgu, parametreler)]
 
     def sayim(self) -> dict[str, int]:
         """Olay türüne göre sayım. Rapora ve `sq risk durum`a gidiyor."""
-        return {
-            str(s["tur"]): int(s["n"])
-            for s in self._baglanti.execute("SELECT tur, COUNT(*) AS n FROM audit GROUP BY tur")
-        }
+        with self._kilit:
+            return {
+                str(s["tur"]): int(s["n"])
+                for s in self._baglanti.execute(
+                    "SELECT tur, COUNT(*) AS n FROM audit GROUP BY tur"
+                )
+            }
 
     @staticmethod
     def _satir(s: sqlite3.Row) -> dict[str, Any]:
@@ -242,7 +257,9 @@ class SqliteDefter:
     def dogrula(self) -> bool:
         """Zinciri baştan yeniden hesaplar ve kayıtlı hash'lerle karşılaştırır."""
         onceki = KOK_HASH
-        for satir in self._baglanti.execute("SELECT * FROM audit ORDER BY id"):
+        with self._kilit:
+            satirlar = list(self._baglanti.execute("SELECT * FROM audit ORDER BY id"))
+        for satir in satirlar:
             olay = Olay(
                 tur=OlayTuru(satir["tur"]),
                 zaman_ms=int(satir["zaman_ms"]),
@@ -259,7 +276,8 @@ class SqliteDefter:
         return True
 
     def kapat(self) -> None:
-        self._baglanti.close()
+        with self._kilit:
+            self._baglanti.close()
 
     def __enter__(self) -> SqliteDefter:
         return self
