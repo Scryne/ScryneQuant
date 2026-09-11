@@ -12,10 +12,19 @@ risk motorunun onayladığı maruziyetin **üstüne** çıkmak demektir; onay bi
 değil. Aşağı yuvarlamanın bedeli birkaç satoshi eksik işlem, yukarı yuvarlamanınki
 onaylanmamış risk.
 
-Fiyat (tick) yuvarlaması yöne bağlı ve bu modülde **bilerek yok**: Faz 7 market emri
-kullanıyor, limit fiyatı göndermiyor. Yön bağımlı bir yuvarlama fonksiyonunu kullanılmadan
-yazmak, kullanıldığında test edilmemiş olur (`temel.py`nin "şimdiden yer açılmıyor"
-gerekçesi).
+**Fiyat (tick) yuvarlaması yöne bağlıdır ve Faz 7'de bilerek yoktu** — o faz market emri
+kullanıyordu, limit fiyatı göndermiyordu. Limit yolu açılınca (K-047) yazıldı ve yönü
+miktarınkiyle **aynı ilkeden** türüyor: emir, istenenden daha saldırgan olamaz.
+
+| Yön | Yuvarlama | Sonuç |
+| --- | --- | --- |
+| BUY | **aşağı** | İstenenden yüksek fiyat teklif edilmez |
+| SELL | **yukarı** | İstenenden düşük fiyata satılmaz |
+
+Bedeli dolmama ihtimali, ve bu **bilinçli bir tercih**: dolmayan bir emir görünür — defterde
+`ACKNOWLEDGED` olarak durur, iptal edilebilir, raporda sayılır. Oysa bir tick kötüye
+yuvarlanmış bir fill sessizdir: emir dolar, kayıt temiz görünür, ve fark yalnızca uzun
+vadeli maliyet hesabında ortaya çıkar. Bu projede gürültülü hata, sessiz hataya yeğdir.
 """
 
 from __future__ import annotations
@@ -80,6 +89,30 @@ def miktar_uydur(miktar: float, step_size: float) -> float:
     return math.floor(adim) * step_size
 
 
+def fiyat_uydur(fiyat: float, tick_size: float, *, yon: str) -> float:
+    """Limit fiyatını tick'e uydurur; **yön bağımlı** (modül docstring'indeki tablo).
+
+    `BUY` aşağı, `SELL`/`FLAT` yukarı yuvarlanır — yani emir hiçbir zaman istenenden
+    saldırgan olmaz. `miktar_uydur`daki aynı kayan nokta önlemi burada da var: bölümü
+    tick hassasiyetinde yuvarlayıp sonra taban/tavan almak, tam katların bir tick
+    kaymasını engelliyor.
+    """
+    if tick_size <= 0.0:
+        raise KuralIhlali(f"tick_size pozitif olmalı: {tick_size}")
+    if fiyat <= 0.0:
+        raise KuralIhlali(f"limit fiyatı pozitif olmalı: {fiyat}")
+
+    adim = round(fiyat / tick_size, 9)
+    if yon.upper() == "BUY":
+        return math.floor(adim) * tick_size
+    return math.ceil(adim) * tick_size
+
+
+def fiyat_metni(fiyat: float, tick_size: float) -> str:
+    """Uydurulmuş fiyatın borsaya gidecek metin hâli. `miktar_metni` ile aynı gerekçe."""
+    return f"{fiyat:.{basamak(tick_size)}f}"
+
+
 def basamak(step_size: float) -> int:
     """Adımın ondalık basamak sayısı — borsaya gönderilecek metnin biçimi için.
 
@@ -131,6 +164,8 @@ __all__ = [
     "SembolKurallari",
     "basamak",
     "emri_dogrula",
+    "fiyat_metni",
+    "fiyat_uydur",
     "miktar_metni",
     "miktar_uydur",
 ]

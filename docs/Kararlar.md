@@ -2146,6 +2146,7 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-044 | Çoklu test düzeltmesi ölçüldü: `oos_sharpe` 0,50 → 1,02 | ✅ **kabul** | Faz 4'e dönüş 4 |
 | K-045 | Maliyet duvarı bağlayıcı değil; tek sembollü yönlü arama kapandı | ✅ **kabul** | Faz 4'e dönüş 5 |
 | K-046 | Pozisyon mutabakatı üç taraflı; çıpa tazelenemez, komisyon tahmin edilemez | ✅ **kabul** | Faz 7'ye dönüş |
+| K-047 | İptalde de maruziyetin var olduğu varsayılır; fiyat kimliğe girmez | ✅ **kabul** | Faz 7'ye dönüş |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5
@@ -2191,3 +2192,113 @@ kısıtlar. İlgili kararların içinde ayrıntılı, burada tek bakışta:
 | 5 | Kalite bayrakları yapay bozuk fixture ile test edilir | Spike 2 | Faz 1 (K-006) |
 | 6 | Testnet API anahtarı alınmış olmalı | Spike 1 | Faz 7 ön koşulu |
 | 7 | Canlı hesap + KYC + API anahtarı; Spike 1'in auth kısmı tekrarlanır | Spike 1 | Faz 8 ön koşulu |
+
+---
+
+## K-047 — İptalde de aynı ilke: maruziyetin var olduğunu varsay
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 7'ye dönüş (Faz 8 hazırlığı) ·
+**Kapatır:** Faz 7 §7'nin "limit emri ve iptal ölçülmedi" maddesi · **İlgili:** K-007,
+K-040, K-041, K-046 · **Kanıt:** `tests/unit/test_limit_iptal.py`,
+`runs/testnet/lim-1.json`
+
+**Bağlam.** Faz 7 market emriyle çalıştı ve iptal yolunu açık bıraktı: *"`CANCELED` yolu
+state machine'de tanımlı ama gerçek borsaya karşı hiç yürütülmedi."* Tanımlı ama hiç
+yürütülmemiş bir yol, **çalıştığı sanılan** bir yoldur — ve bu projede en pahalı hata
+sınıfı orada yaşar.
+
+### 1. Asimetri değil, tek bir ilkenin iki yüzü
+
+Gönderimde kayıt ağ çağrısından **önce** yazılıyor (K-040); iptalde yanıt doğrulandıktan
+**sonra**. İlk bakışta çelişkili görünüyor. Değil:
+
+| | Kayıt ne zaman | Belirsizlikte varsayılan |
+| --- | --- | --- |
+| Gönderim | Ağ çağrısından **önce** (`SUBMITTED`) | Emir **olmuş olabilir** |
+| İptal | Yanıt doğrulandıktan **sonra** (`CANCELED`) | Emir **hâlâ duruyor olabilir** |
+
+İkisi de aynı yöne yanılıyor: **maruziyet vardır.** Gönderimde erken yazmak, olmuş bir
+emri kaçırmamak için; iptalde geç yazmak, duran bir emri kapanmış saymamak için.
+
+Tersi — doğrulanmamış bir iptali `CANCELED` yazmak — duran bir maruziyeti kapanmış
+gösterir. Sistem "pozisyonum yok" sanıp yeni emir gönderir ve maruziyet **ikiye
+katlanır**. Yanlış tarafa yanılmanın bedeli, bu projede geri alınamaz olan taraftadır.
+
+Bunun doğrudan sonucu: `BelirsizSonuc` alan bir iptal defteri **hiç değiştirmiyor**.
+Emir `ACKNOWLEDGED` kalıyor ve çıkış yolu mutabakat — `UNKNOWN`dan çıkışın tek yolunun
+sorgulama olmasıyla aynı disiplin.
+
+### 2. "İptal edilecek emir yok" bir başarısızlık değil
+
+Borsa `-2011` döndürdüğünde ortada iptal edilecek bir şey yoktur: emir bu arada dolmuş,
+süresi geçmiş ya da zaten iptal edilmiştir. Bunu hata sayıp yeniden iptal denemek, hiçbir
+şeyi çözmez. Doğru tepki **sorgulamak** ve gerçek durumu deftere yazmak.
+
+Bu, iptal ile fill'in yarıştığı andır ve yarışı fill kazanmıştır. Ölçülmesi gereken şey
+yarışın kendisi değil, **yarışı kaybeden iptalin ne yaptığı**.
+
+### 3. Fiyat yuvarlaması yön bağımlı — miktarınkiyle aynı ilkeden (K-007)
+
+| Yön | Yuvarlama | Sonuç |
+| --- | --- | --- |
+| BUY | **aşağı** | İstenenden yüksek fiyat teklif edilmez |
+| SELL | **yukarı** | İstenenden düşük fiyata satılmaz |
+
+Emir istenenden **saldırgan olamaz**. Bedeli dolmama ihtimali ve bu bilinçli: dolmayan
+bir emir **görünür** — defterde durur, iptal edilebilir, raporda sayılır. Bir tick kötüye
+yuvarlanmış bir fill ise **sessizdir**: emir dolar, kayıt temiz görünür, fark yalnızca
+uzun vadeli maliyet hesabında ortaya çıkar. Gürültülü hata, sessiz hataya yeğdir.
+
+Fiyat tick'e **deftere yazılmadan önce** uyduruluyor: borsaya giden fiyat ile defterdeki
+fiyat aynı olmalı, yoksa *"hangi fiyattan emir verdim"* sorusunun iki cevabı olur.
+
+### 4. Fiyat kimliğe girmiyor — ve bu bir güvenlik kararı
+
+`istemci_kimligi` yalnızca onaylı niyetin içeriğinden türüyor. Tür (`MARKET`/`LIMIT`) ve
+limit fiyatı **kimliğe katılmıyor**, yani aynı niyet bir kez market bir kez limit olarak
+gönderilse ikincisi reddediliyor.
+
+Alternatifi — fiyatı kimliğe katmak — yeniden fiyatlamayı mümkün kılardı: dolmayan bir
+limit emrini iptal edip biraz daha yukarıdan tekrar koymak. Ve tam orada execution
+katmanı **kendi başına maruziyet kararı üretmeye** başlardı: "market denedim olmadı,
+limit de deneyeyim". Değişmez kural 3 bunu yasaklıyor. Bir niyet, bir emir; dolmayan bir
+limit iptal edilir ve **yeni bir risk kararı** yeni bir niyet üretir.
+
+`GTC` seçilmesi de bununla ilgili: `IOC`/`FOK` dolmama hâlinde emri kendiliğinden kapatır
+ve iptal yolunu hiç sınamaz — oysa ölçülmesi gereken tam olarak o yol.
+
+### 5. Ölçüm: gerçek testnet, dört vaka
+
+`runs/testnet/lim-1` (fiyat 77.207,08):
+
+| Vaka | Sonuç |
+| --- | --- |
+| `acik_limit` | `ACKNOWLEDGED` · limit 61.765,66 · **9,8825 USDT kilitlendi** · açık emir listesinde |
+| `iptal` | `CANCELED` · kilit **0,0**'a çözüldü · açık emir listesinden çıktı |
+| `marketable` | `FILLED` · limit 77.979,15 · gerçekleşen **77.218,01** (limitten iyi) |
+| `nihai_iptal` | Dolmuş emir · **ağa hiç çıkılmadı** · durum `FILLED` kaldı |
+
+Koşu sonunda pozisyon mutabakatı: BTC ve USDT farkı **tam sıfır**. Yani limit yolunun
+bakiyeyi `serbest`/`kilitli` arasında gezdirmesi, `toplam` üzerinden yapılan mutabakatı
+bozmuyor — K-046'nın `Varlik` kararının ilk gerçek sınavı ve geçti.
+
+### 6. Bu değişiklik Faz 7'de ölçülemezdi
+
+Faz 7'nin `bakiye()`si yalnızca `free` okuyordu ve o fazda bu hiç sorun çıkarmadı, çünkü
+market emri para kilitlemez. Limit yolu açılınca aynı kod **her açık emirde koşuyu
+durduracaktı** — haksız yere, çünkü kilitli para da hesabın parasıdır.
+
+Kayda değer olan şu: bu, sessiz değil **gürültülü** bir kırılma olurdu. Faz 7'nin dersi
+("bir sahte, gerçeğin reddettiğini kabul ediyorsa ona karşı yeşil olan test bir şey
+kanıtlamaz") burada da geçerli, o yüzden `SahteBorsa` artık gerçek bir muhasebe tutuyor:
+açık limit emri parayı `serbest`ten `kilitli`ye taşıyor, iptal geri alıyor, komisyon
+alınan varlıktan kesiliyor.
+
+### 7. Ölçülmeyen, kayıtlı
+
+- **Kısmi dolum.** `PARTIALLY_FILLED → CANCELED` geçişi state machine'de tanımlı ve birim
+  testi var, ama gerçek borsaya karşı yürütülmedi: testnet'te 10 USDT'lik bir emri kısmi
+  doldurtmak güvenilir biçimde tetiklenemiyor. Faz 8'in emir büyüklükleri de küçük
+  olacağı için orada da doğal olarak doğmayabilir.
+- **Uzun süre açık kalan emir.** Ölçümdeki emir saniyeler içinde iptal edildi; günlerce
+  açık kalan bir emrin davranışı (borsa tarafında süre aşımı, sunucu bakımı) ölçülmedi.

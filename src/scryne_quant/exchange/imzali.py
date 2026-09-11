@@ -55,7 +55,13 @@ from scryne_quant.exchange.hatalar import (
     GonderilemediHatasi,
     SaatSapmasi,
 )
-from scryne_quant.exchange.kurallar import SembolKurallari, miktar_metni, miktar_uydur
+from scryne_quant.exchange.kurallar import (
+    SembolKurallari,
+    fiyat_metni,
+    fiyat_uydur,
+    miktar_metni,
+    miktar_uydur,
+)
 
 #: Spot Testnet. Faz 7'nin tamamı buraya bakar.
 TESTNET_HOST: Final = "https://testnet.binance.vision"
@@ -94,6 +100,14 @@ KOD_DUPLICATE: Final = -2010
 
 KOD_EMIR_YOK: Final = -2013
 """`Order does not exist`. Sorgulamanın kesin "hayır"ı."""
+
+KOD_IPTAL_EDILECEK_EMIR_YOK: Final = -2011
+"""`Unknown order sent`. İptal isteğinin "ortada duran bir emir yok" cevabı.
+
+`-2013`ten ayrı bir kod ve ayrı bir anlam taşımıyor gibi görünse de, iptal yolunda gelen
+kod budur. İkisini de `None`a çevirmek gerekiyor: iptal edilecek bir şeyin olmaması bir
+hata değil, emrin bu arada dolmuş/kapanmış olmasıdır — ve o durumda yapılacak şey
+sorgulamaktır, tekrar iptal denemek değil."""
 
 
 class Transport(Protocol):
@@ -404,6 +418,59 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
             imzali=True,
             yazma=True,
         )
+        return self._borsa_emri(govde)
+
+    def limit_emri(
+        self,
+        *,
+        istemci_kimligi: str,
+        sembol: str,
+        yon: str,
+        miktar: float,
+        fiyat: float,
+    ) -> BorsaEmri:
+        kural = self.sembol_kurallari(sembol)
+        borsa_yon = borsa_yonu(yon)
+        uydurulmus = miktar_uydur(miktar, kural.step_size)
+        limit = fiyat_uydur(fiyat, kural.tick_size, yon=borsa_yon)
+        govde = self._cagir(
+            "POST",
+            "/api/v3/order",
+            {
+                "symbol": sembol,
+                "side": borsa_yon,
+                "type": "LIMIT",
+                "timeInForce": "GTC",
+                "quantity": miktar_metni(uydurulmus, kural.step_size),
+                "price": fiyat_metni(limit, kural.tick_size),
+                "newClientOrderId": istemci_kimligi,
+                "newOrderRespType": "FULL",
+            },
+            imzali=True,
+            yazma=True,
+        )
+        return self._borsa_emri(govde)
+
+    def emir_iptal(self, *, sembol: str, istemci_kimligi: str) -> BorsaEmri | None:
+        """`DELETE /api/v3/order`. `-2011` (Unknown order) `None` demektir.
+
+        İptal **yazma** isteği (`yazma=True`), yani yeniden denenmiyor: bir iptalin yanıtı
+        kaybolduğunda emrin iptal edilip edilmediği bilinmez ve körlemesine tekrar denemek
+        o bilinmezliği çözmez, yalnızca gizler. Çözüm sorgulamak — emir gönderiminde
+        `UNKNOWN`dan çıkışın tek yolunun sorgulama olmasıyla aynı disiplin.
+        """
+        try:
+            govde = self._cagir(
+                "DELETE",
+                "/api/v3/order",
+                {"symbol": sembol, "origClientOrderId": istemci_kimligi},
+                imzali=True,
+                yazma=True,
+            )
+        except BorsaReddetti as hata:
+            if hata.kod in (KOD_EMIR_YOK, KOD_IPTAL_EDILECEK_EMIR_YOK):
+                return None
+            raise
         return self._borsa_emri(govde)
 
     def emir_sorgula(self, *, sembol: str, istemci_kimligi: str) -> BorsaEmri | None:

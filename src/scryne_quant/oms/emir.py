@@ -86,6 +86,14 @@ def komisyon_topla(kalemler: Iterable[tuple[str, float]]) -> Komisyon:
 KOMISYON_KAYNAKLARI: Final[frozenset[str]] = frozenset({"", "yanit", "islemler"})
 
 
+#: Emir türleri. Faz 7 yalnızca `MARKET` kullandı; `LIMIT` Faz 8 hazırlığında açıldı (K-047).
+#:
+#: Tür defterde **ayrı bir sütun**, `limit_fiyati`nın dolu olup olmamasından çıkarılmıyor:
+#: "fiyatı yoksa market'tir" kuralı, fiyatı yazılmayı unutulmuş bir limit emrini sessizce
+#: market emri gibi okur. Tür bir beyandır, bir çıkarım değil.
+EMIR_TURLERI: Final[frozenset[str]] = frozenset({"MARKET", "LIMIT"})
+
+
 class EmirHatasi(ValueError):
     """Emir sözleşmesi ihlal edildi."""
 
@@ -252,6 +260,14 @@ class Emir:
     miktar: float
     durum: EmirDurumu = EmirDurumu.CREATED
 
+    tur: str = "MARKET"
+    """`MARKET` ya da `LIMIT` (`EMIR_TURLERI`)."""
+
+    limit_fiyati: float = 0.0
+    """Limit emrinin fiyatı; market emrinde 0. `ortalama_fiyat` ile karıştırılmamalı —
+    biri **istenen**, diğeri **gerçekleşen**. İkisini tek alanda tutmak, dolmamış bir
+    limit emrinin fiyatını "gerçekleşmiş fiyat" gibi okutur."""
+
     borsa_kimligi: str | None = None
     """Borsanın verdiği kimlik. `ACKNOWLEDGED` öncesi `None`."""
 
@@ -289,6 +305,21 @@ class Emir:
             raise EmirHatasi(
                 "kaynaksız komisyon yazılamaz: bir rakam, nereden geldiği bilinmeden "
                 "muhasebeye giremez"
+            )
+        if self.tur not in EMIR_TURLERI:
+            raise EmirHatasi(
+                f"bilinmeyen emir türü: {self.tur!r}. Geçerli: "
+                f"{', '.join(sorted(EMIR_TURLERI))}"
+            )
+        if self.tur == "LIMIT" and self.limit_fiyati <= 0.0:
+            raise EmirHatasi(
+                f"limit emrinin fiyatı pozitif olmalı: {self.limit_fiyati}. Fiyatsız bir "
+                f"limit emri, borsada market emrine dönüşmez — hiç oluşmaz."
+            )
+        if self.tur == "MARKET" and self.limit_fiyati != 0.0:
+            raise EmirHatasi(
+                f"market emrinin limit fiyatı olamaz: {self.limit_fiyati}. Bir fiyat "
+                f"taşıyan market emri, okuyana o fiyattan dolduğunu düşündürür."
             )
 
     @property
@@ -363,7 +394,9 @@ class Emir:
             "istemci_kimligi": self.istemci_kimligi,
             "sembol": self.sembol,
             "yon": self.yon,
+            "tur": self.tur,
             "miktar": self.miktar,
+            "limit_fiyati": self.limit_fiyati,
             "durum": str(self.durum),
             "borsa_kimligi": self.borsa_kimligi,
             "dolan_miktar": self.dolan_miktar,
@@ -381,19 +414,34 @@ class Emir:
         }
 
 
-def emir_kur(niyet: OnayliNiyet, miktar: float, *, zaman_ms: int) -> Emir:
+def emir_kur(
+    niyet: OnayliNiyet,
+    miktar: float,
+    *,
+    zaman_ms: int,
+    tur: str = "MARKET",
+    limit_fiyati: float = 0.0,
+) -> Emir:
     """Onaylı niyetten `CREATED` durumunda bir emir üretir.
 
     Miktar dışarıdan veriliyor: onaylı niyet **maruziyet** taşıyor, miktar değil. İkisi
     arasındaki çeviri fiyat gerektirir ve fiyat fill anında belli olur (`backtest/fill.py`
     ile aynı gerekçe).
+
+    **`tur` ve `limit_fiyati` kimliğe girmiyor.** Kimlik yalnızca niyetin içeriğinden
+    türüyor (`istemci_kimligi`), yani aynı niyet market olarak da limit olarak da
+    gönderilse aynı kimliği alır ve ikincisi reddedilir. Bu istenen davranış: bir niyet
+    bir emirdir. Türü kimliğe katmak, aynı kararın iki kez maruziyet üretmesine —
+    "market denedim olmadı, limit de deneyeyim" — kapı açardı.
     """
     onayli = dogrula(niyet)
     return Emir(
         istemci_kimligi=istemci_kimligi(onayli),
         sembol=onayli.sinyal.symbol,
         yon=str(onayli.sinyal.side),
+        tur=tur,
         miktar=miktar,
+        limit_fiyati=limit_fiyati,
         karar_ms=onayli.karar_ms,
         olusturuldu_ms=zaman_ms,
         guncellendi_ms=zaman_ms,
@@ -403,6 +451,7 @@ def emir_kur(niyet: OnayliNiyet, miktar: float, *, zaman_ms: int) -> Emir:
 
 __all__ = [
     "ACIK",
+    "EMIR_TURLERI",
     "GECISLER",
     "KIMLIK_ONEKI",
     "KIMLIK_UZUNLUGU",

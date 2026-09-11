@@ -129,17 +129,88 @@ hata yok, test yeşil — ve pozisyon hesabında her emirde biraz büyüyen sess
 
 ## 7. Bu faz neyi ölçmedi
 
-- **Pozisyon mutabakatı.** Koşu başındaki bakiyenin bağımsız kaydı yok; Faz 8'in
-  *"açıklanamayan pozisyon farkı: sıfır"* kriteri onu kuracak (K-041/3).
-- **PostgreSQL şeması.** K-034 ile Faz 7'ye ertelenmişti; Faz 7'de de tek yazıcı var, yani
-  şemanın gerekçesi olan eşzamanlı yazma hâlâ doğmadı. `migrations/001_faz5.sql` dondurulmuş
-  kalıyor ve `oms/defter.py` ile birlikte SQLite üzerinde çalışılıyor. Karar Faz 8'e taşındı.
-- **Limit emri ve iptal.** Faz 7 market emriyle çalıştı; `CANCELED` yolu state machine'de
-  tanımlı ama gerçek borsaya karşı hiç yürütülmedi. Limit emri gerektiğinde ölçülecek.
-- **Uzun süreli dayanıklılık.** 100 emir 2 dakikada gönderildi; günlerce süren bir emir
-  akışının davranışı (bağlantı yaşlanması, anahtar rotasyonu) ölçülmedi.
+> **Güncelleme (2026-09-11, Faz 7'ye dönüş):** aşağıdaki dört maddeden **ikisi
+> kapandı** — pozisyon mutabakatı (K-046) ve limit/iptal yolu (K-047). İkisi de gerçek
+> testnet'e karşı ölçüldü; ayrıntısı §9'da. Kalan ikisi açık ve Faz 8'e ait.
+
+- **Pozisyon mutabakatı.** ✅ **kapandı (K-046).** Koşu başındaki bakiyenin değişmez bir
+  kaydı kuruldu; çıpa + defter akışı borsanın bakiyesiyle karşılaştırılıyor.
+- **PostgreSQL şeması.** ⏳ **açık.** K-034 ile Faz 7'ye ertelenmişti; Faz 7'de de tek
+  yazıcı var, yani şemanın gerekçesi olan eşzamanlı yazma hâlâ doğmadı.
+  `migrations/001_faz5.sql` dondurulmuş kalıyor ve `oms/defter.py` ile birlikte SQLite
+  üzerinde çalışılıyor. Karar Faz 8'e taşındı.
+- **Limit emri ve iptal.** ✅ **kapandı (K-047).** Dört vaka gerçek testnet'e karşı
+  yürütüldü. Kısmi dolumun iptali hâlâ ölçülmedi ve o kayıtlı (K-047/7).
+- **Uzun süreli dayanıklılık.** ⏳ **açık.** 100 emir 2 dakikada gönderildi; günlerce
+  süren bir emir akışının davranışı (bağlantı yaşlanması, anahtar rotasyonu) ölçülmedi.
 
 ## 8. Faz 7'nin verdiği karar
 
 **K-041** — ağ hatası üç sınıfa ayrılır; imzanın zamanı borsadan gelir; mutabakat
 çözebildiğini çözer, çözemediğinde durur.
+
+---
+
+## 9. Faz 7'ye dönüş (2026-09-11): iki eksik ölçüm kapandı
+
+Faz 4'e dönüş 5'te tek sembollü yönlü arama kapandıktan sonra (K-045) Faz 8'in önündeki
+engel bir iş kalemi değil bir bulgu hâline geldi: promotion'u geçen strateji yok. Bu
+arada **stratejiden bağımsız** olarak ölçülebilen iki borç kapatıldı — ikisi de Faz 8'in
+ön koşulu ve ikisi de strateji beklemiyor.
+
+### 9.1 Pozisyon mutabakatı (K-046)
+
+Faz 7 bunu bilerek yapmamıştı: bağımsız bir açılış kaydı olmadan yapılan karşılaştırma
+*"borsa ne diyorsa o"* demenin süslü hâli olurdu. O kayıt kuruldu — değişmez bir çıpa,
+iki SQLite tetiğiyle korunuyor ve ilk emirden önce atılmak zorunda.
+
+**Ölçüm** (`runs/testnet/poz-1`, 20 emir):
+
+| Varlık | Çıpa | Defter akışı | Beklenen | Borsada | Fark |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| BTC | 1,00048 | 0,0 | 1,00048 | 1,00048 | **0,0** |
+| USDT | 9963,0282472 | −0,000012 | 9963,0282352 | 9963,0282352 | **0,0** |
+
+**Ters yön de ölçüldü** ve asıl kanıt bu: defterin bilmediği bir emir (doğrudan
+adaptörden, `EmirMotoru`'na uğramadan, 0,0002 BTC) gönderildi ve mutabakat **durdu** —
++0,0002 BTC / −15,4368 USDT, çıkış kodu 1. Sayı kuruşuna kadar tutuyor
+(0,0002 × 77.184,01 = 15,43680).
+
+O emir market olduğu için **açık emir listesinde hiç görünmedi**; yani emir mutabakatının
+yakalayamayacağı bir fark. Pozisyon mutabakatının kendi başına gerekli olduğunun kanıtı.
+
+**Ölçülemeyen, kayıtlı: testnet komisyon kesmiyor.** `/api/v3/myTrades` yanıtında
+`commission: '0.00000000'`. Yani yukarıdaki temiz sonuç, komisyon yolu hiç çalışmadan da
+aynı çıkardı. Bu, Faz 7'nin kendi dersinin yön değiştirmiş hâli: orada `SahteBorsa`
+gerçeğinden hoşgörülüydü, burada **testnet** gerçek hesaptan hoşgörülü. Komisyon mantığı
+birim testlerde ölçülüyor; gerçeğe karşı ilk sınavı Faz 8'in ilk pozisyon mutabakatı
+olacak.
+
+### 9.2 Limit emri ve iptal (K-047)
+
+**Ölçüm** (`runs/testnet/lim-1`, fiyat 77.207,08):
+
+| Vaka | Sonuç |
+| --- | --- |
+| `acik_limit` | `ACKNOWLEDGED` · limit 61.765,66 · **9,8825 USDT kilitlendi** · açık emir listesinde |
+| `iptal` | `CANCELED` · kilit **0,0**'a çözüldü · listeden çıktı |
+| `marketable` | `FILLED` · limit 77.979,15 · gerçekleşen **77.218,01** (limitten iyi) |
+| `nihai_iptal` | Dolmuş emir · **ağa hiç çıkılmadı** · durum `FILLED` kaldı |
+
+Koşu sonunda pozisyon mutabakatı temiz: limit emrinin bakiyeyi `serbest`/`kilitli`
+arasında gezdirmesi, `toplam` üzerinden yapılan mutabakatı bozmadı.
+
+**Bu ikisi birbirini buldu.** Faz 7'nin `bakiye()`si yalnızca `free` okuyordu ve o fazda
+hiç sorun çıkarmamıştı — çünkü market emri para kilitlemez. Limit yolu açılınca aynı kod
+**her açık emirde** pozisyon mutabakatını haksız yere durduracaktı. İki işin aynı turda
+yapılması bu bağı görünür kıldı; ayrı yapılsalardı, ikincisi birincinin üzerine sessiz
+bir arıza bırakırdı.
+
+### 9.3 Bu dönüşün değiştirdiği sözleşme
+
+`EmirAdaptoru.bakiye()` artık `dict[str, float]` değil `dict[str, Varlik]` (serbest +
+kilitli). Değişiklik bilerek **kırıcı**: tipi değiştirmek her çağıranı yeniden okumaya
+zorlar, alanın anlamını sessizce genişletmek ise okunmamış bir çağıranda "neredeyse
+doğru" bir bakiye bırakırdı.
+
+Testler **1103 → 1143**.

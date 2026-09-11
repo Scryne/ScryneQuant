@@ -212,6 +212,44 @@ class EmirAdaptoru(ABC):
         """
 
     @abstractmethod
+    def limit_emri(
+        self,
+        *,
+        istemci_kimligi: str,
+        sembol: str,
+        yon: str,
+        miktar: float,
+        fiyat: float,
+    ) -> BorsaEmri:
+        """Limit emri gönderir (`GTC`). Market ile aynı idempotency sözleşmesi.
+
+        **Fiyat kimliğe girmiyor** ve bu bir karar: `istemci_kimligi` yalnızca onaylı
+        niyetin içeriğinden türüyor (`oms/emir.istemci_kimligi`). Fiyat kimliğe girseydi,
+        aynı niyet farklı fiyatlarla defalarca emre dönüşebilirdi — yani execution
+        katmanı kendi başına yeni kararlar üretirdi. Bir niyet, bir emir; dolmayan bir
+        limit emri iptal edilir ve **yeni bir risk kararı** yeni bir niyet üretir
+        (değişmez kural 3).
+
+        `GTC` seçiliyor, `IOC`/`FOK` değil: ikisi de dolmama hâlinde emri kendiliğinden
+        kapatır, yani iptal yolunu hiç sınamaz. Faz 8'in ölçmesi gereken şey tam olarak
+        o yol.
+        """
+
+    @abstractmethod
+    def emir_iptal(self, *, sembol: str, istemci_kimligi: str) -> BorsaEmri | None:
+        """Emri iptal eder. Borsa emri tanımıyorsa `None`.
+
+        `None` burada *"iptal başarısız"* değil, *"iptal edilecek bir şey yok"* demektir:
+        emir dolmuş, süresi geçmiş ya da zaten iptal edilmiştir. Çağıran bunu bir hata
+        sayıp yeniden denememeli; **emri sorgulayıp gerçek durumunu öğrenmeli.**
+
+        `BelirsizSonuc` fırlarsa emrin iptal edilip edilmediği bilinmiyordur ve defter
+        **değiştirilmemelidir**. Doğrulanmamış bir iptali `CANCELED` diye yazmak, duran
+        bir maruziyeti kapanmış göstermek olur — ve "pozisyonum yok" sanıp yeni emir
+        göndermek, maruziyeti ikiye katlamanın en kısa yolu (K-047).
+        """
+
+    @abstractmethod
     def emir_sorgula(self, *, sembol: str, istemci_kimligi: str) -> BorsaEmri | None:
         """Emri istemci kimliğiyle sorgular. Borsa tanımıyorsa `None`.
 

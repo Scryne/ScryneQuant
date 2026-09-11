@@ -73,7 +73,13 @@ CREATE TABLE IF NOT EXISTS emir (
     -- mutabakatı ikisini farklı işler. Tek sütun olsaydı, ölçülmemiş bir komisyon ile
     -- ölçülüp sıfır çıkmış bir komisyon diskte ayırt edilemezdi.
     komisyon        TEXT    NOT NULL DEFAULT '[]',
-    komisyon_kaynagi TEXT   NOT NULL DEFAULT ''
+    komisyon_kaynagi TEXT   NOT NULL DEFAULT '',
+
+    -- Tür ayrı bir sütun, `limit_fiyati`nın doluluğundan çıkarılmıyor: "fiyatı yoksa
+    -- market'tir" kuralı, fiyatı yazılmayı unutulmuş bir limit emrini sessizce market
+    -- emri gibi okur (`oms/emir.EMIR_TURLERI`).
+    tur             TEXT    NOT NULL DEFAULT 'MARKET',
+    limit_fiyati    REAL    NOT NULL DEFAULT 0.0
 );
 CREATE INDEX IF NOT EXISTS emir_durum ON emir (durum);
 CREATE INDEX IF NOT EXISTS emir_karar ON emir (karar_ms);
@@ -159,6 +165,8 @@ class EmirDefteri:
         for sutun, tanim in (
             ("komisyon", "TEXT NOT NULL DEFAULT '[]'"),
             ("komisyon_kaynagi", "TEXT NOT NULL DEFAULT ''"),
+            ("tur", "TEXT NOT NULL DEFAULT 'MARKET'"),
+            ("limit_fiyati", "REAL NOT NULL DEFAULT 0.0"),
         ):
             if sutun not in mevcut:
                 self._baglanti.execute(f"ALTER TABLE emir ADD COLUMN {sutun} {tanim}")
@@ -196,8 +204,9 @@ class EmirDefteri:
             b.execute(
                 "INSERT INTO emir (istemci_kimligi, sembol, yon, miktar, durum, "
                 "borsa_kimligi, dolan_miktar, ortalama_fiyat, karar_ms, olusturuldu_ms, "
-                "guncellendi_ms, gecmis, hata, komisyon, komisyon_kaynagi) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "guncellendi_ms, gecmis, hata, komisyon, komisyon_kaynagi, tur, "
+                "limit_fiyati) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     emir.istemci_kimligi,
                     emir.sembol,
@@ -214,6 +223,8 @@ class EmirDefteri:
                     emir.hata,
                     _komisyon_metni(emir.komisyon),
                     emir.komisyon_kaynagi,
+                    emir.tur,
+                    emir.limit_fiyati,
                 ),
             )
         return emir, True
@@ -433,6 +444,8 @@ def _satirdan(satir: sqlite3.Row) -> Emir:
             (str(v), float(m)) for v, m in json.loads(satir["komisyon"] or "[]")
         ),
         komisyon_kaynagi=str(satir["komisyon_kaynagi"] or ""),
+        tur=str(satir["tur"] or "MARKET"),
+        limit_fiyati=float(satir["limit_fiyati"] or 0.0),
         hata=str(satir["hata"]),
     )
 

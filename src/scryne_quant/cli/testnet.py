@@ -38,7 +38,7 @@ from scryne_quant.common.zaman import simdi_ms, utc_str
 from scryne_quant.exchange.emir_adaptoru import Varlik
 from scryne_quant.exchange.hatalar import BorsaHatasi
 from scryne_quant.exchange.imzali import BinanceImzaliAdaptoru
-from scryne_quant.execution.motor import EmirMotoru, SaatEngeli
+from scryne_quant.execution.motor import EmirMotoru, IptalSonucu, SaatEngeli
 from scryne_quant.oms.defter import EmirDefteri
 from scryne_quant.oms.emir import EmirDurumu
 from scryne_quant.oms.mutabakat import Uyusmazlik, mutabakat
@@ -758,3 +758,240 @@ def _rapor_yaz(rapor: dict[str, Any], yol: Path) -> None:
 
 
 __all__ = ["testnet_app"]
+
+
+# ---------------------------------------------------------------------- limit
+
+#: Limit emrinin piyasadan ne kadar uzağa konacağı. %20 aşağısı, dakikalar süren bir
+#: ölçümde dolma ihtimalini pratikte sıfırlar — ama emri **gerçek** bir açık emir olarak
+#: bırakır. Dolmayan bir emirle çalışmak bir hile değil, iptal yolunun ön koşulu: dolmuş
+#: bir emir iptal edilemez.
+UZAKLIK_ORANI = 0.80
+
+
+@testnet_app.command("limit")
+def testnet_limit(
+    kosu_adi: Annotated[str, typer.Argument(help="Koşu adı; defter dosyasının adı olur.")],
+    notional: Annotated[float, typer.Option("--notional")] = VARSAYILAN_NOTIONAL,
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_KOK,
+    risk_yolu: Annotated[Path, typer.Option("--risk")] = limitler_mod.VARSAYILAN_YOL,
+) -> None:
+    """Limit emri ve iptal yolunu gerçek testnet'e karşı ölçer. (K-047)
+
+    Faz 7 bu yolu açık bırakmıştı: *"`CANCELED` yolu state machine'de tanımlı ama gerçek
+    borsaya karşı hiç yürütülmedi."* Tanımlı ama yürütülmemiş bir yol, **çalıştığı
+    sanılan** bir yoldur.
+
+    Dört vaka ölçülüyor ve dördü de ancak gerçek borsaya karşı anlamlı:
+
+    | Vaka | Ölçülen |
+    | --- | --- |
+    | `acik_limit` | Dolmayan emir açık kalıyor ve **para kilitleniyor** |
+    | `iptal` | İptal onaylanıyor, kilit çözülüyor, emir açık listeden çıkıyor |
+    | `marketable` | Piyasanın üstündeki limit hemen doluyor |
+    | `nihai_iptal` | Dolmuş emrin iptali "emir yok" alıyor, defter bozulmuyor |
+
+    Sonunda pozisyon mutabakatı koşuyor: limit yolunun bakiyeyi `serbest`/`kilitli`
+    arasında gezdirmesi, `toplam` üzerinden yapılan mutabakatı bozmamalı.
+    """
+    kok.mkdir(parents=True, exist_ok=True)
+    defter_yolu = kok / f"{kosu_adi}.sqlite"
+    if defter_yolu.exists():
+        raise typer.BadParameter(
+            f"bu koşu zaten var: {defter_yolu}. Emir defteri append-only; yeni bir ad seç."
+        )
+
+    a = _adaptor()
+    kural = a.sembol_kurallari("BTCUSDT")
+    if not kural.islenebilir:
+        raise typer.BadParameter(f"BTCUSDT işleme kapalı: {kural.durum}")
+    if notional < kural.min_notional:
+        raise typer.BadParameter(
+            f"--notional {notional} minNotional {kural.min_notional} altında"
+        )
+
+    fiyat = a.son_fiyat("BTCUSDT")
+    bakiye = a.bakiye()
+    ozkaynak = (
+        bakiye.get("USDT", Varlik()).toplam + bakiye.get("BTC", Varlik()).toplam * fiyat
+    )
+    risk = RiskMotoru(limitler_mod.yukle(risk_yolu), "1h", mod="gozlem")
+
+    typer.secho(
+        f"limit koşusu: {kosu_adi} · fiyat {fiyat:.2f} · ≤{notional:.2f} USDT/emir\n"
+        f"UYARI: gözlem modu — bu koşu promotion kanıtı üretmez (K-035)",
+        fg=typer.colors.YELLOW,
+    )
+
+    with EmirDefteri(defter_yolu) as defter:
+        cipa_at(defter, a, not_metni=f"limit/iptal olcumu {kosu_adi}")
+        rapor = _limit_kosusu(
+            defter=defter,
+            adaptor=a,
+            risk=risk,
+            fiyat=fiyat,
+            ozkaynak=ozkaynak,
+            notional=notional,
+            kosu_adi=kosu_adi,
+        )
+
+    rapor_yolu = kok / f"{kosu_adi}.json"
+    rapor_yolu.write_text(
+        json.dumps(rapor, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    typer.echo(f"\nrapor: {rapor_yolu}")
+    if not rapor["kriter_saglandi"]:
+        raise typer.Exit(code=1)
+
+
+def _limit_kosusu(
+    *,
+    defter: EmirDefteri,
+    adaptor: BinanceImzaliAdaptoru,
+    risk: RiskMotoru,
+    fiyat: float,
+    ozkaynak: float,
+    notional: float,
+    kosu_adi: str,
+) -> dict[str, Any]:
+    motor = EmirMotoru(defter, adaptor)
+    miktar = notional / fiyat
+    vakalar: list[dict[str, Any]] = []
+
+    # --- vaka 1: dolmayan limit açık kalıyor, para kilitleniyor -------------
+    uzak = fiyat * UZAKLIK_ORANI
+    # Uzak limitte notional düşeceği için miktar büyütülüyor: minNotional limit
+    # fiyatından hesaplanır, piyasa fiyatından değil.
+    acik = _emir_gonder(motor, risk, adaptor, ozkaynak, notional / uzak, uzak, "ACIK")
+    onceki_kilit = adaptor.bakiye().get("USDT", Varlik()).kilitli
+    vakalar.append(
+        {
+            "vaka": "acik_limit",
+            "durum": str(acik.emir.durum),
+            "limit_fiyati": acik.emir.limit_fiyati,
+            "kilitli_usdt": onceki_kilit,
+            "acik_emir_listesinde": any(
+                e.istemci_kimligi == acik.emir.istemci_kimligi
+                for e in adaptor.acik_emirler("BTCUSDT")
+            ),
+            "gecti": acik.emir.durum is EmirDurumu.ACKNOWLEDGED,
+        }
+    )
+    _vaka_yaz(vakalar[-1])
+
+    # --- vaka 2: iptal ------------------------------------------------------
+    iptal = motor.iptal(acik.emir.istemci_kimligi)
+    sonraki_kilit = adaptor.bakiye().get("USDT", Varlik()).kilitli
+    vakalar.append(
+        {
+            "vaka": "iptal",
+            "durum": str(iptal.emir.durum),
+            "iptal_edildi": iptal.iptal_edildi,
+            "kilitli_usdt": sonraki_kilit,
+            "kilit_cozuldu": sonraki_kilit < onceki_kilit,
+            "acik_emir_listesinde": any(
+                e.istemci_kimligi == acik.emir.istemci_kimligi
+                for e in adaptor.acik_emirler("BTCUSDT")
+            ),
+            "gecti": iptal.iptal_edildi
+            and iptal.emir.durum is EmirDurumu.CANCELED
+            and sonraki_kilit < onceki_kilit,
+        }
+    )
+    _vaka_yaz(vakalar[-1])
+
+    # --- vaka 3: marketable limit hemen doluyor -----------------------------
+    yakin = fiyat * 1.01
+    dolan = _emir_gonder(motor, risk, adaptor, ozkaynak, miktar, yakin, "MARKETABLE")
+    vakalar.append(
+        {
+            "vaka": "marketable",
+            "durum": str(dolan.emir.durum),
+            "limit_fiyati": dolan.emir.limit_fiyati,
+            "ortalama_fiyat": dolan.emir.ortalama_fiyat,
+            # Borsa limitten **daha iyi** bir fiyattan doldurmalı: alışta limitin altında.
+            "limitten_iyi": 0.0 < dolan.emir.ortalama_fiyat <= dolan.emir.limit_fiyati,
+            "gecti": dolan.emir.durum is EmirDurumu.FILLED,
+        }
+    )
+    _vaka_yaz(vakalar[-1])
+
+    # --- vaka 4: dolmuş emrin iptali ----------------------------------------
+    nihai: IptalSonucu = motor.iptal(dolan.emir.istemci_kimligi)
+    vakalar.append(
+        {
+            "vaka": "nihai_iptal",
+            "durum": str(nihai.emir.durum),
+            "aga_cikildi": nihai.gonderildi,
+            # Emir zaten `FILLED` olarak defterde: iptal ağa **hiç çıkmamalı** ve durum
+            # değişmemeli. Çıkmış olsaydı bile borsa "emir yok" derdi ve sonuç aynı
+            # olurdu — ama gereksiz bir yazma isteği, çözülecek yeni bir belirsizliktir.
+            "gecti": nihai.emir.durum is EmirDurumu.FILLED and not nihai.iptal_edildi,
+        }
+    )
+    _vaka_yaz(vakalar[-1])
+
+    hatalar: list[dict[str, Any]] = []
+    pozisyon = _pozisyon_adimi(defter, adaptor, hatalar)
+
+    return {
+        "kosu_adi": kosu_adi,
+        "utc": utc_str(simdi_ms()),
+        "son_fiyat": fiyat,
+        "vakalar": vakalar,
+        "pozisyon_mutabakati": pozisyon,
+        "hatalar": hatalar,
+        "defter_sayimi": defter.sayim(),
+        "kriter_saglandi": all(v["gecti"] for v in vakalar)
+        and not pozisyon.get("halt", True),
+        "not": (
+            "Gözlem modu (K-035): bu koşunun hiçbir kaydı promotion kanıtı değildir."
+        ),
+    }
+
+
+def _emir_gonder(
+    motor: EmirMotoru,
+    risk: RiskMotoru,
+    adaptor: BinanceImzaliAdaptoru,
+    ozkaynak: float,
+    miktar: float,
+    limit_fiyati: float,
+    etiket: str,
+):
+    """Risk motorundan geçirip limit emri gönderir.
+
+    Niyet elle kurulmuyor: değişmez kural 3 (*"sinyal risk motorunu atlayamaz"*) bu
+    ölçümde de geçerli — bir ölçüm aracı olması onu muaf tutmaz.
+    """
+    bar_ms = adaptor.sunucu_zamani_ms()
+    fiyat = adaptor.son_fiyat("BTCUSDT")
+    risk.bar_isle(bar_ms, ozkaynak)
+    karar = risk.degerlendir(
+        Sinyal(
+            symbol="BTCUSDT",
+            side=Yon.BUY,
+            target_exposure=(miktar * limit_fiyati) / ozkaynak,
+            confidence=1.0,
+            reason=f"FAZ8_LIMIT_{etiket}",
+            timestamp=bar_ms,
+        ),
+        PiyasaOlcumu(
+            fiyat=fiyat,
+            ozkaynak=ozkaynak,
+            mevcut_maruziyet=0.0,
+            bar_ms=bar_ms,
+            atr=fiyat * 0.01,
+        ),
+    )
+    if not isinstance(karar, OnayliNiyet):
+        raise typer.BadParameter(f"risk motoru reddetti ({etiket}): {karar.sebep}")
+    return motor.gonder(karar, miktar, limit_fiyati=limit_fiyati)
+
+
+def _vaka_yaz(vaka: dict[str, Any]) -> None:
+    renk = typer.colors.GREEN if vaka["gecti"] else typer.colors.RED
+    ayrinti = " · ".join(
+        f"{k}={v}" for k, v in vaka.items() if k not in ("vaka", "gecti")
+    )
+    typer.secho(f"  {vaka['vaka']:<14} {ayrinti}", fg=renk)

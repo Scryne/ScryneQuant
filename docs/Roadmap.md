@@ -599,10 +599,30 @@ emirde biraz büyüyen sessiz bir fark. Ders: **bir sahte, gerçeğin reddettiğ
 ediyorsa ona karşı yeşil olan test bir şey kanıtlamaz.** `SahteBorsa` artık yön ve lot
 adımı doğruluyor; iki hata için de regresyon testi var.
 
-**Bu fazın ölçmediği şeyler** (raporun §7'si): pozisyon mutabakatı (koşu başı bakiyesinin
-bağımsız kaydı yok — Faz 8'in kriteri onu kuracak), limit emri ve iptal yolu, uzun süreli
-dayanıklılık. **K-034 yine ertelendi:** Faz 7'de de tek yazıcı var, PostgreSQL'in gerekçesi
-olan eşzamanlı yazma doğmadı; şema dondurulmuş kalıyor, karar Faz 8'e taşındı.
+**Bu fazın ölçmediği şeyler** (raporun §7'si): pozisyon mutabakatı, limit emri ve iptal
+yolu, uzun süreli dayanıklılık. **K-034 yine ertelendi:** Faz 7'de de tek yazıcı var,
+PostgreSQL'in gerekçesi olan eşzamanlı yazma doğmadı; şema dondurulmuş kalıyor.
+
+**Faz 7'ye dönüş (2026-09-11): dört eksikten ikisi kapandı.** Faz 4'e dönüş 5'ten sonra
+(K-045) Faz 8'in önündeki engel bir iş kalemi değil bir bulgu — promotion'u geçen strateji
+yok. Bu arada **stratejiden bağımsız** ölçülebilen iki borç kapatıldı; ikisi de Faz 8'in ön
+koşulu ve ikisi de strateji beklemiyordu:
+
+| Eksik | Durum |
+| --- | --- |
+| Pozisyon mutabakatı | ✅ **K-046** — değişmez çıpa + defter akışı vs borsa bakiyesi. `runs/testnet/poz-1`: fark tam sıfır; defterin bilmediği 0,0002 BTC'lik bir emir gönderilince **durdu** (−15,4368 USDT, çıkış kodu 1) |
+| Limit emri ve iptal | ✅ **K-047** — dört vaka gerçek testnet'te: açık limit para kilitliyor, iptal kilidi çözüyor, marketable limit limitten iyi fiyattan doluyor, dolmuş emrin iptali ağa hiç çıkmıyor |
+| PostgreSQL şeması (K-034) | ⏳ açık, Faz 8 |
+| Uzun süreli dayanıklılık | ⏳ açık, Faz 8 |
+
+**İki iş birbirini buldu:** Faz 7'nin `bakiye()`si yalnızca `free` okuyordu ve market
+emriyle bu hiç sorun çıkarmamıştı; limit yolu açılınca aynı kod **her açık emirde**
+pozisyon mutabakatını haksız yere durduracaktı. Ayrı yapılsalardı ikincisi birincinin
+üzerine sessiz bir arıza bırakırdı.
+
+**Kayıtlı ölçülemezlik: testnet komisyon kesmiyor** (`commission: '0.00000000'`). Pozisyon
+mutabakatının temiz sonucu, komisyon yolu hiç çalışmadan da aynı çıkardı. Komisyon mantığı
+birim testlerde ölçülüyor; gerçeğe karşı ilk sınavı Faz 8. Testler 1103 → 1143.
 
 **Üretilen paketler:** `exchange/` (`hatalar`, `kurallar`, `emir_adaptoru`, `imzali`),
 `execution/motor.py`, `oms/mutabakat.py`, CLI `sq testnet {durum,yuk,kesinti,mutabakat}`.

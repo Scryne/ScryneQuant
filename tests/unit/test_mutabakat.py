@@ -105,6 +105,10 @@ class SahteBorsa(EmirAdaptoru):
         self.islemler: dict[str, Komisyon] = {}
         #: Komisyonu `POST` yanıtında **gizle** — `GET /api/v3/order`ın davranışı bu.
         self.komisyonu_yanitta_gizle = False
+        self.iptaller: list[str] = []
+        self.iptal_hatasi: Exception | None = None
+        #: Açık limit emirlerinin kilitlediği miktar: borsa kimliği → (varlık, miktar).
+        self.kilitler: dict[str, tuple[str, float]] = {}
 
     # -- sözleşme --------------------------------------------------------
 
@@ -162,6 +166,102 @@ class SahteBorsa(EmirAdaptoru):
         self.emirler[istemci_kimligi] = emir
         return emir
 
+    def limit_emri(
+        self,
+        *,
+        istemci_kimligi: str,
+        sembol: str,
+        yon: str,
+        miktar: float,
+        fiyat: float,
+    ) -> BorsaEmri:
+        """Dolabilir ya da açık kalabilir — ve **açık kalan para kilitler**.
+
+        Gerçek borsanın limit emrinde önemli olan iki davranışı bu: piyasa fiyatına göre
+        ya hemen dolar ya defterde bekler, ve beklerken bakiyeyi `serbest`ten
+        `kilitli`ye taşır. Kilitlemeyen bir sahte, pozisyon mutabakatının `toplam`
+        kullandığını hiç sınamazdı.
+        """
+        self.gonderimler.append(istemci_kimligi)
+        if self.hata is not None:
+            hata, self.hata = self.hata, None
+            raise hata
+        if istemci_kimligi in self.emirler:
+            raise BorsaReddetti("Duplicate order sent.", kod=-2010)
+
+        yon = borsa_yonu(yon)
+        if yon not in ("BUY", "SELL"):
+            raise BorsaReddetti(f"Invalid side: {yon}", kod=-1121)
+        if abs(fiyat / KURALLAR.tick_size - round(fiyat / KURALLAR.tick_size)) > 1e-6:
+            raise BorsaReddetti(f"Tick size hatası: {fiyat}", kod=-1013)
+
+        borsa_kimligi = f"B{len(self.emirler) + 1}"
+        dolar = (yon == "BUY" and fiyat >= FIYAT) or (yon == "SELL" and fiyat <= FIYAT)
+
+        if dolar:
+            # Marketable limit: borsa **daha iyi** olan fiyattan doldurur, limitten değil.
+            gerceklesen = min(fiyat, FIYAT) if yon == "BUY" else max(fiyat, FIYAT)
+            komisyon = self._doldur(
+                borsa_kimligi, yon=yon, miktar=miktar, fiyat=gerceklesen
+            )
+            emir = BorsaEmri(
+                istemci_kimligi=istemci_kimligi,
+                borsa_kimligi=borsa_kimligi,
+                sembol=sembol,
+                yon=yon,
+                durum=EmirDurumu.FILLED,
+                miktar=miktar,
+                dolan_miktar=miktar,
+                ortalama_fiyat=gerceklesen,
+                guncellendi_ms=self.zaman_ms,
+                ham_durum="FILLED",
+                komisyon=() if self.komisyonu_yanitta_gizle else komisyon,
+                komisyon_kaynagi="" if self.komisyonu_yanitta_gizle else "yanit",
+            )
+        else:
+            self._kilitle(borsa_kimligi, yon=yon, miktar=miktar, fiyat=fiyat)
+            emir = BorsaEmri(
+                istemci_kimligi=istemci_kimligi,
+                borsa_kimligi=borsa_kimligi,
+                sembol=sembol,
+                yon=yon,
+                durum=EmirDurumu.ACKNOWLEDGED,
+                miktar=miktar,
+                dolan_miktar=0.0,
+                ortalama_fiyat=0.0,
+                guncellendi_ms=self.zaman_ms,
+                ham_durum="NEW",
+                komisyon=(),
+                komisyon_kaynagi="yanit",
+            )
+        self.emirler[istemci_kimligi] = emir
+        return emir
+
+    def emir_iptal(self, *, sembol: str, istemci_kimligi: str) -> BorsaEmri | None:
+        self.iptaller.append(istemci_kimligi)
+        if self.iptal_hatasi is not None:
+            hata, self.iptal_hatasi = self.iptal_hatasi, None
+            raise hata
+        emir = self.emirler.get(istemci_kimligi)
+        if emir is None or emir.durum is not EmirDurumu.ACKNOWLEDGED:
+            # Gerçek borsanın `-2011`i: iptal edilecek bir şey yok.
+            return None
+        self._kilidi_coz(emir.borsa_kimligi)
+        iptal = BorsaEmri(
+            istemci_kimligi=emir.istemci_kimligi,
+            borsa_kimligi=emir.borsa_kimligi,
+            sembol=emir.sembol,
+            yon=emir.yon,
+            durum=EmirDurumu.CANCELED,
+            miktar=emir.miktar,
+            dolan_miktar=emir.dolan_miktar,
+            ortalama_fiyat=emir.ortalama_fiyat,
+            guncellendi_ms=self.zaman_ms,
+            ham_durum="CANCELED",
+        )
+        self.emirler[istemci_kimligi] = iptal
+        return iptal
+
     def emir_sorgula(self, *, sembol: str, istemci_kimligi: str) -> BorsaEmri | None:
         return self.emirler.get(istemci_kimligi)
 
@@ -197,6 +297,27 @@ class SahteBorsa(EmirAdaptoru):
         self.islemler[borsa_kimligi] = toplam
         return toplam
 
+    def _kilitle(
+        self, borsa_kimligi: str, *, yon: str, miktar: float, fiyat: float
+    ) -> None:
+        """Açık emir parayı `serbest`ten `kilitli`ye taşır; toplam **değişmez**."""
+        varlik, tutar = ("USDT", miktar * fiyat) if yon == "BUY" else ("BTC", miktar)
+        mevcut = self.varliklar.get(varlik, Varlik())
+        self.varliklar[varlik] = Varlik(
+            serbest=mevcut.serbest - tutar, kilitli=mevcut.kilitli + tutar
+        )
+        self.kilitler[borsa_kimligi] = (varlik, tutar)
+
+    def _kilidi_coz(self, borsa_kimligi: str) -> None:
+        kilit = self.kilitler.pop(borsa_kimligi, None)
+        if kilit is None:
+            return
+        varlik, tutar = kilit
+        mevcut = self.varliklar.get(varlik, Varlik())
+        self.varliklar[varlik] = Varlik(
+            serbest=mevcut.serbest + tutar, kilitli=mevcut.kilitli - tutar
+        )
+
     def _ekle(self, varlik: str, miktar: float) -> None:
         mevcut = self.varliklar.get(varlik, Varlik())
         self.varliklar[varlik] = Varlik(
@@ -204,6 +325,34 @@ class SahteBorsa(EmirAdaptoru):
         )
 
     # -- test yardımcıları -----------------------------------------------
+
+    def sessizce_doldur(self, kimlik: str) -> None:
+        """Açık bir limit emri borsada dolar — ve çağıranın haberi olmaz.
+
+        İptal ile fill'in yarıştığı anın borsadan görünüşü bu. Gerçek bir zamanlama
+        yarışını taklit etmeye çalışmak testi kırılgan yapardı; ölçülmesi gereken şey
+        yarışın kendisi değil, **yarışı kaybeden iptalin ne yaptığı**.
+        """
+        emir = self.emirler[kimlik]
+        self._kilidi_coz(emir.borsa_kimligi)
+        self._doldur(
+            emir.borsa_kimligi,
+            yon=emir.yon,
+            miktar=emir.miktar,
+            fiyat=emir.ortalama_fiyat or FIYAT,
+        )
+        self.emirler[kimlik] = BorsaEmri(
+            istemci_kimligi=emir.istemci_kimligi,
+            borsa_kimligi=emir.borsa_kimligi,
+            sembol=emir.sembol,
+            yon=emir.yon,
+            durum=EmirDurumu.FILLED,
+            miktar=emir.miktar,
+            dolan_miktar=emir.miktar,
+            ortalama_fiyat=emir.ortalama_fiyat or FIYAT,
+            guncellendi_ms=self.zaman_ms,
+            ham_durum="FILLED",
+        )
 
     def sessizce_kabul_et(self, kimlik: str, *, durum=EmirDurumu.FILLED) -> None:
         """Emri borsaya yazar ama çağırana haber vermez — 'yanıt kayboldu' hâli."""
