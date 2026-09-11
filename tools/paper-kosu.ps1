@@ -16,9 +16,14 @@
 #
 # Gorevi kaldirmak:
 #   Unregister-ScheduledTask -TaskName "ScryneQuant-Paper" -Confirm:$false
+#
+# Kosuyu DUZGUN durdurmak (K-043) -- sert kill degil:
+#   sq paper durdur gozlem-2 --sebep "kod guncellemesi"
+# Sert kill `temiz_kapanmadi` olarak kesintiye yazilir; bu komut `durdu` satirini
+# sebebiyle birlikte yazdirir ve kesinti saydirmaz.
 
 param(
-    [string]$KosuAdi   = "gozlem-1",
+    [string]$KosuAdi   = "gozlem-2",
     [string]$Strateji  = "ema_kesisim",
     [string]$Mod       = "gozlem",
     [int]   $Port      = 8787

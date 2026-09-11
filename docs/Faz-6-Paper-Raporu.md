@@ -28,7 +28,7 @@ Toplam **881 test** yeşil (Faz 5 sonunda 757'ydi).
 
 | Alan | Değer |
 | --- | --- |
-| Koşu adı | `gozlem-1` |
+| Koşu adı | `gozlem-1` → **`gozlem-2`** (bkz. aşağıdaki denetim bölümü) |
 | Mod | `gozlem` — promotion kanıtı üretmez (K-035) |
 | Sembol / timeframe | BTCUSDT / 1h |
 | Strateji | `ema_kesisim` {"hizli": 20, "maruziyet": 0.2, "yavas": 50} |
@@ -257,9 +257,33 @@ Ayrıca iki küçük düzeltme: tanınmayan bir `/api/...` yolu SPA geri düşü
 görünmemeli), ve `session-start` hook'u Roadmap'teki spike tablosunu da faz sanıp 9 fazı
 **13** diye sayıyordu.
 
-**Testler 1023 → 1061.** Koşu düzeltmelerin ardından `sq paper durdur` ile **düzgün**
-durduruldu ve yeniden başlatıldı; kayıtta `durdu` + `basladi` görünüyor, kesinti sayacı
-**0**'da kaldı ve `calisma_gun` ilk olaydan sayıldığı için 30 günlük saat sıfırlanmadı.
+**Testler 1023 → 1061.**
+
+### Koşu neden sıfırdan başlatıldı: `gozlem-1` → `gozlem-2`
+
+`gozlem-1` (2026-09-11 06:26 UTC, 5,5 saat, 6 bar, 0 fill) **emekliye ayrıldı** ve 30
+günlük saat `gozlem-2` ile sıfırdan başladı. Gerekçe iki katlı:
+
+**1. Eski süreç kendi kapısını tanımıyordu.** Düzeltmeler diskteydi ama çalışan süreç
+K-043 öncesi koddu; durdurma bayrağını yoklamıyordu. Yani onu durdurmanın tek yolu sert
+kill'di, ve sistem — kendi kuralı gereği, doğru biçimde — bunu `temiz_kapanmadi` diye
+kaydederdi. `gozlem-1`'e devam etmek, 30 günlük koşuya **sebebi "bilinmiyor" olan bir
+kesintiyle** başlamak demekti. Kriter *"kesinti olduysa sebebi kayıtlı"* diyor; sebebi
+yalnızca bu rapora elle yazarak "kayıtlı" saymak, kaydın söylemediği bir şeyi söylemiş
+gibi göstermek olurdu.
+
+**2. O 5,5 saat artık var olmayan kodu ölçüyordu.** Ölçülen şey altyapının ayakta kalması
+ve altyapı tam da o noktada değişti: yeniden bağlanma kaydı, backoff ölçütü, guard'ın
+gözetimi ve kapanış yolu. Saati devretmek, 30 günlük bir iddianın ilk saatlerini artık
+çalışmayan bir sürümle doldurmak olurdu. Kaybedilen ölçüm değeri sıfır: 0 fill, 6 bar.
+
+Bu, K-009'un *"bir commit atmak 30 günlük ölçümü sıfırlamamalı"* kuralıyla çelişmiyor.
+O kural koşunun **ortasındaki** bir kod değişikliğini kesinti saymamak için var ve
+`KOD_DEGISTI` ile kaydediyor; buradaki durum bir yan değişiklik değil, ölçülen mekanizmanın
+kendisinin düzeltilmesi — ve zaten temiz devretme imkânı da yoktu.
+
+Bundan sonrası için kapı açık: `sq paper durdur gozlem-2 --sebep "..."` planlı bir duruşu
+`durdu` satırıyla kapatıyor, kesinti sayacına dokunmuyor (K-043).
 
 ## Sırada ne var
 
