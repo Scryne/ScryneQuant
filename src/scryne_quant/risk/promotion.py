@@ -141,6 +141,17 @@ class Kanit:
     paper_kesinti: int | None = None
     """Açıklanamayan kesinti sayısı. Sıfırdan büyükse PAPER aşaması geçilmez."""
 
+    hipotez_sirasi: int | None = None
+    """Bu strateji **kaçıncı** denenen hipotezdi (K-039). `None` = kaydedilmemiş.
+
+    Bir eşik değil, okunması zorunlu bir bağlam — ve ölçülemediğinde `out_of_sample`
+    aşaması geçilmiş sayılmıyor. Sebep: K-019'un yedi kapısı strateji başına çalışıyor ve
+    hiçbiri "bu kaçıncı çekilişti" sorusunu sormuyor. Yeterince çok deneyen biri, eşiğe
+    hiç dokunmadan, K-018'in 'sayısal eşik esnetilemez' kuralını deler."""
+
+    hipotez_toplami: int | None = None
+    """Defterdeki toplam hipotez sayısı. `hipotez_sirasi` ile birlikte okunur."""
+
     paper_mod: str | None = None
     """Paper kanıtını üreten koşunun **modu**. `paper` dışındaki bir mod kanıt üretemez.
 
@@ -180,6 +191,8 @@ class Kanit:
             "paper_gun": self.paper_gun,
             "paper_kesinti": self.paper_kesinti,
             "paper_mod": self.paper_mod,
+            "hipotez_sirasi": self.hipotez_sirasi,
+            "hipotez_toplami": self.hipotez_toplami,
         }
 
 
@@ -233,8 +246,27 @@ def _kalite_kontrol(k: Kanit) -> AsamaSonucu:
 def _out_of_sample(k: Kanit) -> AsamaSonucu:
     if k.kapi_sonucu is None:
         return AsamaSonucu(Asama.OUT_OF_SAMPLE, None, "K-019 kapıları değerlendirilmemiş")
+
+    # Kaçıncı çekiliş olduğu **ölçülemediyse** aşama geçilmiş sayılmaz (K-039). Aynı
+    # kural volatilite guard'ında ve K-019'un her kapısında var: "veri yoktu" ile
+    # "geçti" aynı şey değil. Burada özellikle keskin, çünkü kaydedilmemiş bir çekiliş
+    # sayısı, geçilen kapının ne anlama geldiğini de bilinmez yapar.
+    if k.hipotez_sirasi is None:
+        return AsamaSonucu(
+            Asama.OUT_OF_SAMPLE,
+            None,
+            "hipotez defterinde kayıt yok: bu stratejinin kaçıncı deneme olduğu "
+            "bilinmiyor (K-039)",
+        )
+
     if k.kapi_sonucu.get("gecti") is True:
-        return AsamaSonucu(Asama.OUT_OF_SAMPLE, True, "K-019'un yedi eşiği geçildi")
+        toplam = k.hipotez_toplami or k.hipotez_sirasi
+        return AsamaSonucu(
+            Asama.OUT_OF_SAMPLE,
+            True,
+            f"K-019'un yedi eşiği geçildi — {k.hipotez_sirasi}. hipotez "
+            f"(defterde toplam {toplam})",
+        )
     kalan = k.kapi_sonucu.get("kalan_kapilar") or []
     return AsamaSonucu(
         Asama.OUT_OF_SAMPLE, False, f"geçilmeyen kapı(lar): {', '.join(kalan) or 'bilinmiyor'}"

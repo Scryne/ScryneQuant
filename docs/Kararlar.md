@@ -1369,6 +1369,68 @@ olurdu; o kapı bir kez aralandığında kapanmaz.
 
 ---
 
+## K-039 — Kaç hipotez denendiği sayılır ve ön kayıt zorunludur
+
+**Durum:** kabul (düzeltme açık) · **Tarih:** 2026-09-11 · **Faz:** 6 · **Tamamlar:**
+K-010, K-018, K-019 · **Kanıt:** `tests/unit/test_hipotez.py`,
+`tests/unit/test_promotion.py::TestHipotezSayisi`
+
+**Sorun — promotion zincirinin en sessiz başarısızlık yolu.** K-019'un yedi kapısı
+strateji **başına** çalışıyor ve hiçbiri *"bu kaçıncı denemeydi"* sorusunu sormuyor. Faz
+4'te yedi hipotez denendi ve yedisi de kaldı; bu doğru sonuçtu. Ama elli tane daha
+denenirse, kapılara **hiç dokunmadan**, birinin şans eseri geçme olasılığı ciddi biçimde
+yükselir.
+
+Yani K-018'in *"sayısal eşik esnetilemez, değiştirmek iz bırakır"* kuralı, **eşiğe el
+sürmeden** delinebiliyordu: yeterince çok deneyerek. Hiçbir kural çiğnenmez, hiçbir test
+kırılmaz, `test_faz4_olcumlerinden_hicbiri_gecmiyor` yeşil kalır — ve sonunda "kapıları
+geçen bir strateji" ortaya çıkar. O stratejinin kaçıncı deneme olduğu kayıtlı değilse,
+geçtiği kapının ne anlama geldiği de bilinmiyor demektir.
+
+Bu, K-010'un korumaya çalıştığı sabırsızlığın en kılık değiştirmiş hâli: kapıyı zorlamak
+yerine kapıya yeterince çok kez gitmek.
+
+**Karar — üç parça:**
+
+1. **Hipotez defteri** (`docs/Hipotez-Defteri.jsonl`, `research/hipotez.py`). Bir hipotez
+   = (strateji, timeframe, veri hash'i, parametre ızgarası). Aynı dördü ikinci kez yeni
+   bir çekiliş **değil**; ızgarayı genişletmek **yeni bir çekiliştir** ve sayılır.
+2. **Ön kayıt zorunlu.** Hipotez sonucu görülmeden önce yazılır ve bir **gerekçe** taşır
+   (≥20 karakter, zorunlu). Sonradan yazılan bir hipotez "zaten bunu bekliyordum" demenin
+   kaydıdır, kanıt değil. Gerekçesiz bir hipotez, ızgarayı genişletmenin kibar adıdır.
+3. **Sayı promotion kanıtının parçası.** `Kanit.hipotez_sirasi` yoksa `out_of_sample`
+   aşaması **ölçülemedi** sayılır — "kaldı" değil, ölçülemedi. Bu, K-019'un *"ölçülemeyen
+   kapı geçilmiş sayılmaz"* kuralının aynısı. Geçen bir stratejinin kaydı "47. hipotez
+   (defterde toplam 120)" diye okunur.
+
+**Bilerek yapılmayan: eşiği düzeltmek.** Bonferroni benzeri bir düzeltme çekici ama buraya
+yanlış oturur — stratejiler bağımsız değil (aynı veri, örtüşen sinyaller, aynı rejim), yani
+düzeltme çarpanı bilinmiyor. Uydurulan bir çarpan, olmayan bir kesinlik iddia eder ve bu
+projede en pahalı hata sınıfı tam olarak budur. Deflated Sharpe (Bailey & López de Prado)
+gibi yöntemler var ama varsayımları tartışmalı ve bu veri üzerinde **ölçülmedi**.
+
+**Bu yüzden karar "açık düzeltme" ile veriliyor** — K-019'un eşikleri Faz 4'ün ölçümüne
+kadar nasıl açık bırakıldıysa aynı kalıpta. Düzeltme, kapıları geçen **ilk** strateji
+çıktığında verilir; o an defterdeki sayı bilinecek ve düzeltmenin büyüklüğü somut bir
+soruya dönüşecek. Şimdiden bir sayı seçmek, ölçülmemiş bir şeye sayı vermek olurdu.
+
+**Defterin yeri bir karar.** `runs/` altında olması doğal görünüyordu ama yanlış: `runs/`
+`.gitignore`'da ve **iz bırakmadan silinebilen bir defter, defter değildir.** Sayacı
+sıfırlamak, bu kararın engellemeye çalıştığı şeyi bir `rm` ile yapmak olurdu. Defter
+`docs/` altında, sürüm kontrolünde, karar günlüğünün yanında duruyor — tuttuğu şey bir
+çalışma çıktısı değil, bir araştırma kaydı. Biçim JSONL: bir hipotez eklemek diff'te tek
+bir satır.
+
+**Faz 4'ün yedi hipotezi geriye dönük kaydedildi** ve kayıtları bunu açıkça söylüyor.
+Geriye dönük kayıt ön kayıt sayılmaz ve o yedi hipotez ön-kayıt kanıtı olarak
+kullanılamaz — ama **sayılmak zorundalar**: kaydedilmemiş bir çekiliş, sayacı olduğundan
+küçük gösterir ve bu kararın tam olarak engellemek istediği şeyi yapar.
+
+**Pratik sonuç:** Faz 4'e her dönüşte, denenecek hipotez önce `sq lab hipotez-kaydet` ile
+gerekçesiyle yazılır. Defter `sq lab hipotezler` ile okunur.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -1399,14 +1461,20 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-036 | Dashboard Vite+React SPA, FastAPI servis eder | ✅ **kabul** | Faz 6 |
 | K-037 | Engelleyen katman risk motorunun dışında olabilir, izin veren olamaz | ✅ **kabul** | Faz 6 |
 | K-038 | Toparlanma bir geri yükleme değil, yeniden üretimdir | ✅ **kabul** | Faz 6 |
+| K-039 | Kaç hipotez denendiği sayılır; ön kayıt zorunlu | ✅ **kabul** (düzeltme açık) | Faz 6 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5
-K-032/033'ü, Faz 6 K-034…038'i ekledi.**
+K-032/033'ü, Faz 6 K-034…039'u ekledi.**
 
-**Açık karar kalmadı.** Projenin son açık kararı olan **K-019** (promotion kapılarının
+**Açık karar kalmadı; iki açık *sayı* var** (aşağıda). Projenin son açık kararı olan **K-019** (promotion kapılarının
 sayısal eşikleri) Faz 4 sonunda gerçek veriyle kalibre edilip kapandı. Bundan sonraki
 kararlar yeni fazların kendi soruları olacak.
+
+**Açık bırakılan tek sayı K-039'un düzeltmesi.** Kaç hipotez denendiği artık sayılıyor,
+ama o sayının eşiklere nasıl yansıyacağı **ölçülmedi** ve uydurulmadı. Düzeltme, kapıları
+geçen ilk strateji çıktığında verilecek — o an defterdeki sayı bilinecek. K-019'un
+eşiklerinin Faz 4'e kadar açık bırakılmasıyla aynı kalıp.
 
 **K-018/3'ün beşinci eşik adayı (paper/backtest drift üst sınırı) hâlâ ölçülmemiş.** Faz
 6'da ölçülebilir hâle gelecekti; K-035 bunun neden **hâlâ mümkün olmadığını** kaydediyor:

@@ -40,6 +40,7 @@ from scryne_quant.research import analiz as analiz_mod
 from scryne_quant.research import bolme, tekrar
 from scryne_quant.research import degerlendirme as degerlendirme_mod
 from scryne_quant.research import deney as deney_mod
+from scryne_quant.research import hipotez as hipotez_mod
 from scryne_quant.research import karsilastirma as karsilastirma_mod
 from scryne_quant.research import tarama as tarama_mod
 from scryne_quant.research import walkforward as wf_mod
@@ -1795,6 +1796,78 @@ def _deger_coz(ham: str) -> Any:
         except ValueError:
             continue
     return ham
+
+
+@lab_app.command("hipotez-kaydet")
+def lab_hipotez_kaydet(
+    strateji_adi: Annotated[str, typer.Argument(help="Kütüphanedeki strateji adı.")],
+    gerekce: Annotated[
+        str,
+        typer.Option("--gerekce", "-g", help="Bu hipotez neden deneniyor? (≥20 karakter)"),
+    ],
+    sembol: Annotated[str, typer.Option("--sembol")] = "BTCUSDT",
+    timeframe: Annotated[str, typer.Option("--timeframe", "-t")] = "1h",
+    depo: Depo = VARSAYILAN_DEPO,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Bir hipotezi **sonucu görmeden önce** deftere kaydeder. (K-039)
+
+    K-019'un yedi kapısı strateji başına çalışıyor ve hiçbiri "bu kaçıncı denemeydi"
+    sorusunu sormuyor. Yeterince çok deneyen biri, eşiğe hiç dokunmadan, K-018'in
+    "sayısal eşik esnetilemez" kuralını deler — hiçbir test kırılmadan. Defter o yolu
+    kapatıyor: kaydedilmemiş bir hipotez `out_of_sample` aşamasını geçemez.
+
+    Izgara `research/izgaralar.py`den okunuyor; yani "hangi parametre uzayı denendi"
+    sorusunun cevabı kaydın içinde ve sonradan genişletilen bir ızgara **yeni bir
+    hipotez** sayılıyor.
+    """
+    izgara = varsayilan_izgara(strateji_adi)
+    sha = ParquetDepo(depo).sha256(sembol, timeframe)
+    hipotez = hipotez_mod.Hipotez.kur(strateji_adi, timeframe, sha, izgara, gerekce)
+
+    defter = hipotez_mod.HipotezDefteri()
+    onceki = defter.sira(hipotez)
+    sira = defter.kaydet(hipotez)
+
+    govde = {
+        "sira": sira,
+        "toplam": defter.sayi(),
+        "yeni": onceki is None,
+        "hipotez": hipotez.sozluk(),
+    }
+    if json_cikti:
+        _yaz_json(govde)
+        return
+    if onceki is not None:
+        typer.echo(f"zaten kayıtlı: {sira}. hipotez (aynı soru yeni bir çekiliş değil)")
+    else:
+        typer.echo(f"kaydedildi: {sira}. hipotez")
+    typer.echo(f"kimlik : {hipotez.kimlik[:16]}")
+    typer.echo(f"defter : {defter.sayi()} hipotez · {defter.yol}")
+
+
+@lab_app.command("hipotezler")
+def lab_hipotezler(json_cikti: JsonCikti = False) -> None:
+    """Hipotez defteri: kaç çekiliş yapıldı, hangi stratejide kaç tane. (K-039)"""
+    defter = hipotez_mod.HipotezDefteri()
+    kayitlar = defter.tumu()
+    if json_cikti:
+        _yaz_json({"ozet": defter.ozet(), "hipotezler": kayitlar})
+        return
+    if not kayitlar:
+        typer.echo("defter boş.")
+        return
+    for sira, k in enumerate(kayitlar, start=1):
+        typer.echo(f"{sira:>3}. {k['strateji']:<14} {k['timeframe']:<4} {k['zaman_utc']}")
+        for satir in _sar(k["gerekce"], 72):
+            typer.echo(f"     {satir}")
+    typer.echo("")
+    typer.echo(f"toplam {len(kayitlar)} hipotez")
+    typer.secho(
+        "Bu sayı bir eşik değil, okunması zorunlu bir bağlam: kapıları geçen bir "
+        "strateji, kaçıncı deneme olduğu bilinmeden okunamaz (K-039).",
+        fg=typer.colors.YELLOW,
+    )
 
 
 @app.command("bilgi")

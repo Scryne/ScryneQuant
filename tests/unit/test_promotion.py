@@ -50,6 +50,8 @@ TAM_KANIT: Final = Kanit(
     paper_gun=31.0,
     paper_kesinti=0,
     paper_mod="paper",
+    hipotez_sirasi=3,
+    hipotez_toplami=7,
 )
 
 
@@ -361,4 +363,42 @@ def _alanlar(k: Kanit) -> dict:
         "paper_gun": k.paper_gun,
         "paper_kesinti": k.paper_kesinti,
         "paper_mod": k.paper_mod,
+        "hipotez_sirasi": k.hipotez_sirasi,
+        "hipotez_toplami": k.hipotez_toplami,
     }
+
+
+class TestHipotezSayisi:
+    """K-039: kaçıncı çekiliş olduğu ölçülmediyse OOS aşaması geçilmiş sayılmaz.
+
+    K-019'un yedi kapısı strateji **başına** çalışıyor ve hiçbiri "bu kaçıncı denemeydi"
+    sorusunu sormuyor. Yeterince çok deneyen biri, eşiğe hiç dokunmadan, K-018'in
+    "sayısal eşik esnetilemez" kuralını deler — hiçbir test kırılmadan, hiçbir kural
+    çiğnenmeden. Bu sınıf o yolu kapatıyor.
+    """
+
+    def test_hipotez_kaydi_yoksa_asama_olculemedi(self):
+        k = kayit(Asama.KALITE_KONTROL)
+        sonuc = k.ilerlet(Kanit(**{**_alanlar(TAM_KANIT), "hipotez_sirasi": None}))
+        assert sonuc.gecti is None  # "kaldı" değil — **ölçülemedi**
+        assert "K-039" in sonuc.gerekce
+
+    def test_hipotez_kaydi_varken_geciyor(self):
+        k = kayit(Asama.KALITE_KONTROL)
+        sonuc = k.ilerlet(TAM_KANIT)
+        assert sonuc.gecti is True
+        assert "3. hipotez" in sonuc.gerekce
+
+    def test_gerekce_kacinci_cekilis_oldugunu_yaziyor(self):
+        # Geçen bir stratejinin kaydı, kaçıncı deneme olduğunu **söylemek zorunda**:
+        # o sayı olmadan geçilen kapının ne anlama geldiği de bilinmiyor.
+        k = kayit(Asama.KALITE_KONTROL)
+        sonuc = k.ilerlet(Kanit(**{**_alanlar(TAM_KANIT), "hipotez_sirasi": 47,
+                                   "hipotez_toplami": 120}))
+        assert "47. hipotez" in sonuc.gerekce
+        assert "120" in sonuc.gerekce
+
+    def test_kanit_sozlugu_sayiyi_tasiyor(self):
+        g = TAM_KANIT.sozluk()
+        assert g["hipotez_sirasi"] == 3
+        assert g["hipotez_toplami"] == 7
