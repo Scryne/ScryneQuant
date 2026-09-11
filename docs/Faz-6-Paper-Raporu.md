@@ -20,7 +20,7 @@ status: devam-ediyor
 | Veri akışı kesilince yeni pozisyon açılmıyor | ✅ | `tests/unit/test_paper_dongu.py::TestBayatVeriGuardi` |
 | Dashboard'un 4 sayfası çalışıyor, risk ilk bakışta görünüyor | ✅ | `tests/unit/test_api.py` + uçtan uca canlı doğrulama |
 
-Toplam **872 test** yeşil (Faz 5 sonunda 757'ydi).
+Toplam **881 test** yeşil (Faz 5 sonunda 757'ydi).
 
 ## Ölçülen şey ne, ölçülmeyen ne
 
@@ -119,9 +119,28 @@ en yeni satır olduğu için) ve bunu testi yakaladı. Tarama `temiz_kapanmadi`y
 şekilde düzeltildi: bir kez kaydedilmiş kesinti kaydedilmiştir; sayacın iki kez artması
 olmayan bir kesinti uydurmak olurdu.
 
+## Koşuyu başlatırken çıkan kaza: tek-örnek koruması yoktu
+
+Gözlem koşusu başlatılırken **iki süreç aynı koşu dosyasını açtı** ve hiçbir şey
+**çökmedi** — SQLite yazımları serileştirdi. Tehlikeli olan tam olarak buydu: iki trader
+döngüsü aynı barları işleseydi fill defteri çiftlenir, kontrol noktası birbirinin üstüne
+yazılır ve hata ancak bir sonraki toparlanmada, üstelik **yanlış sebeple** ("portföy fill
+defteriyle ayrıştı") görünürdü. Yani sistemin en iyi teşhis aracı yanlış yeri gösterirdi.
+
+Çözüm işletim sistemi düzeyinde tavsiye kilidi (`live/kilit.py`), veritabanı satırı değil.
+Bir `kilit` tablosuna pid yazmak cazipti ama yanlış: süreç çökünce satır kalır ve "kilitli
+mi yoksa ölü mü" sorusu cevapsız kalır — `temiz_kapanmadi`nin çözmek zorunda kaldığı
+problemin ikinci kopyası. İşletim sistemi kilidini çekirdek bırakır; bayat kilit diye bir
+durum yoktur. Testi de bunu ölçüyor: kilidi tutan çocuk süreç öldürülüyor ve kilidin gittiği
+doğrulanıyor.
+
+İlk yazımda kilit baytı dosyanın başındaydı; Windows kilitli bayt aralığını okutmadığı için
+**kilit tutulurken pid okunamıyordu** — yani "kim tutuyor" bilgisi tam da ihtiyaç duyulduğu
+anda erişilemezdi. Kilit baytı içeriğin dışına (4096) taşındı.
+
 ## Bulunan hatalar
 
-Altısı da testler yazılırken veya uçtan uca doğrulamada çıktı.
+Yedisi de testler yazılırken veya uçtan uca doğrulamada çıktı.
 
 1. **Canlı pencere kısayken ATR hesabı patlıyordu.** Backtest'te seri baştan sona elde ve
    ATR bir kez hesaplanıyor; canlıda pencere sıfırdan büyüyor ve ilk 15 barda seri
@@ -141,7 +160,9 @@ Altısı da testler yazılırken veya uçtan uca doğrulamada çıktı.
    anlatan iki sayı — ve rapor, ekranda okunan taraf.
 5. **Çökme kesinti sayılmıyordu** — yukarıdaki bölüm. Kriterin kendisini ölçülebilir
    kılan düzeltme; koşu başlatılmadan önce yapıldı.
-6. **Arayüzde üç denetim bulgusu:** `role="tablist"` gerekli ARIA kalıbı olmadan
+6. **Koşunun tek-örnek koruması yoktu** — yukarıdaki bölüm. Koşuyu başlatırken, canlı
+   olarak yaşandı.
+7. **Arayüzde üç denetim bulgusu:** `role="tablist"` gerekli ARIA kalıbı olmadan
    verilmişti; risk şeridi SAFE_MODE'da bile `role="status"` ile sıraya giriyordu;
    `background-attachment: fixed` her kaydırmada arka planı yeniden boyatıyordu.
 

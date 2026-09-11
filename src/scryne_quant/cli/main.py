@@ -1671,6 +1671,7 @@ def paper_baslat(
                     fg=typer.colors.YELLOW)
 
     if not ag:
+        kurulum.kapat()
         typer.echo("ağ kapalı: koşu kuruldu ama başlatılmadı (--ag ile başlatın)")
         return
 

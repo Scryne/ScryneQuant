@@ -33,6 +33,7 @@ from scryne_quant.exchange.binance import BinanceAdaptoru
 from scryne_quant.live.akis import Bar, Kaynak
 from scryne_quant.live.api import Yayinci, bar_yayini, uygulama_kur
 from scryne_quant.live.depo import KosuDeposu, KosuKimligi, KosuOlayi
+from scryne_quant.live.kilit import KosuKilidi
 from scryne_quant.live.kosturucu import Kosturucu
 from scryne_quant.live.motor import PaperMotoru
 from scryne_quant.live.pencere import VARSAYILAN_KAPASITE
@@ -52,6 +53,12 @@ class Kurulum:
     kosturucu: Kosturucu
     yayinci: Yayinci
     toparlanma: ToparlanmaSonucu
+    kilit: KosuKilidi
+    """Koşunun tek-yazıcı kilidi; süreç boyunca tutuluyor (`live/kilit.py`)."""
+
+    def kapat(self) -> None:
+        """Kilidi ve depoyu bırakır. İki kez çağrılabilir."""
+        self.kilit.kapat()
 
     def sozluk(self) -> dict[str, Any]:
         return {
@@ -147,7 +154,13 @@ def kur(
     azami_veri_yasi_ms: int | None = None,
     web_kok: Path | None = None,
 ) -> tuple[Kurulum, Any]:
-    """Koşuyu ve API uygulamasını kurar; henüz hiçbir şey çalışmıyor."""
+    """Koşuyu ve API uygulamasını kurar; henüz hiçbir şey çalışmıyor.
+
+    **Kilit her şeyden önce alınıyor.** Depo açıldıktan sonra alınsaydı, ikinci süreç
+    kilide takılana kadar çoktan bir SQLite bağlantısı açmış ve WAL dosyalarına dokunmuş
+    olurdu. Kilit, koşuya dokunan ilk işlem olmalı.
+    """
+    kilit = KosuKilidi(kosu_yolu).al()
     depo = KosuDeposu(kosu_yolu)
     # Audit defteri **aynı dosyada**: risk kararları ile koşu durumu tek bir dosyada
     # yaşıyor, yani koşunun kopyası kararlarının da kopyası (K-034).
@@ -189,7 +202,7 @@ def kur(
     )
     kosturucu = Kosturucu(motor, akis, bar_kancasi=bar_yayini(yayinci, motor))
     app = uygulama_kur(motor, defter=defter, web_kok=web_kok, yayinci=yayinci)
-    return Kurulum(motor, kosturucu, yayinci, toparlanma), app
+    return Kurulum(motor, kosturucu, yayinci, toparlanma, kilit), app
 
 
 async def calistir(
@@ -227,6 +240,9 @@ async def calistir(
             if not gorev.done():
                 gorev.cancel()
         await asyncio.gather(trader, web, return_exceptions=True)
+        # Kilit en sonda bırakılıyor: daha erken bırakmak, koşu hâlâ kapanış satırını
+        # yazarken ikinci bir sürecin dosyaya girmesine izin verirdi.
+        kurulum.kapat()
 
     for gorev in bitenler:
         if gorev.exception() is not None:

@@ -462,9 +462,9 @@ K-037 (engelleyen katman risk motorunun dışında olabilir, izin veren olamaz),
 (toparlanma bir geri yükleme değil yeniden üretimdir).
 
 **Üretilen paketler:** `live/` (akış, pencere, depo, motor, toparlanma, koşturucu, API,
-kurulum), `exchange/akis.py` (Binance WebSocket + resync), `backtest/defter.py` (Faz 3'ten
+kurulum), `exchange/akis.py` (Binance WebSocket + resync), `live/kilit.py` (tek-yazıcı kilidi), `backtest/defter.py` (Faz 3'ten
 taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,olaylar}`.
-872 test yeşil (Faz 5 sonunda 757'ydi).
+881 test yeşil (Faz 5 sonunda 757'ydi).
 
 ### Faz 7: Execution sandbox (Binance Spot Testnet)
 
