@@ -50,10 +50,25 @@ from scryne_quant.strategy.sinyal import Sinyal
 
 #: Çalışma modları. `MOD_ESIGI` her birinin hangi promotion aşamasını şart koştuğunu
 #: söylüyor; buradaki tuple yalnızca geçerli ad kümesi.
-MODLAR: Final[tuple[str, ...]] = ("backtest", "paper", "live")
+#:
+#: `gozlem` Faz 6'da eklendi (K-035): canlı veride koşan ama promotion kanıtı **üretemeyen**
+#: mod. Risk motorunun promotion dışındaki her limiti orada da tam olarak uygulanır; tek
+#: farkı `MOD_ESIGI` eşiğinin `YOK` olması. Gerekçe K-035'te: altyapıyı ölçmek için kapıyı
+#: indirmek, kapının var olma sebebini yok ederdi.
+MODLAR: Final[tuple[str, ...]] = ("backtest", "gozlem", "paper", "live")
 
 #: Hedefi aşağı çekebilen limitler. Audit'te "hangi limit kısıtladı" sayımı bunu kullanıyor.
 KISIT_ADLARI: Final[tuple[str, ...]] = ("azami_maruziyet", "islem_basina_risk")
+
+#: Risk motorunun volatilite ölçüsünün penceresi. Stratejinin bildirdiği özelliklerden
+#: **bağımsız**: risk kendi ölçüsünü kendi alır (`PiyasaOlcumu`). 14, limitlerin
+#: kalibre edildiği pencere (`docs/Faz-5-Risk-Raporu.md`) — değiştirmek
+#: `volatilite_esigi` ve `ters_hareket_atr_carpani`yi yeniden ölçmeyi gerektirir.
+#:
+#: Faz 3'te `backtest/motor.py`de doğdu, Faz 6'da buraya taşındı: paper döngüsü de aynı
+#: pencereyi kullanmak zorunda ve ikisinin ayrışması, risk limitlerinin backtest'te bir
+#: canlıda başka bir volatilite ölçüsüyle uygulanması demek olurdu (K-001).
+RISK_ATR_PENCERESI: Final = 14
 
 #: Kill switch sebep kodları. Audit'te gruplanabilmesi için kod, cümle değil.
 KILL_DRAWDOWN: Final = "DRAWDOWN_LIMITI"

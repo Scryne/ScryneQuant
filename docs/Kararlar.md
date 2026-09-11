@@ -1140,6 +1140,235 @@ değil (ölçüldü: %30 tavanda gerçekleşen %30,14, fill sonrası fiyat harek
 
 ---
 
+## K-034 — Operasyonel state SQLite (WAL); PostgreSQL Faz 7'ye ertelendi
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 6 · **Tadil eder:** K-011,
+Final-Doküman "Teknoloji Stack" satırı *Operasyonel state → PostgreSQL (Faz 5+)*
+
+**Karar:** Faz 6'nın operasyonel state'i (paper koşu durumu, portföy, risk durumu, audit
+log) **SQLite**'ta, WAL modunda yaşar. PostgreSQL Faz 7'ye (execution sandbox) ertelendi.
+`migrations/001_faz5.sql` olduğu yerde ve dondurulmuş kalır; `risk/audit.py`'nin şemayla
+kolon hizası testi (`tests/unit/test_audit.py`) sürüyor.
+
+**Gerekçe — K-011'in kendi ölçütüne göre:** K-011 PostgreSQL'i *"eşzamanlı yazma,
+transaction ve dayanıklı state gerektiğinde"* diye gerekçelendirmişti. Faz 6'nın mimarisi
+o üç ihtiyaçtan yalnızca ikisini doğuruyor:
+
+- **Eşzamanlı yazma yok.** FastAPI paper trading sürecinin *içinde* çalışıyor (K-036);
+  yazan tek şey trader döngüsü, dashboard yalnızca okuyor. Tek yazıcı + çok okuyucu tam
+  olarak SQLite WAL'ın tasarım noktası.
+- **Transaction ve dayanıklılık gerekiyor** ve SQLite ikisini de veriyor: WAL +
+  `synchronous = FULL` ile commit'lenmiş bir satır süreç çökmesinde de işletim sistemi
+  çökmesinde de kalır.
+
+Geriye tek bir gerçek argüman kalıyordu — "nasıl olsa gerekecek, şimdi kur". Onu Faz 6'nın
+**bitti kriteri** çürütüyor: *"30 gün kesintisiz çalışma (kesinti olduysa sebebi kayıtlı ve
+giderilmiş)."* Bu kriteri ölçen koşunun yanına, ayakta kalması gereken ikinci bir servis
+(Docker konteyneri — bu makinede yerel `psql` yok) koymak, ölçülen şeyi ölçüm aracının
+kendisiyle kirletir. 30 günü bölen şey konteynerin yeniden başlaması olursa, o kesinti
+paper trading altyapısı hakkında hiçbir şey söylemez ama kriteri düşürür.
+
+**Ne zaman geri dönülür (gözden geçirme koşulu, K-033'ün kalıbı):** aşağıdakilerden biri
+gerçekleştiğinde PostgreSQL kararı yeniden verilir — ertelenmiş karar, iptal edilmiş karar
+değildir.
+
+1. İkinci bir yazıcı süreç doğduğunda (Faz 7'nin execution/reconciliation döngüsü trader
+   döngüsünden ayrı bir süreçse).
+2. Audit tablosu 10 milyon satırı aştığında veya `runs/` toplamı 5 GB'ı geçtiğinde.
+3. Çok sembollü çalışmaya geçildiğinde.
+
+**Bedeli açıkça:** SQLite'ta `JSONB` yok (`govde`/`durum` TEXT olarak JSON tutuluyor,
+zaten öyleydi), `BIGSERIAL` yerine `INTEGER PRIMARY KEY`, ve append-only kuralı Postgres'in
+`RULE`'ları yerine trigger + `RAISE(ABORT)` ile zorlanıyor. Şema ikizliği testle korunduğu
+için göç, bir bağlantı dizgisi ve bir toplu kopyalama olarak kalır.
+
+---
+
+## K-035 — Gözlem modu: promotion geçmemiş strateji canlı veride koşabilir, ama kanıt üretemez
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 6 · **İlgili:** K-010, K-018, K-019,
+K-032
+
+**Sorun:** `MOD_ESIGI["paper"] = Asama.RISK_INCELEMESI`, yani paper modunda bir stratejinin
+sinyali ancak `out_of_sample` kapısını geçtiyse risk motorundan geçer. Faz 4'te ölçülen
+**yedi stratejinin yedisi de kaldı** (K-019) ve Faz 5 eşikleri gevşetmedi. Bugün başlatılan
+bir paper koşusunda risk motoru her sinyali `PROMOTION_YOK` ile reddeder. Faz 6'nın dört
+bitti kriterinden biri — *"süreç öldürülüp yeniden başlatıldığında pozisyon ve emir state'i
+doğru toparlanıyor"* — hiç pozisyon açılmadığı için **boş yere** geçer. Bu, bu projenin
+açıkça kaçındığı hata sınıfı: ölçülmemiş bir şeyin ölçülmüş görünmesi.
+
+**Reddedilen çözüm:** `MOD_ESIGI["paper"]` eşiğini indirmek. K-018 *"sayısal eşik
+esnetilemez"* diyor ve K-019 bunun mekanizmasını
+(`test_faz4_olcumlerinden_hicbiri_gecmiyor`) kurmuş. Kriteri ölçülebilir kılmak için
+kapıyı indirmek, kriteri ölçmenin sebebini yok eder.
+
+**Karar:** Dördüncü bir çalışma modu eklendi: `gozlem`. `MOD_ESIGI["gozlem"] = Asama.YOK`.
+
+1. **Risk motorunun promotion kapısı dışındaki her limiti tam olarak uygulanır** —
+   SAFE_MODE, drawdown, günlük zarar, cooldown, volatilite guard, boyutlandırma. Gözlem
+   modu risk motorunu gevşetmez; yalnızca *"bu strateji canlıya aday mı"* sorusunu sormaz.
+2. **Gözlem koşusunun ürettiği hiçbir kayıt promotion kanıtı olamaz.** Koşu kaydı `mod`
+   alanını taşır ve promotion kanıtı üretimi `mod != "paper"` olan bir koşuyu **reddeder** —
+   atlamaz, hata verir. Zorlaması `tests/unit/test_gozlem_modu.py`'de: gözlem koşusundan
+   promotion ilerletmeye çalışan test `PromotionHatasi` bekler.
+3. **Gerçek para yolu kapalıdır.** `gozlem` `MODLAR` içinde ama gerçek borsa bağlantısı
+   yalnızca `paper` ve `live` modlarında kurulur; gözlem her zaman simüle fill kullanır
+   (`backtest/fill.py`, yani K-004 ve K-007 aynen geçerli).
+
+**Gerekçe:** Faz 6'nın ölçtüğü şey stratejinin kârı değil, **altyapının 30 gün ayakta
+kalması ve doğru toparlanması**. O ölçüm için gereken tek şey pozisyon açan bir sinyal
+akışı; sinyalin canlıya aday olup olmaması ölçümle ilgisiz. İki soruyu tek kapıya bağlamak
+(K-010'un promotion kapısı) doğruydu — ama o kapı *sermayeyi* koruyor, *test kapsamını*
+değil. Gözlem modu ikisini ayırıyor: sermaye yolu kapalı kalır, kapsam açılır.
+
+**Ne kaybediyoruz, açıkça:** Gözlem koşusu 30 gün sürse bile K-018/3'ün beşinci eşik
+adayını (paper/backtest drift üst sınırı) **kalibre etmeye yetmez** — o ölçüm promotion'a
+girecek bir strateji üzerinde yapılmalı, çünkü drift'in büyüklüğü stratejiye bağlıdır.
+Gözlem koşusundan çıkacak olan şey drift ölçüm **yönteminin** çalıştığının kanıtı; sayının
+kendisi değil.
+
+---
+
+## K-036 — Dashboard: Vite + React SPA, FastAPI tarafından servis edilir
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 6 · **Tadil eder:** Final-Doküman
+"Teknoloji Stack" satırı *Frontend → Next.js + TypeScript + Tailwind + shadcn/ui* ·
+**İlgili:** K-012
+
+**Karar:** Faz 6'nın 4 sayfalık dashboard'u **Vite + React + TypeScript + Tailwind +
+shadcn/ui** ile yazılır, `apps/web/` altında yaşar, statik build'i **FastAPI servis eder**.
+Next.js kullanılmıyor. Diğer stack seçimleri (TypeScript, Tailwind, shadcn/ui,
+lightweight-charts) **aynen korunuyor** — değişen tek şey uygulama çatısı.
+
+**Gerekçe:** Next.js'in ScryneQuant'a verecek üç şeyi var — SSR/SSG, dosya-tabanlı
+yönlendirme, ve API route'ları — ve üçü de bu üründe karşılıksız:
+
+- **SSR'ın getirisi sıfır.** Tek kullanıcı, localhost, ve ekrandaki her sayı canlı
+  (SSE ile geliyor). Sunucuda render edilen bir sayfa, ilk boyamadan sonra hemen bayatlar.
+  İlk-boyama gecikmesi bir SEO veya mobil-3G problemi; burada ikisi de yok.
+- **API route'ları çakışıyor.** API zaten FastAPI'de ve orada olmak zorunda: risk durumu,
+  portföy ve audit **trader sürecinin belleğinde** yaşıyor. İkinci bir API katmanı, o
+  belleğe erişmek için trader'a HTTP atan bir proxy'den ibaret olurdu.
+- **Süreç sayısı Faz 6'nın bitti kriterine giriyor.** *"30 gün kesintisiz"* ölçülen şey;
+  ayakta kalması gereken her ek süreç o ölçümün paydası. Statik build tek bir dizin, tek
+  bir `StaticFiles` mount'u, ve düşecek ikinci bir servis yok. (Aynı gerekçe K-034'te de
+  belirleyiciydi.)
+
+**Bedeli açıkça:** Çok kullanıcılı, kimlik doğrulamalı, SEO'lu bir web ürününe dönülürse bu
+karar yeniden verilmelidir. K-014 (*yalnızca kendi hesabı, kendi parası*) o dönüşü hukuki
+olarak zaten kapatıyor — yani bu bedel, v1 kapsamı içinde ödenmiyor.
+
+**Gözden geçirme koşulu:** §28'in kalan altı sayfası açıldığında (Faz 7+) yönlendirme
+yükü ölçülür; `react-router` yetmezse karar yeniden değerlendirilir.
+
+---
+
+## K-037 — Sinyali engelleyen katman risk motorunun dışında olabilir; izin veren katman olamaz
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 6 · **İlgili:** K-028, K-032, K-008/3,
+§24
+
+**Sorun:** Faz 6 iki yeni engel getiriyor ve ikisi de risk motorunun dışında yaşıyor:
+
+1. **Bayat veri** (§24): akıştan uzun süre mesaj gelmediyse yeni pozisyon açılmaz.
+2. **`ok` olmayan bar** (K-028): kopma sonrası REST'ten tamamlanan bar `backfilled`dır,
+   o barda ne karar verilir ne fill yapılır.
+
+İkisi de "sinyal risk motorunu atlayamaz" kuralıyla (§9.1/3) ilk bakışta gerilimde: bir
+sinyal risk motoruna hiç ulaşmadan eleniyor.
+
+**Karar — asimetri açıkça yazılıyor:**
+
+- Bir sinyali **engelleyen** katman risk motorunun dışında olabilir. Engelleme riski
+  artırmaz; en kötü ihtimalle bir fırsat kaçar ve o kayıp sayılabilir (`AtlamaSebebi`).
+- Bir sinyale **izin veren** katman yalnızca risk motorudur. `OnayliNiyet`in tek üreticisi
+  risk motoru olmaya devam eder (K-032) ve execution kapısı başka hiçbir şey kabul etmez.
+
+**Gerekçe:** §9.1/3'ün koruduğu şey "her sinyal risk motorunu görsün" değil, **"borsaya
+giden yolda risk motorundan geçmemiş hiçbir şey olmasın"**. Bu ikisi aynı şey değil ve
+farkı önemli: birincisini şart koşmak, bozuk veriyle beslenen bir kararı risk motoruna
+sokmak demek olurdu — yani guard'ı, korumaya çalıştığı şeyin **içine** taşımak. Risk
+motorunun deterministik ve I/O'suz kalması (K-002/K-003 kalıbı) bu ayrımın ön koşulu:
+motor duvar saatine bakmıyor ve bakmamalı, dolayısıyla "veri kaç saniyeliktı" sorusunu
+cevaplayamaz.
+
+**Bayat veri guard'ının iki ayrıntısı, ikisi de bilinçli:**
+
+1. **Azaltan niyetler engellenmez.** Bayat veride `SELL`/`FLAT` geçer. Bu, K-008/3'ün
+   ("kill switch'te mevcut çıkışlar çalışmaya devam eder") ve risk motorunun sıfırıncı
+   adımının aynı kuralı: bir çıkışı engellemek riski azaltmaz, artırır. Bayatlığı bir
+   çıkış engeline çevirmek, bağlantı sorununu pozisyon kilidine dönüştürürdü.
+2. **Bayatlık, gelen barın nabzından *önce* ölçülür.** Barın kendisi de bir mesajdır;
+   nabzı önce işlersek akış her bar geldiğinde taze görünür ve guard 1h timeframe'de hiç
+   tetiklenmez. Ölçülmek istenen şey "bu bar gelene kadar ne kadar sessizlik vardı" —
+   çünkü o sessizlikte kaçırılmış bar olabilir.
+
+**Bunun ön koşulu bir sözleşme:** koşturucu **her** akış mesajında `nabiz()` çağırmak
+zorunda, yalnızca kapanmış barlarda değil. Çağırmazsa guard sürekli açık kalır. Bu bir
+güvenlik açığı değil (yanlış yön güvenli yöndür) ama guard'ı işe yaramaz hâle getirir, ve
+işe yaramaz bir guard er ya da geç kapatılır.
+
+**Kayıt:** Engellenen her sinyal sayılıyor (`AtlamaSebebi.VERI_BAYAT`,
+`AtlamaSebebi.FILL_BARI_OK_DEGIL`) ve bayatlığa giriş/çıkış koşu günlüğüne yazılıyor.
+Sessizce elenen sinyal yok — K-024'ün ("bayrak tekildir, boşluk uydurulmaz") ve Faz 3'ün
+`AtlamaSebebi` kalıbının devamı.
+
+**Bayat veri kesinti sayılmaz.** Faz 6'nın *"30 gün kesintisiz"* kriterinin sayacı
+(`KESINTI_OLAYLARI`) bayatlığı içermiyor: bayat veri koşuyu bölmez, yalnızca yeni girişi
+durdurur. Kesinti sayılanlar kopma, hata ve toparlanma ayrışması.
+
+---
+
+## K-038 — Toparlanma bir geri yükleme değil, yeniden üretimdir
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 6 · **İlgili:** K-009, K-032, K-034 ·
+**Kanıt:** `tests/unit/test_toparlanma.py`
+
+**Karar:** Süreç yeniden başladığında diskten okunan durum **olduğu gibi kabul edilmez**;
+bağımsız bir kaynaktan yeniden üretilip karşılaştırılır. Uyuşmazlıkta koşu **durur**
+(`ToparlanmaAyrismasi`), tahmin yürütülmez.
+
+| Diskten okunan | Bağımsız kaynak | Uyuşmazsa |
+| --- | --- | --- |
+| Portföy (nakit, miktar, ort. maliyet) | `fill` defterinin baştan uygulanması | durur |
+| Bekleyen kararın özeti | Strateji + risk motorunun barı yeniden karara bağlaması | durur |
+| Risk durumu | **yok** — türetilecek bağımsız kaynağı yok | — |
+
+**Neden karar saklanmıyor da yeniden üretiliyor:** `OnayliNiyet` mühürlü ve mühür süreç
+başına rastgele (K-032). Serileştirilmiş bir onay yeniden başlayan süreçte doğrulanamaz;
+onu yeniden mühürlemek ise "onayın tek üreticisi risk motorudur" garantisini kırardı —
+diskteki bir JSON'u değiştiren herkes onay üretebilir hâle gelirdi. Bu yüzden kayda giren
+şey onay değil **özet**tir ve tek işi karşılaştırılmaktır.
+
+**Kontrol noktasının yeri bu kararın sonucudur.** Durum satırı bir barın fill'i ve risk
+güncellemesi yapıldıktan **sonra, kararı verilmeden önce** yazılır. Karar sonrası
+yazılsaydı yeniden üretim yanlış başlangıç noktasından yapılırdı: karar adımı risk
+durumunu değiştirebiliyor (drawdown limiti aşıldığında `kill()`), ve SAFE_MODE açıkken
+yeniden üretilen karar `Red(DRAWDOWN)` yerine `Red(SAFE_MODE)` verirdi — yani sistem kendi
+kendine ayrışma ilan ederdi.
+
+**Bayatlık kontrol noktasının parçası.** Toparlanan süreç henüz hiç nabız almamıştır;
+bayatlığı yeniden ölçse her kararı bayat yoldan üretirdi. Kararın girdisi olan bayatlık
+değeri bu yüzden kayda giriyor (K-037/2 ile birlikte okunmalı).
+
+**Üçüncü satır bilerek boş ve bu bir eksiklik olarak kayıtlı.** Risk durumunun bağımsız
+bir ikinci kaynağı yok — equity eğrisinin tamamını saklamadan yeniden hesaplanamaz. Onu
+"doğrulandı" diye raporlamak, doğrulanmamış bir şeyi doğrulanmış göstermek olurdu.
+Korunması yazım tarafında: atomik yazım + `synchronous=FULL` (K-034).
+
+**Ölçüm yöntemi de bir karar:** toparlanmanın testi "okunan alanlar kayıtlıyla eşit mi"
+diye bakmıyor — o, kaydı kaydın kendisiyle doğrulamak olurdu. Bunun yerine **iki koşu**
+karşılaştırılıyor: 60 barı kesintisiz işleyen koşu ile 30 barda öldürülüp yeniden
+başlatılan koşunun portföyü, risk durumu ve fill defteri birebir aynı olmak zorunda.
+Kesinti hiçbir iz bırakmamalı.
+
+**Yan etki, açıkça:** Yeniden üretim audit'e o bar için **ikinci** bir karar satırı yazar.
+Bu bilinçli — karar gerçekten yeniden verildi — ve koşu günlüğündeki `toparlandi` olayı
+sebebini açıklıyor. Alternatifi, risk kararını audit'e yazmadan veren bir kod yolu açmak
+olurdu; o kapı bir kez aralandığında kapanmaz.
+
+---
+
 ## Açık kararlar
 
 Faz 0 kapandığında (2026-09-08) durum:
@@ -1165,15 +1394,25 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-031 | Strateji sinyalinin kabul edildiğini varsayamaz | ✅ **kabul** | Faz 4 |
 | K-032 | Risk onayı bir tip, bir mühür ve bir kesme noktası | ✅ **kabul** | Faz 5 |
 | K-033 | Her risk limiti kaynağını ve gözden geçirme koşulunu taşır | ✅ **kabul** | Faz 5 |
+| K-034 | Operasyonel state SQLite (WAL); Postgres Faz 7'ye ertelendi | ✅ **kabul** | Faz 6 |
+| K-035 | Gözlem modu: kanıt üretmeyen canlı koşu | ✅ **kabul** | Faz 6 |
+| K-036 | Dashboard Vite+React SPA, FastAPI servis eder | ✅ **kabul** | Faz 6 |
+| K-037 | Engelleyen katman risk motorunun dışında olabilir, izin veren olamaz | ✅ **kabul** | Faz 6 |
+| K-038 | Toparlanma bir geri yükleme değil, yeniden üretimdir | ✅ **kabul** | Faz 6 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5
-K-032/033'ü ekledi.**
+K-032/033'ü, Faz 6 K-034…038'i ekledi.**
 
 **Açık karar kalmadı.** Projenin son açık kararı olan **K-019** (promotion kapılarının
 sayısal eşikleri) Faz 4 sonunda gerçek veriyle kalibre edilip kapandı. Bundan sonraki
-kararlar yeni fazların kendi soruları olacak; K-018/3'ün beşinci eşik adayı
-(paper/backtest drift üst sınırı) Faz 6'da ölçülebilir hâle gelince K-019'a eklenecek.
+kararlar yeni fazların kendi soruları olacak.
+
+**K-018/3'ün beşinci eşik adayı (paper/backtest drift üst sınırı) hâlâ ölçülmemiş.** Faz
+6'da ölçülebilir hâle gelecekti; K-035 bunun neden **hâlâ mümkün olmadığını** kaydediyor:
+drift'in büyüklüğü stratejiye bağlı, ve promotion'a girecek bir strateji henüz yok. Gözlem
+koşusu ölçüm **yönteminin** çalıştığını gösterir, eşiğin sayısını vermez. Eşik, kapıları
+geçen ilk stratejinin paper koşusunda kalibre edilecek.
 
 ### Faz 0'dan çıkan, karar olmayan ama bağlayıcı gereksinimler
 

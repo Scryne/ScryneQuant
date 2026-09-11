@@ -67,6 +67,13 @@ class AtlamaSebebi(StrEnum):
     POZISYON_YOK = "pozisyon_yok"
     """Satım isteniyor ama elde varlık yok."""
 
+    VERI_BAYAT = "veri_bayat"
+    """Veri akışı bayat (§24); bu barda **yeni giriş** kararı verilmedi (Faz 6, K-037).
+
+    Azaltan niyetler bu sebeple atlanmaz: bir çıkışı engellemek riski azaltmaz, artırır
+    (`risk/niyet.py:AZALTAN_YONLER` ile aynı kural). Backtest'te hiç üretilmez — duvar
+    saati kavramı yok."""
+
     RISK_REDDETTI = "risk_reddetti"
     """Risk motoru sinyali onaylamadı (Faz 5). Sebebin kendisi audit'te ve `risk` özetinde;
     burada yalnızca akış muhasebesi için sayılıyor — üretilen sinyallerin toplamı

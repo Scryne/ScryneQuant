@@ -49,6 +49,7 @@ TAM_KANIT: Final = Kanit(
     risk_drawdown_limiti=0.20,
     paper_gun=31.0,
     paper_kesinti=0,
+    paper_mod="paper",
 )
 
 
@@ -359,4 +360,5 @@ def _alanlar(k: Kanit) -> dict:
         "risk_drawdown_limiti": k.risk_drawdown_limiti,
         "paper_gun": k.paper_gun,
         "paper_kesinti": k.paper_kesinti,
+        "paper_mod": k.paper_mod,
     }

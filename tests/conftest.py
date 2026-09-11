@@ -13,6 +13,7 @@ import pytest
 
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import BAR_SUTUNLARI, KaliteDurumu
+from scryne_quant.risk import limitler as limit_mod
 from scryne_quant.strategy.sinyal import Sinyal, Yon
 from scryne_quant.strategy.temel import Strateji
 
@@ -103,3 +104,42 @@ class PlanliStrateji(Strateji):
             reason="PLANLI_TAKVIM",
             timestamp=ctx.zaman,
         )
+
+
+def risk_gerekceleri() -> dict[str, limit_mod.Gerekce]:
+    """Test limitleri için asgari gerekçe kümesi (K-033).
+
+    `limitler.py` üç limitin **ölçülmüş** olmasını şart koşuyor; onlar `olculdu` işaretli
+    ve sahte bir `veri_sha256` taşıyor. Testin konusu gerekçe doğrulaması değil, limitin
+    davranışı — o doğrulamanın kendi testi `test_risk_limitleri.py`de.
+    """
+    olculdu = ("ters_hareket_atr_carpani", "volatilite_esigi", "gunluk_zarar_limiti")
+    return {
+        ad: limit_mod.Gerekce(
+            kaynak="olculdu" if ad in olculdu else "istah",
+            metin=f"test limiti: {ad}",
+            veri_sha256="0" * 64 if ad in olculdu else "",
+            gozden_gecirme="" if ad in olculdu else "test",
+        )
+        for ad in limit_mod.LIMIT_ADLARI
+    }
+
+
+def risk_limitleri(**degisiklik) -> limit_mod.RiskLimitleri:
+    """Testlerin dayandığı limitler — `config/risk.json`dan **bağımsız**.
+
+    Yürürlükteki konfigürasyonu okusaydı, bir limitin elle değiştirilmesi testleri
+    sessizce başka bir şeyi ölçer hâle getirirdi.
+    """
+    alanlar = {
+        "azami_maruziyet": 0.30,
+        "islem_basina_risk": 0.005,
+        "ters_hareket_atr_carpani": 5.0,
+        "gunluk_zarar_limiti": 0.02,
+        "drawdown_limiti": 0.20,
+        "ardisik_kayip_limiti": 3,
+        "cooldown_bar": 4,
+        "volatilite_esigi": 0.02,
+        "gerekceler": risk_gerekceleri(),
+    }
+    return limit_mod.RiskLimitleri(**(alanlar | degisiklik))

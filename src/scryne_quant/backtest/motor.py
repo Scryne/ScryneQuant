@@ -37,7 +37,8 @@ from collections.abc import Mapping
 
 import numpy as np
 
-from scryne_quant.backtest.fill import AtlamaSebebi, Emir, IslemYonu, emir_hazirla
+from scryne_quant.backtest.defter import uygula as defter_uygula
+from scryne_quant.backtest.fill import AtlamaSebebi, Emir, emir_hazirla
 from scryne_quant.backtest.metrikler import Islem, hesapla
 from scryne_quant.backtest.sonuc import VARSAYILAN_KALITE_ESIGI, Sonuc, VeriKimligi, atlama_sayimi
 from scryne_quant.common.maliyet import MaliyetModeli
@@ -45,18 +46,12 @@ from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import KaliteDurumu
 from scryne_quant.features.indikator import atr as atr_hesapla
 from scryne_quant.portfolio.durum import Portfoy
-from scryne_quant.risk.motor import PiyasaOlcumu, RiskMotoru
+from scryne_quant.risk.motor import RISK_ATR_PENCERESI, PiyasaOlcumu, RiskMotoru
 from scryne_quant.risk.niyet import OnayliNiyet
 from scryne_quant.strategy.baglam import PiyasaGorunumu
 from scryne_quant.strategy.kosu import gorunum_kur
 from scryne_quant.strategy.sinyal import Sinyal
 from scryne_quant.strategy.temel import Strateji
-
-#: Risk motorunun volatilite ölçüsünün penceresi. Stratejinin bildirdiği özelliklerden
-#: **bağımsız**: risk kendi ölçüsünü kendi alır (`PiyasaOlcumu`). 14, limitlerin
-#: kalibre edildiği pencere (`docs/Faz-5-Risk-Raporu.md`) — değiştirmek
-#: `volatilite_esigi` ve `ters_hareket_atr_carpani`yi yeniden ölçmeyi gerektirir.
-RISK_ATR_PENCERESI = 14
 
 
 class BacktestHatasi(ValueError):
@@ -304,38 +299,12 @@ class Backtest:
         acik: Islem | None,
         islemler: list[Islem],
     ) -> tuple[Portfoy, Islem | None]:
-        """Emri portföye uygular ve işlem defterini günceller.
+        """Emri portföye uygular. Mantık `backtest/defter.py`de — paper döngüsüyle ortak.
 
-        Bir "işlem" düzden düze bir pozisyon turudur: ilk alımda açılır, pozisyon sıfıra
-        döndüğünde kapanır. Aradaki her fill aynı turun içindedir.
+        Faz 6'da buradan taşındı (K-001): ortalama maliyet, tur muhasebesi ve cooldown'ı
+        tetikleyen "kapanan tur" tanımı backtest ile paper arasında ikiye ayrılamaz.
         """
-        if emir.yon is IslemYonu.AL:
-            if acik is None:
-                acik = Islem(acilis_ms=emir.zaman_ms)
-                islemler.append(acik)
-            portfoy = portfoy.al(emir.miktar, emir.fiyat, emir.komisyon, emir.zaman_ms)
-            acik.giris_notional += emir.notional
-            acik.giris_miktar += emir.miktar
-        else:
-            if acik is None:  # pragma: no cover - pozisyon yokken satış emri üretilmez
-                raise BacktestHatasi("açık işlem yokken satış emri")
-            portfoy, gerceklesen = portfoy.sat(emir.miktar, emir.fiyat, emir.komisyon)
-            acik.cikis_notional += emir.notional
-            acik.cikis_miktar += emir.miktar
-            acik.net_pnl += gerceklesen
-
-        acik.komisyon += emir.komisyon
-        acik.slippage += emir.slippage_maliyeti
-        acik.fill_sayisi += 1
-
-        if not portfoy.acik:
-            acik.kapanis_ms = emir.zaman_ms
-            # Risk motorunun ardışık kayıp sayacı kapanmış **turları** sayar, fill'leri
-            # değil: bir pozisyonu iki taksitte kapatmak iki kayıp olarak sayılsaydı
-            # cooldown limiti sessizce yarıya inerdi.
-            if self.risk is not None:
-                self.risk.islem_kapandi(acik.net_pnl, emir.zaman_ms)
-            acik = None
+        portfoy, acik, _ = defter_uygula(emir, portfoy, acik, islemler, risk=self.risk)
         return portfoy, acik
 
 

@@ -89,8 +89,13 @@ SIRA: Final[tuple[Asama, ...]] = (
 #: olmalı, yoksa laboratuvar çalışmaz. `PAPER` risk incelemesini şart koşuyor — yani paper'a
 #: giren bir strateji K-019'un yedi kapısını çoktan geçmiş olmak zorunda. `LIVE` yalnızca
 #: zincirin sonunu kabul ediyor.
+#: `GOZLEM` de promotion istemiyor ve bu bir gevşetme **değil** (K-035): gözlem koşusunun
+#: ürettiği hiçbir kayıt promotion kanıtı olamaz — `Kanit.__post_init__` gözlem modundan
+#: gelen paper kanıtını kurulmadan reddeder. Yani gözlem modu zinciri atlamıyor; zincire
+#: hiç girmiyor.
 MOD_ESIGI: Final[dict[str, Asama]] = {
     "backtest": Asama.YOK,
+    "gozlem": Asama.YOK,
     "paper": Asama.RISK_INCELEMESI,
     "live": Asama.LIVE,
 }
@@ -136,6 +141,30 @@ class Kanit:
     paper_kesinti: int | None = None
     """Açıklanamayan kesinti sayısı. Sıfırdan büyükse PAPER aşaması geçilmez."""
 
+    paper_mod: str | None = None
+    """Paper kanıtını üreten koşunun **modu**. `paper` dışındaki bir mod kanıt üretemez.
+
+    K-035'in ikinci maddesinin zorlaması burada ve `__post_init__`te. Gözlem modu
+    (`gozlem`) promotion geçmemiş bir stratejiyi canlı veride koşturabiliyor; o koşunun
+    30 gün sürmesi PAPER aşamasını geçirseydi, gözlem modu zinciri atlamanın en kolay yolu
+    olurdu — yani K-018'in "eşik esnetilemez" kuralı bir mod adı yazarak delinirdi.
+    """
+
+    def __post_init__(self) -> None:
+        """Kanıtın **kurulmasını** engelleyen tek kontrol. Değerlendirmeye bırakılmadı.
+
+        `_paper` içinde `gecti=False` döndürmek de bir reddetme olurdu, ama farklı bir
+        şey: "ölçüldü ve yetmedi" ile "bu ölçüm bu koşudan alınamaz" aynı şey değil.
+        İkincisi bir kanıt hatasıdır ve sessizce bir kapı sonucuna dönüşmemeli (K-035/2).
+        """
+        if self.paper_gun is None and self.paper_kesinti is None:
+            return
+        if self.paper_mod != "paper":
+            raise PromotionHatasi(
+                f"paper kanıtı yalnızca `paper` modundan gelebilir, verilen: "
+                f"{self.paper_mod!r}. Gözlem koşusu promotion kanıtı üretmez (K-035/2)"
+            )
+
     def sozluk(self) -> dict[str, Any]:
         return {
             "config_hash": self.config_hash,
@@ -150,6 +179,7 @@ class Kanit:
             "risk_drawdown_limiti": self.risk_drawdown_limiti,
             "paper_gun": self.paper_gun,
             "paper_kesinti": self.paper_kesinti,
+            "paper_mod": self.paper_mod,
         }
 
 
