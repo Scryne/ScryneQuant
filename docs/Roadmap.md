@@ -328,6 +328,15 @@ bugünkü sonuca göre gevşetilmedi; gevşetilseydi kapı kaldırılmış olurd
   öyle çıktı.* Faz 5-8 bu tabloyu değiştirmiyor: sistemin işi cevabı ölçmekti ve ölçtü.
   Sermaye artırma veya live'a geçme kararı bu tabloya bakılarak verilmez.
 
+**Faz 4'e dönüş 1 (2026-09-11): timeframe hipotezi — çürütüldü.** Roadmap'in geri besleme
+kuralı gereği burada kayıtlı. 4h ve 1d indirildi, hipotezler önceden kaydedildi (K-039).
+Mekanizma **çalıştı**: 1h'te altı stratejinin altısı da OOS'ta negatifken 4h'te iki kesişim
+ailesi pozitife döndü (+0,39 / +0,32), üstelik kıyasın negatif olduğu bir pencerede. Ama
+yetmedi ve **kendi ayağına bastı**: timeframe'i uzatmak işlem sayısını 4 kat düşürdü, yani
+`asgari_islem ≥ 30` kapısı düştü. 1d ise walk-forward'ı hiç tamamlayamadı — 1.936 bar
+istatistiksel güç tabanının altında. Kapılardan geçen yok, eşikler değişmedi. Ayrıntı:
+`docs/Faz-4-Donus-1-Timeframe.md`.
+
 ### Faz 5: Risk motoru + promotion — ✅ kapandı 2026-09-11
 
 - **İşler:** Position sizing; exposure limiti; günlük zarar limiti; drawdown limiti;

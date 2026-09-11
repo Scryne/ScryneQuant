@@ -14,6 +14,7 @@ import asyncio
 import datetime as dt
 import json
 import sys
+from contextlib import suppress
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -601,6 +602,7 @@ def lab_tara(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     secenekler = varsayilan_izgara(strateji)
+    _defteri_zorla([strateji], timeframe, veri_hash)
 
     ins, _ = karsilastirma_mod.ortak_pencereler(
         len(diziler["open_time"]), [strateji], oos_orani=oos_orani
@@ -669,6 +671,7 @@ def lab_walkforward(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     secenekler = varsayilan_izgara(strateji)
+    _defteri_zorla([strateji], timeframe, veri_hash)
 
     n = len(diziler["open_time"])
     isinma = karsilastirma_mod.ortak_isinma([strateji])
@@ -742,6 +745,7 @@ def lab_montecarlo(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     pencere = _tam_pencere(diziler, strateji)
+    _defteri_zorla([strateji], timeframe, veri_hash)
 
     nesne = sinif()
     kosu_sonucu = tarama_mod.kosu(
@@ -796,6 +800,7 @@ def lab_stres(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     pencere = _tam_pencere(diziler, strateji)
+    _defteri_zorla([strateji], timeframe, veri_hash)
 
     nesne = sinif()
     sonuc = analiz_mod.stres(
@@ -835,6 +840,43 @@ def lab_stres(
     typer.echo(f"  deney: {yol}")
 
 
+def _defteri_zorla(adlar: list[str], timeframe: str, veri_sha256: str) -> None:
+    """Koşturulacak her strateji hipotez defterinde kayıtlı mı? (K-039)
+
+    **Araç seviyesinde zorlanması şart, çünkü çekiliş burada yapılıyor.** K-039 ön kaydı
+    zorunlu kıldı ama ilk hâlinde yalnızca promotion kapısı kontrol ediyordu — yani
+    `sq lab karsilastir` yedi aileyi koşturup sonuçlarını gösterebiliyor, defter bundan
+    habersiz kalıyordu. Sonucu **gördükten** sonra kaydetmek ön kayıt değildir; ve o
+    kayıt hiç yapılmazsa sayaç olduğundan küçük kalır. İkisi de K-039'un engellemek
+    istediği şey.
+
+    Kaçış kapısı **yok** ve bilerek yok: "sadece bakıyorum" diye koşturulan bir strateji
+    de bir çekiliştir. Bakmak bedavaysa, yeterince bakan biri kapıyı delmiş olur.
+    """
+    defter = hipotez_mod.HipotezDefteri()
+    eksik = [
+        ad
+        for ad in adlar
+        if defter.sira(
+            hipotez_mod.Hipotez.kur(
+                ad, timeframe, veri_sha256, varsayilan_izgara(ad), "kontrol amaçlı kurulum"
+            )
+        )
+        is None
+    ]
+    if not eksik:
+        return
+    komutlar = chr(10).join(
+        f'  sq lab hipotez-kaydet {ad} -t {timeframe} -g "<neden deniyorsun>"'
+        for ad in eksik
+    )
+    raise hipotez_mod.HipotezHatasi(
+        f"hipotez defterinde kayıtlı olmayan strateji(ler): {', '.join(eksik)} "
+        f"({timeframe}). Sonucu gördükten sonra kaydetmek ön kayıt değildir (K-039). "
+        f"Önce kaydedin:{chr(10)}{komutlar}"
+    )
+
+
 @lab_app.command("karsilastir")
 def lab_karsilastir(
     sembol: Sembol = "BTCUSDT",
@@ -850,6 +892,7 @@ def lab_karsilastir(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     adlar = [*KUTUPHANE, *KIYAS]
+    _defteri_zorla(adlar, timeframe, veri_hash)
 
     sonuc = karsilastirma_mod.calistir(
         model, sembol, timeframe, diziler, stratejiler=adlar,
@@ -976,6 +1019,7 @@ def lab_kapilar(
     diziler, veri_hash = _lab_veri(depo, sembol, timeframe)
     model = maliyet_mod.yukle()
     adlar = [*KUTUPHANE, *KIYAS]
+    _defteri_zorla(adlar, timeframe, veri_hash)
 
     sonuc = degerlendirme_mod.degerlendir(
         model, sembol, timeframe, diziler, stratejiler=adlar, oos_orani=oos_orani,
@@ -1884,8 +1928,27 @@ def bilgi(json_cikti: JsonCikti = False) -> None:
         typer.echo(f"  {ad:<8}: {surum}")
 
 
+def _konsolu_utf8_yap() -> None:
+    """Çıktıyı UTF-8'e sabitler. Windows konsolu varsayılan olarak cp1252 kullanıyor ve
+    `→`, `≥`, `·` gibi karakterlerde **çıktı yazarken çöküyor** (`UnicodeEncodeError`).
+
+    Bu bir kozmetik sorun değil: komutun kendisi başarıyla çalışıp sonucu yazarken
+    patlıyor, yani iş yapılmış ama görünmemiş oluyor. Hatanın metnini değiştirmek yerine
+    akışı düzeltmek doğru: raporlar ve kararlar Türkçe ve tipografik karakter içeriyor,
+    onları ASCII'ye indirmek çıktıyı okunmaz yapardı.
+    """
+    for akis in (sys.stdout, sys.stderr):
+        yeniden = getattr(akis, "reconfigure", None)
+        if yeniden is None:  # pragma: no cover - yeniden yapılandırılamayan akış
+            continue
+        # pragma: no cover - kapalı veya yönlendirilmiş akış
+        with suppress(ValueError, OSError):
+            yeniden(encoding="utf-8", errors="replace")
+
+
 def main() -> int:
     """`sq` giriş noktası. Hatalar yığın izi değil, tek satırlık mesaj olarak çıkar."""
+    _konsolu_utf8_yap()
     try:
         app()
     except Exception as hata:  # noqa: BLE001 — CLI sınırı: kullanıcıya traceback gösterme

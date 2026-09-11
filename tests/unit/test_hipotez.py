@@ -116,3 +116,56 @@ class TestOnKayit:
     def test_sira_kayitsizda_none(self, tmp_path) -> None:
         d = HipotezDefteri(tmp_path / "h.jsonl")
         assert d.sira(hipotez()) is None
+
+
+class TestAracZorlamasi:
+    """Defteri **araç seviyesinde** zorlamak şart: çekiliş orada yapılıyor. (K-039)
+
+    K-039'un ilk hâlinde yalnızca promotion kapısı kontrol ediyordu — yani
+    `sq lab karsilastir` yedi aileyi koşturup sonuçlarını gösterebiliyor, defter bundan
+    habersiz kalıyordu. Ve bu gerçekten oldu: 4h turunda `rsi_donus` ile `cok_faktor`
+    kaydedilmeden koşturuldu, geriye dönük kaydedilmek zorunda kalındı.
+
+    Kaçış kapısı bilerek yok: "sadece bakıyorum" diye koşturulan bir strateji de bir
+    çekiliştir. Bakmak bedavaysa, yeterince bakan biri kapıyı delmiş olur.
+    """
+
+    def test_kayitsiz_strateji_kosturulamiyor(self, tmp_path, monkeypatch) -> None:
+        from scryne_quant.cli import main as cli
+
+        defter = HipotezDefteri(tmp_path / "h.jsonl")
+        monkeypatch.setattr(cli.hipotez_mod, "HipotezDefteri", lambda: defter)
+        with pytest.raises(HipotezHatasi, match="kayıtlı olmayan"):
+            cli._defteri_zorla(["sma_kesisim"], "1h", "a" * 64)
+
+    def test_hata_mesaji_kayit_komutunu_veriyor(self, tmp_path, monkeypatch) -> None:
+        # Bir kuralı zorlayan hata, onu sağlamanın yolunu da söylemeli.
+        from scryne_quant.cli import main as cli
+
+        defter = HipotezDefteri(tmp_path / "h.jsonl")
+        monkeypatch.setattr(cli.hipotez_mod, "HipotezDefteri", lambda: defter)
+        with pytest.raises(HipotezHatasi) as hata:
+            cli._defteri_zorla(["donchian"], "4h", "a" * 64)
+        assert "sq lab hipotez-kaydet donchian -t 4h" in str(hata.value)
+
+    def test_kayitli_strateji_geciyor(self, tmp_path, monkeypatch) -> None:
+        from scryne_quant.cli import main as cli
+        from scryne_quant.research.izgaralar import izgara
+
+        defter = HipotezDefteri(tmp_path / "h.jsonl")
+        monkeypatch.setattr(cli.hipotez_mod, "HipotezDefteri", lambda: defter)
+        defter.kaydet(
+            Hipotez.kur("sma_kesisim", "1h", "a" * 64, izgara("sma_kesisim"), GEREKCE)
+        )
+        cli._defteri_zorla(["sma_kesisim"], "1h", "a" * 64)  # patlamamalı
+
+    def test_eksik_olanlarin_hepsi_tek_hatada_listeleniyor(self, tmp_path, monkeypatch) -> None:
+        # Tek tek kaydettirip tek tek patlamak, kullanıcıyı defteri es geçmeye iter.
+        from scryne_quant.cli import main as cli
+
+        defter = HipotezDefteri(tmp_path / "h.jsonl")
+        monkeypatch.setattr(cli.hipotez_mod, "HipotezDefteri", lambda: defter)
+        with pytest.raises(HipotezHatasi) as hata:
+            cli._defteri_zorla(["sma_kesisim", "donchian", "momentum"], "4h", "a" * 64)
+        for ad in ("sma_kesisim", "donchian", "momentum"):
+            assert ad in str(hata.value)

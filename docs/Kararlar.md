@@ -1426,6 +1426,16 @@ Geriye dönük kayıt ön kayıt sayılmaz ve o yedi hipotez ön-kayıt kanıtı
 kullanılamaz — ama **sayılmak zorundalar**: kaydedilmemiş bir çekiliş, sayacı olduğundan
 küçük gösterir ve bu kararın tam olarak engellemek istediği şeyi yapar.
 
+**Zorlama laboratuvarda, yalnızca kapıda değil — ve bu bir düzeltme.** Kararın ilk hâlinde
+defteri yalnızca promotion kapısı kontrol ediyordu. Yanlıştı: **çekiliş laboratuvarda
+yapılıyor.** `sq lab karsilastir` yedi aileyi koşturup sonuçlarını gösterebiliyor, defter
+bundan habersiz kalıyordu — ve bu gerçekten oldu (`docs/Faz-4-Donus-1-Timeframe.md`, "Süreç
+hatası"). Artık `sq lab` komutlarının hepsi defteri zorluyor; kaydedilmemiş bir strateji
+**koşturulamıyor**.
+
+Kaçış kapısı bilerek yok. "Sadece bakıyorum" diye koşturulan bir strateji de bir
+çekiliştir; bakmak bedavaysa, yeterince bakan biri kapıyı delmiş olur.
+
 **Pratik sonuç:** Faz 4'e her dönüşte, denenecek hipotez önce `sq lab hipotez-kaydet` ile
 gerekçesiyle yazılır. Defter `sq lab hipotezler` ile okunur.
 
