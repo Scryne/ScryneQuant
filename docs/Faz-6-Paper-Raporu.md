@@ -22,6 +22,38 @@ status: devam-ediyor
 
 Toplam **881 test** yeşil (Faz 5 sonunda 757'ydi).
 
+## Koşu kaydı
+
+**Başladı: 2026-09-11 06:26:43 UTC**
+
+| Alan | Değer |
+| --- | --- |
+| Koşu adı | `gozlem-1` |
+| Mod | `gozlem` — promotion kanıtı üretmez (K-035) |
+| Sembol / timeframe | BTCUSDT / 1h |
+| Strateji | `ema_kesisim` {"hizli": 20, "maruziyet": 0.2, "yavas": 50} |
+| Başlangıç sermayesi | 10,000 |
+| Commit | `ba7e20e180b1` · dirty: **false** |
+| Risk limitleri | `c3608583bd9f6d93` |
+| Isınma penceresi | 1.000 bar, tamamı `backfilled` |
+
+**Neden `ema_kesisim`:** Faz 5'in ölçümünde risk motoru altında en iyi davranan strateji
+oydu (getiri −%8,3 → +%8,1, Sharpe −0,19 → +0,37) ve 1h'te düzenli kesişim üretiyor. Seçim
+bir beklenti değil bir **test yükü** kararı: altyapıyı ölçmek için pozisyon açıp kapatan
+bir akış gerekiyor. `al_tut` 30 günde bir-iki fill üretir ve restart-açık-pozisyon yolunu
+hiç sınamaz; `cok_faktor` backtest'te drawdown limitini aşıp kill switch'i tetikliyordu ve
+sonrasında hiç giriş yapmazdı.
+
+**Nasıl çalışıyor:** Windows zamanlanmış görevi `ScryneQuant-Paper`, oturum açılışında
+tetikleniyor, hata hâlinde iki dakikada bir yeniden deniyor, süre sınırı yok
+(`tools/paper-kosu.ps1`). Görev kesintiyi **sıfırlamıyor**, boşluk süresini kısaltıyor:
+temiz kapanmayan her oturum yine `temiz_kapanmadi` olarak kesinti sayılıyor.
+
+Görevi kaldırmak: `Unregister-ScheduledTask -TaskName "ScryneQuant-Paper" -Confirm:$false`
+
+İzleme: dashboard `http://127.0.0.1:8787` · `sq paper durum gozlem-1` ·
+`sq paper olaylar gozlem-1`
+
 ## Ölçülen şey ne, ölçülmeyen ne
 
 Faz 6'nın ölçtüğü şey **stratejinin kârı değil, altyapının ayakta kalması ve doğru
