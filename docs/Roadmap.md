@@ -24,7 +24,7 @@ yanlış sonuç olarak geri döner.
 | 3 | Backtest motoru | ✅ Tamamlandı | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ✅ Tamamlandı | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ✅ Tamamlandı | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
-| 6 | Paper trading + dashboard | ⏳ Bekliyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
+| 6 | Paper trading + dashboard | 🔄 Devam Ediyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
 | 7 | Execution sandbox (testnet) | ⏳ Bekliyor | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
 | 8 | Kontrollü live | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
 
@@ -418,7 +418,7 @@ ATR, p90'ı 6,39 ATR. 2,0 seçmek vakaların yarısında gerçek riskin altında
   özeti `sonuc_hash`'e yalnızca varsa giriyor. Promotion zincirinde hiçbir strateji
   `out_of_sample` aşamasını geçemiyor — K-019'un eşikleri gevşetilmedi.
 
-### Faz 6: Paper trading + dashboard
+### Faz 6: Paper trading + dashboard — 🔄 altyapı bitti (2026-09-11), koşu bekliyor
 
 - **İşler:** WebSocket ile gerçek zamanlı veri; stale-data guard (§24); canlı sinyal
   üretimi; simüle emir ve pozisyon takibi; gerçek zamanlı risk kontrolü; FastAPI; 4 sayfalık
@@ -431,6 +431,40 @@ ATR, p90'ı 6,39 ATR. 2,0 seçmek vakaların yarısında gerçek riskin altında
   - Dashboard'un 4 sayfası çalışıyor ve risk durumu ilk bakışta görülüyor.
 - **Notlar:** Frontend'e başlamadan önce global `~/.claude/CLAUDE.md`'deki araç sırası
   izlenir ve `DESIGN.md` doldurulur.
+
+**Durum — dört kriterden üçü karşılandı, ayrıntısı `docs/Faz-6-Paper-Raporu.md`'de:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| 30 gün kesintisiz çalışma | ⏳ **koşu bekliyor** — tanım gereği duvar saati ister |
+| Restart sonrası state doğru toparlanıyor | ✅ toparlanma bir geri yükleme değil **yeniden üretim** (K-038); 60 barı kesintisiz işleyen koşu ile 30 barda öldürülüp yeniden başlatılan koşu birebir aynı sonucu veriyor |
+| Veri akışı kesilince yeni pozisyon açılmıyor | ✅ bayat-veri guard'ı (§24, K-037); azaltan niyetler geçiyor |
+| 4 sayfalık dashboard, risk ilk bakışta | ✅ Genel/Strateji/Pozisyon/Günlük; risk şeridi her sayfada aynı yerde ve boşken de görünür |
+
+**Faz bu yüzden kapanmadı.** "Neredeyse bitti" diye geçilen faz sonraki fazın üstüne borç
+bırakır — ve 30 günlük kriter, promotion zincirinin `paper` aşamasının tek kanıtı.
+
+**Faz 6'nın en önemli bulgusu kriterle ilgili değil, kargoyla:** hiçbir strateji promotion
+kapılarını geçmediği için (`MOD_ESIGI["paper"] = RISK_INCELEMESI`, K-019'da yedi
+stratejinin yedisi de kaldı) paper modunda risk motoru her sinyali `PROMOTION_YOK` ile
+reddederdi — yani hiç pozisyon açılmaz ve restart kriteri **boş yere** geçerdi. Eşik
+indirilmedi; K-035 ile **gözlem modu** eklendi: promotion dışındaki her limit tam olarak
+uygulanıyor, ama o koşunun ürettiği hiçbir kayıt promotion kanıtı **olamıyor** (kanıt
+nesnesi kurulmadan reddediliyor).
+
+**Bunun bedeli kayıtlı:** K-018/3'ün beşinci eşik adayı (paper/backtest drift üst sınırı)
+Faz 6'da ölçülecekti, **ölçülemedi** — drift'in büyüklüğü stratejiye bağlı. O sayı,
+kapıları geçen ilk stratejinin gerçek `paper` koşusunda kalibre edilecek.
+
+**Faz 6'nın verdiği kararlar:** K-034 (operasyonel state SQLite/WAL, PostgreSQL Faz 7'ye
+ertelendi), K-035 (gözlem modu), K-036 (dashboard Vite+React SPA, FastAPI servis eder),
+K-037 (engelleyen katman risk motorunun dışında olabilir, izin veren olamaz), K-038
+(toparlanma bir geri yükleme değil yeniden üretimdir).
+
+**Üretilen paketler:** `live/` (akış, pencere, depo, motor, toparlanma, koşturucu, API,
+kurulum), `exchange/akis.py` (Binance WebSocket + resync), `backtest/defter.py` (Faz 3'ten
+taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,olaylar}`.
+867 test yeşil (Faz 5 sonunda 757'ydi).
 
 ### Faz 7: Execution sandbox (Binance Spot Testnet)
 

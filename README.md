@@ -5,8 +5,9 @@ backtest eden, risk kurallarıyla sınırlandıran, paper trading ile doğrulaya
 yapısal kapılardan geçtikten sonra kontrollü biçimde otomatik uygulayan tek kişilik quant
 araştırma ve execution platformu.
 
-**Durum:** Faz 1 (market data temeli) — uygulama sürüyor. Sıradaki: Faz 2 (indikatör +
-strateji sözleşmesi).
+**Durum:** Faz 6 (paper trading + dashboard) — altyapı bitti, **30 günlük koşu bekliyor.**
+Faz 0-5 kapandı. Sıradaki: gözlem koşusunu başlatmak, paralelde Faz 4'e dönüp promotion
+kapılarını geçen bir strateji aramak.
 
 ## Kurulum ve ilk komutlar
 
@@ -17,6 +18,23 @@ uv run sq data indir BTCUSDT 1h --yil 5.2    # tarihsel veri (idempotent)
 uv run sq data quality BTCUSDT 1h            # kalite raporu (K-006)
 uv run sq data maliyet                       # yürürlükteki maliyet modeli (K-007)
 ```
+
+### Paper / gözlem koşusu (Faz 6)
+
+```bash
+cd apps/web && npm install && npm run build && cd ../..   # dashboard build'i (bir kez)
+uv run sq paper baslat gozlem-1 --strateji ema_kesisim    # koşuyu başlat + dashboard
+uv run sq paper durum gozlem-1                            # süreç kapalıyken durum
+uv run sq paper olaylar gozlem-1                          # koşu günlüğü, kesinti sebepleri
+```
+
+Dashboard `http://127.0.0.1:8787`. Aynı koşu adıyla yeniden başlatmak **yeni koşu
+açmaz**: kayıtlı durumdan toparlanır — ve toparlanma bir geri yükleme değil, state'in
+yeniden üretilebildiğinin kanıtıdır (K-038). Konfigürasyon koşunun kimliğinin parçası ve
+değişmez (K-009); farklı bir konfigürasyon için yeni bir koşu adı verilir.
+
+**`--mod gozlem` promotion zincirini atlar ama kanıt üretmez** (K-035): o koşunun günleri
+`paper` aşamasına sayılmaz. Risk motorunun diğer limitleri tam olarak uygulanır.
 
 Veri `data/market/<SEMBOL>/<timeframe>.parquet` altında yaşar ve git'e girmez; dosyanın
 SHA-256'sı veri setinin kimliğidir (K-009).
@@ -38,12 +56,17 @@ kaç kötü stratejiyi elediğiyle ölçülür.
 | Fikirde ne düzeltildi? | [`docs/Denetim.md`](docs/Denetim.md) |
 | Arayüz nasıl görünecek? | [`DESIGN.md`](DESIGN.md) |
 | Veri katmanı ne buldu? | [`docs/Faz-1-Veri-Raporu.md`](docs/Faz-1-Veri-Raporu.md) |
+| Laboratuvar ne ölçtü? | [`docs/Faz-4-Laboratuvar-Raporu.md`](docs/Faz-4-Laboratuvar-Raporu.md) |
+| Risk motoru ne yaptı? | [`docs/Faz-5-Risk-Raporu.md`](docs/Faz-5-Risk-Raporu.md) |
+| Canlı taraf nerede? | [`docs/Faz-6-Paper-Raporu.md`](docs/Faz-6-Paper-Raporu.md) — **açık** |
 
 ## Değişmez kurallar
 
 Strateji I/O yapamaz · Strateji geleceği göremez · Sinyal risk motorunu atlayamaz · Zaman
 UTC · Fill bir sonraki barın açılışında · Slippage her zaman aleyhte · Aynı girdi aynı
-çıktı · Promotion kapıları kaldırılamaz · Kendi hesabı, kendi parası.
+çıktı · Promotion kapıları kaldırılamaz · Kendi hesabı, kendi parası · Engelleyen katman
+risk motorunun dışında olabilir, izin veren olamaz · Toparlanma bir geri yükleme değil,
+yeniden üretimdir.
 
 Gerekçeler: `docs/Kararlar.md`.
 

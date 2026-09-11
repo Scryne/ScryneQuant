@@ -56,6 +56,12 @@ bunlardan birini ihlal ediyorsa görev yanlıştır; kural değil.
    (K-010, K-018)
 9. **Kendi hesabı, kendi parası.** Başkasının parası, sinyal paylaşımı, copy trading
    yasak — hukuki sınır. (K-014)
+10. **Engelleyen katman risk motorunun dışında olabilir; izin veren katman olamaz.**
+    Bayat veri ve `ok` olmayan bar sinyali eler, ama onay üreten tek yer risk motorudur.
+    (K-037)
+11. **Toparlanma bir geri yükleme değil, yeniden üretimdir.** Diskten okunan durum
+    bağımsız bir kaynaktan yeniden üretilip karşılaştırılır; uyuşmazlıkta koşu **durur**,
+    tahmin yürütülmez. (K-038)
 
 Yeni bir mimari karar verildiğinde `docs/Kararlar.md`'ye K-0XX olarak yazılır ve ilgili
 commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
@@ -69,14 +75,23 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
 - `docs/Roadmap.md` — Faz 0-8, her fazın somut bitti kriteri.
 - `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,
-  `docs/Faz-5-Risk-Raporu.md` — faz sonu ölçüm raporları. Sayılar buradan alınır, tahmin
-  edilmez.
+  `docs/Faz-5-Risk-Raporu.md`, `docs/Faz-6-Paper-Raporu.md` — faz sonu ölçüm raporları.
+  Sayılar buradan alınır, tahmin edilmez. Faz 6 raporu **açık**: fazın 30 günlük kriteri
+  duvar saati istiyor, koşu bitince o dosyaya yazılacak.
 - `config/risk.json` — yürürlükteki risk limitleri; her limit `olculdu`/`istah` kaynağını
   ve (iştahsa) gözden geçirme koşulunu taşır (K-033). `sq risk limitler` ile okunur.
-- `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Henüz uygulanmadı**; Faz
-  6'da bağlanacak (K-011, K-032). `risk/audit.py`'nin SQLite şemasıyla hizalı tutuluyor.
-- `DESIGN.md` — arayüz kimliği. Token'lar Faz 6'da doldurulacak, karar katmanı şimdiden
-  bağlayıcı.
+- `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Uygulanmadı ve Faz 7'ye
+  ertelendi** (K-034): Faz 6'nın mimarisinde tek yazıcı var, PostgreSQL'in gerekçesi olan
+  eşzamanlı yazma doğmuyor. Şema dondurulmuş, `risk/audit.py`'nin SQLite şemasıyla hizalı
+  tutuluyor ve testle korunuyor.
+- `runs/paper/<kosu>.sqlite` — bir paper/gözlem koşusunun **tamamı**: koşu kimliği,
+  kontrol noktası, fill defteri, koşu günlüğü ve risk audit'i tek dosyada. Koşuyu
+  yedeklemek tek bir dosyayı kopyalamak demek. `.gitignore`'da.
+- `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor
+  (`npm run tokens`), elle yazılmıyor.
+- `DESIGN.md` — arayüz kimliği. Token'lar Faz 6'da dolduruldu ve **normatif**: kesin
+  değerler yalnızca frontmatter'da, gerekçe Markdown gövdesinde. Doğrulama:
+  `npx --package @google/design.md -c "designmd lint DESIGN.md"`.
 
 ## Uyarı
 

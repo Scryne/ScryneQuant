@@ -37,15 +37,15 @@ Live trading bunun **ardından** gelir ve promotion kapılarından (K-010) geçm
 | Dil | Python 3.12 | Araştırma ekosistemi (pandas, numpy) ve exchange kütüphaneleri burada |
 | Veri işleme | pandas, numpy, pyarrow | Standart; ayrıca Parquet için pyarrow zaten gerekli |
 | Tarihsel veri | **Parquet dosyaları + DuckDB** | K-011 — sunucu süreci yok, hash'lenebilir, sürümlenebilir |
-| Operasyonel state | **PostgreSQL** (Faz 5+) | Emir/pozisyon/audit için transaction ve dayanıklılık gerekli |
+| Operasyonel state | **SQLite (WAL)**; PostgreSQL Faz 7'ye ertelendi | K-034 — tek yazıcı, çok okuyucu. Ayakta tutulacak ikinci bir servis, 30 günlük kesintisizlik ölçümünün paydası olurdu |
 | Backtest | **Kendi event-driven motorumuz** | K-001 — backtest = paper = live, tek kod yolu |
 | Exchange | **CCXT** + Binance spot adapter | Adapter arkasında; borsa değiştirilebilir kalsın |
 | Doğrulama | **Pydantic v2** | Signal / config / veri sözleşmelerinde tip garantisi |
 | Zamanlama | **APScheduler** (tek proses) | Celery/Redis/Temporal v1'de yok — K-011 |
-| API | **FastAPI** (Faz 6+) | Dashboard'la birlikte gelir, öncesinde gerekmez |
-| Frontend | **Next.js + TypeScript + Tailwind + shadcn/ui** (Faz 6+) | K-012 |
+| API | **FastAPI** (Faz 6+), trader sürecinin **içinde**, salt-okunur | Yazma ucu yok: risk limitleri koşu kimliğinin parçası (K-009), SAFE_MODE çıkışı elle onay ister (K-008/4) |
+| Frontend | **Vite + React + TypeScript + Tailwind** (Faz 6+) | K-012, K-036 — SSR'ın getirisi yok (tek kullanıcı, localhost, canlı veri); statik build'i FastAPI servis ediyor, yani tek süreç |
 | Grafik | **lightweight-charts** | Mum ve equity curve'ün ikisini de yapar; tek kütüphane |
-| Log | **structlog** (JSON) + Postgres audit tablosu | Prometheus/Grafana/Sentry v1'de yok |
+| Log | **structlog** (JSON) + SQLite audit tablosu (zincir hash'li) | Prometheus/Grafana/Sentry v1'de yok. Şema `migrations/001_faz5.sql` ile hizalı (K-034) |
 | Test | **pytest** | Determinizm ve look-ahead testleri birinci sınıf |
 | Paket yönetimi | **uv** + `uv.lock` | Kilitli sürümler; K-009'un ortam kaydının kaynağı |
 | Lint/format | **ruff** | `docs/` ve `research/` hariç |
@@ -82,8 +82,9 @@ scryne-quant/
 │   ├── execution/     # execution engine + exchange adapter arayüzü
 │   ├── exchange/      # CCXT/Binance adapter (strategy buraya erişemez — K-003)
 │   ├── research/      # deney kaydı, promotion kapıları (K-010)
+│   ├── live/          # canlı akış, paper/gözlem döngüsü, toparlanma, API (Faz 6)
 │   └── cli/           # Faz 1-5'in tek arayüzü (K-012)
-├── apps/web/          # Faz 6'da açılır
+├── apps/web/          # dashboard SPA (Faz 6, K-036)
 ├── research/          # notebooks, experiments, datasets (git'e girmez)
 ├── tests/
 └── docs/
@@ -128,7 +129,8 @@ niyet (§10). Exchange'e giden yol yoktur.
 - Deney kaydı ve reproducibility (K-009)
 - Risk motoru: sizing, exposure limiti, günlük zarar limiti, drawdown limiti, kill switch
 - Promotion kapıları (K-010)
-- Paper trading (gerçek zamanlı veri, simüle emir)
+- Paper trading (gerçek zamanlı veri, simüle emir) + **gözlem modu** (K-035: promotion
+  geçmemiş strateji canlı veride koşabilir ama promotion kanıtı üretemez)
 - 4 sayfalık dashboard (K-012)
 - Audit log
 
