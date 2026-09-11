@@ -497,6 +497,12 @@ nesnesi kurulmadan reddediliyor).
 Faz 6'da ölçülecekti, **ölçülemedi** — drift'in büyüklüğü stratejiye bağlı. O sayı,
 kapıları geçen ilk stratejinin gerçek `paper` koşusunda kalibre edilecek.
 
+**Koşu başladıktan sonraki denetim (2026-09-11):** altyapı baştan sona denetlendi; koşunun
+kendisinde arıza yok, ama 30 günü etkileyen altı sorun bulundu ve giderildi — `exchange/akis.py`
+hiç test edilmemişti, `YENIDEN_BAGLANDI` olayı hiç yazılmıyordu, bayatlık yoklaması sessizce
+ölebiliyordu, düzgün durdurmanın kapısı yoktu (K-043), backoff yanlış ölçüte bakıyordu ve
+kapanışta bağlantılar kapatılmıyordu. Ayrıntı `docs/Faz-6-Paper-Raporu.md`. Testler 1023 → 1061.
+
 **Faz 6'nın verdiği kararlar:** K-034 (operasyonel state SQLite/WAL, PostgreSQL Faz 7'ye
 ertelendi), K-035 (gözlem modu), K-036 (dashboard Vite+React SPA, FastAPI servis eder),
 K-037 (engelleyen katman risk motorunun dışında olabilir, izin veren olamaz), K-038
@@ -504,7 +510,7 @@ K-037 (engelleyen katman risk motorunun dışında olabilir, izin veren olamaz),
 
 **Üretilen paketler:** `live/` (akış, pencere, depo, motor, toparlanma, koşturucu, API,
 kurulum), `exchange/akis.py` (Binance WebSocket + resync), `live/kilit.py` (tek-yazıcı kilidi), `backtest/defter.py` (Faz 3'ten
-taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,olaylar}`.
+taşındı — K-001), `apps/web/` (Vite SPA), CLI `sq paper {baslat,durum,durdur,olaylar}`.
 881 test yeşil (Faz 5 sonunda 757'ydi).
 
 ### Faz 7: Execution sandbox (Binance Spot Testnet) — ✅ kapandı 2026-09-11

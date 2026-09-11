@@ -227,7 +227,15 @@ def uygulama_kur(
 
             İstemci tarafı yönlendirme için gerekli — `/positions` doğrudan açıldığında
             sunucuda öyle bir dosya yok ama SPA o yolu tanıyor.
+
+            **`/api/` altı bu geri düşüşün dışında.** Aksi hâlde tanınmayan bir API yolu
+            `index.html`i **200** ile döndürüyordu: yanlış yazılmış ya da kaldırılmış bir
+            uç, istemcide "JSON bekleniyordu, HTML geldi" diye görünürdü ve hata asıl
+            sebebinden uzakta patlardı. Bu projede "neredeyse doğru" cevap, açık bir
+            hatadan tehlikelidir — olmayan uç 404 döner.
             """
+            if yol.startswith("api/"):
+                raise HTTPException(status_code=404, detail=f"bilinmeyen API yolu: /{yol}")
             hedef = (web_kok / yol).resolve()
             if yol and hedef.is_file() and web_kok.resolve() in hedef.parents:
                 return FileResponse(hedef)

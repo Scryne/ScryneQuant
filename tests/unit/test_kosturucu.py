@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 from collections.abc import AsyncIterator
 
 import pytest
@@ -18,7 +19,7 @@ import pytest
 from scryne_quant.exchange.akis import akis_adi, bar_cikar
 from scryne_quant.live.akis import AkisHatasi, Bar, Kaynak
 from scryne_quant.live.depo import KosuOlayi
-from scryne_quant.live.kosturucu import Kosturucu
+from scryne_quant.live.kosturucu import Kosturucu, KosturucuHatasi
 from scryne_quant.live.toparlanma import toparlan
 from tests.unit.test_paper_dongu import barlar, motor_kur
 
@@ -188,3 +189,64 @@ class TestKosturucu:
         asyncio.run(k.calistir())
         turler = [o["tur"] for o in m.depo.olaylar()]
         assert str(KosuOlayi.BAYAT_GIRIS) in turler
+
+
+class TestYoklamaGozetimi:
+    """Bayatlık yoklaması **sessizce** ölmemeli. (§24)
+
+    Gözetim eklenmeden önce `_yoklama_dongusu` ayrı bir `create_task` içindeydi ve
+    içinden çıkan bir istisna hiçbir yere ulaşmıyordu: görev ölür, ana döngü barları
+    işlemeye devam eder, ve guard kalan koşu boyunca **kör** kalırdı. Dashboard yine
+    "sistem sağlıklı" gösterirdi, çünkü gösterdiği şey guard'ın son bildiği durum.
+
+    Bu üç test o sessizliği kapatıyor: hata kayda geçer, koşu durur, ve gerçek kapanış
+    sebebi başka bir istisnanın altında kaybolmaz.
+    """
+
+    @staticmethod
+    def _kirik_yoklama(m, bar_listesi):
+        def patla(*_: object, **__: object) -> None:
+            raise sqlite3.OperationalError("disk I/O error")
+
+        m.tazelik_kontrol = patla
+        return Kosturucu(m, SahteAkis(bar_listesi, gecikme_s=0.05), yoklama_araligi_s=0.01)
+
+    def test_yoklama_hatasi_kosuyu_durduruyor(self) -> None:
+        m = motor_kur({})
+        toparlan(m, [])
+        k = self._kirik_yoklama(m, barlar(40))
+        with pytest.raises(KosturucuHatasi, match="bayatlık yoklaması"):
+            asyncio.run(k.calistir())
+        # Guard kör kaldığı anda duruldu: barların tamamı işlenmedi.
+        assert k.islenen_bar < 40
+
+    def test_yoklama_hatasi_kayda_geciyor(self) -> None:
+        m = motor_kur({})
+        toparlan(m, [])
+        k = self._kirik_yoklama(m, barlar(40))
+        with pytest.raises(KosturucuHatasi):
+            asyncio.run(k.calistir())
+        olaylar = m.depo.olaylar()
+        hatalar = [o for o in olaylar if o["tur"] == str(KosuOlayi.HATA)]
+        assert len(hatalar) == 1
+        assert hatalar[0]["ayrinti"]["kaynak"] == "bayatlik_yoklamasi"
+        assert "OperationalError" in hatalar[0]["ayrinti"]["hata"]
+
+    def test_durdu_satiri_sebebi_tasiyor(self) -> None:
+        """Kapanış satırı boş sebeple yazılsaydı, kesinti açıklanamaz görünürdü."""
+        m = motor_kur({})
+        toparlan(m, [])
+        k = self._kirik_yoklama(m, barlar(40))
+        with pytest.raises(KosturucuHatasi):
+            asyncio.run(k.calistir())
+        durdu = [o for o in m.depo.olaylar() if o["tur"] == str(KosuOlayi.DURDU)]
+        assert len(durdu) == 1
+        assert "OperationalError" in (durdu[0]["ayrinti"]["hata"] or "")
+
+    def test_saglikli_yoklama_hic_hata_yazmiyor(self) -> None:
+        m = motor_kur({})
+        toparlan(m, [])
+        k = Kosturucu(m, SahteAkis(barlar(3)), yoklama_araligi_s=0.01)
+        ozet = asyncio.run(k.calistir())
+        assert ozet.hata is None
+        assert not [o for o in m.depo.olaylar() if o["tur"] == str(KosuOlayi.HATA)]

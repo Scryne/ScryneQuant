@@ -65,7 +65,14 @@ $lines.Add("Aşama: $asama -- $aciklama")
 if ($asama -eq 'uygulama') {
     $roadmapPath = Join-Path $docsDir 'Roadmap.md'
     if (Test-Path -LiteralPath $roadmapPath -PathType Leaf) {
-        $rows = @(Get-Content -LiteralPath $roadmapPath | Where-Object { $_ -match '^\|\s*\d+\s*\|' })
+        # Yalnizca FAZ tablosunun satirlari. Onceki desen ('^\|\s*\d+\s*\|')
+        # Roadmap'teki HER numarali tabloyu yakaliyordu -- spike tablosu da oyle
+        # basliyor, ve hook 9 fazi 13 diye sayiyordu. Faz tablosu dortuncu sutunda
+        # bir durum isareti tasiyor; ayirt edici olan o.
+        $rows = @(
+            Get-Content -LiteralPath $roadmapPath |
+                Where-Object { $_ -match '^\|\s*\d+\s*\|[^|]*\|\s*(✅|🔄|⏳)' }
+        )
         $total = $rows.Count
         $current = $rows | Where-Object { $_ -notmatch '✅' } | Select-Object -First 1
         if ($current) {

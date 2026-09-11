@@ -228,13 +228,38 @@ opak; cam token'ları tanımlı ama şu an tüketen bir bileşen yok (ilk modal 
 
 `live/` (`akis`, `pencere`, `depo`, `motor`, `toparlanma`, `kosturucu`, `api`, `baslat`),
 `exchange/akis.py`, `backtest/defter.py` (Faz 3'ten taşındı), `apps/web/` (Vite SPA),
-CLI: `sq paper {baslat,durum,olaylar}`.
+CLI: `sq paper {baslat,durum,durdur,olaylar}`.
 
 ## Faz 6'nın verdiği kararlar
 
 K-034 (operasyonel state SQLite; Postgres Faz 7'ye), K-035 (gözlem modu), K-036 (dashboard
 Vite+React, FastAPI servis eder), K-037 (engelleyen katman dışarıda olabilir, izin veren
-olamaz), K-038 (toparlanma yeniden üretimdir).
+olamaz), K-038 (toparlanma yeniden üretimdir), K-043 (planlı duruş kesinti değildir).
+
+## Koşu başladıktan sonraki denetim (2026-09-11)
+
+Gözlem koşusu 5,5 saattir ayaktayken altyapı baştan sona denetlendi. Koşunun kendisinde
+arıza yok — 0 kesinti, 0 fill (beklenen: `ema_kesisim` 1h'te saatlerce kesişim üretmeyebilir),
+dashboard'un dört sayfası ve altı API ucu ayakta, canlı fiyat akıyor. Bulunan altı sorun
+**altyapının 30 günü nasıl geçireceğiyle** ilgiliydi ve altısı da giderildi.
+
+| # | Bulgu | Neden önemliydi | Durum |
+| --- | --- | --- | --- |
+| 1 | `exchange/akis.py` **hiç test edilmemişti** | Sınıfın kendisi — kopma döngüsü, backoff, resync, tekrar süzme — yalnızca gerçek bir kesintide ilk kez çalışacaktı. Kriterin en çok dayandığı kod, en az sınanan koddu | ✅ 20 test |
+| 2 | `YENIDEN_BAGLANDI` olayı **hiç yazılmıyordu** | Enum'da tanımlı, kancası yok. Kopma kayda geçiyordu, giderilmesi geçmiyordu — kriterin *"ve giderilmiş"* yarısı boştu | ✅ kanca + kayıt |
+| 3 | Bayatlık yoklaması **sessizce ölebiliyordu** | `tazelik_kontrol` diske yazıyor; bir `OperationalError` görevi öldürür, ana döngü devam eder ve guard kalan 30 gün **kör** kalırdı. Dashboard yine "sağlıklı" derdi | ✅ gözetim + dur |
+| 4 | Düzgün durdurmanın **kapısı yoktu** | K-043. Sert kill tek seçenekti ve `temiz_kapanmadi` sayılıyordu: planlı her yeniden başlatma kriteri kırardı | ✅ `sq paper durdur` |
+| 5 | Backoff yalnızca **bar** geldiğinde sıfırlanıyordu | 1h'te bar saatte bir kapanır; trafik gören sağlıklı bir oturum da "başarısız deneme" sayılır ve bekleme kısa kesintilerde bile 60 s'ye tırmanırdı | ✅ ölçüt mesaj |
+| 6 | Kapanışta oturum/bağlantı **kapatılmıyordu** | aiohttp oturumu ve iki SQLite bağlantısı açık kalıyordu; WAL checkpoint'i yorumlayıcının çıkış sırasına bağlıydı | ✅ `Kurulum.kapat` |
+
+Ayrıca iki küçük düzeltme: tanınmayan bir `/api/...` yolu SPA geri düşüşüne takılıp
+`index.html`i **200** ile döndürüyordu (artık 404 — kaldırılmış bir uç çalışıyor gibi
+görünmemeli), ve `session-start` hook'u Roadmap'teki spike tablosunu da faz sanıp 9 fazı
+**13** diye sayıyordu.
+
+**Testler 1023 → 1061.** Koşu düzeltmelerin ardından `sq paper durdur` ile **düzgün**
+durduruldu ve yeniden başlatıldı; kayıtta `durdu` + `basladi` görünüyor, kesinti sayacı
+**0**'da kaldı ve `calisma_gun` ilk olaydan sayıldığı için 30 günlük saat sıfırlanmadı.
 
 ## Sırada ne var
 

@@ -67,3 +67,6 @@ apps/web/*.tsbuildinfo
 
 # Paper/gozlem kosulari: calisma durumu, kaynak kod degil.
 /runs/paper/
+
+# Duzgun durdurma bayragi (live/durdurma.py) - kosunun yaninda yasar, kalici degil.
+*.dur

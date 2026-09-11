@@ -1721,6 +1721,59 @@ olurdu. Durma kuralı tam olarak bu anı öngörerek, sonucu görmeden yazıldı
 Funding'in "işe yaramadığı" **ölçülmedi**; ölçülen, bu ızgarada ve bu veride kapıları
 geçecek kadar güçlü olmadığı. Fark korunuyor.
 
+## K-043 — Planlı duruş kesinti değildir; onu ayıran şey bir bayrak dosyasıdır
+
+**Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 6 · **Tamamlar:** K-034, K-038 ·
+**İlgili:** K-009, K-037 · **Kanıt:** `tests/unit/test_durdurma.py`
+
+**Bağlam.** Faz 6'nın kriteri *"30 gün kesintisiz çalışma (kesinti olduysa sebebi kayıtlı
+ve giderilmiş)"*. Koşu bir Windows zamanlanmış görevinin altında yaşıyor ve düzgün kapanış
+`SIGINT`/`SIGTERM`e bağlıydı. O yol orada **ulaşılamaz**: sinyali gönderecek bir terminal
+yok ve başka bir sürecin konsol grubuna `CTRL_BREAK` yollanamıyor. Geriye tek seçenek sert
+kill kalıyordu — ve sistem onu, kendi kuralı gereği, `temiz_kapanmadi` olarak kaydediyor.
+
+Sonucu şuydu: **kodu düzeltmek için yapılan her yeniden başlatma kriterin kendisini
+kırıyordu.** Kriter altyapının beklenmedik şekilde düşüp düşmediğini ölçmek istiyor; o
+hâliyle ölçtüğü şey makinenin 30 gün hiç dokunulmamış olmasıydı. İkisi aynı şey değil ve
+farkı kapatmak eşiği gevşetmek olmazdı — ölçülen büyüklüğü düzeltmek olurdu.
+
+### 1. Ayrım niyette, mekanizmada değil
+
+Bir duruş iki sorudan biriyle ayrılır: **kim istedi?** Süreç kendi kapanış yolundan
+çıktıysa ve sebebini yazabildiyse bu bir `durdu`dur. Yazamadan öldüyse `temiz_kapanmadi`dır
+ve sebebi "bilinmiyor" kalır. Kesinti sayan ikincisidir; birincisi zaten K-038'in
+kanıtladığı yolu (yeniden üretim) izleyerek geri geliyor.
+
+`KESINTI_OLAYLARI` değişmedi ve değişmemeliydi: `DURDU` zaten o kümede değildi. Eksik olan
+şey kural değil, **kuralın kullanılabilir bir kapısının olmaması**ydı.
+
+### 2. Bayrak dosyası, HTTP ucu değil
+
+Dashboard salt okunur ve öyle kalmalı (`tests/unit/test_api.py`). Koşuyu durduran bir uç
+koymak, arayüzü ölçümün üstünde bir yetkiye çıkarırdı — K-036'nın *"arayüz asla ölçümün
+önüne geçmez"* çizgisinin tersi. Bayrak dosyası ise kilidin (`live/kilit.py`) zaten kurduğu
+kalıbı izliyor: koşunun yanında yaşayan, işletim sistemi düzeyinde, ağ yüzeyi olmayan bir iz.
+
+Sebep **isteyen tarafından** yazılıyor (`sq paper durdur --sebep`), çünkü onu bilen tek
+taraf o. Süreç kendi kapanışına "bilinmiyor" yazmak zorunda kalmıyor.
+
+### 3. Bayrağın varlığı niyettir, içeriği değil
+
+Bozuk ya da yarım yazılmış bir bayrak **yine de istek sayılıyor**; yalnızca sebebi
+"bilinmiyor" oluyor. Tersi — ayrıştırılamayan dosyayı yok saymak — durdurma yeteneğini bir
+JSON ayrıntısına bağlardı. Durdurulamayan bir koşu, kaydı eksik bir koşudan kötüdür.
+
+Bayrak hem başlangıçta hem kapanışta siliniyor: kalan bir bayrak, bir sonraki koşuyu
+başlar başlamaz durdururdu.
+
+### 4. Bu karar neyi vaat etmiyor
+
+Planlı duruş kesinti sayılmıyor ama **bedava** da değil: duruş boyunca gelen barlar akıştan
+alınmıyor, toparlanmada REST'ten `backfilled` olarak geliyor ve K-028 gereği o barların
+açılışında fill iddia edilmiyor. Yani uzun bir planlı duruş, kesinti sayacını değil **ölçüm
+yoğunluğunu** düşürür. 30 günün kapanışında bu ayrım rapora yazılacak: kaç bar `ok`, kaç bar
+`backfilled` geldi.
+
 ---
 
 ## Açık kararlar
@@ -1755,6 +1808,9 @@ Faz 0 kapandığında (2026-09-08) durum:
 | K-038 | Toparlanma bir geri yükleme değil, yeniden üretimdir | ✅ **kabul** | Faz 6 |
 | K-039 | Kaç hipotez denendiği sayılır; ön kayıt zorunlu | ✅ **kabul** (düzeltme açık) | Faz 6 |
 | K-040 | Emir kimliği içerikten türer; yazım gönderimden önce; UNKNOWN yeniden gönderilmez | ✅ **kabul** | Faz 7 |
+| K-041 | Ağ hatası üç sınıfa ayrılır; imzanın zamanı borsadan gelir | ✅ **kabul** | Faz 7 |
+| K-042 | Funding bir bilgi kaynağıdır; üç hipotez, tek tur, geri dönüşsüz | ✅ **kabul** | Faz 4'e dönüş 3 |
+| K-043 | Planlı duruş kesinti değildir; ayıran şey bir bayrak dosyasıdır | ✅ **kabul** | Faz 6 |
 
 **Faz 0'ın dört spike'ı da kapandı; Faz 1 kendi üç kararını (K-023/024/025) verdi ve
 K-021'i kapattı; Faz 2 K-026/027'yi, Faz 3 K-028/029'u, Faz 4 K-030/031'i, Faz 5

@@ -133,3 +133,40 @@ class TestYayinci:
         assert y.abone_sayisi == 1
         y.birak(k)
         assert y.abone_sayisi == 0
+
+
+class TestSpaGeriDususu:
+    """SPA geri düşüşü `/api/` altını **yutmamalı**.
+
+    İlk yazımda `/{yol:path}` her şeyi yakalıyordu: yanlış yazılmış ya da kaldırılmış bir
+    API yolu `index.html`i **200** ile döndürüyordu. İstemci tarafında bu "JSON
+    bekleniyordu, HTML geldi" diye görünür — yani hata asıl sebebinden uzakta patlar ve
+    kaldırılmış bir uç, çalışan bir uç gibi durur.
+    """
+
+    @pytest.fixture
+    def web_istemci(self, tmp_path):
+        web = tmp_path / "dist"
+        (web / "assets").mkdir(parents=True)
+        (web / "index.html").write_text("<!doctype html><title>SQ</title>", encoding="utf-8")
+        (web / "favicon.svg").write_text("<svg/>", encoding="utf-8")
+        m = motor_kur({})
+        toparlan(m, [])
+        with TestClient(uygulama_kur(m, defter=BellekDefteri(), web_kok=web)) as c:
+            yield c
+
+    def test_bilinmeyen_api_yolu_404(self, web_istemci) -> None:
+        cevap = web_istemci.get("/api/olmayan-uc")
+        assert cevap.status_code == 404
+        assert "html" not in cevap.headers["content-type"]
+
+    def test_bilinen_api_yolu_calismaya_devam_ediyor(self, web_istemci) -> None:
+        assert web_istemci.get("/api/ozet").status_code == 200
+
+    def test_istemci_yolu_index_dosyasina_dusuyor(self, web_istemci) -> None:
+        cevap = web_istemci.get("/pozisyon")
+        assert cevap.status_code == 200
+        assert "<title>SQ</title>" in cevap.text
+
+    def test_gercek_dosya_oldugu_gibi_servis_ediliyor(self, web_istemci) -> None:
+        assert web_istemci.get("/favicon.svg").text == "<svg/>"

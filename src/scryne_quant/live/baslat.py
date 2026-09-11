@@ -30,6 +30,7 @@ from scryne_quant.common.zaman import simdi_ms, timeframe_ms
 from scryne_quant.data.depo import ParquetDepo
 from scryne_quant.exchange.akis import BinanceBarAkisi, df_barlara
 from scryne_quant.exchange.binance import BinanceAdaptoru
+from scryne_quant.live import durdurma as durdurma_mod
 from scryne_quant.live.akis import Bar, Kaynak
 from scryne_quant.live.api import Yayinci, bar_yayini, uygulama_kur
 from scryne_quant.live.depo import KosuDeposu, KosuKimligi, KosuOlayi
@@ -56,9 +57,22 @@ class Kurulum:
     kilit: KosuKilidi
     """Koşunun tek-yazıcı kilidi; süreç boyunca tutuluyor (`live/kilit.py`)."""
 
+    defter: SqliteDefter
+    """Risk audit defteri. Koşu dosyasının **aynısını** kullanıyor (K-034) ama ayrı bir
+    SQLite bağlantısı; kapatılması da ayrı."""
+
     def kapat(self) -> None:
-        """Kilidi ve depoyu bırakır. İki kez çağrılabilir."""
-        self.kilit.kapat()
+        """Kilidi, depoyu ve audit defterini bırakır. İki kez çağrılabilir.
+
+        **Sıra önemli ve kilit en sonda.** SQLite bağlantıları kapanırken WAL'ı ana
+        dosyaya checkpoint'liyor; kilidi önce bırakmak, ikinci bir sürecin tam o sırada
+        dosyaya girmesine izin verirdi. Bağlantıları hiç kapatmamak ise (ilk yazımdaki
+        durum) checkpoint'i yorumlayıcının çıkış sırasına bırakmak olurdu — 30 günlük bir
+        koşunun kapanışını çöp toplayıcının kaprisine bağlamak.
+        """
+        for kapatilabilir in (self.motor.depo, self.defter, self.kilit):
+            with suppress(Exception):
+                kapatilabilir.kapat()
 
     def sozluk(self) -> dict[str, Any]:
         return {
@@ -161,6 +175,9 @@ def kur(
     olurdu. Kilit, koşuya dokunan ilk işlem olmalı.
     """
     kilit = KosuKilidi(kosu_yolu).al()
+    # Önceki oturumdan kalmış bir durdurma bayrağı silinir. Kalsaydı yeni koşu
+    # başlar başlamaz kendini durdururdu — hem de "elle durduruldu" sebebiyle.
+    durdurma_mod.temizle(kosu_yolu)
     depo = KosuDeposu(kosu_yolu)
     # Audit defteri **aynı dosyada**: risk kararları ile koşu durumu tek bir dosyada
     # yaşıyor, yani koşunun kopyası kararlarının da kopyası (K-034).
@@ -199,10 +216,22 @@ def kur(
         kopma_kancasi=lambda sebep: depo.olay_yaz(
             KosuOlayi.KOPMA, bar_ms=motor.son_bar_ms, ayrinti={"sebep": sebep}
         ),
+        # Kopmanın **giderildiği** de kayda geçiyor. Yalnızca `KOPMA` yazmak, koşu
+        # günlüğünü *"kesinti olduysa sebebi kayıtlı ve giderilmiş"* kriterinin ilk
+        # yarısında bırakırdı: kaç bar REST'ten tamamlandığı ve kopmanın ne kadar
+        # sürdüğü, kesintinin gerçekten kapandığını söyleyen tek kanıt.
+        yeniden_baglanma_kancasi=lambda ayrinti: depo.olay_yaz(
+            KosuOlayi.YENIDEN_BAGLANDI, bar_ms=motor.son_bar_ms, ayrinti=ayrinti
+        ),
     )
-    kosturucu = Kosturucu(motor, akis, bar_kancasi=bar_yayini(yayinci, motor))
+    kosturucu = Kosturucu(
+        motor,
+        akis,
+        bar_kancasi=bar_yayini(yayinci, motor),
+        durdurma_istegi=lambda: durdurma_mod.istek(kosu_yolu),
+    )
     app = uygulama_kur(motor, defter=defter, web_kok=web_kok, yayinci=yayinci)
-    return Kurulum(motor, kosturucu, yayinci, toparlanma, kilit), app
+    return Kurulum(motor, kosturucu, yayinci, toparlanma, kilit, defter), app
 
 
 async def calistir(
@@ -240,6 +269,19 @@ async def calistir(
             if not gorev.done():
                 gorev.cancel()
         await asyncio.gather(trader, web, return_exceptions=True)
+        # Akışın kendi açtığı HTTP oturumu kapatılıyor. Kapatılmadığında aiohttp çıkışta
+        # "Unclosed client session" uyarısı basıyor ve soket işletim sistemine
+        # yorumlayıcı çıkışında bırakılıyordu — 30 günlük bir koşunun temiz kapanışı
+        # bir uyarı satırıyla bitmemeli.
+        temizle = getattr(kurulum.kosturucu.akis, "temizle", None)
+        if temizle is not None:
+            with suppress(Exception):
+                await temizle()
+        # Bayrak kapanan sürecin kendi işi: kalırsa bir sonraki başlatmayı da durdururdu.
+        # Kilitten **önce** siliniyor — kilit bırakıldıktan sonra dosyanın sahibi artık
+        # bu süreç değil.
+        with suppress(Exception):
+            durdurma_mod.temizle(kurulum.motor.depo.yol)
         # Kilit en sonda bırakılıyor: daha erken bırakmak, koşu hâlâ kapanış satırını
         # yazarken ikinci bir sürecin dosyaya girmesine izin verirdi.
         kurulum.kapat()

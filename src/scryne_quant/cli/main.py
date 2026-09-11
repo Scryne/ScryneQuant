@@ -15,6 +15,7 @@ import datetime as dt
 import hashlib
 import json
 import sys
+import time
 from contextlib import suppress
 from pathlib import Path
 from typing import Annotated, Any
@@ -39,7 +40,9 @@ from scryne_quant.data.kalibrasyon import (
 from scryne_quant.exchange.binance import BinanceAdaptoru
 from scryne_quant.features.barlar import bar_dizileri
 from scryne_quant.live import baslat as baslat_mod
+from scryne_quant.live import durdurma
 from scryne_quant.live.depo import KosuDeposu
+from scryne_quant.live.kilit import KilitAlinamadi, KosuKilidi
 from scryne_quant.research import analiz as analiz_mod
 from scryne_quant.research import bolme, tekrar
 from scryne_quant.research import degerlendirme as degerlendirme_mod
@@ -1892,6 +1895,73 @@ def paper_durum(
             f"SAFE_MODE: {kn['risk'].get('safe_mode_sebep')} — çıkış `sq risk serbest` (K-008/4)",
             fg=typer.colors.RED,
         )
+
+
+@paper_app.command("durdur")
+def paper_durdur(
+    kosu_adi: Annotated[str, typer.Argument()],
+    sebep: Annotated[
+        str, typer.Option("--sebep", help="`durdu` satırına yazılacak sebep.")
+    ] = "elle durduruldu",
+    bekle_s: Annotated[
+        float, typer.Option("--bekle", help="Sürecin çıkmasını kaç saniye bekleyelim.")
+    ] = 60.0,
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Çalışan bir koşuyu **düzgün** durdurur. (Faz 6)
+
+    Sert kill ile farkı kayıtta: bu yol `durdu` satırını sebebiyle birlikte yazdırır ve
+    koşu kesinti saymaz. Sert kill ise (tek alternatifti) `temiz_kapanmadi` olarak
+    geriye dönük kesintiye yazılır — yani kodu düzeltmek için yapılan planlı bir
+    yeniden başlatma, *"30 gün kesintisiz"* kriterine karşı bir kesinti olurdu.
+
+    Komut bir bayrak dosyası bırakıp sürecin **kilidi bıraktığını** doğrulayarak bekler;
+    kilidin serbest kalması kapanışın gerçekten tamamlandığının tek dış kanıtı.
+    """
+    yol = _paper_yolu(kosu_adi, kok)
+    if not yol.exists():
+        raise typer.BadParameter(f"koşu bulunamadı: {yol}")
+
+    kilit = KosuKilidi(yol)
+    try:
+        kilit.al().kapat()
+    except KilitAlinamadi:
+        pass
+    else:
+        govde = {"kosu": kosu_adi, "durum": "zaten_calismiyordu", "sebep": sebep}
+        _yaz_json(govde) if json_cikti else typer.echo(
+            "koşu zaten çalışmıyor; durdurulacak bir şey yok"
+        )
+        return
+
+    durdurma.dur_iste(yol, sebep=sebep)
+    typer.echo(f"durdurma istendi: {kosu_adi} — sebep: {sebep}")
+
+    # Yoklama periyodu 15 s; bir tik kaçırmamak için ondan sık bakılıyor.
+    son = time.monotonic() + max(bekle_s, 0.0)
+    durdu = False
+    while time.monotonic() < son:
+        time.sleep(1.0)
+        try:
+            kilit.al().kapat()
+        except KilitAlinamadi:
+            continue
+        durdu = True
+        break
+
+    if json_cikti:
+        _yaz_json({"kosu": kosu_adi, "durum": "durdu" if durdu else "beklemede", "sebep": sebep})
+        return
+    if durdu:
+        typer.secho("koşu düzgün kapandı; kesinti sayılmadı", fg=typer.colors.GREEN)
+        return
+    typer.secho(
+        f"{bekle_s:.0f} s içinde kapanmadı. Bayrak duruyor, süreç bir sonraki yoklamada "
+        "görecek — `sq paper olaylar` ile `durdu` satırını doğrula. Bayrağı iptal etmek "
+        f"için: {durdurma.bayrak_yolu(yol)} dosyasını sil.",
+        fg=typer.colors.YELLOW,
+    )
 
 
 @paper_app.command("olaylar")

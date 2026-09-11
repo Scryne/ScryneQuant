@@ -127,6 +127,7 @@ class BinanceBarAkisi:
         adaptor: BorsaAdaptoru | None = None,
         nabiz_kancasi: Callable[[int], None] | None = None,
         kopma_kancasi: Callable[[str], None] | None = None,
+        yeniden_baglanma_kancasi: Callable[[dict[str, Any]], None] | None = None,
         ws_kok: str = WS_KOK,
         oturum: aiohttp.ClientSession | None = None,
     ) -> None:
@@ -140,11 +141,26 @@ class BinanceBarAkisi:
 
         self._nabiz = nabiz_kancasi or (lambda _: None)
         self._kopma = kopma_kancasi or (lambda _: None)
+        self._yeniden_baglandi = yeniden_baglanma_kancasi or (lambda _: None)
+        """Kopma **giderildiğinde** çağrılır. `kopma_kancasi`nın eksik yarısıydı: kopma
+        kayda geçiyordu ama toparlanması geçmiyordu, yani koşu günlüğü *"kesinti olduysa
+        sebebi kayıtlı ve giderilmiş"* kriterinin ikinci yarısını hiç yazmıyordu."""
+
         self._ws_kok = ws_kok.rstrip("/")
         self._dis_oturum = oturum
         self._oturum: aiohttp.ClientSession | None = oturum
         self._kapali = False
         self._son_teslim_ms: int | None = None
+        self._kopuk = False
+        """Şu an bir kopmadan sonraki yeniden bağlanmayı bekliyor muyuz?"""
+
+        self._resync_bar = 0
+        """Bu kopma boyunca REST'ten tamamlanan bar sayısı; yeniden bağlanma kaydına girer."""
+
+        self._kopma_ms: int | None = None
+        self._oturum_mesaji = 0
+        """İçinde bulunulan WebSocket oturumunda alınan mesaj sayısı. Backoff'un
+        sıfırlanıp sıfırlanmayacağını bu belirliyor — ayrıntı `barlar()`de."""
 
     # ------------------------------------------------------------------ sözleşme
 
@@ -178,26 +194,41 @@ class BinanceBarAkisi:
     # ------------------------------------------------------------------ akış
 
     async def barlar(self) -> AsyncIterator[Bar]:
-        """Kapanmış barları sırayla üretir; kopmada yeniden bağlanıp eksikleri tamamlar."""
+        """Kapanmış barları sırayla üretir; kopmada yeniden bağlanıp eksikleri tamamlar.
+
+        **Backoff bir bar değil, bir mesaj gördüğünde sıfırlanır.** İlk yazımda sayaç
+        yalnızca `yield`lenen bir barda sıfırlanıyordu ve bu 1h timeframe'de yanlış
+        davranırdı: bar saatte bir kapanır, yani bağlantı kurulup mesaj akmaya başlasa
+        bile bir sonraki kopma "başarısız deneme" sayılır ve backoff kısa kesintilerde
+        bile tavana (60 s) tırmanırdı. Ölçüt "bağlantı çalıştı mı", ve onu söyleyen şey
+        trafik. Yalnızca *bağlanmış olmak* ölçüt değil: kabul edip anında kapatan bir uç
+        sayacı her turda sıfırlar ve backoff'u tamamen devre dışı bırakırdı.
+        """
         deneme = 0
         while not self._kapali:
             try:
                 async for bar in self._oturumda_barlar():
-                    deneme = 0
                     yield bar
             except (TimeoutError, aiohttp.ClientError, AkisKoptu) as hata:
                 if self._kapali:
                     break
+                if self._oturum_mesaji > 0:
+                    deneme = 0
+                self._kopuk = True
+                self._kopma_ms = simdi_ms()
+                self._resync_bar = 0
                 self._kopma(f"{type(hata).__name__}: {hata}")
                 bekleme = BACKOFF[min(deneme, len(BACKOFF) - 1)]
                 deneme += 1
                 await asyncio.sleep(bekleme)
                 async for bar in self._resync():
+                    self._resync_bar += 1
                     yield bar
 
     async def _oturumda_barlar(self) -> AsyncIterator[Bar]:
         if self._oturum is None:
             self._oturum = aiohttp.ClientSession()
+        self._oturum_mesaji = 0
         async with self._oturum.ws_connect(self.url, heartbeat=30.0) as ws:
             while not self._kapali:
                 try:
@@ -209,6 +240,25 @@ class BinanceBarAkisi:
                     ) from hata
 
                 if mesaj.type is aiohttp.WSMsgType.TEXT:
+                    self._oturum_mesaji += 1
+                    # Kopma ancak **trafik** geri geldiğinde giderilmiş sayılır.
+                    # `ws_connect`in dönmesi yetmez: el sıkışan ama veri göndermeyen bir
+                    # uç, koşu günlüğüne "giderildi" yazdırıp kesintiyi kapatırdı.
+                    if self._kopuk:
+                        self._kopuk = False
+                        self._yeniden_baglandi(
+                            {
+                                "resync_bar": self._resync_bar,
+                                "kopuk_ms": (
+                                    None
+                                    if self._kopma_ms is None
+                                    else simdi_ms() - self._kopma_ms
+                                ),
+                                "son_teslim_ms": self._son_teslim_ms,
+                            }
+                        )
+                        self._resync_bar = 0
+                        self._kopma_ms = None
                     self._nabiz(simdi_ms())
                     bar = bar_cikar(json.loads(mesaj.data))
                     if bar is not None and self._ileri_mi(bar):
