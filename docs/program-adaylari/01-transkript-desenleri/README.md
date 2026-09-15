@@ -21,11 +21,17 @@ klasörden etkilenmez.
 
 ## 2. Dosyalar ve dondurma kimliği (K-049/5)
 
-| Dosya | SHA-256 |
+| Dosya | SHA-256 (LF, git'teki blob) |
 | --- | --- |
-| `hipotez_adaylari.json` — 114 aday, 24 aile | `1daa0779f266247e791947933dfa73c4824d2f5a6953c43ca8808ae8839f05a9` |
-| `grup_a_on_kayit_taslagi.json` — 10 aday, tek parametre seti, K-051 taslağı, bütçe tahmini | `503bfb50a15978c31cb6e659e617e184ba73d30285c0705dd3a0057b3e7bf11d` |
-| `grup_b_varlik_sinifi_karari_gerekli.json` — 104 aday, varlık sınıfı özeti | `28f8d9fa2bc222efe5bc376d8d26072b32e74fa46afb909c79400a742bc63db9` |
+| `hipotez_adaylari.json` — 114 aday, 24 aile | `cd28ddf05ab03e990699f9d13647838c900803555c2eb90f670927d9fed3c5ec` |
+| `grup_a_on_kayit_taslagi.json` — 10 aday, tek parametre seti, K-051 taslağı, bütçe tahmini | `0a4684b1c0dc1f57911c158b3ea6933723fc985ba1a01d684916864e68954fa3` |
+| `grup_b_varlik_sinifi_karari_gerekli.json` — 104 aday, varlık sınıfı özeti | `faa430315c9afed7ab394069c27a5570ba0f52a26adf9ce5dc6957046d5a8fa4` |
+
+- **Hash kanonu LF'dir.** Dosyalar Windows'ta CRLF ile üretildi ve `core.autocrlf=true` checkout'ta
+  yine CRLF yazabilir; doğrulama `git show HEAD:<yol> | sha256sum` ile ya da `\r` silinerek
+  yapılır. İlk commit'teki (05b6ebd) README CRLF hash'lerini yazmıştı (`1daa0779…`, `503bfb50…`,
+  `28f8d9fa…`); içerik bayt olarak aynı, yalnızca satır sonu farklı — kural değişmediği için
+  dondurma tarihi yeniden başlamaz.
 
 - **Üreten model:** `claude-opus-5` · eğitim kesimi **2026-05** (önceden kaydediliyor, K-049/4).
 - **Girdi:** 79 transkript (`.md`; DREYKO 22, Kaanermi 57), repoda değil. Ağaç hash'i (göreli
@@ -36,8 +42,8 @@ klasörden etkilenmez.
 
 ## 3. İleriye dönük değerlendirme penceresi
 
-- **Pencere başlangıcı = bu klasörün commit zamanı** (git zaman damgası; commit edilmeden
-  dondurmanın kanıt değeri yoktur).
+- **Pencere başlangıcı = commit `05b6ebd`, 2026-09-15T22:20:33+03:00 (19:20:33 UTC).**
+  Değerlendirmeye yalnızca açılış zamanı bu andan sonra olan barlar girer.
 - Bu tarihten sonraki BTCUSDT verisi ne LLM'in eğitiminde ne de kaynak videolarda olabilir; bu
   pencerede ölçülen sonuç `leak_riski` taşımaz.
 - Binance arşivi geçmişi sakladığı için veri şimdiden biriktirilmek zorunda değil; program
