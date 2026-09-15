@@ -1,0 +1,2024 @@
+{
+  "meta": {
+    "amac": "Mevcut veri hattının kapsamadığı adayların bekleme listesi ve varlık sınıfı kararı için özet. Test edilmedi; parametre önerisi ve ön kayıt taslağı bilerek yapılmadı.",
+    "girdi": "C:\\Users\\scryn\\Downloads\\trade-strateji\\hipotez_adaylari.json",
+    "olusturma_tarihi": "2026-09-15",
+    "grup_a_kurali": "Aday Grup A'ya alındı ancak ve ancak: gerekli_veri alanı BTC/kripto'yu açıkça listeliyor VEYA enstrümanı belirtmiyor/'herhangi likit' diyor; VE kural BTCUSDT dışında ikinci bir sembol (ETH, AVAX, NQ/ES çifti vb.) veya depoda/indiricide olmayan bir veri türü (COT, tatil takvimi) gerektirmiyor. Kaynağın yalnızca endeks/FX/metal üzerinde anlattığı ama 'genel' dediği adaylar Grup A'ya ALINMADI; BTC'ye aktarılmaları kaynakta olmayan yeni bir hipotez olur, bu karar insana bırakıldı (Grup B'de 'kaynak_genel_iddia' bayrağı).",
+    "veri_kapsami_dogrulamasi_ozeti": "Depoda yalnızca Binance spot BTCUSDT (1m 2023-08-04→, 1h/4h/1d 2021-05/06→) ve BTCUSDT perp funding var; ayrıntı grup_a_on_kayit_taslagi.json → meta.veri_kapsami_dogrulamasi.",
+    "ilgili_kararlar": "K-053: ikinci varlık sınıfı kendi spike'ı ölçülmeden açılmaz (ölçülecekler: hesap uygunluğu, veri lisansı ve maliyeti, PIT verisi, gerçek komisyon). K-051: defter tektir; bu adaylar hangi sınıfta açılırsa açılsın aynı sayaca eklenir. K-045/K-054 notları Grup A dosyasında."
+  },
+  "ozet": {
+    "grup_b_aday_sayisi": 104,
+    "varlik_sinifi_bazinda": [
+      {
+        "varlik_sinifi": "CME_ENDEKS_VADELI",
+        "kapsam": "CME NQ/ES/YM 1m intraday, Pazar 18:00 ET açılışı dahil ETH, ET saat dilimi. NQ/ES çifti gerektiren kurallar için ikisi birlikte.",
+        "tek_basina_acacagi_aday_sayisi": 95,
+        "katki_verdigi_aday_sayisi": 97,
+        "tek_basina_acacagi_adaylar": [
+          "DREYKO-PRS-03-h1",
+          "DREYKO-PRS-05-h1",
+          "DREYKO-PRS-05-h2",
+          "DREYKO-PRS-05-h3",
+          "DREYKO-PRS-05-h4",
+          "DREYKO-PRS-09-h1",
+          "DREYKO-PRS-09-h2",
+          "DREYKO-PRS-10-h1",
+          "DREYKO-PRS-10-h2",
+          "DREYKO-PRS-11-h1",
+          "DREYKO-PRS-11-h2",
+          "DREYKO-PRS-12-h1",
+          "DREYKO-PRS-12-h2",
+          "DREYKO-PRS-12-h3",
+          "DREYKO-PRS-14-h1",
+          "DREYKO-PRS-14-h2",
+          "DREYKO-PRS-15-h1",
+          "DREYKO-PRS-16-h1",
+          "DREYKO-PRS-16-h2",
+          "DREYKO-PRS-16-h3",
+          "DREYKO-PRS-17-h1",
+          "DREYKO-PRS-18-h1",
+          "DREYKO-PRS-18-h2",
+          "DREYKO-PRS-19-h1",
+          "DREYKO-PRS-19-h2",
+          "DREYKO-PRS-19-h3",
+          "DREYKO-PRS-20-h1",
+          "DREYKO-PRS-20-h2",
+          "DREYKO-PRS-21-h1",
+          "DREYKO-PRS-21-h2",
+          "DREYKO-PRS-22-h1",
+          "DREYKO-PRS-23-h1",
+          "DREYKO-PRS-23-h2",
+          "KAANERMI-10AM-01-h1",
+          "KAANERMI-10AM-01-h2",
+          "KAANERMI-10AM-02-h1",
+          "KAANERMI-10AM-02-h2",
+          "KAANERMI-10AM-03-h1",
+          "KAANERMI-10AM-03-h2",
+          "KAANERMI-10AM-04-h1",
+          "KAANERMI-10AM-04-h2",
+          "KAANERMI-10AM-05-h1",
+          "KAANERMI-10AM-05-h2",
+          "KAANERMI-10AM-05-h3",
+          "KAANERMI-DMC-01-h1",
+          "KAANERMI-DMC-01-h2",
+          "KAANERMI-DMC-01-h3",
+          "KAANERMI-DMC-02-h1",
+          "KAANERMI-DMC-03-h1",
+          "KAANERMI-DMC-04-h1",
+          "KAANERMI-DMC-05-h1",
+          "KAANERMI-DMC-06-h1",
+          "KAANERMI-DMC-06-h2",
+          "KAANERMI-DMC-06-h3",
+          "KAANERMI-DMC-07-h1",
+          "KAANERMI-DMC-08-h1",
+          "KAANERMI-DMC-08-h2",
+          "KAANERMI-DMC-08-h3",
+          "KAANERMI-DMC-09-h1",
+          "KAANERMI-DMC-09-h2",
+          "KAANERMI-DMC-10-h1",
+          "KAANERMI-LUNCH-02-h2",
+          "KAANERMI-LUNCH-03-h1",
+          "KAANERMI-LUNCH-05-h1",
+          "KAANERMI-LUNCH-05-h2",
+          "KAANERMI-LUNCH-07-h1",
+          "KAANERMI-LUNCH-08-h1",
+          "KAANERMI-LUNCH-09-h1",
+          "KAANERMI-LUNCH-10-h1",
+          "KAANERMI-LUNCH-12-h1",
+          "KAANERMI-LUNCH-13-h1",
+          "KAANERMI-LUNCH-14-h1",
+          "KAANERMI-LUNCH-14-h2",
+          "KAANERMI-MSNR-01-h1",
+          "KAANERMI-MSNR-02-h1",
+          "KAANERMI-SIFIR-05-h1",
+          "KAANERMI-SIFIR-06-h1",
+          "KAANERMI-SIFIR-07-h1",
+          "KAANERMI-SIFIR-08-h1",
+          "KAANERMI-SIFIR-10-h1",
+          "KAANERMI-SIFIR-11-h1",
+          "KAANERMI-SIFIR-12-h1",
+          "KAANERMI-SIFIR-13-h1",
+          "KAANERMI-SIFIR-14-h1",
+          "KAANERMI-SIFIR-15-h1",
+          "KAANERMI-SIFIR-16-h1",
+          "KAANERMI-SIFIR-17-h1",
+          "KAANERMI-SIFIR-18-h1",
+          "KAANERMI-SIFIR-18-h2",
+          "KAANERMI-SIFIR-19-h1",
+          "KAANERMI-SIFIR-20-h1",
+          "KAANERMI-SIFIR-21-h1",
+          "KAANERMI-SIFIR-22-h1",
+          "KAANERMI-SIFIR-23-h1",
+          "KAANERMI-SIFIR-24-h1"
+        ],
+        "baska_sinifla_birlikte_gerektigi_adaylar": [
+          "DREYKO-PRS-22-h2",
+          "DREYKO-PRS-23-h3"
+        ]
+      },
+      {
+        "varlik_sinifi": "FX_MAJOR",
+        "kapsam": "EURUSD, GBPUSD, USDCAD, DXY 1m-1h (hafta sonu boşluklu). Çift gerektiren kurallar için EURUSD+GBPUSD birlikte.",
+        "tek_basina_acacagi_aday_sayisi": 15,
+        "katki_verdigi_aday_sayisi": 15,
+        "tek_basina_acacagi_adaylar": [
+          "DREYKO-PRS-06-h1",
+          "DREYKO-PRS-06-h2",
+          "KAANERMI-LUNCH-02-h2",
+          "KAANERMI-LUNCH-05-h1",
+          "KAANERMI-LUNCH-09-h1",
+          "KAANERMI-LUNCH-13-h1",
+          "KAANERMI-SIFIR-03-h1",
+          "KAANERMI-SIFIR-06-h1",
+          "KAANERMI-SIFIR-07-h1",
+          "KAANERMI-SIFIR-08-h1",
+          "KAANERMI-SIFIR-10-h1",
+          "KAANERMI-SIFIR-12-h1",
+          "KAANERMI-SIFIR-19-h1",
+          "KAANERMI-SIFIR-21-h1",
+          "KAANERMI-SIFIR-24-h1"
+        ],
+        "baska_sinifla_birlikte_gerektigi_adaylar": []
+      },
+      {
+        "varlik_sinifi": "METAL_SPOT",
+        "kapsam": "XAUUSD, XAGUSD 1m-1h. Çift gerektiren kurallar için ikisi birlikte.",
+        "tek_basina_acacagi_aday_sayisi": 11,
+        "katki_verdigi_aday_sayisi": 11,
+        "tek_basina_acacagi_adaylar": [
+          "DREYKO-PRS-08-h1",
+          "DREYKO-PRS-08-h2",
+          "DREYKO-PRS-18-h1",
+          "KAANERMI-DMC-02-h1",
+          "KAANERMI-LUNCH-09-h1",
+          "KAANERMI-LUNCH-13-h1",
+          "KAANERMI-MSNR-01-h1",
+          "KAANERMI-MSNR-02-h1",
+          "KAANERMI-SIFIR-07-h1",
+          "KAANERMI-SIFIR-10-h1",
+          "KAANERMI-SIFIR-16-h1"
+        ],
+        "baska_sinifla_birlikte_gerektigi_adaylar": []
+      },
+      {
+        "varlik_sinifi": "KRIPTO_EK_SEMBOL",
+        "kapsam": "BTCUSDT dışında Binance kripto sembolü (ETHUSDT, AVAXUSDT). Adaptör ve indirici mevcut; yalnızca veri indirilmemiş. K-053'ün açtığı yolun içinde.",
+        "tek_basina_acacagi_aday_sayisi": 2,
+        "katki_verdigi_aday_sayisi": 2,
+        "tek_basina_acacagi_adaylar": [
+          "DREYKO-PRS-02-h4",
+          "DREYKO-PRS-04-h1"
+        ],
+        "baska_sinifla_birlikte_gerektigi_adaylar": []
+      },
+      {
+        "varlik_sinifi": "CFTC_COT",
+        "kapsam": "CFTC Commitments of Traders haftalık raporları, available_time ile (K-052/5).",
+        "tek_basina_acacagi_aday_sayisi": 0,
+        "katki_verdigi_aday_sayisi": 1,
+        "tek_basina_acacagi_adaylar": [],
+        "baska_sinifla_birlikte_gerektigi_adaylar": [
+          "DREYKO-PRS-22-h2"
+        ]
+      },
+      {
+        "varlik_sinifi": "US_TATIL_TAKVIMI",
+        "kapsam": "ABD resmi tatil / CME kısaltılmış seans takvimi.",
+        "tek_basina_acacagi_aday_sayisi": 0,
+        "katki_verdigi_aday_sayisi": 1,
+        "tek_basina_acacagi_adaylar": [],
+        "baska_sinifla_birlikte_gerektigi_adaylar": [
+          "DREYKO-PRS-23-h3"
+        ]
+      },
+      {
+        "varlik_sinifi": "US_HISSE",
+        "kapsam": "ABD hisse senedi günlük veri (tek aday alternatifi).",
+        "tek_basina_acacagi_aday_sayisi": 1,
+        "katki_verdigi_aday_sayisi": 1,
+        "tek_basina_acacagi_adaylar": [
+          "DREYKO-PRS-05-h1"
+        ],
+        "baska_sinifla_birlikte_gerektigi_adaylar": []
+      },
+      {
+        "varlik_sinifi": "EMTIA_DIGER",
+        "kapsam": "Soya yağı vadelisi (tek aday alternatifi).",
+        "tek_basina_acacagi_aday_sayisi": 1,
+        "katki_verdigi_aday_sayisi": 1,
+        "tek_basina_acacagi_adaylar": [
+          "KAANERMI-LUNCH-09-h1"
+        ],
+        "baska_sinifla_birlikte_gerektigi_adaylar": []
+      }
+    ],
+    "sinif_kombinasyonlari": [
+      {
+        "acilan_siniflar": [
+          "CME_ENDEKS_VADELI"
+        ],
+        "acilan_aday_sayisi": 95
+      },
+      {
+        "acilan_siniflar": [
+          "FX_MAJOR"
+        ],
+        "acilan_aday_sayisi": 15
+      },
+      {
+        "acilan_siniflar": [
+          "METAL_SPOT"
+        ],
+        "acilan_aday_sayisi": 11
+      },
+      {
+        "acilan_siniflar": [
+          "KRIPTO_EK_SEMBOL"
+        ],
+        "acilan_aday_sayisi": 2
+      },
+      {
+        "acilan_siniflar": [
+          "CME_ENDEKS_VADELI",
+          "FX_MAJOR"
+        ],
+        "acilan_aday_sayisi": 98
+      },
+      {
+        "acilan_siniflar": [
+          "CME_ENDEKS_VADELI",
+          "METAL_SPOT"
+        ],
+        "acilan_aday_sayisi": 97
+      },
+      {
+        "acilan_siniflar": [
+          "FX_MAJOR",
+          "METAL_SPOT"
+        ],
+        "acilan_aday_sayisi": 22
+      },
+      {
+        "acilan_siniflar": [
+          "CME_ENDEKS_VADELI",
+          "FX_MAJOR",
+          "METAL_SPOT"
+        ],
+        "acilan_aday_sayisi": 100
+      },
+      {
+        "acilan_siniflar": [
+          "CFTC_COT",
+          "CME_ENDEKS_VADELI"
+        ],
+        "acilan_aday_sayisi": 96
+      },
+      {
+        "acilan_siniflar": [
+          "CME_ENDEKS_VADELI",
+          "US_TATIL_TAKVIMI"
+        ],
+        "acilan_aday_sayisi": 96
+      },
+      {
+        "acilan_siniflar": [
+          "CFTC_COT",
+          "CME_ENDEKS_VADELI",
+          "EMTIA_DIGER",
+          "FX_MAJOR",
+          "KRIPTO_EK_SEMBOL",
+          "METAL_SPOT",
+          "US_HISSE",
+          "US_TATIL_TAKVIMI"
+        ],
+        "acilan_aday_sayisi": 104
+      }
+    ],
+    "aile_bazinda_grup_b_sayisi": {
+      "F01_SMT_KORELE_UYUMSUZLUK": 8,
+      "F02_SEANS_RANGE_SWEEP_DONUS": 11,
+      "F03_ONCEKI_MUM_RANGE_SWEEP_CRT": 4,
+      "F04_INSIDE_BAR_RANGE_HEDEF": 1,
+      "F05_SEANS_ACILISI_ILK_HAREKET_TERS": 5,
+      "F06_ANAHTAR_ACILIS_SEVIYESI_SR": 4,
+      "F07_MSS_SONRASI_RETRACE_GIRIS": 5,
+      "F08_FIB_RETRACEMENT_DEVAM": 6,
+      "F09_FIB_EXTENSION_DONUS": 1,
+      "F10_FVG_TEPKI_SR": 8,
+      "F11_FVG_DOLDURMA_MIKNATIS": 2,
+      "F12_IFVG_TERS_KAPANIS_DEVAM": 4,
+      "F13_FPFVG_0930_ILK_FVG": 8,
+      "F14_HAFTALIK_ACILIS_GAPI_NWOG": 5,
+      "F15_REJECTION_BLOCK_FITIL_BOLGESI": 13,
+      "F16_MSNR_GOVDE_SEVIYESI_FLIP": 4,
+      "F18_UC_MUM_HTF_DONUS": 1,
+      "F19_SOL_YAVAS_SAG_HIZLI": 2,
+      "F20_VOLATILITE_REJIM_SEANS_HACIM": 4,
+      "F21_HAFTA_GUNU_UC_NOKTA": 2,
+      "F22_INTRADAY_MAKRO_ZAMAN_PENCERESI": 2,
+      "F23_COT_INDIKATOR_UYUMSUZLUK": 1,
+      "F24_LIKIDITEDEN_LIKIDITEYE_HEDEF": 3
+    },
+    "kaynak_genel_iddia_bayrakli_adaylar": [
+      "DREYKO-PRS-03-h1",
+      "DREYKO-PRS-05-h4",
+      "DREYKO-PRS-09-h2",
+      "KAANERMI-SIFIR-03-h1",
+      "KAANERMI-SIFIR-07-h1"
+    ],
+    "okuma_notu": "'tek_basina_acacagi' bir sınıfın başka hiçbir sınıf olmadan açacağı adaylardır; bir aday birden fazla sınıfta alternatif olarak geçebildiği için sınıf satırları toplanınca 104'ü aşar. Kesin sayılar için 'sinif_kombinasyonlari'. Açılan aday sayısı bir öncelik önerisi değildir; açılan her aday yeni çekiliş demektir ve K-044 eşiğini yükseltir."
+  },
+  "celiskiler": {
+    "isaretlenen": [
+      {
+        "kod": "SMT_ISLEM_ENSTRUMANI",
+        "aciklama": "SMT sinyalinde işlemin likiditeyi ALMAYAN mı ALAN mı enstrümanda açılacağı",
+        "taraf_1": [
+          "DREYKO-PRS-02-h4",
+          "DREYKO-PRS-21-h1"
+        ],
+        "taraf_2": [
+          "DREYKO-PRS-09-h1",
+          "KAANERMI-DMC-06-h2",
+          "KAANERMI-SIFIR-10-h1"
+        ]
+      },
+      {
+        "kod": "HAFTALIK_UC_GUNU",
+        "aciklama": "Haftalık high/low'un Pazartesi/Salı mı Salı/Çarşamba mı oluştuğu",
+        "taraf_1": [
+          "DREYKO-PRS-03-h1"
+        ],
+        "taraf_2": [
+          "KAANERMI-10AM-05-h1"
+        ]
+      },
+      {
+        "kod": "TEMAS_SONRASI_BIRIKIM",
+        "aciklama": "Bölgeye temas sonrası birikimde 'işlem yok' mu 'önce stop avı sonra dönüş' mü",
+        "taraf_1": [
+          "KAANERMI-10AM-03-h2"
+        ],
+        "taraf_2": [
+          "KAANERMI-DMC-08-h2"
+        ]
+      },
+      {
+        "kod": "LUNCH_GIRIS_TANIMI",
+        "aciklama": "Lunch dönüşünde çekirdek kural (Lunch SONRASI 5m fitil) ile gevşetilmiş sweep / Lunch İÇİNDE giriş",
+        "taraf_1": [
+          "KAANERMI-LUNCH-01-h1"
+        ],
+        "taraf_2": [
+          "KAANERMI-LUNCH-02-h1",
+          "KAANERMI-LUNCH-13-h1",
+          "KAANERMI-LUNCH-14-h1",
+          "KAANERMI-LUNCH-14-h2"
+        ]
+      }
+    ],
+    "isaretlenmeyen": "'Midnight Open' isimlendirme karışıklığı (18:00 vs 00:00 ET) rakip bir fiyat iddiası değil, adlandırma farkı; etkilenen adaylar (KAANERMI-DMC-01-h3, KAANERMI-DMC-08-h1) saati açıkça sabitlediği için celisen_hipotez_id verilmedi.",
+    "kural": "Çelişen adaylar birleştirilmedi; her biri ayrı ve rakip hipotezdir. Bir tarafın sonucu diğer tarafın koşturulup koşturulmayacağına karar vermek için kullanılmamalı (sonuca bakıp çekiliş seçmek olur)."
+  },
+  "bekleyen_adaylar": [
+    {
+      "hipotez_id": "DREYKO-PRS-02-h4",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/02_optimal_trend_entry_ile_isleme_girmek_pattern_recognition_series_ep2.md",
+      "gerekli_veri": "1H ve günlük OHLC, BTCUSDT ve ETHUSDT (aynı borsa, senkron zaman damgası).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "KRIPTO_EK_SEMBOL"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F01_SMT_KORELE_UYUMSUZLUK",
+      "celisen_hipotez_id": [
+        "DREYKO-PRS-09-h1",
+        "KAANERMI-DMC-06-h2",
+        "KAANERMI-SIFIR-10-h1"
+      ],
+      "celiski_tipi": [
+        "SMT_ISLEM_ENSTRUMANI"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-03-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/03_kotu_piyasa_kosullarinda_ne_yapilmali_pattern_recognition_series_ep3.md",
+      "gerekli_veri": "Intraday (en az 1H) OHLC; endeks vadelileri (NQ/ES), video genel konuşuyor. Ek veri yok.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "Kaynak endeks üzerinde anlattı ama 'video genel konuşuyor'.",
+      "btc_uyarlamasi_notu": "Kaynak iddiayı genel sunduğu için BTCUSDT'ye uyarlanabilir; ancak bu kaynakta olmayan yeni bir hipotezdir ve Grup A'ya alınması insan kararıdır.",
+      "ayni_aile": "F21_HAFTA_GUNU_UC_NOKTA",
+      "celisen_hipotez_id": [
+        "KAANERMI-10AM-05-h1"
+      ],
+      "celiski_tipi": [
+        "HAFTALIK_UC_GUNU"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-04-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/04_trading_bir_maraton_pattern_recognition_series_ep4.md",
+      "gerekli_veri": "4H ve 15m OHLC; ETHUSDT, BTCUSDT, AVAXUSDT.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "KRIPTO_EK_SEMBOL"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F01_SMT_KORELE_UYUMSUZLUK",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-05-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/05_sadece_3_muma_bakarak_marketi_okumak_pattern_recognition_series_ep5.md",
+      "gerekli_veri": "Günlük/haftalık OHLC; video ES, NQ (endeks), hisse örneği.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "US_HISSE"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F18_UC_MUM_HTF_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-05-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/05_sadece_3_muma_bakarak_marketi_okumak_pattern_recognition_series_ep5.md",
+      "gerekli_veri": "Günlük/4H OHLC; video ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-05-h3",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/05_sadece_3_muma_bakarak_marketi_okumak_pattern_recognition_series_ep5.md",
+      "gerekli_veri": "Günlük ve 1H OHLC, CME ES/NQ (Pazar açılışı dahil ETH).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F14_HAFTALIK_ACILIS_GAPI_NWOG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-05-h4",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/05_sadece_3_muma_bakarak_marketi_okumak_pattern_recognition_series_ep5.md",
+      "gerekli_veri": "4H/günlük OHLC; video ES/NQ ve genel.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "Kaynak ES/NQ örnekleri verdi ama iddiayı genel bir kural olarak sundu.",
+      "btc_uyarlamasi_notu": "Kaynak iddiayı genel sunduğu için BTCUSDT'ye uyarlanabilir; ancak bu kaynakta olmayan yeni bir hipotezdir ve Grup A'ya alınması insan kararıdır.",
+      "ayni_aile": "F19_SOL_YAVAS_SAG_HIZLI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-06-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/06_htf_piyasada_fvg_ve_ote_ile_bias_belirlemek_pattern_recognition_series_ep6.md",
+      "gerekli_veri": "4H ve 1H OHLC, EURUSD, GBPUSD, DXY.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F08_FIB_RETRACEMENT_DEVAM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-06-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/06_htf_piyasada_fvg_ve_ote_ile_bias_belirlemek_pattern_recognition_series_ep6.md",
+      "gerekli_veri": "1H FX OHLC (hafta sonu boşluklu), EURUSD, GBPUSD.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F14_HAFTALIK_ACILIS_GAPI_NWOG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-08-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/08_ifvg_nedir_nasil_kullanmalisin_pattern_recognition_series_ep8.md",
+      "gerekli_veri": "5m ve 1H OHLC, XAUUSD; seans saatleri (Asya, London, NY killzone).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "METAL_SPOT"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F03_ONCEKI_MUM_RANGE_SWEEP_CRT",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-08-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/08_ifvg_nedir_nasil_kullanmalisin_pattern_recognition_series_ep8.md",
+      "gerekli_veri": "1m ve 5m OHLC, XAUUSD.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "METAL_SPOT"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F12_IFVG_TERS_KAPANIS_DEVAM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-09-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/09_market_maker_model_pattern_recognition_series_ep9.md",
+      "gerekli_veri": "5m ve 4H OHLC, CME NQ ve ES (senkron).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F01_SMT_KORELE_UYUMSUZLUK",
+      "celisen_hipotez_id": [
+        "DREYKO-PRS-02-h4",
+        "DREYKO-PRS-21-h1"
+      ],
+      "celiski_tipi": [
+        "SMT_ISLEM_ENSTRUMANI"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-09-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/09_market_maker_model_pattern_recognition_series_ep9.md",
+      "gerekli_veri": "5m (gün içi) ve günlük OHLC; NQ ve genel.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "Kaynak '%90, değişmez kural' diyerek genel sundu.",
+      "btc_uyarlamasi_notu": "Kaynak iddiayı genel sunduğu için BTCUSDT'ye uyarlanabilir; ancak bu kaynakta olmayan yeni bir hipotezdir ve Grup A'ya alınması insan kararıdır.",
+      "ayni_aile": "F19_SOL_YAVAS_SAG_HIZLI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-10-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/10_model_1_scalp_tradelemek_icin_kullanman_gereken_model_ep10.md",
+      "gerekli_veri": "5m OHLC, CME NQ (ET saat dilimi, yaz saati).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-10-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/10_model_1_scalp_tradelemek_icin_kullanman_gereken_model_ep10.md",
+      "gerekli_veri": "1m/5m OHLC, CME NQ ve ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F01_SMT_KORELE_UYUMSUZLUK",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-11-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/11_bazen_kaybetmek_gerekir_pattern_recognition_series_ep11.md",
+      "gerekli_veri": "1m/5m OHLC, CME NQ ve ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F13_FPFVG_0930_ILK_FVG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-11-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/11_bazen_kaybetmek_gerekir_pattern_recognition_series_ep11.md",
+      "gerekli_veri": "5m, 15m, 1H OHLC, NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F12_IFVG_TERS_KAPANIS_DEVAM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-12-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/12_tek_islemde_fon_gecmek_pattern_recognition_series_ep12.md",
+      "gerekli_veri": "Günlük ve intraday OHLC, CME NQ/ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F03_ONCEKI_MUM_RANGE_SWEEP_CRT",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-12-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/12_tek_islemde_fon_gecmek_pattern_recognition_series_ep12.md",
+      "gerekli_veri": "Günlük ve 1H OHLC, NQ/ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-12-h3",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/12_tek_islemde_fon_gecmek_pattern_recognition_series_ep12.md",
+      "gerekli_veri": "1H ve 5m OHLC, CME NQ/ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-14-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/14_fvgyi_yanlis_kullaniyorsun_pattern_recognition_series_ep14.md",
+      "gerekli_veri": "5m, 15m, 1H, 4H OHLC; NQ, ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-14-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/14_fvgyi_yanlis_kullaniyorsun_pattern_recognition_series_ep14.md",
+      "gerekli_veri": "1m/5m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F13_FPFVG_0930_ILK_FVG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-15-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/15_model_2_gunun_yonunu_930da_bul_pattern_recognition_series_ep15.md",
+      "gerekli_veri": "5m ve 1m OHLC, CME NQ (ES teyit).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F13_FPFVG_0930_ILK_FVG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-16-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/16_gunun_ilk_girisini_kacirma_1st_presented_fvg_pattern_recognition_series_ep16.md",
+      "gerekli_veri": "Günlük ve 1H OHLC, CME NQ; video ES/NQ SMT'yi ek teyit olarak kullanıyor.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F03_ONCEKI_MUM_RANGE_SWEEP_CRT",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-16-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/16_gunun_ilk_girisini_kacirma_1st_presented_fvg_pattern_recognition_series_ep16.md",
+      "gerekli_veri": "1m OHLC, CME NQ; ET saat dilimi.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F22_INTRADAY_MAKRO_ZAMAN_PENCERESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-16-h3",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/16_gunun_ilk_girisini_kacirma_1st_presented_fvg_pattern_recognition_series_ep16.md",
+      "gerekli_veri": "1m ve 1H OHLC, CME NQ (tick hassasiyetinde veri).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-17-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/17_live_trade_1st_presented_fvg_ile_5_dakikada_tp_pattern_recognition_series_ep17.md",
+      "gerekli_veri": "1m/5m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F13_FPFVG_0930_ILK_FVG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-18-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/18_manipulasyonu_gordugum_an_pattern_recognition_series_ep18.md",
+      "gerekli_veri": "Aylık ve günlük OHLC; NQ, ES, XAU.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "METAL_SPOT"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-18-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/18_manipulasyonu_gordugum_an_pattern_recognition_series_ep18.md",
+      "gerekli_veri": "5m OHLC, CME NQ/ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F22_INTRADAY_MAKRO_ZAMAN_PENCERESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-19-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/19_risk_almaktan_korkma_pattern_recognition_series_ep19.md",
+      "gerekli_veri": "Günlük ve 1H OHLC, CME NQ/ES (Pazar açılışı dahil).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F14_HAFTALIK_ACILIS_GAPI_NWOG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-19-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/19_risk_almaktan_korkma_pattern_recognition_series_ep19.md",
+      "gerekli_veri": "1m/5m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F13_FPFVG_0930_ILK_FVG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-19-h3",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/19_risk_almaktan_korkma_pattern_recognition_series_ep19.md",
+      "gerekli_veri": "1m OHLC, CME NQ ve ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F01_SMT_KORELE_UYUMSUZLUK",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-20-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/20_one_shot_one_kill_kullanman_gereken_tek_model_pattern_recognition_series_ep20.md",
+      "gerekli_veri": "1m ve günlük OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-20-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/20_one_shot_one_kill_kullanman_gereken_tek_model_pattern_recognition_series_ep20.md",
+      "gerekli_veri": "1m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F11_FVG_DOLDURMA_MIKNATIS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-21-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/21_5_yilik_trading_surecinin_bana_kazandirdiklari_pattern_recognition_series_ep21.md",
+      "gerekli_veri": "Haftalık, 1H, 5m OHLC, CME NQ ve ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F01_SMT_KORELE_UYUMSUZLUK",
+      "celisen_hipotez_id": [
+        "DREYKO-PRS-09-h1",
+        "KAANERMI-DMC-06-h2",
+        "KAANERMI-SIFIR-10-h1"
+      ],
+      "celiski_tipi": [
+        "SMT_ISLEM_ENSTRUMANI"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-21-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/21_5_yilik_trading_surecinin_bana_kazandirdiklari_pattern_recognition_series_ep21.md",
+      "gerekli_veri": "5m OHLC, CME NQ/ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F13_FPFVG_0930_ILK_FVG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-22-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/22_fiyatin_nereye_gidecegini_onceden_bilmek_pattern_recognition_series_ep22.md",
+      "gerekli_veri": "Aylık ve günlük OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F04_INSIDE_BAR_RANGE_HEDEF",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-22-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/22_fiyatin_nereye_gidecegini_onceden_bilmek_pattern_recognition_series_ep22.md",
+      "gerekli_veri": "Haftalık OHLCV, CME NQ; CFTC COT raporları (veri Salı'ya ait, Cuma yayınlanır; kesme available_time'a göre yapılmalı).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI + CFTC_COT"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F23_COT_INDIKATOR_UYUMSUZLUK",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-23-h1",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/23_range_manipulasyonu_asil_hareketi_yakalamak_pattern_recognition_series_ep23.md",
+      "gerekli_veri": "1H, 15m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F11_FVG_DOLDURMA_MIKNATIS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-23-h2",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/23_range_manipulasyonu_asil_hareketi_yakalamak_pattern_recognition_series_ep23.md",
+      "gerekli_veri": "1m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F13_FPFVG_0930_ILK_FVG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-23-h3",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/23_range_manipulasyonu_asil_hareketi_yakalamak_pattern_recognition_series_ep23.md",
+      "gerekli_veri": "Günlük ve 1H OHLCV, CME NQ/ES; ABD tatil takvimi.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI + US_TATIL_TAKVIMI"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F20_VOLATILITE_REJIM_SEANS_HACIM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-01-h1",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/01_marketi_yaratan_model_10am_stratejisi_turkiyede_tek.md",
+      "gerekli_veri": "1m OHLC, CME NQ (video NQ1!, MNQ karşılaştırması); ET saat dilimi.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F06_ANAHTAR_ACILIS_SEVIYESI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-01-h2",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/01_marketi_yaratan_model_10am_stratejisi_turkiyede_tek.md",
+      "gerekli_veri": "1m ve 5m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F07_MSS_SONRASI_RETRACE_GIRIS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-02-h1",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/02_pratikten_zarar_gelmez_10am_model_backtest_ve_derinleme_seansi_2_bolum.md",
+      "gerekli_veri": "1m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F06_ANAHTAR_ACILIS_SEVIYESI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-02-h2",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/02_pratikten_zarar_gelmez_10am_model_backtest_ve_derinleme_seansi_2_bolum.md",
+      "gerekli_veri": "1m/3m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-03-h1",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/03_sadece_bu_stratejiye_guven_10am_3_bolum.md",
+      "gerekli_veri": "1m ve 5m OHLC, CME NQ (ES korelasyonu ek teyit).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F05_SEANS_ACILISI_ILK_HAREKET_TERS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-03-h2",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/03_sadece_bu_stratejiye_guven_10am_3_bolum.md",
+      "gerekli_veri": "5m ve 1H OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "celisen_hipotez_id": [
+        "KAANERMI-DMC-08-h2"
+      ],
+      "celiski_tipi": [
+        "TEMAS_SONRASI_BIRIKIM"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-04-h1",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/04_bu_video_sana_para_kazandiracak_10am_model_final_backtesting.md",
+      "gerekli_veri": "1m ve 4H OHLC, CME NQ; ET 4H ızgarası.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F05_SEANS_ACILISI_ILK_HAREKET_TERS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-04-h2",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/04_bu_video_sana_para_kazandiracak_10am_model_final_backtesting.md",
+      "gerekli_veri": "1m/5m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F08_FIB_RETRACEMENT_DEVAM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-05-h1",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/05_1_saatlik_dev_backtest_son_3_haftada_10am_model_nasil_calisti.md",
+      "gerekli_veri": "1H veya günlük OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F21_HAFTA_GUNU_UC_NOKTA",
+      "celisen_hipotez_id": [
+        "DREYKO-PRS-03-h1"
+      ],
+      "celiski_tipi": [
+        "HAFTALIK_UC_GUNU"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-05-h2",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/05_1_saatlik_dev_backtest_son_3_haftada_10am_model_nasil_calisti.md",
+      "gerekli_veri": "1m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F06_ANAHTAR_ACILIS_SEVIYESI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-10AM-05-h3",
+      "kaynak_dosya": "Kaanermi/10AM Modeli 💰/05_1_saatlik_dev_backtest_son_3_haftada_10am_model_nasil_calisti.md",
+      "gerekli_veri": "5m OHLC (tick hassasiyetinde open/high eşitliği için 1m veya tick veri tercih), CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F05_SEANS_ACILISI_ILK_HAREKET_TERS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-01-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/01_dumb_money_concepts_turkce_turkiyede_tek.md",
+      "gerekli_veri": "1m, 3m, 5m, 15m OHLC; CME NQ (video NQ1!, stoplar 7.5 puan).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-01-h2",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/01_dumb_money_concepts_turkce_turkiyede_tek.md",
+      "gerekli_veri": "1m-15m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-01-h3",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/01_dumb_money_concepts_turkce_turkiyede_tek.md",
+      "gerekli_veri": "1m/5m OHLC, CME NQ; ET saat dilimi, CME günlük bakım arası (17:00-18:00).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F06_ANAHTAR_ACILIS_SEVIYESI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-02-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/02_1989_kazandim_en_tepeden_short.md",
+      "gerekli_veri": "1m-30m OHLC; NQ ve XAUUSD (video her ikisi).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "METAL_SPOT"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-03-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/03_kilciksiz_bir_trade.md",
+      "gerekli_veri": "45m, 15m, 5m, 1m OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-04-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/04_birlikte_backtest_yaptik_rejection_block_nasil_kullanilmali.md",
+      "gerekli_veri": "1m, 3m, 5m, 15m OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F16_MSNR_GOVDE_SEVIYESI_FLIP",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-05-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/05_25_dakikada_7rr_canli_islem.md",
+      "gerekli_veri": "1m-15m OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F16_MSNR_GOVDE_SEVIYESI_FLIP",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-06-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/06_piyasayi_ben_dondurdum_canli_islem.md",
+      "gerekli_veri": "1m, 3m, 5m OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-06-h2",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/06_piyasayi_ben_dondurdum_canli_islem.md",
+      "gerekli_veri": "1m OHLC, CME NQ ve ES (senkron).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F01_SMT_KORELE_UYUMSUZLUK",
+      "celisen_hipotez_id": [
+        "DREYKO-PRS-02-h4",
+        "DREYKO-PRS-21-h1"
+      ],
+      "celiski_tipi": [
+        "SMT_ISLEM_ENSTRUMANI"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-06-h3",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/06_piyasayi_ben_dondurdum_canli_islem.md",
+      "gerekli_veri": "1m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F08_FIB_RETRACEMENT_DEVAM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-07-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/07_yanlislikla_para_basan_strateji_buldum_canli_backtesting.md",
+      "gerekli_veri": "1m, 3m, 5m, 15m OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-08-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/08_bana_5500_kazandiran_strateji_rejection_block_ve_trade_analizim.md",
+      "gerekli_veri": "15m, 30m, 5m, 1m OHLC; CME NQ; ET saat dilimi.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-08-h2",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/08_bana_5500_kazandiran_strateji_rejection_block_ve_trade_analizim.md",
+      "gerekli_veri": "1m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [
+        "KAANERMI-10AM-03-h2"
+      ],
+      "celiski_tipi": [
+        "TEMAS_SONRASI_BIRIKIM"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-08-h3",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/08_bana_5500_kazandiran_strateji_rejection_block_ve_trade_analizim.md",
+      "gerekli_veri": "1m-4H OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-09-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/09_13_islemde_50rr_kazanmak_dumb_money_concepts_backtest_sezonum.md",
+      "gerekli_veri": "1m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F05_SEANS_ACILISI_ILK_HAREKET_TERS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-09-h2",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/09_13_islemde_50rr_kazanmak_dumb_money_concepts_backtest_sezonum.md",
+      "gerekli_veri": "1m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-DMC-10-h1",
+      "kaynak_dosya": "Kaanermi/Dumb Money Model Kampı 💰/10_stdv_stratejisi_nedir_turkiyede_tek_baba_ya.md",
+      "gerekli_veri": "5m ve 1m OHLC; CME NQ (video 2-8 Temmuz 2026 örnekleri).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F09_FIB_EXTENSION_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-02-h2",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/02_lunch_stratejisi_bolum_2.md",
+      "gerekli_veri": "5m OHLC, CME NQ/ES; FX için aynı saat penceresi.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F20_VOLATILITE_REJIM_SEANS_HACIM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-03-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/03_2700_kazandigim_nqdaki_lunch_islemim_canli.md",
+      "gerekli_veri": "5m ve 1m OHLC; CME NQ ve ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-05-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/05_lunch_stratejisi_son_bolum.md",
+      "gerekli_veri": "5m ve 15m OHLC; NQ, EURUSD.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-05-h2",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/05_lunch_stratejisi_son_bolum.md",
+      "gerekli_veri": "5m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F05_SEANS_ACILISI_ILK_HAREKET_TERS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-07-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/07_10_dakikada_1900_kazandiran_canli_lunch_islemim.md",
+      "gerekli_veri": "5m OHLC, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-08-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/08_daha_iyi_bir_strateji_yok_diyorum_sana_kanki.md",
+      "gerekli_veri": "1m/5m OHLCV, CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F20_VOLATILITE_REJIM_SEANS_HACIM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-09-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/09_adami_deli_eden_nasdaqa_ayari_verdik_kanki.md",
+      "gerekli_veri": "5m ve 1m OHLC; NQ, ES, EURUSD, USDCAD, XAUUSD, soya yağı (videoda bakılan).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR",
+        "METAL_SPOT",
+        "EMTIA_DIGER"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-10-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/10_sanirim_16_yasinda_araba_alacagim_canli_lunch_islemim.md",
+      "gerekli_veri": "1m ve 15m OHLC; CME NQ, ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-12-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/12_300_kisi_1_islemde_canli_yayin_tekrari.md",
+      "gerekli_veri": "5m, 1m OHLC; CME NQ ve ES (SMT teyidi).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-13-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/13_smokefxg_ile_son_10_gunun_lunch_islemlerini_inceledik.md",
+      "gerekli_veri": "3m, 5m, 1m OHLC; CME NQ, ES; ayrıca EURUSD, XAUUSD incelemesi.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR",
+        "METAL_SPOT"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [
+        "KAANERMI-LUNCH-01-h1"
+      ],
+      "celiski_tipi": [
+        "LUNCH_GIRIS_TANIMI"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-14-h1",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/14_3_trade_1500_canli_islem_ve_mum_yorumlarim.md",
+      "gerekli_veri": "1m, 3m OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F08_FIB_RETRACEMENT_DEVAM",
+      "celisen_hipotez_id": [
+        "KAANERMI-LUNCH-01-h1"
+      ],
+      "celiski_tipi": [
+        "LUNCH_GIRIS_TANIMI"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-14-h2",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/14_3_trade_1500_canli_islem_ve_mum_yorumlarim.md",
+      "gerekli_veri": "1m, 3m OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F12_IFVG_TERS_KAPANIS_DEVAM",
+      "celisen_hipotez_id": [
+        "KAANERMI-LUNCH-01-h1"
+      ],
+      "celiski_tipi": [
+        "LUNCH_GIRIS_TANIMI"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-MSNR-01-h1",
+      "kaynak_dosya": "Kaanermi/MSNR Modeli 💰/01_temel_snr_yapilari_ve_ornekler_malaysian_snr_konsepti_bolum_1.md",
+      "gerekli_veri": "1H, 4H OHLC; XAUUSD (anlatıcıya göre en iyi), NQ (daha az).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "METAL_SPOT",
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F16_MSNR_GOVDE_SEVIYESI_FLIP",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-MSNR-02-h1",
+      "kaynak_dosya": "Kaanermi/MSNR Modeli 💰/02_likidite_ustaligi_msnr_konsepti_trade_modeli.md",
+      "gerekli_veri": "4H, 1H ve 1m-15m OHLC; XAUUSD, NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "METAL_SPOT",
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F16_MSNR_GOVDE_SEVIYESI_FLIP",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-03-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/03_temel_market_yapisi_yakit_sistemi.md",
+      "gerekli_veri": "Günlük ve 1H OHLC; EURUSD (örnek), genel.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "Eğitim anlatımı, enstrümandan bağımsız sundu (örnek EURUSD).",
+      "btc_uyarlamasi_notu": "Kaynak iddiayı genel sunduğu için BTCUSDT'ye uyarlanabilir; ancak bu kaynakta olmayan yeni bir hipotezdir ve Grup A'ya alınması insan kararıdır.",
+      "ayni_aile": "F24_LIKIDITEDEN_LIKIDITEYE_HEDEF",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-05-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/05_killzone_isleyisi_ve_hacim_analizi.md",
+      "gerekli_veri": "1m/5m OHLCV, CME NQ; ET saat dilimi (kış/yaz saati).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F20_VOLATILITE_REJIM_SEANS_HACIM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-06-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/06_mss_ve_bos_yapilari.md",
+      "gerekli_veri": "1m, 5m, 1H OHLC; NQ, ES, EURUSD.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F07_MSS_SONRASI_RETRACE_GIRIS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-07-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/07_fvg_yapilari.md",
+      "gerekli_veri": "1m-1H OHLC; NQ, ES, EURUSD, XAUUSD ('tüm paritelerde çalışıyor').",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR",
+        "METAL_SPOT"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "Kaynak 'tüm paritelerde çalışıyor' diyor.",
+      "btc_uyarlamasi_notu": "Kaynak iddiayı genel sunduğu için BTCUSDT'ye uyarlanabilir; ancak bu kaynakta olmayan yeni bir hipotezdir ve Grup A'ya alınması insan kararıdır.",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-08-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/08_ilk_kurgulaman_gereken_strateji.md",
+      "gerekli_veri": "1m, 5m OHLC; NQ, EURUSD.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F07_MSS_SONRASI_RETRACE_GIRIS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-10-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/10_smt_yapilari.md",
+      "gerekli_veri": "15m, 1H, 4H, 5m, 1m OHLC; NQ ve ES, EURUSD ve GBPUSD, XAU ve XAG (senkron zaman damgası).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR",
+        "METAL_SPOT"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F01_SMT_KORELE_UYUMSUZLUK",
+      "celisen_hipotez_id": [
+        "DREYKO-PRS-02-h4",
+        "DREYKO-PRS-21-h1"
+      ],
+      "celiski_tipi": [
+        "SMT_ISLEM_ENSTRUMANI"
+      ],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-11-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/11_premium_discount_seviyeleri_ve_anlami.md",
+      "gerekli_veri": "5m, 1H, 4H OHLC; NQ (örnek).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F08_FIB_RETRACEMENT_DEVAM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-12-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/12_ote_stratejisi.md",
+      "gerekli_veri": "1H, 5m OHLC; NQ, ES, US30 (YM), EURUSD.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F08_FIB_RETRACEMENT_DEVAM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-13-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/13_continuation_trade_modeli.md",
+      "gerekli_veri": "5m, 1H OHLC; CME NQ (Pazar açılışı dahil).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F14_HAFTALIK_ACILIS_GAPI_NWOG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-14-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/14_ndog_ve_nwog_seviyeleri_ve_onemi.md",
+      "gerekli_veri": "5m, 1H OHLC; CME NQ, ES, YM; ETH/RTH ayrımı.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F14_HAFTALIK_ACILIS_GAPI_NWOG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-15-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/15_box_setup_stratejisi.md",
+      "gerekli_veri": "5m OHLC; NQ (09:30 örneği dahil).",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-16-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/16_mitigation_block_stratejisi.md",
+      "gerekli_veri": "1m-15m OHLC; NQ, XAUUSD.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "METAL_SPOT"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F07_MSS_SONRASI_RETRACE_GIRIS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-17-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/17_first_presented_fvg.md",
+      "gerekli_veri": "1m, 5m OHLC; CME NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F13_FPFVG_0930_ILK_FVG",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-18-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/18_daily_bias_nedir_nasil_belirlenir.md",
+      "gerekli_veri": "Günlük, 4H OHLC; NQ (örnek). Günlük mum sınırı (ET 18:00) sabitlenmeli.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F03_ONCEKI_MUM_RANGE_SWEEP_CRT",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-18-h2",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/18_daily_bias_nedir_nasil_belirlenir.md",
+      "gerekli_veri": "Günlük ve 4H OHLC; NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F24_LIKIDITEDEN_LIKIDITEYE_HEDEF",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-19-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/19_rdrb_nedir.md",
+      "gerekli_veri": "1m-1H OHLC; NQ, EURUSD.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-20-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/20_tum_fvgler.md",
+      "gerekli_veri": "1m, 3m, 5m OHLC; NQ, ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F12_IFVG_TERS_KAPANIS_DEVAM",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-21-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/21_rejection_block_stratejisi.md",
+      "gerekli_veri": "4H, 1H OHLC; NQ, EURUSD, ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI",
+        "FX_MAJOR"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F15_REJECTION_BLOCK_FITIL_BOLGESI",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-22-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/22_low_resistance_liquidity_nedir.md",
+      "gerekli_veri": "5m, 15m OHLC; NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F24_LIKIDITEDEN_LIKIDITEYE_HEDEF",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-23-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/23_power_of_3_modeli.md",
+      "gerekli_veri": "1m, 5m, 15m OHLC; NQ, ES.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-24-h1",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/24_turtle_soup.md",
+      "gerekli_veri": "1m, 5m OHLC; EURUSD (örnek), NQ.",
+      "acilmasi_icin_gereken_varlik_siniflari": [
+        "FX_MAJOR",
+        "CME_ENDEKS_VADELI"
+      ],
+      "alternatif_notu": "Listedeki her satır tek başına yeterli bir alternatiftir; bir satırdaki '+' iki sınıfın birlikte gerektiğini gösterir.",
+      "kaynak_genel_iddia": "",
+      "btc_uyarlamasi_notu": "",
+      "ayni_aile": "F07_MSS_SONRASI_RETRACE_GIRIS",
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "durum": "VARLIK SINIFI KARARI BEKLİYOR — test edilmedi"
+    }
+  ]
+}
