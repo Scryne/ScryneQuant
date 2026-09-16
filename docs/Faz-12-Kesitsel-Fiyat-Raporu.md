@@ -76,7 +76,7 @@ Evren dayanıklılığının oranı yalnızca pozitif OOS Sharpe'ta tanımlı; d
 
 1. **`bayat_degerleme` sıfır değil.** OOS'ta 13.101 (39), 18.837 (40), 58.254 (41), 23.532
    (42) pozisyon-bar: seçilen sembol delist edilmiş, pozisyon son bilinen fiyattan
-   değerleniyor (`backtest/coklu_motor.py`, Faz 10'da bu pencerede 0'dı). Ters dönüş
+   değerleniyor (`backtest/coklu_motor.py`, Faz 10'un 2023 sonrası penceresinde 0'dı). Ters dönüş
    ailesi geride kalanı seçtiği için en yüksek. **Etkinin yönü ölçülmedi:** son fiyat
    delist öncesi çöküşü içerebilir de, sermayeyi dondurup volatiliteyi düşürebilir de.
    Kapanış kararını değiştirmiyor (PBO ve pertürbasyon kapıları bundan bağımsız, OOS
