@@ -3017,3 +3017,21 @@ spike'ı tekrarladı (0,98 / 0,96 / 0,93).
   (K-039, K-051 bütçesi); dedektörün yakalaması gereken şey kayıt dışı kalan başka adlı
   tekrar. Soru metni ve eşikler değişmiyor.
 - Mekanizma içermeyen idari gerekçeler (hipotez 1-7, 18-21) incele bandına gürültü düşürüyor.
+
+## K-062 — Sürekli açık host: AB'de bir VPS, paper modda
+
+**Durum:** kabul · **Tarih:** 2026-09-17 · **Karar veren:** Scryne · **Uygular:** K-055,
+K-060 plan kaydı · **Açar:** Faz 14
+
+1. **Host bir VPS.** Ev bilgisayarı değil: elektrik, internet ve işletim sistemi
+   güncellemesi kesintileri K-055'in ≥30 gün kesintisiz koşu kriterini ölçülemez kılar.
+   Araştırma koşuları (bellek yoğun, `data/evren/`) yerel makinede kalır; host yalnızca
+   canlı paper motorunu taşır.
+2. **Konum AB (örn. Almanya); ABD değil.** Binance ABD IP'lerini engelliyor. Erişim Spike 1
+   kalıbıyla host üzerinde yeniden doğrulanır; "yol açık" kanıtı yerel makineden taşınmaz.
+3. **Boyut:** 2 vCPU / 4 GB RAM başlangıç. Canlı motor uzun geçmiş taşımaz; ölçülen bellek
+   yetmezse büyütülür (ölç, tahmin etme).
+4. **Erişim yalnızca SSH anahtarıyla**, parola girişi kapalı. Anahtar yalnızca bu host için
+   üretildi (`~/.ssh/scrynequant_vps`), başka hiçbir yerde kullanılmaz.
+5. **Mod paper.** Hostta borsa **işlem** anahtarı bulunmaz; Faz 8 tetiklenene kadar gerçek
+   emir yolu yok.
