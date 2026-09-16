@@ -3,19 +3,19 @@ proje: ScryneQuant
 created: 2026-09-11
 type: faz-raporu
 faz: 6
-status: devam-ediyor
+status: kapandi
 ---
 # Faz 6 — Paper trading + dashboard
 
-> **Bu faz kapanmadı ve kapanamaz.** Dört bitti kriterinden üçü karşılandı ve testle
-> kanıtlı; dördüncüsü (*"30 gün kesintisiz çalışma"*) tanım gereği duvar saati ister.
-> Rapor altyapının durumunu kaydediyor; koşunun sonucu 30 gün sonra bu dosyaya eklenecek.
+> **Faz 2026-09-15'te kapandı (K-055).** Üç bitti kriteri testle kanıtlı. Dördüncüsü
+> (*"30 gün kesintisiz çalışma"*) karşılanmadı ve **gevşetilmedi, taşındı**: Faz 8 ön
+> koşuluna ve Faz 14'e. Gerekçe ve koşunun ölçülen sonucu en alttaki "Kapanış" bölümünde.
 
 ## Bitti kriteri durumu
 
 | Kriter | Durum | Kanıt |
 | --- | --- | --- |
-| 30 gün kesintisiz çalışma | ⏳ **koşu bekliyor** | — |
+| 30 gün kesintisiz çalışma | ↪ **taşındı** (K-055) → Faz 8 ön koşulu 5, Faz 14 | `gozlem-2`: 4,29 gün, 5 kesinti, 0 fill |
 | Restart sonrası state doğru toparlanıyor | ✅ | `tests/unit/test_toparlanma.py` (18 test) |
 | Veri akışı kesilince yeni pozisyon açılmıyor | ✅ | `tests/unit/test_paper_dongu.py::TestBayatVeriGuardi` |
 | Dashboard'un 4 sayfası çalışıyor, risk ilk bakışta görünüyor | ✅ | `tests/unit/test_api.py` + uçtan uca canlı doğrulama |
@@ -301,3 +301,32 @@ durdurulmalı (`Disable-ScheduledTask -TaskName ScryneQuant-Paper`).
    strateji ile gerçek bir `paper` koşusu başlar ve K-018/3'ün drift eşiği ancak orada
    kalibre edilir.
 3. Faz 7'nin ön koşulu: `testnet.binance.vision` API anahtarı.
+
+*(Yukarıdaki liste 2026-09-11'de yazıldı. Faz 7 aynı gün kapandı; Faz 4'e dönüşler K-045 ile
+aramayı kapattı.)*
+
+## Kapanış (2026-09-15, K-055)
+
+Scryne 30 günlük kriteri gereksiz buldu ve makinenin her gün kapatıldığını bildirdi. Koşu
+kaydı bunu doğruladı:
+
+| `gozlem-2` | Değer |
+| --- | --- |
+| Aralık | 2026-09-11 12:21 → 2026-09-15 19:24 UTC |
+| Çalışma | 4,29 gün |
+| Kesinti | **5** — 4 `temiz_kapanmadi` (sebep "bilinmiyor", günlük kapanışla uyumlu) + 1 `kopma` |
+| Kopma → yeniden bağlanma | 18 s, resync 0 bar — `exchange/akis.py`'nin gerçek ilk sınavı, temiz |
+| Toparlanma | 4/4 başarılı, ayrışma 0 |
+| Fill | 0 (`ema_kesisim` bu aralıkta kesişim üretmedi) |
+| Kapanış | `sq paper durdur` → `durdu`, kesinti sayılmadı; `ScryneQuant-Paper` görevi kaldırıldı |
+
+**Kriter gevşetilmedi, taşındı.** Bu makinede ölçtüğü şey altyapı değil, masaüstünün açık
+kalmasıydı. Promotion'un kendi `paper` kapısı (`ASGARI_PAPER_GUN = 30`) değişmedi ve gözlem
+koşusu zaten promotion kanıtı olamazdı (K-035). Kesintisiz 30 gün şimdi sürekli açık bir host
+ister: **Faz 8 ön koşulu 5** ve **Faz 14 bitti kriteri**.
+
+**Ölçülemeden kalan, kayıtlı:** açık pozisyonla canlı toparlanma (0 fill); günlerce süren
+bağlantı yaşlanması; uzun koşuda dosya/bellek büyümesi. Koşu dosyası
+`runs/paper/gozlem-2.sqlite` yerinde duruyor.
+
+Koşuyu yeniden başlatmak gerekirse: `tools/paper-kosu.ps1` başlığındaki görev kaydı.

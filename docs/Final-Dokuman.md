@@ -35,7 +35,7 @@ altyapıdır.** Bu cümle v1'den beri aynı ve v2 onu değiştirmiyor — geniş
 > kurallarını uygulayabilen ve aynı stratejileri gerçek zamanlı veri üzerinde paper trading
 > ile çalıştırabilen bir platformun ilk üretilebilir sürümü.
 
-**Kuruldu ve ölçtü.** Faz 0-5 ve 7 kapandı, Faz 6'nın 30 günlük koşusu sürüyor. Ölçtüğü
+**Kuruldu ve ölçtü.** Faz 0-7 kapandı (Faz 6'nın 30 günlük koşu kriteri K-055 ile Faz 8/14'e taşındı). Ölçtüğü
 sonuç olumsuz ve bu bir başarısızlık değil: 38 hipotez denendi, hiçbiri promotion kapılarını
 geçmedi; en iyi sonuç şans beklentisinin altında çıktı (K-044); maliyet sıfır kabul edilse
 bile geçen olmadı (K-045). Tek sembollü yönlü arama bu ölçümle kapandı.

@@ -2575,3 +2575,46 @@ olasılık kalibrasyonu, Deflated Sharpe. Kapı olmamalarının sebebi K-019'unk
 `evren_dayanikliligi` tek bir sembolde **ölçülemez** — aynı kuralların evrenin geri kalanına
 uygulanmasıyla ölçülür. Yani tek sembolde geliştirilen bir strateji de artık evrene karşı
 sınanmak zorunda. Bu bilinçli: K-045 tek sembollü yönlü aramayı zaten kapatmıştı.
+
+---
+
+## K-055 — Faz 6 kapanır; 30 günlük kesintisizlik sürekli açık bir host ister ve oraya taşınır
+
+**Durum:** kabul · **Tarih:** 2026-09-15 · **Faz:** 6 · **Tamamlar:** K-035, K-043 ·
+**İlgili:** K-010, K-018, K-038 · **Kaynak:** Scryne'ın kararı; `runs/paper/gozlem-2.sqlite`
+
+**Bağlam.** Faz 6'nın dört bitti kriterinden üçü 2026-09-11'de testle karşılanmıştı;
+dördüncüsü *"30 gün kesintisiz çalışma"* `gozlem-2` koşusuna bağlıydı. Scryne kriteri
+gereksiz buldu ve bir olgu bildirdi: **bilgisayar iş bitince kapatılıyor.** Koşunun kaydı bunu
+doğruluyor.
+
+| Ölçüm (`gozlem-2`, 2026-09-11 12:21 → 2026-09-15 19:24 UTC) | Değer |
+| --- | --- |
+| Çalışma | 4,29 gün |
+| Kesinti | 5 = 4 `temiz_kapanmadi` (sebep "bilinmiyor"; makinenin kapatılmasıyla uyumlu) + 1 `kopma` |
+| Gerçek WebSocket kopması | 1, 18 s'de `yeniden_baglandi`, resync 0 bar |
+| Toparlanma | 4 başarılı (`toparlandi`), ayrışma 0 |
+| Fill | 0 |
+| Kapanış | `sq paper durdur` → `durdu` (kesinti sayılmadı); zamanlanmış görev kaldırıldı |
+
+**Karar — dört madde:**
+
+1. **Faz 6 kapanır; 30 günlük kriter gevşetilmez, taşınır.** Bu makinede kriter altyapının
+   beklenmedik şekilde düşüp düşmediğini değil, bir masaüstünün 30 gün açık kalıp
+   kalmadığını ölçüyor. K-043 aynı ayrımı planlı yeniden başlatma için yapmıştı; buradaki
+   fark, günlük kapanışın bir bayrakla "planlı" sayılması **da** yanlış olurdu: canlı bir
+   koşu o saatlerde gerçekten kapalıdır. Doğru cevap kriteri düzeltmek değil, onu ölçülebilir
+   olduğu yere taşımak.
+2. **Promotion kapısı değişmiyor.** `risk/promotion.py::ASGARI_PAPER_GUN = 30` yerinde. Faz
+   6'nın gözlem koşusu K-035 gereği zaten promotion kanıtı **olamazdı**; promotion'un `paper`
+   aşamasının 30 günü, kapıları geçen ilk stratejinin gerçek paper koşusunda ölçülür.
+3. **Borç iki yere bağlanır.** (a) **Faz 8 ön koşulu 5:** sürekli açık bir host ve üzerinde
+   30 gün kesintisiz koşu; açık pozisyonla gerçek bir toparlanma en az bir kez görülmüş.
+   (b) **Faz 14 bitti kriteri:** uzun süreli dayanıklılık (Faz 7'nin açık kalemiyle
+   birleşir).
+4. **Ne kaybedildi, açıkça:** toparlanmanın **açık pozisyonla** canlıda sınanması (0 fill;
+   yol yalnızca `tests/unit/test_toparlanma.py`'de kanıtlı); günlerce süren bağlantının
+   yaşlanması; uzun koşuda bellek/dosya büyümesi. Üçü de Faz 8'den önce ölçülmek zorunda ve
+   yukarıdaki iki madde bunu zorluyor.
+
+**Faz sırası:** Faz 9 bu karardan bağımsızdır (strateji ve canlı koşu içermez), bekleme yok.

@@ -115,14 +115,14 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   istisnayı kullanıyor** (K-048): cross-sectional, evren geneli türev ve makro programları
   K-051'in program kaydı + arama bütçesiyle açılır, serbest çekilişle değil.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
-- `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri. Faz 0-8 v1 (7'si kapalı),
+- `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri. Faz 0-8 v1 (8'i kapalı),
   Faz 9-16 v2. **Faz 8 sıraya değil tetiklenmeye bağlıdır:** promotion'u geçen ilk strateji
   çıktığında başlar.
 - `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,
   `docs/Faz-5-Risk-Raporu.md`, `docs/Faz-6-Paper-Raporu.md`,
   `docs/Faz-7-Execution-Raporu.md` — faz sonu ölçüm raporları.
-  Sayılar buradan alınır, tahmin edilmez. Faz 6 raporu **açık**: fazın 30 günlük kriteri
-  duvar saati istiyor, koşu bitince o dosyaya yazılacak.
+  Sayılar buradan alınır, tahmin edilmez. Faz 6 **kapandı** (K-055): 30 günlük koşu kriteri
+  sürekli açık host gerektirdiği için Faz 8 ön koşuluna ve Faz 14'e taşındı.
 - `config/risk.json` — yürürlükteki risk limitleri; her limit `olculdu`/`istah` kaynağını
   ve (iştahsa) gözden geçirme koşulunu taşır (K-033). `sq risk limitler` ile okunur.
 - `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Uygulanmadı ve bu artık bir

@@ -74,7 +74,12 @@ if ($asama -eq 'uygulama') {
                 Where-Object { $_ -match '^\|\s*\d+\s*\|[^|]*\|\s*(✅|🔄|⏳)' }
         )
         $total = $rows.Count
-        $current = $rows | Where-Object { $_ -notmatch '✅' } | Select-Object -First 1
+        # Tetiklemeli/kosullu fazlar siraya degil bir olaya bagli (Faz 8: promotion'u
+        # gecen ilk strateji; Faz 13/15: acilma kosulu). Aktif faz onlar olamaz --
+        # yoksa hook Faz 8'i "aktif" gosterip siradaki gercek isi (Faz 9) gizliyordu.
+        $current = $rows |
+            Where-Object { $_ -notmatch '✅' -and $_ -notmatch '\((tetiklemeli|koşullu)\)' } |
+            Select-Object -First 1
         if ($current) {
             $lines.Add("Roadmap: $total faz, aktif satır -> $current")
         }

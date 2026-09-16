@@ -29,10 +29,10 @@ yanlış sonuç olarak geri döner.
 | 3 | Backtest motoru | ✅ Tamamlandı | Determinizm hash'le kanıtlı; maliyet modeli çalışıyor; bağımsız referans fixture'ıyla birebir uyuşuyor |
 | 4 | Strateji laboratuvarı | ✅ Tamamlandı | 5 strateji ailesi; walk-forward + OOS; her sonuç reproduce edilebilir kayıtla |
 | 5 | Risk motoru + promotion | ✅ Tamamlandı | Risk bypass edilemiyor (testle); kill switch çalışıyor; promotion kapıları uygulanıyor |
-| 6 | Paper trading + dashboard | 🔄 Devam Ediyor | 30 gün kesintisiz; restart sonrası state doğru; 4 sayfalık dashboard ayakta |
+| 6 | Paper trading + dashboard | ✅ Tamamlandı | Restart sonrası state doğru; bayat veri guard'ı; 4 sayfalık dashboard ayakta (30 günlük koşu kriteri K-055 ile Faz 8/14'e taşındı) |
 | 7 | Execution sandbox (testnet) | ✅ Tamamlandı | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
-| 8 | Kontrollü live | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
-| 9 | Veri platformu v2 (PIT + evren + kimlik) | ⏳ Bekliyor | Delist dahil çoklu sembol indirilmiş; PIT evren tablosu üretiliyor; kimlik kırılması yakalanıyor; `available_time` kesmesi testli |
+| 8 | Kontrollü live (tetiklemeli) | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
+| 9 | Veri platformu v2 (PIT + evren + kimlik) | ✅ Tamamlandı | Delist dahil çoklu sembol indirilmiş; PIT evren tablosu üretiliyor; kimlik kırılması yakalanıyor; `available_time` kesmesi testli |
 | 10 | Çok enstrümanlı araştırma çekirdeği | ⏳ Bekliyor | Tek enstrüman özel hâlde bit düzeyinde aynı; çok enstrümanlı bağımsız referans tutuyor; evren look-ahead testi yeşil |
 | 11 | Doğrulama v2 | ⏳ Bekliyor | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
 | 12 | Araştırma programları (cross-sectional, türev, makro) | ⏳ Bekliyor | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
@@ -507,31 +507,36 @@ ATR, p90'ı 6,39 ATR. 2,0 seçmek vakaların yarısında gerçek riskin altında
   özeti `sonuc_hash`'e yalnızca varsa giriyor. Promotion zincirinde hiçbir strateji
   `out_of_sample` aşamasını geçemiyor — K-019'un eşikleri gevşetilmedi.
 
-### Faz 6: Paper trading + dashboard — 🔄 altyapı bitti (2026-09-11), koşu bekliyor
+### Faz 6: Paper trading + dashboard — ✅ kapandı (2026-09-15, K-055)
 
 - **İşler:** WebSocket ile gerçek zamanlı veri; stale-data guard (§24); canlı sinyal
   üretimi; simüle emir ve pozisyon takibi; gerçek zamanlı risk kontrolü; FastAPI; 4 sayfalık
   dashboard (Overview, Strategies, Positions, Logs) — K-012; DESIGN.md'nin token'ları bu
   fazda doldurulur.
 - **Bitti Kriteri:**
-  - 30 gün kesintisiz çalışma (kesinti olduysa sebebi kayıtlı ve giderilmiş).
+  - ~~30 gün kesintisiz çalışma (kesinti olduysa sebebi kayıtlı ve giderilmiş).~~ **K-055 ile
+    bu fazdan çıkarıldı** — Faz 8 ön koşuluna ve Faz 14'e taşındı (aşağıda).
   - Süreç öldürülüp yeniden başlatıldığında pozisyon ve emir state'i doğru toparlanıyor.
   - Veri akışı kesildiğinde yeni pozisyon açılmıyor (stale-data guard testi).
   - Dashboard'un 4 sayfası çalışıyor ve risk durumu ilk bakışta görülüyor.
 - **Notlar:** Frontend'e başlamadan önce global `~/.claude/CLAUDE.md`'deki araç sırası
   izlenir ve `DESIGN.md` doldurulur.
 
-**Durum — dört kriterden üçü karşılandı, ayrıntısı `docs/Faz-6-Paper-Raporu.md`'de:**
+**Durum — kalan üç kriterin üçü de karşılandı, faz kapandı (2026-09-15). Ayrıntı
+`docs/Faz-6-Paper-Raporu.md`'de:**
 
 | Kriter | Sonuç |
 | --- | --- |
-| 30 gün kesintisiz çalışma | 🔄 **koşuyor** — `gozlem-2` (ilk deneme `gozlem-1` denetim sonrası sıfırlandı, bkz. Faz 6 raporu) başladı 2026-09-11 12:21 UTC, `ema_kesisim`, zamanlanmış görevle; hedef ≈2026-10-11. Tanım gereği duvar saati ister. Kriterin kendisindeki bir boşluk koşu başlamadan kapatıldı: çökme/elektrik kesintisi hiçbir iz bırakmıyordu, artık geriye dönük `temiz_kapanmadi` olarak sayılıyor |
+| 30 gün kesintisiz çalışma | ↪ **taşındı (K-055)** — `gozlem-2` 4,29 gün koştu, 5 kesinti: 4 `temiz_kapanmadi` (makine her gün kapatılıyor) + 1 gerçek WebSocket kopması (18 s'de giderildi); 0 fill. 2026-09-15 19:24 UTC'de `sq paper durdur` ile düzgün kapatıldı, zamanlanmış görev kaldırıldı. Kriter bu makinede altyapıyı değil masaüstünün açık kalmasını ölçüyordu |
 | Restart sonrası state doğru toparlanıyor | ✅ toparlanma bir geri yükleme değil **yeniden üretim** (K-038); 60 barı kesintisiz işleyen koşu ile 30 barda öldürülüp yeniden başlatılan koşu birebir aynı sonucu veriyor |
 | Veri akışı kesilince yeni pozisyon açılmıyor | ✅ bayat-veri guard'ı (§24, K-037); azaltan niyetler geçiyor |
 | 4 sayfalık dashboard, risk ilk bakışta | ✅ Genel/Strateji/Pozisyon/Günlük; risk şeridi her sayfada aynı yerde ve boşken de görünür |
 
-**Faz bu yüzden kapanmadı.** "Neredeyse bitti" diye geçilen faz sonraki fazın üstüne borç
-bırakır — ve 30 günlük kriter, promotion zincirinin `paper` aşamasının tek kanıtı.
+**Faz neden kriter karşılanmadan değil, kriter taşınarak kapandı (K-055).** Gözlem koşusu
+K-035 gereği promotion kanıtı **olamaz**; promotion'un `paper` aşaması kodda ayrıca
+`ASGARI_PAPER_GUN = 30` ile zorlanıyor ve o kapı **değişmedi**. Faz 6'nın 30 günü yalnızca
+altyapı dayanıklılığını ölçüyordu, ve bu ölçüm her gün kapatılan bir masaüstünde anlamlı
+değil. Borç kayıtlı ve iki yere bağlandı: Faz 8 ön koşulu (5. madde) ve Faz 14 bitti kriteri.
 
 **Faz 6'nın en önemli bulgusu kriterle ilgili değil, kargoyla:** hiçbir strateji promotion
 kapılarını geçmediği için (`MOD_ESIGI["paper"] = RISK_INCELEMESI`, K-019'da yedi
@@ -683,6 +688,11 @@ live arasındaki gerçek operasyon farkı.
    ölçtü (451 yok), hukuki erişimi ölçmedi. SPK'nın 2025 düzenlemesi sonrası kullanılan
    borsanın Türkiye yerleşiğine hizmet statüsü kaynaklı olarak kaydedilir. Proje K-014
    içinde kaldığı sürece hizmet sağlayıcı değildir; doğrulanan şey venue'nun durumu.
+5. **Sürekli açık bir host ve üzerinde 30 günlük kesintisiz koşu** (K-055, Faz 6'dan
+   taşındı). Canlı koşu her gün kapatılan bir masaüstünde yaşayamaz. Promotion'un `paper`
+   aşaması (`ASGARI_PAPER_GUN = 30`) zaten bu host üzerinde koşulur; kesinti olursa sebebi
+   koşu günlüğünde kayıtlı ve giderilmiş olmalı. Açık pozisyonla gerçek bir toparlanma en az
+   bir kez bu koşuda görülmüş olmalı (Faz 6'da 0 fill ile sınanamadı).
 
 - **Notlar:** Sermaye artırma kararı bu fazın çıktısına bakılarak verilir; fazın içinde
   değil, ve artık K-050/3'ün sayısal kuralıyla. Drift beklenenden büyükse sermaye artmaz,
@@ -819,6 +829,8 @@ bu bilinçli: kapıları sonuçları gördükten sonra tanımlamak, bu projenin 
   - Toparlanma tatbikatı: koşu dosyası yedekten geri getirilip state **yeniden üretiliyor** ve
     karşılaştırma temiz.
   - Anahtar ayrımı ve çekim yetkisinin kapalı olduğu ekran görüntüsü/çıktıyla kayıtlı.
+  - **Uzun süreli dayanıklılık** (K-055; Faz 6'nın 30 günü + Faz 7'nin açık kalemi): sürekli
+    açık host üzerinde ≥30 gün kesintisiz koşu, kesinti olduysa sebebi kayıtlı ve giderilmiş.
 
 ### Faz 15: İkinci varlık sınıfı (US equities / ETF) — **koşullu**
 
