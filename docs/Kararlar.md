@@ -2962,3 +2962,58 @@ Faz 12 makro programıyla kapanır; ardından **Faz 14 öne alınır**: sürekli
 dışı kill switch, alarmlar ve paper modda 7/24 koşu. Bu koşuda kıyas ve en yakın adaylar
 dondurulmuş hâlde **ileriye dönük** izlenir (30-60 gün). Gerçek sermaye yalnızca promotion
 kapılarını geçen stratejiyle (K-010, K-018); kapılar gevşetilmez.
+
+---
+
+## K-061 — Gizli tekrar çekiliş dedektörü: TypeSafe (Jev) araştırma aracı, uyarır engellemez
+
+**Durum:** kabul · **Tarih:** 2026-09-16 · **Uygular:** K-039, K-051 · **Sınırı:** K-049 ·
+**Kaynak:** `src/scryne_quant/research/gizli_tekrar.py`, `sq lab tekrar-kontrol`,
+`tests/unit/test_gizli_tekrar.py`
+
+**Boşluk.** K-039 kimliği sayıyor, K-051 bütçeyi. İkisi de aynı mekanizmanın başka adla,
+başka programda, başka kapsamda yeniden denenmesini görmez; bunu görmek gerekçe metnini
+anlamayı gerektiriyor, hash ya da kural yetmiyor.
+
+### Karar — dört madde
+
+1. **Soru ve eşik.** Yeni kayıt × her önceki kayıt için tek Choice (`ayni_mekanizma` /
+   `parametre_varyasyonu` / `farkli`), `jev-1.13.0`, hepsi paralel (48 karşılaştırmaya kadar
+   tek istek). Kod `ilgili = P(ayni) + P(param)` toplar: **≥ 0,80 uyarı, 0,50–0,80 incele**.
+   Soru metni `SORU_SHA256` ile dondurulmuş; metni değiştirmek eşiği geçersiz kılar ve yeni
+   spike + yeni K-kaydı ister.
+2. **Yetkisi yok.** Kaydı engellemez, defteri değiştirmez, çekiliş sayılmaz, alım-satım
+   kararına ya da özelliğe girmez (K-049/1). Karar Scryne'ındır. Piyasa hakkında bir şey
+   söylemediği için look-ahead taşımaz; K-049/4'ün kesim tarihi ve K-049/5'in dondurulmuş
+   veri kaynağı kuralları uygulanmaz. İşlem katmanının (`strategy`, `backtest`, `features`,
+   `risk`, `execution`, `live`) modülü ya da SDK'yı import etmediği testle korunuyor.
+3. **Sürüm sabit.** Çözülen model `jev-1.13.0` değilse komut durur. Sürüm API'den kalkarsa
+   eşikler yeni sürümde yeniden ölçülür. Her koşunun istek hash'leri ve cevapları
+   `runs/gizli_tekrar/` altına yazılır (`.gitignore`'da; iz, kanıt değil).
+4. **Anahtar yalnız yerel ortamda** (`TYPESAFE_API_KEY`); komut dışında hiçbir yol SDK'yı
+   yüklemez.
+
+### Ölçüm (spike, 2026-09-16, 48 kayıtlı defter)
+
+| Yeni → önceki | ilgili | Jev |
+|---|---|---|
+| 43 evren_funding_kesit → 37 funding_filtre / 36 / 38 | 0,98 / 0,95 / 0,91 | aynı mekanizma |
+| 43 → kalan 39 kayıt | ≤ 0,17 (medyan 0,02) | farklı |
+| 40 kesitsel_guc aylık → 39 haftalık | 1,00 | parametre varyasyonu |
+| 48 NFCI → 47 VIX | 0,04 | farklı |
+| Sentetik gizli tekrar (38'in adı, "funding" kelimesi ve K-042 referansı silinmiş, evrene taşınmış), 3 koşu | 38: 0,93–0,97 · 44: 0,87–0,94 · 36: 0,84–0,89 · 37: 0,81–0,82 | aynı mekanizma |
+| Aynı sentetik → 46 / 43 (akraba) | 0,58–0,66 | sınırda |
+| Aynı sentetik → 18 rsi_donus (mekanizmasız idari gerekçe) | 0,40–0,51 | **yanlış alarm** |
+
+Koşular arası oynama sınırda ±0,1; net kararlarda ±0,03. İstek başına ≈50k girdi token'ı
+(≈ $0,002). Bu makinede ilk bağlantı DNS yüzünden ~12 sn; `--sira 43` uçtan uca 15 sn ve
+spike'ı tekrarladı (0,98 / 0,96 / 0,93).
+
+### Açık
+
+- ~~**Aynı nedensel iddia, farklı veri serisi** (VIX stres engeli ↔ NFCI stres engeli)
+  bugünkü tanımda `farkli`.~~ **Kapandı (Scryne, 2026-09-16): `farkli` kalıyor.** Aynı
+  program içinde önceden kaydedilmiş proxy varyasyonları zaten ayrı çekiliş olarak sayılıyor
+  (K-039, K-051 bütçesi); dedektörün yakalaması gereken şey kayıt dışı kalan başka adlı
+  tekrar. Soru metni ve eşikler değişmiyor.
+- Mekanizma içermeyen idari gerekçeler (hipotez 1-7, 18-21) incele bandına gürültü düşürüyor.

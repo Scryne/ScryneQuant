@@ -105,6 +105,10 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   global kalır (program başına ikinci defter yok); her araştırma programı ön kayıtlı bir
   **arama bütçesiyle** açılır; hipotez kimliğine evren tanımı, portföy yöntemi ve rejim
   tanımı eklenir.
+- `sq lab tekrar-kontrol` (`research/gizli_tekrar.py`) — **gizli tekrar çekiliş dedektörü
+  (K-061).** `hipotez-kaydet`ten önce koşturulur; Jev yeni gerekçeyi her önceki kayıtla
+  karşılaştırır, ≥0,80 uyarı / 0,50–0,80 incele. Engellemez, sayılmaz, işlem katmanına
+  girmez. Soru metni hash'le donmuş: değiştirmek yeni spike ister. `TYPESAFE_API_KEY` gerekir.
 - `docs/Faz-4-Donus-4-Coklu-Test.md` — **çoklu test düzeltmesi (K-044).** `oos_sharpe`
   kapısı 0,50 → 1,02. Eşik defterdeki çekiliş sayısına bağlı; defter büyürse
   `sq lab coklu-test` yeniden koşturulup `research/kapilar.py`deki sabit güncellenmeli.

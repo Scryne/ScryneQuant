@@ -56,6 +56,7 @@ from scryne_quant.research import coklu_test as coklu_mod
 from scryne_quant.research import degerlendirme as degerlendirme_mod
 from scryne_quant.research import deney as deney_mod
 from scryne_quant.research import evren_kosu as evren_kosu_mod
+from scryne_quant.research import gizli_tekrar as gizli_tekrar_mod
 from scryne_quant.research import hipotez as hipotez_mod
 from scryne_quant.research import kapilar as kapilar_mod
 from scryne_quant.research import kapilar_v2 as kapilar_v2_mod
@@ -2520,6 +2521,93 @@ def lab_hipotez_kaydet(
             f"bütçe  : {program} · {butce['harcanan']}/{butce['azami_cekilis']} "
             f"(kalan {butce['kalan']})"
         )
+
+
+def _typesafe_istemci():
+    """Tek, komut boyu açık istemci. Testler bunu sahtesiyle değiştirir; ağa çıkmaz.
+
+    Import burada: SDK yalnızca bu komutun bağımlılığı, `sq`nin geri kalanı onsuz açılmalı.
+    Anahtar `TYPESAFE_API_KEY` ortam değişkeninden okunur.
+    """
+    from typesafe_sdk import TypeSafeClient
+
+    return TypeSafeClient()
+
+
+@lab_app.command("tekrar-kontrol")
+def lab_tekrar_kontrol(
+    strateji_adi: Annotated[
+        str | None, typer.Argument(help="Kaydedilecek stratejinin adı (--sira yoksa zorunlu).")
+    ] = None,
+    gerekce: Annotated[
+        str, typer.Option("--gerekce", "-g", help="Kaydedilecek gerekçe metni.")
+    ] = "",
+    timeframe: Annotated[str, typer.Option("--timeframe", "-t")] = "1h",
+    secim: Secim = "tepe",
+    program: Annotated[str, typer.Option("--program", "-p")] = "",
+    portfoy: Annotated[str, typer.Option("--portfoy")] = "",
+    sira: Annotated[
+        int | None,
+        typer.Option(
+            "--sira", help="Defterde zaten kayıtlı N. hipotezi kendinden öncekilerle karşılaştır."
+        ),
+    ] = None,
+    kayit_koku: Annotated[
+        Path, typer.Option("--kayit-koku", help="Dondurulmuş istek/cevap kaydının klasörü.")
+    ] = gizli_tekrar_mod.VARSAYILAN_KAYIT_KOKU,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Yeni hipotez, önceki bir kaydın mekanizmasını başka adla mı deniyor? (K-061, K-039)
+
+    `sq lab hipotez-kaydet`ten **önce** çalıştırılır. Engellemez ve çekiliş sayılmaz:
+    uyarı verir, karar Scryne'ındır. Jev'e (TypeSafe) gider; `TYPESAFE_API_KEY` gerekir.
+    """
+    defter = hipotez_mod.HipotezDefteri().tumu()
+    if sira is not None:
+        if not 1 <= sira <= len(defter):
+            raise typer.BadParameter(f"defterde {len(defter)} kayıt var: --sira {sira}")
+        yeni, onceki = defter[sira - 1], defter[: sira - 1]
+    else:
+        if not strateji_adi or len(gerekce.strip()) < 20:
+            raise typer.BadParameter("strateji adı ve ≥20 karakterlik --gerekce gerekli")
+        yeni = {
+            "strateji": strateji_adi,
+            "program": program,
+            "timeframe": timeframe,
+            "secim": secim,
+            "portfoy": portfoy,
+            "izgara": {a: list(d) for a, d in varsayilan_izgara(strateji_adi).items()},
+            "gerekce": gerekce,
+        }
+        onceki = defter
+    if not onceki:
+        raise typer.BadParameter("karşılaştırılacak önceki kayıt yok")
+
+    istemci = _typesafe_istemci()
+    try:
+        govde = gizli_tekrar_mod.kontrol_et(istemci, yeni, onceki, kayit_koku=kayit_koku)
+    finally:
+        istemci.close()
+
+    if json_cikti:
+        _yaz_json(govde)
+        return
+    typer.echo(
+        f"{govde['karsilastirma']} kayıtla karşılaştırıldı · model {govde['model']} · "
+        f"uyarı {govde['uyari']} · incele {govde['incele']}"
+    )
+    for b in govde["bulgular"]:
+        if b["seviye"] == "temiz":
+            continue
+        etiket = "UYARI " if b["seviye"] == "uyari" else "incele"
+        typer.echo(
+            f"  {etiket} h{b['sira']:<3} {b['strateji']:<24} ilgili {b['ilgili']:.2f} "
+            f"(aynı {b['ayni']:.2f}, param {b['param']:.2f}) → {b['karar']}"
+        )
+    if not govde["uyari"] and not govde["incele"]:
+        typer.echo("  benzer mekanizma bulunmadı")
+    if "kayit" in govde:
+        typer.echo(f"kayıt : {govde['kayit']}")
 
 
 def _coklu_test_cekilisleri(depo: Path, deney_kok: Path):
