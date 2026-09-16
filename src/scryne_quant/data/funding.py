@@ -30,6 +30,7 @@ import time
 from pathlib import Path
 from typing import Any, Final
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -258,8 +259,67 @@ def barlara_hizala(
     return birlesik.reset_index(drop=True)
 
 
+# --------------------------------------------------------------------- evren (Faz 12)
+
+#: Arşiv biçiminin normalizasyon tabanı: oranlar 8 saatlik eşdeğere çevrilir. Arşivde
+#: aralıklar karışık (ölçüldü, 761 sembol: 8 s 918.697, 4 s 747.282, 1 s 39.288, 2 s 2.325
+#: kayıt); 4 saatlik bir sözleşmenin ham oranını 8 saatlikle aynı kesitte sıralamak, aynı
+#: kaldıraç baskısını yarım göstermek olurdu.
+NORMAL_ARALIK_SAAT: Final = 8
+
+#: Son ödemeden bu kadar sonra seri **bayat**: değer `NaN`. En uzun aralığın (8 s) üç katı.
+#: Perp'i kapanmış ama spot'u süren bir sembolün son funding'i sonsuza kadar taşınmaz.
+BAYAT_MS: Final = 24 * 3_600_000
+
+
+def evren_dizileri(zamanlar: np.ndarray, funding: pd.DataFrame) -> dict[str, np.ndarray]:
+    """Arşiv funding'ini (`calc_time`, `funding_interval_hours`, `last_funding_rate`) ortak
+    bar ızgarasına **nedensel** olarak oturtur. (Faz 12, K-002, K-052/15)
+
+    İki dizi döner:
+
+    - `funding`: bar açılışına kadar **gerçekleşmiş** son oran (`calc_time <= open_time`),
+      8 saatlik eşdeğere normalize. Son ödemeden `BAYAT_MS`den uzun süre geçtiyse `NaN`.
+    - `funding_odeme`: ödemenin görünür olduğu ilk barda o ödemenin **ham** oranı, diğer
+      taze barlarda 0, bayat ya da ilk kayıttan önceki barlarda `NaN`. Kayan toplamı
+      (`funding_odeme_toplami`) son W saatte fiilen ödenen toplamı verir; as-of seriyi
+      toplamak her ödemeyi aralığı kadar tekrar sayardı.
+
+    `available_time = calc_time` (K-052/15): ödeme o anda gerçekleşir. Eşitlik dahil, tek
+    sembollü `barlara_hizala` ile aynı kural.
+    """
+    zamanlar = np.asarray(zamanlar, dtype="int64")
+    n = len(zamanlar)
+    oran_n = np.full(n, np.nan)
+    odeme = np.full(n, np.nan)
+    if funding.empty:
+        return {"funding": oran_n, "funding_odeme": odeme}
+    df = funding.sort_values("calc_time", kind="mergesort")
+    zaman = df["calc_time"].to_numpy(dtype="int64")
+    aralik = df["funding_interval_hours"].to_numpy(dtype="float64")
+    ham = df["last_funding_rate"].to_numpy(dtype="float64")
+    if (aralik <= 0).any() or np.isnan(ham).any():
+        raise FundingHatasi("arşiv funding'inde geçersiz aralık ya da boş oran")
+
+    # Her bar için `calc_time <= open_time` olan son kaydın indeksi.
+    son = np.searchsorted(zaman, zamanlar, side="right") - 1
+    var = son >= 0
+    taze = var & (zamanlar - zaman[np.maximum(son, 0)] <= BAYAT_MS)
+    oran_n[taze] = (ham * NORMAL_ARALIK_SAAT / aralik)[son[taze]]
+
+    # Ödemenin görünür olduğu ilk bar: `open_time >= calc_time` olan ilk bar. O bar tazedir
+    # (son kayıt tam o ödeme), yani ödeme her zaman taze bir bara yazılır.
+    odeme[taze] = 0.0
+    gorunur = np.searchsorted(zamanlar, zaman, side="left")
+    icerde = gorunur < n
+    np.add.at(odeme, gorunur[icerde], ham[icerde])
+    return {"funding": oran_n, "funding_odeme": odeme}
+
+
 __all__ = [
     "GECMIS_BASI_MS",
+    "BAYAT_MS",
+    "NORMAL_ARALIK_SAAT",
     "ORAN_TAVANI",
     "PERIYOT_MS",
     "SUTUNLAR",
@@ -267,6 +327,7 @@ __all__ = [
     "FundingHatasi",
     "barlara_hizala",
     "dogrula",
+    "evren_dizileri",
     "indir",
     "oku",
     "yaz",

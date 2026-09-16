@@ -38,23 +38,42 @@ from scryne_quant.research import evren_degerlendirme as ed
 from scryne_quant.research import evren_kosu
 from scryne_quant.research import hipotez as hipotez_mod
 from scryne_quant.research import program as program_mod
-from scryne_quant.research.izgaralar import EVREN_CEKILISLERI, evren_cekilisi
+from scryne_quant.research.izgaralar import (
+    PROGRAM_CEKILISLERI,
+    cekilis_programi,
+    evren_cekilisi,
+)
 from scryne_quant.strategy.kutuphane import EVREN_AILELER, EvrenEsitAgirlik
 
 KOK = Path(__file__).resolve().parent.parent
 TABLO = KOK / "data" / "evren" / "_evren" / "27b7a16ed0ed.parquet"
 DEPO = KOK / "data" / "evren"
 CIKTI = KOK / "runs" / "faz12"
-PROGRAM = "kesitsel_fiyat"
+FUNDING_DEPO = KOK / "data" / "turev" / "funding"
 AZAMI_SEMBOL = 600
+#: Kesitsel programın kıyası sabit yoğunlukla koşuldu (hipotez 39-42). Türev programında
+#: kıyas **seçilen** yoğunlukla koşulur: filtre kıyasın üstüne tek bir dışlama, fark yalnız
+#: ondan gelmeli.
 KIYAS_YOGUNLUK = 10
+#: Program → (funding yüklenir mi, portföy kodu, kıyas yoğunluğu seçilenden mi)
+PROGRAM_AYARI = {
+    "kesitsel_fiyat": (False, ed.KESITSEL_PORTFOY, False),
+    "turev_evren": (True, ed.TUREV_PORTFOY, True),
+}
 #: Ölçüm (24 GB makine): veri yüklü süreç ≈4,5 GB; tek koşunun tepesi in-sample +0,6 GB,
 #: tam pencere +0,9 GB. Ana süreç + 3 işçi in-sample'da ≈20 GB; tam pencere 2 işçiyle.
 #: 4 işçi (≈6,2 GB/süreç, düzeltmelerden önce) sistemin koşuyu iki kez öldürmesine yol açtı.
 VARSAYILAN_ISCI = 3
 BUYUK_IS_BAR = 60_000
 
-_veri = partial(evren_kosu.veri_kur, TABLO, depo_kok=DEPO, azami_sembol=AZAMI_SEMBOL)
+
+
+def _veri_uretici(program: str):
+    funding, _, _ = PROGRAM_AYARI[program]
+    return partial(
+        evren_kosu.veri_kur, TABLO, depo_kok=DEPO, azami_sembol=AZAMI_SEMBOL,
+        funding_depo=FUNDING_DEPO if funding else None,
+    )
 
 
 def _temiz(x: Any) -> Any:
@@ -73,24 +92,29 @@ def _temiz(x: Any) -> Any:
 
 
 def _defter_sirasi(cekilis: str, veri: evren_kosu.EvrenVerisi) -> tuple[int | None, Any]:
+    program = cekilis_programi(cekilis)
     hip = ed.hipotez_kur(
-        cekilis, veri, program=PROGRAM, gerekce="kimlik kontrolü için geçici nesne"
+        cekilis, veri, program=program, gerekce="kimlik kontrolü için geçici nesne",
+        portfoy=PROGRAM_AYARI[program][1],
     )
     return hipotez_mod.HipotezDefteri().sira(hip), hip
 
 
 def kaydet(cekilis: str, gerekce: str) -> int:
-    veri = _veri()
-    hip = ed.hipotez_kur(cekilis, veri, program=PROGRAM, gerekce=gerekce)
+    program = cekilis_programi(cekilis)
+    veri = _veri_uretici(program)()
+    hip = ed.hipotez_kur(
+        cekilis, veri, program=program, gerekce=gerekce, portfoy=PROGRAM_AYARI[program][1]
+    )
     defter = hipotez_mod.HipotezDefteri()
     programlar = program_mod.ProgramDefteri()
     onceki = defter.sira(hip)
     sira = defter.kaydet(hip, programlar=None if onceki is not None else programlar)
-    butce = programlar.butce(PROGRAM, defter.tumu())
+    butce = programlar.butce(program, defter.tumu())
     print(("zaten kayıtlı" if onceki is not None else "kaydedildi") + f": {sira}. hipotez")
     print(f"kimlik : {hip.kimlik[:16]} · strateji {hip.strateji} · veri {hip.veri_sha256[:12]}")
     print(
-        f"bütçe  : {PROGRAM} {butce['harcanan']}/{butce['azami_cekilis']} "
+        f"bütçe  : {program} {butce['harcanan']}/{butce['azami_cekilis']} "
         f"(kalan {butce['kalan']})"
     )
     return 0
@@ -100,7 +124,9 @@ def kos(cekilis: str, isci: int) -> int:
     strateji_adi, secenekler = evren_cekilisi(cekilis)
     sinif = EVREN_AILELER[strateji_adi]
     basladi = time.perf_counter()
-    veri = _veri()
+    program = cekilis_programi(cekilis)
+    uretici = _veri_uretici(program)
+    veri = uretici()
     sira, hip = _defter_sirasi(cekilis, veri)
     if sira is None:
         print(
@@ -117,7 +143,7 @@ def kos(cekilis: str, isci: int) -> int:
     ilerleme(f"veri hazır · {len(veri.diziler)} sembol · {len(veri):,} bar · hipotez {sira}")
     havuz = (
         ProcessPoolExecutor(max_workers=isci, initializer=ed.isci_baslat,
-                            initargs=(_veri, maliyet))
+                            initargs=(uretici, maliyet))
         if isci > 1 else None
     )
     try:
@@ -136,11 +162,16 @@ def kos(cekilis: str, isci: int) -> int:
     ilerleme("kıyas (OOS)")
     _, oos, _, _ = ed.pencereler(veri)
     tek = dict((a, d[0]) for a, d in secenekler.items() if len(d) == 1)
+    secilen = sonuc["detay"]["secim"].get("secilen") or {}
+    yogunluk = (
+        int(secilen.get("azami_enstruman", tek.get("azami_enstruman", KIYAS_YOGUNLUK)))
+        if PROGRAM_AYARI[program][2] else KIYAS_YOGUNLUK
+    )
     kiyas = ed.kosu(
         EvrenEsitAgirlik(
             yeniden_dengele_bar=int(tek["yeniden_dengele_bar"]),
-            azami_enstruman=KIYAS_YOGUNLUK,
-            azami_agirlik=float(tek["hedef_brut"]) / KIYAS_YOGUNLUK,
+            azami_enstruman=yogunluk,
+            azami_agirlik=float(tek["hedef_brut"]) / yogunluk,
             hedef_brut=float(tek["hedef_brut"]),
         ),
         maliyet, veri, oos,
@@ -148,14 +179,14 @@ def kos(cekilis: str, isci: int) -> int:
     oos_sharpe = sonuc["olcumler"].get("oos_sharpe")
     govde = {
         "cekilis": cekilis,
-        "program": PROGRAM,
+        "program": program,
         "hipotez": {"sira": sira, "kimlik": hip.kimlik, "veri_kimligi": hip.veri_sha256},
         "evren": veri.meta,
         "kiyas_oos": {
             "strateji": EvrenEsitAgirlik.ad,
             "parametreler": {
                 "yeniden_dengele_bar": int(tek["yeniden_dengele_bar"]),
-                "azami_enstruman": KIYAS_YOGUNLUK,
+                "azami_enstruman": yogunluk,
                 "hedef_brut": float(tek["hedef_brut"]),
             },
             "metrikler": kiyas.metrikler.sozluk(),
@@ -186,27 +217,39 @@ def kos(cekilis: str, isci: int) -> int:
 
 def durum() -> int:
     defter = hipotez_mod.HipotezDefteri()
-    butce = program_mod.ProgramDefteri().butce(PROGRAM, defter.tumu())
-    print(f"defter {defter.sayi()} · {PROGRAM} {butce['harcanan']}/{butce['azami_cekilis']}")
-    for ad in EVREN_CEKILISLERI:
-        yol = CIKTI / f"{ad}.json"
-        if not yol.exists():
-            print(f"  {ad:36s} sonuç yok")
-            continue
-        d = json.loads(yol.read_text(encoding="utf-8"))["durma_kurali_olcumu"]
-        print(f"  {ad:36s} oos {d['oos_sharpe']} · kıyas {d['kiyas_oos_sharpe']:.3f} · "
-              f"geçti={d['kiyasi_gecti']}")
+    programlar = program_mod.ProgramDefteri()
+    print(f"defter {defter.sayi()}")
+    for program, adlar in PROGRAM_CEKILISLERI.items():
+        acik = programlar.acik(program)
+        if acik is None:
+            print(f"{program}: kapalı")
+        else:
+            b = programlar.butce(program, defter.tumu())
+            print(f"{program}: {b['harcanan']}/{b['azami_cekilis']}")
+        for ad in adlar:
+            _durum_satiri(ad)
     return 0
+
+
+def _durum_satiri(ad: str) -> None:
+    yol = CIKTI / f"{ad}.json"
+    if not yol.exists():
+        print(f"  {ad:36s} sonuç yok")
+        return
+    d = json.loads(yol.read_text(encoding="utf-8"))["durma_kurali_olcumu"]
+    print(f"  {ad:36s} oos {d['oos_sharpe']} · kıyas {d['kiyas_oos_sharpe']:.3f} · "
+          f"geçti={d['kiyasi_gecti']}")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     alt = ap.add_subparsers(dest="komut", required=True)
     k = alt.add_parser("kaydet")
-    k.add_argument("cekilis", choices=list(EVREN_CEKILISLERI))
+    hepsi = [a for adlar in PROGRAM_CEKILISLERI.values() for a in adlar]
+    k.add_argument("cekilis", choices=hepsi)
     k.add_argument("-g", "--gerekce", required=True)
     r = alt.add_parser("kos")
-    r.add_argument("cekilis", choices=list(EVREN_CEKILISLERI))
+    r.add_argument("cekilis", choices=hepsi)
     r.add_argument("--isci", type=int, default=VARSAYILAN_ISCI)
     alt.add_parser("durum")
     a = ap.parse_args()

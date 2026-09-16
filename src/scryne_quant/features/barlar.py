@@ -27,7 +27,7 @@ SAYISAL: tuple[str, ...] = ("open", "high", "low", "close", "volume", "quote_vol
 #:
 #: "Varsa al" davranışı yumuşak görünüyor ama sessiz değil: funding isteyen bir özellik,
 #: alan yoksa `features/motor.py`'de açık bir hatayla karşılaşır.
-EK_SAYISAL: tuple[str, ...] = ("funding",)
+EK_SAYISAL: tuple[str, ...] = ("funding", "funding_odeme")
 
 
 class BarHatasi(ValueError):

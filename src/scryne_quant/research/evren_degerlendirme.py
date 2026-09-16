@@ -89,6 +89,9 @@ REJIM_KIYASI: Final = "BTCUSDT"
 #: içinden seçilmiş bir sayı. Kesitsel program (hipotez 39-42) bu politika **öncesi** koşuldu.
 SIFIRA_YAZ_BAR: Final = 48
 
+#: Türev filtrelerinin portföy kurma yöntemi: kıyasın kendisi (`evren_esit_agirlik`).
+TUREV_PORTFOY: Final = "EVREN_ESIT"
+
 #: Kesitsel ailelerin portföy kurma yöntemi (`kesitsel._Kesitsel`), hipotez kimliğine girer.
 KESITSEL_PORTFOY: Final = "KESITSEL_ESIT"
 
@@ -108,19 +111,26 @@ def veri_kimligi(veri: EvrenVerisi) -> str:
     hangi barlar (sembol başına SHA-256), hangi üyelik (PIT tablonun hash'i) ve hangi
     pencere. Biri değişirse aynı ızgara **yeni bir hipotezdir** (K-039).
     """
-    return nesne_hash(
-        {
-            "timeframe": veri.timeframe,
-            "tablo_hash": veri.meta.get("tablo_hash", ""),
-            "kural": veri.kural_kimligi,
-            "pencere": veri.meta.get("pencere", {}),
-            "veri_sha256": dict(sorted(veri.veri_sha256.items())),
-        }
-    )
+    govde: dict[str, Any] = {
+        "timeframe": veri.timeframe,
+        "tablo_hash": veri.meta.get("tablo_hash", ""),
+        "kural": veri.kural_kimligi,
+        "pencere": veri.meta.get("pencere", {}),
+        "veri_sha256": dict(sorted(veri.veri_sha256.items())),
+    }
+    # Ek veri (funding, Faz 12) yalnızca yüklendiyse: kesitsel hipotezlerin kimliği değişmez.
+    if "ek_veri_sha256" in veri.meta:
+        govde["ek_veri_sha256"] = veri.meta["ek_veri_sha256"]
+    return nesne_hash(govde)
 
 
 def hipotez_kur(
-    cekilis: str, veri: EvrenVerisi, *, program: str, gerekce: str
+    cekilis: str,
+    veri: EvrenVerisi,
+    *,
+    program: str,
+    gerekce: str,
+    portfoy: str = KESITSEL_PORTFOY,
 ) -> hipotez_mod.Hipotez:
     """Bir evren çekilişinin hipotez nesnesi. Kayıt ve koşu **aynı** fonksiyondan kurar;
     iki yerde ayrı kurulan kimlik, ön kaydı yapılmış bir koşuyu defterde bulamaz."""
@@ -134,7 +144,7 @@ def hipotez_kur(
         secim=KESITSEL_SECIM,
         program=program,
         evren=veri.kural_kimligi,
-        portfoy=KESITSEL_PORTFOY,
+        portfoy=portfoy,
     )
 
 @dataclass(frozen=True, slots=True)
@@ -632,6 +642,7 @@ __all__ = [
     "KESITSEL_SECIM",
     "REJIM_KIYASI",
     "SIFIRA_YAZ_BAR",
+    "TUREV_PORTFOY",
     "EvrenDegerlendirmeHatasi",
     "KosuIsi",
     "Kosucu",

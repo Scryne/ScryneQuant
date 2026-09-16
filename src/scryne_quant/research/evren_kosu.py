@@ -16,6 +16,7 @@ kimliğin ızgarada karşılığı olmaması demek olurdu.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,7 @@ import pandas as pd
 import pyarrow as pa
 
 from scryne_quant.common.zaman import timeframe_ms
+from scryne_quant.data import funding as funding_mod
 from scryne_quant.data import kimlik as kimlik_mod
 from scryne_quant.data.depo import ParquetDepo
 from scryne_quant.data.izgara import (
@@ -108,8 +110,14 @@ def veri_kur(
     baslangic_ay: str | None = None,
     bitis_ay: str | None = None,
     azami_sembol: int | None = None,
+    funding_depo: str | Path | None = None,
 ) -> EvrenVerisi:
     """Evren tablosundan ham, stratejiden bağımsız evren verisi kurar.
+
+    `funding_depo` verilirse (arşiv funding'i, `data/turev/funding/`) her sembole `funding`
+    ve `funding_odeme` dizileri nedensel olarak eklenir (`data/funding.evren_dizileri`).
+    Perp'i olmayan sembolde ikisi de tamamen `NaN`: eşleme uydurulmaz. Dosya hash'leri
+    `meta["ek_veri_sha256"]`a yazılır ve veri kimliğine girer.
 
     `isinma_bar`: pencere başından önce yüklenecek bar sayısı. Birden çok strateji veya
     ızgara noktası aynı veriyi kullanacaksa **en büyüğü** verilmeli.
@@ -176,6 +184,17 @@ def veri_kur(
     olcum_baslangici = min(olcum_baslangici, len(izgara) - 2)
 
     diziler = {s: hizala(df, izgara) for s, df in cerceveler.items()}
+    ek_sha: dict[str, str] = {}
+    if funding_depo is not None:
+        fdepo = Path(funding_depo)
+        for sembol_, dz in diziler.items():
+            yol = fdepo / f"{sembol_}.parquet"
+            if yol.is_file():
+                ek_sha[f"funding/{sembol_}"] = hashlib.sha256(yol.read_bytes()).hexdigest()
+                fdf = pd.read_parquet(yol)
+            else:
+                fdf = pd.DataFrame()
+            dz.update(funding_mod.evren_dizileri(izgara, fdf))
     # Parquet çerçeveleri artık gereksiz; Arrow havuzu boşalan belleği kendiliğinden işletim
     # sistemine geri vermiyor. Faz 12'de ölçüldü: tam evrende süreç başına ≈1 GB. Havuzlu
     # araştırma hattında her işçi veriyi ayrıca yüklediği için bu fark çarpılıyor.
@@ -204,6 +223,8 @@ def veri_kur(
             "uye_bar_toplami": int(sum(int(u.sum()) for u in uyelik.values())),
             # Barı olmadığı için üyelikten düşen saatler (`uyeligi_barlara_kis`).
             "bar_yok_uyelik": dict(sorted(bar_yok_uyelik.items())),
+            # Yalnızca ek veri yüklendiyse: kesitsel koşuların meta'sı (ve kimliği) değişmez.
+            **({"ek_veri_sha256": dict(sorted(ek_sha.items()))} if funding_depo else {}),
         },
         olcum_baslangici=olcum_baslangici,
         kural_kimligi=str(meta.get("kural_kimlik", "")),

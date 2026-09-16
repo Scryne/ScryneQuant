@@ -19,6 +19,10 @@ from scryne_quant.strategy.kutuphane.breakout import DonchianKirilim
 from scryne_quant.strategy.kutuphane.cok_faktor import CokFaktor
 from scryne_quant.strategy.kutuphane.ema_kesisim import EmaKesisim
 from scryne_quant.strategy.kutuphane.evren_esit_agirlik import EvrenEsitAgirlik
+from scryne_quant.strategy.kutuphane.evren_funding import (
+    EvrenFundingBirikim,
+    EvrenFundingKesit,
+)
 from scryne_quant.strategy.kutuphane.funding_egilim import FundingEgilim
 from scryne_quant.strategy.kutuphane.funding_filtre import FundingFiltre
 from scryne_quant.strategy.kutuphane.funding_ters import FundingTers
@@ -70,6 +74,9 @@ EVREN_AILELER: Final[dict[str, type[PortfoyStratejisi]]] = {
     KesitselGuc.ad: KesitselGuc,
     KesitselTers.ad: KesitselTers,
     KesitselDusukOynaklik.ad: KesitselDusukOynaklik,
+    # `turev_evren` programı: kıyasın üstüne funding dışlaması (Faz 12).
+    EvrenFundingKesit.ad: EvrenFundingKesit,
+    EvrenFundingBirikim.ad: EvrenFundingBirikim,
 }
 
 #: Aile → o ailenin stratejileri. Roadmap "5 aile de aynı veri ve aynı maliyet
@@ -122,6 +129,8 @@ __all__ = [
     "DonchianKirilim",
     "EmaKesisim",
     "EvrenEsitAgirlik",
+    "EvrenFundingBirikim",
+    "EvrenFundingKesit",
     "FundingEgilim",
     "FundingFiltre",
     "FundingTers",

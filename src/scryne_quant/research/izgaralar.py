@@ -154,12 +154,51 @@ EVREN_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
 }
 
 
+#: `turev_evren` programının çekilişleri (Faz 12). Sıra durma kuralının sırası: önce iki
+#: funding çekilişi; ikisi de filtresiz kıyası geçmezse basis çekilişleri harcanmaz.
+#: Dengeleme haftalık ve sabit: funding hızlı değişen bir bilgi, aylık dengelemede filtre
+#: bayat veriyle karar verirdi. `hedef_brut` kesitsel programla aynı (0,2).
+TUREV_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    # Son gerçekleşen oran (8 s eşdeğer): anlık kaldıraç baskısı. İkinci eksen yoğunluk;
+    # kıyas seçilen yoğunlukla koşulur, fark yalnızca dışlamadan gelir.
+    "turev_funding_kesit": ("evren_funding_kesit", {
+        "dislama_orani": (0.1, 0.2, 0.3, 0.5),
+        "azami_enstruman": _YOGUNLUK,
+        "yeniden_dengele_bar": (HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }),
+    # Son W saatte fiilen ödenen toplam: süregelen baskı (K-042/5'in zaman ölçeği farkı).
+    # Yoğunluk kıyasın varsayılanında (10) sabit; eksen birikim penceresi.
+    "turev_funding_birikim": ("evren_funding_birikim", {
+        "pencere": (72, 168, 336, 720),
+        "dislama_orani": (0.1, 0.2, 0.3),
+        "azami_enstruman": (10,),
+        "yeniden_dengele_bar": (HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }),
+}
+
+#: Program → çekilişleri. Koşucu çekilişin programını buradan bulur.
+PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
+    "kesitsel_fiyat": tuple(EVREN_CEKILISLERI),
+    "turev_evren": tuple(TUREV_CEKILISLERI),
+}
+
+
 def evren_cekilisi(ad: str) -> tuple[str, Mapping[str, Sequence[Any]]]:
     """Bir evren çekilişinin `(strateji adı, ızgara)` çifti."""
+    hepsi = {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI}
     try:
-        return EVREN_CEKILISLERI[ad]
+        return hepsi[ad]
     except KeyError:
         raise IzgaraYok(
-            f"{ad!r} tanımlı bir evren çekilişi değil; tanımlı: "
-            f"{', '.join(EVREN_CEKILISLERI)}"
+            f"{ad!r} tanımlı bir evren çekilişi değil; tanımlı: {', '.join(hepsi)}"
         ) from None
+
+
+def cekilis_programi(ad: str) -> str:
+    """Çekilişin ait olduğu araştırma programı."""
+    for program, adlar in PROGRAM_CEKILISLERI.items():
+        if ad in adlar:
+            return program
+    raise IzgaraYok(f"{ad!r} hiçbir programın çekilişi değil")

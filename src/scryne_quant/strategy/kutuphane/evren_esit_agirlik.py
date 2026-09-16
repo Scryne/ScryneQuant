@@ -97,7 +97,7 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
             return None
 
         adaylar: list[Aday] = []
-        for sembol in ctx.uyeler():
+        for sembol in self._aday_uyeler(ctx):
             baglam = ctx.enstruman(sembol)
             if not baglam.hazir("atr", "kote_hacim"):
                 # Isınmamış bir enstrümanda boyut hesaplanmaz. Eşit ağırlık varyantında
@@ -135,6 +135,15 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
             self._ayarlar,
             acik_pozisyonlar=tuple(s for s in ctx.acik_pozisyonlar() if s in ctx.gorunur()),
         )
+
+    def _aday_uyeler(self, ctx: EvrenBaglam) -> tuple[str, ...]:
+        """Sıralamaya girecek üyeler. Kıyasta hepsi; alt sınıf yalnızca **daraltabilir**.
+
+        Faz 12'nin türev filtreleri (`evren_funding.py`) bu kancayı kullanıyor: filtre kıyasın
+        üstüne tek bir dışlama adımı koyar, seçim/boyut/dengeleme aynen kalır ve dışlama
+        oranı 0 iken sonuç kıyasla bit düzeyinde aynıdır (testle).
+        """
+        return ctx.uyeler()
 
     def sozluk(self) -> dict[str, Any]:
         return super().sozluk() | {"kiyas": True}

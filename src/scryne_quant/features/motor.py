@@ -73,6 +73,10 @@ DEFTER: Final[dict[str, Kayit]] = {
     "funding_kumulatif_persentil": Kayit(
         ("funding",), ("birikim", "pencere"), ("",), ind.kumulatif_persentil
     ),
+    # Evren funding'inin (Faz 12, `data/funding.py::evren_dizileri`) ödeme dizisi üzerinde
+    # kayan toplam: son W barda **fiilen ödenen** toplam. `funding_kumulatif` as-of oranı
+    # topluyor ve 1h barda 8 saatlik bir ödemeyi 8 kez sayardı; bu yüzden ayrı bir girdi.
+    "funding_odeme_toplami": Kayit(("funding_odeme",), ("pencere",), ("",), ind.kumulatif),
     "bollinger": Kayit(
         ("close",),
         ("pencere", "katsayi"),
