@@ -118,6 +118,15 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri. Faz 0-8 v1 (8'i kapalı),
   Faz 9-16 v2. **Faz 8 sıraya değil tetiklenmeye bağlıdır:** promotion'u geçen ilk strateji
   çıktığında başlar.
+- `docs/Faz-11-Dogrulama-Raporu.md` — **Faz 11 ölçümleri (K-058):** K-054'ün dört kapısının
+  null kalibrasyonu (PBO'nun 0,5 referansı gerçek ızgarada geçersiz — null medyanı 0,237),
+  evren dayanıklılığının yapısal ölçümü, 38 çekilişin yeni kapılardaki durumu (0/38).
+- `docs/Arastirma-Programlari.jsonl` — **araştırma programı defteri (K-051/2, K-058).**
+  Append-only. Faz 12'de her program `sq lab program-kaydet` ile **önce** buraya açılır;
+  `sq lab hipotez-kaydet` artık `--program` istiyor ve bütçe dolunca reddediyor.
+- `research/kapilar_v2.py` — K-054'ün dört kapısı ve eşikleri; `butun_kapilar` 11 kapının
+  tamamı. Eşikler ızgara şekline bağlı: yeni ızgara biçimi `tools/kalibrasyon_v2_kos.py` ile
+  yeniden ölçüm ister.
 - `docs/Faz-10-Coklu-Enstruman-Raporu.md` — **Faz 10 ölçümleri (K-057):** tek motor +
   sarmalayıcı (bit düzeyinde eşitlik kanıtı), çok enstrümanlı Decimal referansı, evren
   look-ahead, portföy düzeyi risk limitleri, VaR/CVaR + kapasite, evren kıyası, ölçek/bellek

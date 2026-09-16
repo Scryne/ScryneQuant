@@ -2802,3 +2802,84 @@ Bu karar şu üç durumda yeniden açılır:
    iştah kararına dönüşür ve K-033'ün gerekçe disiplinine girer.
 3. **Portföy tavanlarından biri gerçekten bağlarsa**, o sayı iştah olmaktan çıkıp ölçülmüş
    olmak zorunda kalır.
+
+---
+
+## K-058 — Doğrulama v2: dört kapının eşiği null'dan, program kaydı zorunlu, `leak_riski` mutlak
+
+**Durum:** kabul · **Tarih:** 2026-09-16 · **Kapatır:** K-054'ün açık eşikleri ·
+**Uygular:** K-051/2-4, K-049/4 · **Tamamlar:** K-019, K-044 · **Kaynak:** Faz 11,
+`docs/Faz-11-Dogrulama-Raporu.md`, ham ölçümler `runs/kalibrasyon-v2/`
+
+### Karar — altı madde
+
+1. **Üç kapının eşiği edge'siz dünyadan ölçülür (K-044'ün yöntemi).** `pbo`,
+   `parametre_perturbasyonu` ve `rejim_kararliligi` için ızgaranın her noktasının sinyal
+   takvimi bir kez çıkarılıp **paylaşılan** dairesel kaydırmayla edge'siz bir dünyada
+   yeniden koşuldu; eşik o dağılımın %5 kuyruğu. İki ızgarada ölçüldü (`donchian` 12
+   nokta / 200 iterasyon, `rsi_donus` 32 nokta / 100 iterasyon) ve **sıkı olanı**
+   alındı: eşik ızgara şekline bağlı çıktı ve bir aday ızgarasını seçerek gevşek eşiğe
+   kaçamamalı (K-007).
+
+   | Kapı | Yön | donchian | rsi_donus | Eşik |
+   | --- | --- | ---: | ---: | ---: |
+   | `pbo` | ≤ | 0,0087 | 0,0462 | **0,0087** |
+   | `parametre_perturbasyonu` | ≤ | 0,0752 | 0,0565 | **0,0565** |
+   | `rejim_kararliligi` | ≥ | 0,481 | 0,685 | **0,685** |
+
+2. **`evren_dayanikliligi` null'dan kalibre edilemez ve yapısal olarak kalibre edilir.**
+   Null edge'i yok eder; bu kapı yoğunlaşmayı ölçer. Evren kıyası 2023-01…2026-08'de 3-20
+   enstrümanla koşuldu; en iyi katkı çıkarıldığında Sharpe oranı **0,832-1,023** bandında
+   kaldı. Eşik **0,75** — bandın altında, bir **iştah** seçimi ve öyle işaretli. Kapı mutlak
+   düşüşü değil **oranı** okur: ilk tasarımda mutlak düşüş vardı ve kalibrasyon onun Sharpe
+   büyüklüğüyle ölçeklendiğini gösterdi. Oran `Sharpe ≤ 0` iken ve tek sembolde
+   **ölçülemez**; ölçülemeyen kapı geçilmiş sayılmaz.
+
+3. **PBO'nun literatür referansı (0,5) bu projede eşik olamaz — ölçüldü.** İid gürültüde
+   ortalama gerçekten 0,503 (40 tohum), ama tek ölçüm ±0,20 sapıyor (aralık 0,08-0,90).
+   Gerçek ızgarada null'ın **medyanı 0,237** (donchian): komşu parametreler neredeyse aynı
+   strateji olduğu için IS-en iyisi edge olmadan da OOS'ta iyi kalıyor. 0,5 eşiği
+   edge'siz ızgaraların %90'ından fazlasını geçirirdi.
+
+4. **Program kaydı olmadan hipotez yazılamaz (K-051/2).** `sq lab hipotez-kaydet` artık
+   `--program` ister; program `docs/Arastirma-Programlari.jsonl`de açık ve bütçesi dolmamış
+   olmalı. Kayıt gerekçe, **ölçüyle** kaynak farkı, azami çekiliş, durma kuralı ve eşik
+   tahmini taşır; biri eksikse program açılmaz. Faz 4'ün 38 çekilişi program öncesi olarak
+   kalır ve öyle sayılır.
+
+5. **Hipotez kimliği K-051/4'le genişler — ama yalnızca dolu alanlarla.** `evren`,
+   `portfoy`, `rejim` kimliğe girer; boşsa girmez, çünkü koşulsuz eklemek defterdeki 38
+   satırın kimliğini değiştirir ve `dogrula()` hiçbirini tanımaz. `program` kimliğe
+   **girmez**: aynı soruyu iki program altında sormak yeni bir soru değildir.
+
+6. **`leak_riski` mutlak engeldir ve beyana dayanır (K-049/4).** `LlmTuretimi` model
+   kimliği, eğitim kesimi, kapsadığı dönem, prompt ve girdi hash'i taşır; kapsam kesimden
+   önceye uzanıyorsa `leak_riski`. `Sonuc.leak_riski` hash'e girmez (provenans, `dirty` gibi)
+   ama `promotion_engelleri`ne girer. Bütün sayısal kapılar geçse bile sonuç geçemez.
+
+### Raporlanan ama kapı olmayanlar
+
+DSR (`research/dsr.py`, ham basıklıkla — fazlalık basıklık sonucu iyimser yapardı),
+VaR/CVaR ve kapasite (Faz 10). **Olasılık kalibrasyonu uygulanamaz**: yalnızca olasılık
+üreten tahmin modellerinde anlamlı ve bu projede henüz böyle bir model yok (Faz 13, koşullu).
+
+### Geri dönüş koşulları
+
+1. Yeni bir **ızgara biçimi** (nokta sayısı veya eksen sayısı belirgin farklı) → üç null
+   eşiği o ızgarada yeniden ölçülür (`tools/kalibrasyon_v2_kos.py`).
+2. İlk gerçek cross-sectional aday (Faz 12) → `evren_dayanikliligi` o adayla yeniden
+   ölçülür; iştah sayısı ölçülmüş bir sayıya dönüşür.
+3. `rejim_kararliligi`nin güven aralığı geniş (0,54-1,18) → iterasyon artırılarak daraltılır;
+   eşik yuvarlanmaz.
+
+### Ek: rejim penceresi zamana bağlı
+
+Rejim etiketinin penceresi **30 gündür**, bar sayısı değil (1h/4h/1d → 720/180/30 bar). İlk
+uygulamada sabit 720 bardı; 1d'de iki yıl ederek OOS penceresini tamamen ısınmada bıraktı ve
+rejim hiç ölçülemedi. Eşik 1h'te kalibre edildi; zaman sabit tutulduğu için diğer
+timeframe'lerde aynı soruyu soruyor.
+
+### Sonuç: 38 çekiliş
+
+**0/38** geçti. `evren_dayanikliligi` tek sembolde 38/38 ölçülemez; diğer üç kapıda en iyi
+aday `cok_faktor` 1h/plato (PBO ✓, pertürbasyon ✓, rejim ✗) — Faz 4'ün de en yakın adayı.

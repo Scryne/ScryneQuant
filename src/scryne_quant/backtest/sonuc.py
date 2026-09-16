@@ -87,6 +87,18 @@ class Sonuc:
     acik_pozisyon_sonda: bool = False
     kalite_esigi: float = VARSAYILAN_KALITE_ESIGI
 
+    leak_riski: bool = False
+    """Bu koşu, eğitim kesimi öncesi dönem için üretilmiş bir LLM türetimi okudu mu?
+    (K-049/4, K-054)
+
+    **Hash'e girmiyor**, çünkü bir provenans beyanı — `dirty` ve `commit` gibi. Sonucun
+    sayılarını değiştirmez, ama promotion'un **mutlak** engelidir: sızıntı ağırlıklarda
+    olduğu için look-ahead testi onu yakalayamaz ve engel bu yüzden beyana dayanır.
+
+    Varsayılan `False` "sızıntı yok" demek değil, "LLM türetimi kullanılmadı" demek.
+    Kullanan taraf (`research/program.py:LlmTuretimi`) hesaplayıp buraya geçiriyor.
+    """
+
     evren: dict[str, Any] | None = None
     """Çok enstrümanlı koşunun evren kimliği; tek sembollü koşuda `None`. (Faz 10)
 
@@ -175,6 +187,8 @@ class Sonuc:
             engeller.append("data_quality_warning")  # K-006
         if self.maliyet.get("gecici"):
             engeller.append("gecici_maliyet_modeli")  # K-021
+        if self.leak_riski:
+            engeller.append("leak_riski")  # K-049/4, K-054
         return engeller
 
     @property
@@ -223,6 +237,7 @@ class Sonuc:
                 "gecebilir": not self.promotion_engelleri,
                 "engeller": self.promotion_engelleri,
                 "data_quality_warning": self.data_quality_warning,
+                "leak_riski": self.leak_riski,
             },
         }
         if self.evren is not None:

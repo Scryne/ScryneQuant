@@ -84,6 +84,21 @@ class Hipotez:
     Zorunlu olması bilinçli: gerekçesiz bir hipotez, ızgarayı genişletmenin kibar adıdır.
     """
 
+    # ------------------------------------------------------------ v2 alanları (K-051/4)
+
+    program: str = ""
+    """Bu çekilişin ait olduğu araştırma programı (`research/program.py`). Boş = Faz 4'ün
+    program öncesi çekilişleri; yeni hipotezlerde CLI zorunlu kılıyor (K-051/2)."""
+
+    evren: str = ""
+    """`EvrenKurali.kimlik` — hangi enstrüman evreninde sorulduğu."""
+
+    portfoy: str = ""
+    """`KurmaAyarlari.yontem` — hangi portföy kurma yöntemiyle."""
+
+    rejim: str = ""
+    """Rejim tanımının kimliği — hangi rejim bölümlemesi altında."""
+
     zaman_ms: int = field(default_factory=simdi_ms)
 
     def __post_init__(self) -> None:
@@ -103,16 +118,29 @@ class Hipotez:
     @property
     def kimlik(self) -> str:
         """Hipotezin içerik hash'i. Gerekçe ve zaman **dahil değil** — ikisi de aynı
-        soruyu farklı kelimelerle sormayı yeni bir çekiliş yapmamalı."""
-        return nesne_hash(
-            {
-                "strateji": self.strateji,
-                "timeframe": self.timeframe,
-                "veri_sha256": self.veri_sha256,
-                "izgara": {a: list(d) for a, d in sorted(self.izgara.items())},
-                "secim": self.secim,
-            }
-        )
+        soruyu farklı kelimelerle sormayı yeni bir çekiliş yapmamalı.
+
+        **K-051/4'ün üç yeni alanı (evren, portföy, rejim) hash'e yalnızca doluysa
+        giriyor.** Üçü de "aynı veriye yeni bir soru sormanın" biçimleri ve kimliğin
+        dışında kalırlarsa bedava çekiliş olurlar — ama koşulsuz eklemek, defterdeki 38
+        eski satırın kimliğini değiştirir ve `dogrula()` hiçbirini tanımaz hâle gelirdi.
+        Eski çekilişlerin evreni tek sembol, portföyü yok, rejimi yoktu; boş alan o
+        yokluğun kaydı, bir eksiklik değil.
+
+        `program` **hash'e girmiyor**: aynı soruyu iki program altında sormak yeni bir
+        soru değildir. Program muhasebenin alanı (bütçe), kimliğin değil.
+        """
+        govde: dict[str, Any] = {
+            "strateji": self.strateji,
+            "timeframe": self.timeframe,
+            "veri_sha256": self.veri_sha256,
+            "izgara": {a: list(d) for a, d in sorted(self.izgara.items())},
+            "secim": self.secim,
+        }
+        for ad, deger in (("evren", self.evren), ("portfoy", self.portfoy), ("rejim", self.rejim)):
+            if deger:
+                govde[ad] = deger
+        return nesne_hash(govde)
 
     def sozluk(self) -> dict[str, Any]:
         return {
@@ -123,6 +151,10 @@ class Hipotez:
             "izgara": {a: list(d) for a, d in sorted(self.izgara.items())},
             "secim": self.secim,
             "gerekce": self.gerekce,
+            "program": self.program,
+            "evren": self.evren,
+            "portfoy": self.portfoy,
+            "rejim": self.rejim,
             "zaman_ms": self.zaman_ms,
             "zaman_utc": utc_str(self.zaman_ms),
         }
@@ -136,6 +168,10 @@ class Hipotez:
         izgara: Mapping[str, Sequence[Any]],
         gerekce: str,
         secim: str = "tepe",
+        program: str = "",
+        evren: str = "",
+        portfoy: str = "",
+        rejim: str = "",
     ) -> Hipotez:
         return cls(
             strateji=strateji,
@@ -144,6 +180,10 @@ class Hipotez:
             izgara={a: list(d) for a, d in izgara.items()},
             secim=secim,
             gerekce=gerekce,
+            program=program,
+            evren=evren,
+            portfoy=portfoy,
+            rejim=rejim,
         )
 
 
@@ -157,13 +197,19 @@ class HipotezDefteri:
 
     # ------------------------------------------------------------------ yazma
 
-    def kaydet(self, hipotez: Hipotez) -> int:
+    def kaydet(self, hipotez: Hipotez, *, programlar: Any = None) -> int:
         """Hipotezi deftere yazar ve **kaçıncı çekiliş** olduğunu döndürür.
 
         Aynı kimlik zaten kayıtlıysa yeni satır yazılmaz ve mevcut sırası döner: aynı
         soruyu iki kez sormak yeni bir çekiliş değildir.
+
+        `programlar` verilirse (bir `ProgramDefteri`) hipotezin programı **açık** ve
+        bütçesi dolmamış olmak zorunda (K-051/2). Verilmemesi yalnızca Faz 4 öncesi
+        kayıtların ve testlerin yolu; `sq lab hipotez-kaydet` her zaman veriyor.
         """
         mevcut = self.tumu()
+        if programlar is not None:
+            programlar.dogrula_cekilis(hipotez.program, mevcut)
         for sira, kayit in enumerate(mevcut, start=1):
             if kayit["kimlik"] == hipotez.kimlik:
                 return sira
@@ -214,11 +260,15 @@ class HipotezDefteri:
     def ozet(self) -> dict[str, Any]:
         kayitlar = self.tumu()
         stratejiler: dict[str, int] = {}
+        programlar: dict[str, int] = {}
         for k in kayitlar:
             stratejiler[k["strateji"]] = stratejiler.get(k["strateji"], 0) + 1
+            ad = k.get("program") or "(program_oncesi)"
+            programlar[ad] = programlar.get(ad, 0) + 1
         return {
             "toplam": len(kayitlar),
             "strateji_basina": dict(sorted(stratejiler.items())),
+            "program_basina": dict(sorted(programlar.items())),
             "ilk_ms": kayitlar[0]["zaman_ms"] if kayitlar else None,
             "son_ms": kayitlar[-1]["zaman_ms"] if kayitlar else None,
         }

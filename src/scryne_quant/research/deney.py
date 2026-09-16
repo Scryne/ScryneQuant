@@ -45,6 +45,10 @@ TIPLER: Final[frozenset[str]] = frozenset(
         # Çoklu test düzeltmesi (K-039). Diğerlerinden farkı: girdisi veri değil
         # **defterin kendisi** — kaç çekiliş yapıldığını ölçüyor, bir stratejiyi değil.
         "coklu_test",
+        # K-054'ün dört yeni kapısı, defterin her çekilişi için (Faz 11). `coklu_test` gibi
+        # girdisi defterin kendisi; kaydından yeniden üretilmesi defterin o günkü hâline
+        # bağlı olduğu için `tekrar.TEKRAR_EDILEBILIR` listesinde değil.
+        "kapilar_v2",
     }
 )
 

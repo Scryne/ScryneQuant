@@ -366,3 +366,81 @@ class TestPaper:
             "--depo", str(dolu_depo), "--kok", str(tmp_path), "--ag-yok",
         )
         assert sonuc.exit_code != 0
+
+
+class TestProgramKaydi:
+    """K-051/2: program kaydı olmadan araştırma programı koşturulamıyor — CLI yolunda da."""
+
+    def test_programsiz_yeni_hipotez_reddediliyor(self, dolu_depo, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        sonuc = calistir(
+            "lab", "hipotez-kaydet", "donchian",
+            "-g", "program kaydı olmadan denenen bir hipotez, reddedilmeli",
+            "--depo", str(dolu_depo),
+        )
+        assert sonuc.exit_code != 0
+        assert not (tmp_path / "docs" / "Hipotez-Defteri.jsonl").exists()
+
+    def test_programli_hipotez_kaydediliyor_ve_butce_dusuyor(
+        self, dolu_depo, tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        acilis = calistir(
+            "lab", "program-kaydet", "deneme_programi",
+            "-g", "Bu program CLI yolunun program kaydını gerçekten zorladığını ölçmek için var.",
+            "-k", "Kaynak farkı burada bir test kurgusu; gerçek bir programda ölçüyle yazılır.",
+            "--kaynak-olcumu", '{"test": 1}',
+            "-n", "1",
+            "-d", "Tek çekilişlik bütçe dolunca durulur.",
+            "--esik-tahmini", '{"tahmin": 1.02}',
+        )
+        assert acilis.exit_code == 0, acilis.stdout
+        kayit = calistir(
+            "lab", "hipotez-kaydet", "donchian",
+            "-p", "deneme_programi",
+            "-g", "program altında kaydedilen bir hipotez, kabul edilmeli",
+            "--depo", str(dolu_depo), "--json",
+        )
+        assert kayit.exit_code == 0, kayit.stdout
+        assert json.loads(kayit.stdout)["butce"]["kalan"] == 0
+
+        ikinci = calistir(
+            "lab", "hipotez-kaydet", "sma_kesisim",
+            "-p", "deneme_programi",
+            "-g", "bütçe dolduktan sonra ikinci hipotez, reddedilmeli",
+            "--depo", str(dolu_depo),
+        )
+        assert ikinci.exit_code != 0
+
+        butce = calistir("lab", "butce", "--json")
+        assert json.loads(butce.stdout)["programlar"][0]["harcanan"] == 1
+
+
+class TestKapilarV2:
+    """`sq lab kapilar-v2` uçtan uca: hesap + kayıt. Kayıt adımı bir kez düşmüştü."""
+
+    def test_defter_cekilisi_degerlendirilip_kaydediliyor(self, dolu_depo, tmp_path, monkeypatch):
+        import shutil
+        from pathlib import Path
+
+        from scryne_quant.research.hipotez import Hipotez, HipotezDefteri
+
+        kaynak_config = Path(cli.__file__).resolve().parents[3] / "config"
+        monkeypatch.chdir(tmp_path)
+        shutil.copytree(kaynak_config, tmp_path / "config")
+        HipotezDefteri().kaydet(
+            Hipotez.kur(
+                "donchian", "1h", "sha", {"giris": [20]}, "uçtan uca test için kaydedilen hipotez"
+            )
+        )
+        kok = tmp_path / "deneyler"
+        sonuc = calistir(
+            "lab", "kapilar-v2", "--depo", str(dolu_depo), "--deney-kok", str(kok), "--json"
+        )
+        assert sonuc.exit_code == 0, sonuc.stdout
+        govde = json.loads(sonuc.stdout)
+        assert govde["defter_sayisi"] == 1
+        satir = govde["cekilisler"][0]
+        # Tek sembollü çekiliş evren kapısında durmak zorunda (K-054).
+        assert "evren_dayanikliligi" in satir["kapilar"]["kalan_kapilar"]
+        assert list(kok.glob("kapilar_v2/*.json"))

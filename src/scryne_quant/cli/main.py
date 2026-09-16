@@ -58,7 +58,9 @@ from scryne_quant.research import deney as deney_mod
 from scryne_quant.research import evren_kosu as evren_kosu_mod
 from scryne_quant.research import hipotez as hipotez_mod
 from scryne_quant.research import kapilar as kapilar_mod
+from scryne_quant.research import kapilar_v2 as kapilar_v2_mod
 from scryne_quant.research import karsilastirma as karsilastirma_mod
+from scryne_quant.research import program as program_mod
 from scryne_quant.research import tarama as tarama_mod
 from scryne_quant.research import walkforward as wf_mod
 from scryne_quant.research.izgaralar import izgara as varsayilan_izgara
@@ -1335,7 +1337,8 @@ def _defteri_zorla(
     if not eksik:
         return
     komutlar = chr(10).join(
-        f'  sq lab hipotez-kaydet {ad} -t {timeframe} -g "<neden deniyorsun>"' for ad in eksik
+        f'  sq lab hipotez-kaydet {ad} -t {timeframe} -p <program> -g "<neden deniyorsun>"'
+        for ad in eksik
     )
     raise hipotez_mod.HipotezHatasi(
         f"hipotez defterinde kayıtlı olmayan strateji(ler): {', '.join(eksik)} "
@@ -2437,10 +2440,23 @@ def lab_hipotez_kaydet(
     sembol: Annotated[str, typer.Option("--sembol")] = "BTCUSDT",
     timeframe: Annotated[str, typer.Option("--timeframe", "-t")] = "1h",
     secim: Secim = "tepe",
+    program: Annotated[
+        str,
+        typer.Option("--program", "-p", help="Ait olduğu açık araştırma programı (K-051/2)."),
+    ] = "",
+    evren: Annotated[
+        str, typer.Option("--evren", help="Evren kuralının kimliği (K-051/4).")
+    ] = "",
+    portfoy: Annotated[
+        str, typer.Option("--portfoy", help="Portföy kurma yöntemi kodu (K-051/4).")
+    ] = "",
+    rejim: Annotated[
+        str, typer.Option("--rejim", help="Rejim tanımının kimliği (K-051/4).")
+    ] = "",
     depo: Depo = VARSAYILAN_DEPO,
     json_cikti: JsonCikti = False,
 ) -> None:
-    """Bir hipotezi **sonucu görmeden önce** deftere kaydeder. (K-039)
+    """Bir hipotezi **sonucu görmeden önce** deftere kaydeder. (K-039, K-051)
 
     K-019'un yedi kapısı strateji başına çalışıyor ve hiçbiri "bu kaçıncı denemeydi"
     sorusunu sormuyor. Yeterince çok deneyen biri, eşiğe hiç dokunmadan, K-018'in
@@ -2460,17 +2476,35 @@ def lab_hipotez_kaydet(
     if _funding_okuyor_mu(strateji_adi):
         f_sha = _funding_hash(funding_mod.oku(sembol))
     sha = _veri_kimligi(strateji_adi, bar_sha, f_sha)
-    hipotez = hipotez_mod.Hipotez.kur(strateji_adi, timeframe, sha, izgara, gerekce, secim=secim)
+    hipotez = hipotez_mod.Hipotez.kur(
+        strateji_adi,
+        timeframe,
+        sha,
+        izgara,
+        gerekce,
+        secim=secim,
+        program=program,
+        evren=evren,
+        portfoy=portfoy,
+        rejim=rejim,
+    )
 
     defter = hipotez_mod.HipotezDefteri()
+    programlar = program_mod.ProgramDefteri()
     onceki = defter.sira(hipotez)
-    sira = defter.kaydet(hipotez)
+    # Program kaydı olmadan araştırma programı koşturulamaz (K-051/2). Zaten kayıtlı bir
+    # hipotez yeni bir çekiliş değil, dolayısıyla bütçeden de düşmez.
+    sira = defter.kaydet(hipotez, programlar=None if onceki is not None else programlar)
 
+    butce = None
+    if program:
+        butce = programlar.butce(program, defter.tumu())
     govde = {
         "sira": sira,
         "toplam": defter.sayi(),
         "yeni": onceki is None,
         "hipotez": hipotez.sozluk(),
+        "butce": butce,
     }
     if json_cikti:
         _yaz_json(govde)
@@ -2481,6 +2515,11 @@ def lab_hipotez_kaydet(
         typer.echo(f"kaydedildi: {sira}. hipotez")
     typer.echo(f"kimlik : {hipotez.kimlik[:16]}")
     typer.echo(f"defter : {defter.sayi()} hipotez · {defter.yol}")
+    if butce is not None:
+        typer.echo(
+            f"bütçe  : {program} · {butce['harcanan']}/{butce['azami_cekilis']} "
+            f"(kalan {butce['kalan']})"
+        )
 
 
 def _coklu_test_cekilisleri(depo: Path, deney_kok: Path):
@@ -2867,6 +2906,246 @@ def evren_backtest(
     typer.echo(f"  sonuc_hash   : {sonuc.sonuc_hash[:16]}")
     if yol:
         typer.echo(f"  kayıt        : {yol}")
+
+
+# --------------------------------------------------------------- araştırma programları
+
+
+@lab_app.command("program-kaydet")
+def lab_program_kaydet(
+    ad: Annotated[str, typer.Argument(help="Program adı (kod: a-z, 0-9, _).")],
+    gerekce: Annotated[
+        str, typer.Option("--gerekce", "-g", help="Program neden açılıyor? (≥60 karakter)")
+    ],
+    kaynak_farki: Annotated[
+        str,
+        typer.Option(
+            "--kaynak-farki",
+            "-k",
+            help="Bilgi kaynağı neden belirgin biçimde farklı? (≥60 karakter, K-045)",
+        ),
+    ],
+    kaynak_olcumu: Annotated[
+        str,
+        typer.Option("--kaynak-olcumu", help="Farkın sayısal dayanağı (JSON nesnesi)."),
+    ],
+    azami_cekilis: Annotated[
+        int, typer.Option("--azami-cekilis", "-n", help="Arama bütçesi: azami hipotez sayısı.")
+    ],
+    durma_kurali: Annotated[
+        str,
+        typer.Option("--durma-kurali", "-d", help="Ne olursa durulacak? (K-042, ≥20 karakter)"),
+    ],
+    esik_tahmini: Annotated[
+        str,
+        typer.Option("--esik-tahmini", help="Bütçe dahil eşiğin mertebe tahmini (JSON nesnesi)."),
+    ],
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Bir araştırma programını **ön kayıtla** açar. (K-051/2)
+
+    Program kaydı olmadan hipotez kaydedilemez: K-044 her yeni çekilişin `oos_sharpe`
+    kapısını yükselttiğini ölçtü, yani bir arama programı bulduğu şeyi geçiremeyeceği bir
+    duvarı kendisi örebilir. Kayıt o duvarın fiyatını baştan görünür kılıyor.
+
+    `--esik-tahmini` **kapı değildir**; kapı program bitiminde `sq lab coklu-test` ile
+    ölçülür (K-044). Amacı programın kendi maliyetini baştan yazması.
+    """
+    try:
+        olcum = json.loads(kaynak_olcumu)
+        tahmin = json.loads(esik_tahmini)
+    except json.JSONDecodeError as hata:
+        raise typer.BadParameter(f"JSON çözülemedi: {hata}") from hata
+    if not isinstance(olcum, dict) or not isinstance(tahmin, dict):
+        raise typer.BadParameter("--kaynak-olcumu ve --esik-tahmini birer JSON nesnesi olmalı")
+
+    kayit = program_mod.ProgramKaydi(
+        ad=ad,
+        gerekce=gerekce,
+        kaynak_farki=kaynak_farki,
+        kaynak_olcumu=olcum,
+        azami_cekilis=azami_cekilis,
+        durma_kurali=durma_kurali,
+        esik_tahmini=tahmin,
+    )
+    defter = program_mod.ProgramDefteri()
+    defter.ac(kayit)
+    hipotezler = hipotez_mod.HipotezDefteri().tumu()
+    butce = defter.butce(ad, hipotezler)
+
+    if json_cikti:
+        _yaz_json({"program": kayit.sozluk(), "butce": butce})
+        return
+    typer.echo(f"program açıldı: {ad}")
+    typer.echo(f"  kimlik  : {kayit.kimlik[:16]}")
+    typer.echo(f"  bütçe   : {butce['harcanan']}/{butce['azami_cekilis']}")
+    typer.echo(f"  durma   : {kayit.durma_kurali}")
+    typer.echo(f"  defter  : {defter.yol}")
+
+
+@lab_app.command("program-kapat")
+def lab_program_kapat(
+    ad: Annotated[str, typer.Argument(help="Kapatılacak program adı.")],
+    sonuc: Annotated[str, typer.Option("--sonuc", "-s", help="Ne bulundu? (≥20 karakter)")],
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Bir araştırma programını kapatır. Kapanış ayrı bir satır — defter append-only."""
+    defter = program_mod.ProgramDefteri()
+    hipotezler = hipotez_mod.HipotezDefteri().tumu()
+    harcanan = defter.harcanan(ad, hipotezler)
+    kapanis = defter.kapat(ad, sonuc, harcanan)
+    if json_cikti:
+        _yaz_json(kapanis.sozluk())
+        return
+    typer.echo(f"program kapandı: {ad} · {harcanan} çekiliş harcandı")
+
+
+@lab_app.command("butce")
+def lab_butce(
+    ad: Annotated[str, typer.Argument(help="Program adı. Boş bırakılırsa hepsi.")] = "",
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Açık programların arama bütçesi durumu. (K-051/2)"""
+    defter = program_mod.ProgramDefteri()
+    hipotezler = hipotez_mod.HipotezDefteri().tumu()
+    adlar = [ad] if ad else [k["ad"] for k in defter.acik_programlar()]
+    satirlar = [defter.butce(a, hipotezler) for a in adlar]
+
+    if json_cikti:
+        _yaz_json({"programlar": satirlar, "defter_toplami": len(hipotezler)})
+        return
+    if not satirlar:
+        typer.echo("açık araştırma programı yok")
+        return
+    typer.echo(f"defter: {len(hipotezler)} hipotez")
+    for b in satirlar:
+        durum = "DOLU" if b["kalan"] <= 0 else f"kalan {b['kalan']}"
+        typer.echo(f"  {b['ad']:<24} {b['harcanan']:>3}/{b['azami_cekilis']:<3} {durum}")
+        typer.echo(f"      durma: {b['durma_kurali']}")
+
+
+@lab_app.command("kapilar-v2")
+def lab_kapilar_v2(
+    sembol: Sembol = "BTCUSDT",
+    oos_orani: Annotated[float, typer.Option("--oos", help="OOS payı [0.1, 0.5].")] = 0.30,
+    sermaye: Sermaye = 10_000.0,
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Defterdeki **her** çekilişi K-054'ün dört yeni kapısından geçirir. (Faz 11)
+
+    Faz 11'in bitti kriteri: *"Defterdeki mevcut 38 çekiliş yeni kapılardan da geçirilmiş
+    ve sonuç raporlanmış — geçen olsa da olmasa da."* Bu komut o raporun kendisi.
+
+    Pahalıdır (çekiliş başına ~20 s): her çekiliş için in-sample taraması, OOS koşusu ve
+    tam pencerede PBO matrisi yeniden üretiliyor.
+    """
+    defter = hipotez_mod.HipotezDefteri()
+    kayitlar = defter.tumu()
+    model = maliyet_mod.yukle()
+    diziler_ob: dict[str, Any] = {}
+    satirlar: list[dict[str, Any]] = []
+
+    for h in kayitlar:
+        ad, tf = h["strateji"], h["timeframe"]
+        if tf not in diziler_ob:
+            diziler_ob[tf], _, _ = _lab_veri(depo, sembol, tf)
+        diziler = diziler_ob[tf]
+        n = len(diziler["open_time"])
+        isinma = karsilastirma_mod.ortak_isinma([ad])
+        ins, oos = karsilastirma_mod.ortak_pencereler(n, [ad], oos_orani=oos_orani)
+        tam = bolme.Pencere("tam", baslangic=isinma, bitis=n, isinma_baslangic=0)
+        asgari = 0 if ad in KIYAS else tarama_mod.ASGARI_ISLEM
+
+        try:
+            olcumler = kapilar_v2_mod.olc(
+                coz(ad),
+                varsayilan_izgara(ad),
+                model,
+                sembol,
+                tf,
+                diziler,
+                ins=ins,
+                oos=oos,
+                tam=tam,
+                secim=h["secim"],
+                baslangic_sermaye=sermaye,
+                asgari_islem=asgari,
+            )
+            hata = ""
+        except (ValueError, KeyError) as e:  # ölçülemeyen çekiliş atlanmaz, sebebiyle yazılır
+            olcumler = {
+                "pbo": None,
+                "perturbasyon_dusus": None,
+                "en_kotu_rejim_sharpe": None,
+                "evren_dayaniklilik_orani": None,
+            }
+            hata = f"{type(e).__name__}: {e}"
+
+        duz = {a: d for a, d in olcumler.items() if a != "detay"}
+        kapi = kapilar_v2_mod.kapilari_degerlendir(f"{ad}/{tf}/{h['secim']}", duz)
+        satirlar.append(
+            {
+                "kimlik": h["kimlik"],
+                "strateji": ad,
+                "timeframe": tf,
+                "secim": h["secim"],
+                "program": h.get("program", ""),
+                "olcumler": duz,
+                "kapilar": kapi.sozluk(),
+                "hata": hata,
+                "detay": olcumler.get("detay", {}),
+            }
+        )
+        # Ara kayıt: her çekilişten sonra. Tam koşu bir saat sürüyor ve kayıt adımında
+        # bir hata o saati silerdi — bu fazda iki kez oldu.
+        ara = Path(deney_kok) / "kapilar_v2" / "_ara.json"
+        ara.parent.mkdir(parents=True, exist_ok=True)
+        ara.write_text(json.dumps(satirlar, ensure_ascii=False, default=str), encoding="utf-8")
+
+    gecen = [s for s in satirlar if s["kapilar"]["gecti"]]
+    govde = {
+        "defter_sayisi": len(kayitlar),
+        "esikler": kapilar_v2_mod.esik_tablosu(),
+        "cekilisler": satirlar,
+        "gecen": [s["kimlik"] for s in gecen],
+    }
+    yol = deney_mod.Deney(
+        tip="kapilar_v2",
+        strateji="+".join(sorted({s["strateji"] for s in satirlar})),
+        veri_sha256=hashlib.sha256(
+            "|".join(sorted({h["veri_sha256"] for h in kayitlar})).encode()
+        ).hexdigest(),
+        girdi={"oos_orani": oos_orani, "sermaye": sermaye, "defter_sayisi": len(kayitlar)},
+        cikti=govde,
+    ).yaz(deney_kok)
+
+    if json_cikti:
+        _yaz_json({"deney": str(yol), **govde})
+        return
+
+    typer.echo(f"defter {len(kayitlar)} çekiliş · yeni kapılar (K-054)")
+    typer.echo(
+        f"  {'çekiliş':<28} {'pbo':>7} {'perturbasyon':>13} {'rejim':>8} {'evren':>7}  kalan"
+    )
+    for s in satirlar:
+        o = s["olcumler"]
+        etiket = f"{s['strateji']}/{s['timeframe']}/{s['secim']}"
+        typer.echo(
+            f"  {etiket:<28} {_sayi(o['pbo']):>7} {_sayi(o['perturbasyon_dusus']):>13} "
+            f"{_sayi(o['en_kotu_rejim_sharpe']):>8} "
+            f"{_sayi(o['evren_dayaniklilik_orani']):>7}  "
+            f"{len(s['kapilar']['kalan_kapilar'])}"
+        )
+    typer.echo("")
+    typer.echo(f"  geçen: {len(gecen)}/{len(satirlar)}")
+    typer.echo(f"  kayıt: {yol}")
+
+
+def _sayi(deger: float | None) -> str:
+    """Ölçülemeyen değer tabloda uzun tire ile görünür; `0,000` ile karıştırılmasın."""
+    return "—" if deger is None else f"{deger:.3f}"
 
 
 def main() -> int:

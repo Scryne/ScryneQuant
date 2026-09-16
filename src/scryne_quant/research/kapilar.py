@@ -171,6 +171,11 @@ MUTLAK_ENGELLER: Final[tuple[str, ...]] = (
     "dirty",  # K-009
     "data_quality_warning",  # K-006
     "gecici_maliyet_modeli",  # K-021
+    # K-049/4, K-054: eğitim kesimi öncesi dönem için üretilmiş LLM türetimi taşıyan
+    # hiçbir sonuç kapıdan geçemez. Sayısal bir eşik değil çünkü ölçülebilir bir büyüklük
+    # değil: sızıntı veride değil modelin ağırlıklarında ve look-ahead testi onu
+    # yakalayamaz. Engel bu yüzden beyana dayanıyor ve mutlak.
+    "leak_riski",
 )
 
 

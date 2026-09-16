@@ -3,5 +3,5 @@
   "asama": "uygulama",
   "guncellendi": "2026-09-16",
   "surum": 2,
-  "not": "Faz 0-7, 9 ve 10 kapali. Faz 10 K-057 ile kapandi: cok enstrumanli motor kuruldu ve tek sembollu motor onun sarmalayicisi oldu (tek kod yolu), hedef portfoy sozlesmesi + portfoy kurma + portfoy duzeyi risk limitleri eklendi, evren look-ahead testi yesil, coklu enstrumanli bagimsiz Decimal referansi tutuyor. Yan bulgu: sq lab dogrula kirikmis (duzeltildi) ve sonuc_hash atlama sayaci listesinin buyumesine karsi dayanikli hale getirildi. Siradaki is Faz 11 (Dogrulama v2: K-054'un dort kapisi, PBO/CSCV, program kaydi + arama butcesi). Faz 8 promotion'u gecen strateji ve surekli acik host bekliyor."
+  "not": "Faz 0-7, 9, 10 ve 11 kapali. Faz 11 K-058 ile kapandi: K-054'un dort kapisi kuruldu (pbo 0,0087 / perturbasyon 0,0565 / rejim 0,685 edge'siz null'dan; evren_dayanikliligi 0,75 yapisal), 38 cekilis yeni kapilardan gecirildi (0/38), program kaydi + arama butcesi zorunlu, leak_riski mutlak engel, DSR raporlaniyor. Siradaki is Faz 12 (arastirma programlari: cross-sectional, turev, makro) - her program sq lab program-kaydet ile acilir. Faz 8 promotion'u gecen strateji ve surekli acik host bekliyor."
 }

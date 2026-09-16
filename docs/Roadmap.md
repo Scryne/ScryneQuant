@@ -34,7 +34,7 @@ yanlış sonuç olarak geri döner.
 | 8 | Kontrollü live (tetiklemeli) | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
 | 9 | Veri platformu v2 (PIT + evren + kimlik) | ✅ Tamamlandı | Delist dahil çoklu sembol indirilmiş; PIT evren tablosu üretiliyor; kimlik kırılması yakalanıyor; `available_time` kesmesi testli |
 | 10 | Çok enstrümanlı araştırma çekirdeği | ✅ Tamamlandı | Tek enstrüman özel hâlde bit düzeyinde aynı; çok enstrümanlı bağımsız referans tutuyor; evren look-ahead testi yeşil |
-| 11 | Doğrulama v2 | ⏳ Bekliyor | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
+| 11 | Doğrulama v2 | ✅ Tamamlandı | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
 | 12 | Araştırma programları (cross-sectional, türev, makro) | ⏳ Bekliyor | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
 | 13 | Haber/olay zekâsı + ML (koşullu) | ⏳ Bekliyor | Açılma koşulu: veri bütçesi kararı + kaynak spike'ı. Açılırsa: LLM kesim tarihi kayıtlı, `leak_riski` uygulanıyor |
 | 14 | Üretim sertleştirme | ⏳ Bekliyor | Süreç dışı kill switch testnet'te kanıtlı; dört gözlem boyutu ayakta; her alarmın runbook'u var; toparlanma tatbikatı yapılmış |
@@ -809,7 +809,7 @@ portföy düzeyi risk yalnızca aşağı çeker; kurma öneri, risk onay; barı 
 tahmin edilmez; `sonuc_hash` sayaç listesinin büyümesine karşı dayanıklı; evren kıyası
 kıyastır, aile değil).
 
-### Faz 11: Doğrulama v2
+### Faz 11: Doğrulama v2 — ✅ kapandı (2026-09-16, K-058)
 
 - **İşler:** K-054'ün dört kapısı (`rejim_kararliligi`, `evren_dayanikliligi`,
   `parametre_perturbasyonu`, `pbo`); PBO'nun CSCV uygulaması; DSR, kapasite ve kalibrasyonun
@@ -826,6 +826,25 @@ kıyastır, aile değil).
   - **Program kaydı olmadan bir araştırma programı koşturulamıyor** (K-051/2, testle).
 - **Notlar:** Bu fazda strateji aranmaz. Kapıyı, geçecek adayı görmeden tanımlamak K-044'ün
   dersi.
+
+**Durum — beş kriterin beşi de karşılandı. Ölçümler `docs/Faz-11-Dogrulama-Raporu.md`de:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| Dört kapı hesaplanıyor, eşikler gerekçeli | ✅ `pbo` 0,0087, `parametre_perturbasyonu` 0,0565, `rejim_kararliligi` 0,685 (edge'siz null'dan, iki ızgaranın sıkı olanı); `evren_dayanikliligi` 0,75 (yapısal ölçüm, iştah) |
+| Gevşetmeyi yakalayan test | ✅ `test_kapilar_v2.py::TestGevsetme` |
+| 38 çekiliş yeni kapılardan geçirildi | ✅ **0/38** — `evren_dayanikliligi` tek sembolde 38/38 ölçülemez; en yakın aday yine `cok_faktor` 1h/plato (PBO ✓, pertürbasyon ✓, rejim ✗) |
+| `leak_riski` kapıdan geçemiyor | ✅ mutlak engel, testle |
+| Program kaydı olmadan program koşturulamıyor | ✅ defter ve CLI yolunda, bütçe dolunca da |
+
+**Fazın bulgusu:** PBO'nun literatür referansı (0,5) iid gürültüde ortalamada doğru (0,503)
+ama tek ölçüm ±0,20 sapıyor; gerçek ızgarada null medyanı 0,237. 0,5 eşiği edge'siz
+ızgaraların %90'ından fazlasını geçirirdi. Eşik ölçüldü: 0,0087.
+
+**Düzeltilen üç hata:** rejim penceresi bar cinsindendi (1d'de iki yıl → rejim ölçülemiyordu;
+artık 30 gün); kalibrasyon aracı sonucu yalnızca sonda yazıyordu (bir dilimleme hatası iki
+saatlik ölçümü sildi, yeniden koşuldu ve birebir aynı çıktı); `kapilar_v2` deney tipi
+tanınmıyordu.
 
 ### Faz 12: Araştırma programları — cross-sectional, türev, makro
 
