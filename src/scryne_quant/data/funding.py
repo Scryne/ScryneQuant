@@ -316,6 +316,27 @@ def evren_dizileri(zamanlar: np.ndarray, funding: pd.DataFrame) -> dict[str, np.
     return {"funding": oran_n, "funding_odeme": odeme}
 
 
+
+def evren_premium_dizisi(zamanlar: np.ndarray, premium: pd.DataFrame) -> np.ndarray:
+    """Premium index 1h barlarının `close`unu (basis) ortak ızgaraya oturtur. (Faz 12)
+
+    Premium barı fiyat barıyla **aynı `open_time`** ile aynı anda kapanır; `ctx` `t` barının
+    kapanışını gördüğü anda o barın basis'ini de görür (K-052/15: bar benzeri gözlemde
+    `available_time` = bar kapanışı). Bu yüzden eşleme tam zaman eşitliğiyle, as-of değil:
+    eksik premium barı `NaN` kalır, önceki değerle **doldurulmaz** (K-024).
+    """
+    zamanlar = np.asarray(zamanlar, dtype="int64")
+    out = np.full(len(zamanlar), np.nan)
+    if premium.empty:
+        return out
+    z = premium["open_time"].to_numpy(dtype="int64")
+    c = premium["close"].to_numpy(dtype="float64")
+    idx = np.searchsorted(zamanlar, z)
+    tam = (idx < len(zamanlar)) & (zamanlar[np.minimum(idx, len(zamanlar) - 1)] == z)
+    out[idx[tam]] = c[tam]
+    return out
+
+
 __all__ = [
     "GECMIS_BASI_MS",
     "BAYAT_MS",
@@ -328,6 +349,7 @@ __all__ = [
     "barlara_hizala",
     "dogrula",
     "evren_dizileri",
+    "evren_premium_dizisi",
     "indir",
     "oku",
     "yaz",

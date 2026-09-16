@@ -34,6 +34,12 @@ atfedilebilir — K-042'nin "tek bir koşul ekle" kuralı.
 | --- | --- | --- |
 | `evren_funding_kesit` | son gerçekleşen oran (8 s eşdeğer) | Anlık kaldıraç baskısı |
 | `evren_funding_birikim` | son `pencere` saatte ödenen toplam | Süregelen baskı |
+| `evren_basis` | son `pencere` saatin ortalama basis'i | Perp primi (vadeli talep) |
+| `evren_funding_basis` | iki skorun kesit sırası ortalaması | İkisi birlikte |
+
+Basis çekilişleri (Faz 12, hipotez 43-44'ün sonuçları görüldükten **sonra** kaydedildi):
+ızgaraları ve kuralları `evren_funding_birikim`in **aynası** — aynı pencere ve dışlama
+eksenleri, aynı yoğunluk ve takvim. Sonuca bakılarak seçilmiş bir parametre yok.
 """
 
 from __future__ import annotations
@@ -41,6 +47,8 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from typing import Any, ClassVar
+
+import numpy as np
 
 from scryne_quant.features.motor import OzellikTanimi
 from scryne_quant.strategy.evren import EvrenBaglam
@@ -177,4 +185,75 @@ class EvrenFundingBirikim(_FundingDislama):
         )
 
 
-__all__ = ["SKOR", "EvrenFundingBirikim", "EvrenFundingKesit"]
+class EvrenBasis(EvrenFundingBirikim):
+    """Son `pencere` saatin ortalama basis'i (premium index) en yüksek dilimi dışla."""
+
+    ad = "evren_basis"
+
+    def _skor_ozelligi(self) -> OzellikTanimi:
+        return OzellikTanimi(SKOR, "basis_sma", {"pencere": int(self.parametreler["pencere"])})
+
+
+BASIS = "basis_skor"
+
+
+class EvrenFundingBasis(EvrenFundingBirikim):
+    """Funding birikimi ve basis ortalamasının **kesit sırası ortalaması** en yüksek dilimi dışla.
+
+    İkisi farklı birimlerde (ödeme toplamı / fiyat primi); ham değer ortalaması birimi büyük
+    olanı ağırlıklandırırdı. Her biri skorlu üyeler arasında sıraya çevrilir (0 = en düşük,
+    1 = en yüksek; eşitlikte ortalama sıra), sonra eşit ağırlıkla ortalanır. Skorlanan üye
+    **iki** skoru da hazır olandır; birinden yoksun üye dışlanmaz (tek skorla sıralamak iki
+    farklı soruyu aynı listede karıştırırdı).
+    """
+
+    ad = "evren_funding_basis"
+
+    def ozellikler(self) -> Sequence[OzellikTanimi]:
+        w = int(self.parametreler["pencere"])
+        return (*super().ozellikler(), OzellikTanimi(BASIS, "basis_sma", {"pencere": w}))
+
+    def _aday_uyeler(self, ctx: EvrenBaglam) -> tuple[str, ...]:
+        uyeler = ctx.uyeler()
+        oran = float(self.parametreler["dislama_orani"])
+        if oran <= 0.0:
+            return uyeler
+        semboller, f, b = [], [], []
+        for sembol in uyeler:
+            bag = ctx.enstruman(sembol)
+            if bag.hazir(SKOR, BASIS):
+                semboller.append(sembol)
+                f.append(bag.ozellik(SKOR))
+                b.append(bag.ozellik(BASIS))
+        if not semboller:
+            return uyeler
+        birlesik = (_sira(f) + _sira(b)) / 2.0
+        kesim = math.ceil(oran * len(semboller))
+        dislanan = {s for _, s in sorted(zip(-birlesik, semboller, strict=True))[:kesim]}
+        return tuple(s for s in uyeler if s not in dislanan)
+
+
+def _sira(degerler: list[float]) -> np.ndarray:
+    """[0, 1] ölçekli sıra; eşitlikte ortalama sıra. Tek eleman için 0,5."""
+    x = np.asarray(degerler, dtype=np.float64)
+    n = len(x)
+    if n == 1:
+        return np.array([0.5])
+    sirali = np.argsort(x, kind="mergesort")
+    sira = np.empty(n, dtype=np.float64)
+    sira[sirali] = np.arange(n, dtype=np.float64)
+    for deger in np.unique(x):
+        esit = x == deger
+        if esit.sum() > 1:
+            sira[esit] = sira[esit].mean()
+    return sira / (n - 1)
+
+
+__all__ = [
+    "BASIS",
+    "SKOR",
+    "EvrenBasis",
+    "EvrenFundingBasis",
+    "EvrenFundingBirikim",
+    "EvrenFundingKesit",
+]

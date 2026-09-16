@@ -111,6 +111,7 @@ def veri_kur(
     bitis_ay: str | None = None,
     azami_sembol: int | None = None,
     funding_depo: str | Path | None = None,
+    premium_depo: str | Path | None = None,
 ) -> EvrenVerisi:
     """Evren tablosundan ham, stratejiden bağımsız evren verisi kurar.
 
@@ -118,6 +119,9 @@ def veri_kur(
     ve `funding_odeme` dizileri nedensel olarak eklenir (`data/funding.evren_dizileri`).
     Perp'i olmayan sembolde ikisi de tamamen `NaN`: eşleme uydurulmaz. Dosya hash'leri
     `meta["ek_veri_sha256"]`a yazılır ve veri kimliğine girer.
+
+    `premium_depo` verilirse (`data/turev/premium/`) her sembole `basis` dizisi eklenir
+    (`data/funding.evren_premium_dizisi`); hash'leri aynı yere yazılır.
 
     `isinma_bar`: pencere başından önce yüklenecek bar sayısı. Birden çok strateji veya
     ızgara noktası aynı veriyi kullanacaksa **en büyüğü** verilmeli.
@@ -195,6 +199,16 @@ def veri_kur(
             else:
                 fdf = pd.DataFrame()
             dz.update(funding_mod.evren_dizileri(izgara, fdf))
+    if premium_depo is not None:
+        pdepo = Path(premium_depo)
+        for sembol_, dz in diziler.items():
+            yol = pdepo / f"{sembol_}.parquet"
+            if yol.is_file():
+                ek_sha[f"premium/{sembol_}"] = hashlib.sha256(yol.read_bytes()).hexdigest()
+                pdf = pd.read_parquet(yol)
+            else:
+                pdf = pd.DataFrame()
+            dz["basis"] = funding_mod.evren_premium_dizisi(izgara, pdf)
     # Parquet çerçeveleri artık gereksiz; Arrow havuzu boşalan belleği kendiliğinden işletim
     # sistemine geri vermiyor. Faz 12'de ölçüldü: tam evrende süreç başına ≈1 GB. Havuzlu
     # araştırma hattında her işçi veriyi ayrıca yüklediği için bu fark çarpılıyor.
@@ -224,7 +238,11 @@ def veri_kur(
             # Barı olmadığı için üyelikten düşen saatler (`uyeligi_barlara_kis`).
             "bar_yok_uyelik": dict(sorted(bar_yok_uyelik.items())),
             # Yalnızca ek veri yüklendiyse: kesitsel koşuların meta'sı (ve kimliği) değişmez.
-            **({"ek_veri_sha256": dict(sorted(ek_sha.items()))} if funding_depo else {}),
+            **(
+                {"ek_veri_sha256": dict(sorted(ek_sha.items()))}
+                if funding_depo is not None or premium_depo is not None
+                else {}
+            ),
         },
         olcum_baslangici=olcum_baslangici,
         kural_kimligi=str(meta.get("kural_kimlik", "")),

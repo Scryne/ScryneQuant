@@ -154,6 +154,14 @@ EVREN_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
 }
 
 
+_TUREV_PENCERELI: Final[dict[str, Sequence[Any]]] = {
+    "pencere": (72, 168, 336, 720),
+    "dislama_orani": (0.1, 0.2, 0.3),
+    "azami_enstruman": (10,),
+    "yeniden_dengele_bar": (HAFTALIK,),
+    "hedef_brut": (SABIT_MARUZIYET,),
+}
+
 #: `turev_evren` programının çekilişleri (Faz 12). Sıra durma kuralının sırası: önce iki
 #: funding çekilişi; ikisi de filtresiz kıyası geçmezse basis çekilişleri harcanmaz.
 #: Dengeleme haftalık ve sabit: funding hızlı değişen bir bilgi, aylık dengelemede filtre
@@ -169,13 +177,11 @@ TUREV_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
     }),
     # Son W saatte fiilen ödenen toplam: süregelen baskı (K-042/5'in zaman ölçeği farkı).
     # Yoğunluk kıyasın varsayılanında (10) sabit; eksen birikim penceresi.
-    "turev_funding_birikim": ("evren_funding_birikim", {
-        "pencere": (72, 168, 336, 720),
-        "dislama_orani": (0.1, 0.2, 0.3),
-        "azami_enstruman": (10,),
-        "yeniden_dengele_bar": (HAFTALIK,),
-        "hedef_brut": (SABIT_MARUZIYET,),
-    }),
+    "turev_funding_birikim": ("evren_funding_birikim", _TUREV_PENCERELI),
+    # Basis çekilişleri hipotez 43-44 görüldükten **sonra** kaydedildi; sonuca bakılarak
+    # seçilmesin diye ızgaraları `turev_funding_birikim`in birebir aynası.
+    "turev_basis": ("evren_basis", _TUREV_PENCERELI),
+    "turev_funding_basis": ("evren_funding_basis", _TUREV_PENCERELI),
 }
 
 #: Program → çekilişleri. Koşucu çekilişin programını buradan bulur.

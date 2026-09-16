@@ -146,6 +146,7 @@ class TestHesapla:
         d["funding"] = np.linspace(-1e-4, 3e-4, d["close"].size)
         # Evren funding'inin ödeme dizisi (Faz 12, `data/funding.evren_dizileri`).
         d["funding_odeme"] = np.linspace(0.0, 1e-4, d["close"].size)
+        d["basis"] = np.linspace(-2e-4, 2e-4, d["close"].size)
         varsayilan = {"pencere": 14, "katsayi": 2.0, "birikim": 5}
         for ad, kayit in DEFTER.items():
             tanim = OzellikTanimi(

@@ -29,7 +29,9 @@ from scryne_quant.research.izgaralar import TUREV_CEKILISLERI, cekilis_programi
 from scryne_quant.research.tarama import izgara
 from scryne_quant.strategy.kutuphane import (
     EVREN_AILELER,
+    EvrenBasis,
     EvrenEsitAgirlik,
+    EvrenFundingBasis,
     EvrenFundingBirikim,
     EvrenFundingKesit,
 )
@@ -198,7 +200,9 @@ class TestKiyasUstuneDislama:
 
 class TestTurevCekilisleri:
     def test_izgaralar_12_noktali_ve_kurulabilir(self):
-        assert list(TUREV_CEKILISLERI) == ["turev_funding_kesit", "turev_funding_birikim"]
+        assert list(TUREV_CEKILISLERI) == [
+            "turev_funding_kesit", "turev_funding_birikim", "turev_basis", "turev_funding_basis"
+        ]
         for ad, (strateji, secenekler) in TUREV_CEKILISLERI.items():
             assert cekilis_programi(ad) == "turev_evren"
             noktalar = izgara(secenekler)
@@ -214,3 +218,100 @@ class TestTurevCekilisleri:
         h = ed.hipotez_kur("turev_funding_kesit", a, program="turev_evren",
                            gerekce="x" * 20, portfoy=ed.TUREV_PORTFOY)
         assert h.portfoy == "EVREN_ESIT" and h.strateji == "evren_funding_kesit"
+
+
+# --------------------------------------------------------------------- basis (Faz 12)
+
+
+class TestPremiumHizalama:
+    def test_tam_zaman_eslesmesi_eksik_doldurulmaz(self):
+        z = T0 + SAAT * np.arange(6)
+        prem = pd.DataFrame({"open_time": [T0, T0 + 2 * SAAT, T0 + 9 * SAAT],
+                             "close": [0.001, -0.002, 0.5]})
+        b = funding_mod.evren_premium_dizisi(z, prem)
+        assert b[0] == pytest.approx(0.001) and b[2] == pytest.approx(-0.002)
+        assert np.isnan(b[1]) and np.isnan(b[3:]).all()  # önceki değer taşınmıyor
+
+    def test_premium_yoksa_nan(self):
+        assert np.isnan(funding_mod.evren_premium_dizisi(T0 + SAAT * np.arange(3),
+                                                         pd.DataFrame())).all()
+
+
+def _basisli(bozuk_t: int | None = None) -> EvrenVerisi:
+    veri = _veri(bozuk_t=bozuk_t)
+    sabit = {"AAAUSDT": 0.002, "BBBUSDT": 0.004, "BTCUSDT": -0.001,
+             "CCCUSDT": 0.0005, "DDDUSDT": 0.003, "EEEUSDT": None}
+    for i, s in enumerate(SEMBOLLER):
+        z = veri.diziler[s]["open_time"]
+        if sabit[s] is None:
+            veri.diziler[s]["basis"] = np.full(N, np.nan)
+            continue
+        b = np.full(N, sabit[s])
+        if bozuk_t is not None:
+            b[bozuk_t + 1:] = np.random.default_rng(99 + i).uniform(-0.01, 0.01, N - bozuk_t - 1)
+        veri.diziler[s]["basis"] = funding_mod.evren_premium_dizisi(
+            z, pd.DataFrame({"open_time": z, "close": b})
+        )
+    return veri
+
+
+class TestBasisCekilisleri:
+    def test_oran_sifirken_kiyasla_ayni(self):
+        veri = _basisli()
+        kiyas = ed.kosu(EvrenEsitAgirlik(yeniden_dengele_bar=168, azami_enstruman=4,
+                                         azami_agirlik=0.05, hedef_brut=0.2),
+                        MALIYET, veri, _pencere())
+        for sinif in (EvrenBasis, EvrenFundingBasis):
+            s = ed.kosu(sinif(pencere=72, dislama_orani=0.0, azami_enstruman=4),
+                        MALIYET, veri, _pencere())
+            assert s.sonuc_hash == kiyas.sonuc_hash, sinif.ad
+
+    def test_basis_en_yuksek_dilim_dislaniyor(self):
+        veri = _basisli()
+        st = EvrenBasis(pencere=24, dislama_orani=0.4, azami_enstruman=6)
+        g = ed.gorunum(veri, st, _pencere())
+        ctx = g.baglam(900, {}, 1.0, st.parametreler)
+        # Basis'li 5 üye → 2 dışlanır: BBB (0,004), DDD (0,003). EEE basis'siz, kalır.
+        assert set(st._aday_uyeler(ctx)) == {"AAAUSDT", "BTCUSDT", "CCCUSDT", "EEEUSDT"}
+
+    def test_birlesik_sira_iki_skoru_esit_agirliklandirir(self):
+        veri = _basisli()
+        st = EvrenFundingBasis(pencere=24, dislama_orani=0.25, azami_enstruman=6)
+        g = ed.gorunum(veri, st, _pencere())
+        ctx = g.baglam(900, {}, 1.0, st.parametreler)
+        # İki skoru da olan: AAA, BBB, BTC, CCC (DDD funding'siz, EEE basis'siz → kalır).
+        # funding birikimi sırası: BBB 0, BTC 1/3, AAA 2/3, CCC 1
+        # basis sırası:             BTC 0, CCC 1/3, AAA 2/3, BBB 1
+        # ortalama: AAA 2/3, BBB 1/2, BTC 1/6, CCC 2/3 → ceil(0,25×4)=1; eşitlikte ad: AAA.
+        assert set(st._aday_uyeler(ctx)) == {"BBBUSDT", "BTCUSDT", "CCCUSDT",
+                                             "DDDUSDT", "EEEUSDT"}
+
+    def test_sira_esitlikte_ortalama(self):
+        from scryne_quant.strategy.kutuphane.evren_funding import _sira
+        assert _sira([3.0, 1.0, 3.0]).tolist() == [0.75, 0.0, 0.75]
+        assert _sira([5.0]).tolist() == [0.5]
+
+    def test_gelecek_basis_bozulunca_t_kadarki_kararlar_ayni(self):
+        t = 1_100
+
+        def kararlar(v, son):
+            st = EvrenFundingBasis(pencere=72, dislama_orani=0.3, azami_enstruman=3,
+                                   yeniden_dengele_bar=24)
+            g = ed.gorunum(v, st, _pencere())
+            st.hazirla()
+            out = []
+            for i in range(son + 1):
+                h = st.on_bar(g.baglam(i, {}, 1.0, st.parametreler))
+                if h is not None:
+                    out.append(json.dumps(h.model_dump(), sort_keys=True))
+            return out
+
+        assert kararlar(_basisli(), t) == kararlar(_basisli(bozuk_t=t), t)
+        assert kararlar(_basisli(), N - 1) != kararlar(_basisli(bozuk_t=t), N - 1)
+
+    def test_izgaralar_funding_birikimin_aynasi(self):
+        assert TUREV_CEKILISLERI["turev_basis"][1] == TUREV_CEKILISLERI["turev_funding_birikim"][1]
+        assert TUREV_CEKILISLERI["turev_funding_basis"][1] == TUREV_CEKILISLERI[
+            "turev_funding_birikim"][1]
+        for ad in ("turev_basis", "turev_funding_basis"):
+            assert cekilis_programi(ad) == "turev_evren"

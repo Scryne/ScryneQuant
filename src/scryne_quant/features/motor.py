@@ -77,6 +77,9 @@ DEFTER: Final[dict[str, Kayit]] = {
     # kayan toplam: son W barda **fiilen ödenen** toplam. `funding_kumulatif` as-of oranı
     # topluyor ve 1h barda 8 saatlik bir ödemeyi 8 kez sayardı; bu yüzden ayrı bir girdi.
     "funding_odeme_toplami": Kayit(("funding_odeme",), ("pencere",), ("",), ind.kumulatif),
+    # Premium index kapanışının (basis, `data/funding.py::evren_premium_dizisi`) kayan
+    # ortalaması. Penceresinde eksik bar varsa `NaN`: eksik basis uydurulmaz (K-024).
+    "basis_sma": Kayit(("basis",), ("pencere",), ("",), ind.sma),
     "bollinger": Kayit(
         ("close",),
         ("pencere", "katsayi"),

@@ -50,6 +50,10 @@ TABLO = KOK / "data" / "evren" / "_evren" / "27b7a16ed0ed.parquet"
 DEPO = KOK / "data" / "evren"
 CIKTI = KOK / "runs" / "faz12"
 FUNDING_DEPO = KOK / "data" / "turev" / "funding"
+PREMIUM_DEPO = KOK / "data" / "turev" / "premium"
+#: Premium verisi yüklenen çekilişler (basis). Funding çekilişleri (43-44) premium'suz
+#: kaydedildi; onların veri kimliği premium hash'ini içermez ve değişmemeli.
+PREMIUM_CEKILISLERI = frozenset({"turev_basis", "turev_funding_basis"})
 AZAMI_SEMBOL = 600
 #: Kesitsel programın kıyası sabit yoğunlukla koşuldu (hipotez 39-42). Türev programında
 #: kıyas **seçilen** yoğunlukla koşulur: filtre kıyasın üstüne tek bir dışlama, fark yalnız
@@ -68,11 +72,12 @@ BUYUK_IS_BAR = 60_000
 
 
 
-def _veri_uretici(program: str):
+def _veri_uretici(program: str, cekilis: str = ""):
     funding, _, _ = PROGRAM_AYARI[program]
     return partial(
         evren_kosu.veri_kur, TABLO, depo_kok=DEPO, azami_sembol=AZAMI_SEMBOL,
         funding_depo=FUNDING_DEPO if funding else None,
+        premium_depo=PREMIUM_DEPO if cekilis in PREMIUM_CEKILISLERI else None,
     )
 
 
@@ -102,7 +107,7 @@ def _defter_sirasi(cekilis: str, veri: evren_kosu.EvrenVerisi) -> tuple[int | No
 
 def kaydet(cekilis: str, gerekce: str) -> int:
     program = cekilis_programi(cekilis)
-    veri = _veri_uretici(program)()
+    veri = _veri_uretici(program, cekilis)()
     hip = ed.hipotez_kur(
         cekilis, veri, program=program, gerekce=gerekce, portfoy=PROGRAM_AYARI[program][1]
     )
@@ -125,7 +130,7 @@ def kos(cekilis: str, isci: int) -> int:
     sinif = EVREN_AILELER[strateji_adi]
     basladi = time.perf_counter()
     program = cekilis_programi(cekilis)
-    uretici = _veri_uretici(program)
+    uretici = _veri_uretici(program, cekilis)
     veri = uretici()
     sira, hip = _defter_sirasi(cekilis, veri)
     if sira is None:
