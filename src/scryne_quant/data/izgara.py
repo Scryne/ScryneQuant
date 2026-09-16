@@ -139,10 +139,42 @@ def uyelik_matrisi(
     return cikti
 
 
+def uyeligi_barlara_kis(
+    uyelik: Mapping[str, np.ndarray],
+    diziler: Mapping[str, Mapping[str, np.ndarray]],
+) -> tuple[dict[str, np.ndarray], dict[str, int]]:
+    """Üyeliği barı **var olan** saatlerle kesiştirir; kaç üye barın düştüğünü döner. (Faz 12)
+
+    Aylık tablo "M ayında üye" der; ay içinde barın olmadığı saati bilmez. Tam pencerede
+    ölçüldü (429 sembol, 3.231.751 üye bar): **205 bar, 10 sembol, iki olay** —
+    2018-06-26 02:00'den itibaren borsa geneli 10 saatlik kesinti (9 sembol) ve
+    BCCUSDT'nin 2018-11-15 17:00'de ay ortasında delist edilmesi (105 bar).
+    `EvrenGorunumu` bu durumda doğru olarak kırılıyor; çare sözleşmeyi gevşetmek değil,
+    üyeliği o saatte gözlenebilir olanla sınırlamak.
+
+    Yön engelleyici (K-037): yalnızca `True` → `False`. Look-ahead yok — barın `t`de var
+    olmadığı `t`de bilinir. Açık pozisyon motorda son bilinen fiyattan değerlenmeye devam
+    eder (`bayat_degerleme`); üyelikten düşmek onu satmaz, bar yokken fill de yoktur.
+    Sayım sessiz kalmasın diye döner ve koşu meta'sına yazılır.
+    """
+    cikti: dict[str, np.ndarray] = {}
+    dusen: dict[str, int] = {}
+    for sembol, u in uyelik.items():
+        u = np.asarray(u, dtype=bool)
+        var = np.asarray(diziler[sembol]["quality_status"], dtype=object) != LISTELENMEDI
+        kesik = u & var
+        n = int((u & ~var).sum())
+        if n:
+            dusen[sembol] = n
+        cikti[sembol] = kesik
+    return cikti, dusen
+
+
 __all__ = [
     "NAN_SUTUNLARI",
     "IzgaraHatasi",
     "hizala",
     "ortak_izgara",
     "uyelik_matrisi",
+    "uyeligi_barlara_kis",
 ]

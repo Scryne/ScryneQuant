@@ -160,3 +160,17 @@ evren (429 sembol, 79.420 bar), `pencereler()`in OOS'u (bar 55.594-79.420):
 Sonuç: `kesitsel_fiyat`'ın haftalık göreli güç çekilişinin ızgarası bu nokta **görülmüş**
 olarak kurulur; kaydının gerekçesine bu bölüm yazılır. Süre ölçümü için bundan sonra
 yalnızca kıyas (`evren_esit_agirlik`) veya sentetik veri kullanılır.
+
+## 7. İlk koşu veri sözleşmesinde durdu (2026-09-16) — düzeltme
+
+Hipotez 39'un ilk koşusu in-sample taramanın ilk işlerinde `EvrenSozlesmesi: ADAUSDT:
+listelenmemiş barda evren üyeliği var` ile durdu; **hiçbir metrik üretilmedi**. Tam pencerede
+ölçüldü: 3.231.751 üye barın **205**'i barı olmayan saatte, 10 sembol, iki olay (2018-06-26
+02:00 borsa geneli 10 saatlik kesinti; BCCUSDT'nin 2018-11-15 17:00 ay ortası delisti, 105
+bar). Faz 10/11 koşuları 2023-01 sonrasındaydı ve bu duruma hiç rastlamadı.
+
+Düzeltme `data/izgara.uyeligi_barlara_kis`: üyelik ∧ bar var; yalnızca engelleyici (K-037),
+sayım koşu meta'sına (`bar_yok_uyelik`) yazılıyor. 2023 sonrası pencerelerde kimlik
+dönüşümü (ihlal yoktu, olsaydı sözleşme kırılırdı), yani önceki sonuçlar değişmiyor.
+Hipotez kimliği girdilere bağlı (tablo, kural, bar hash'leri) ve değişmedi; kayıtlar
+geçerli, çünkü sonuç görülmedi.

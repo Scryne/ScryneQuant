@@ -27,7 +27,12 @@ import pandas as pd
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data import kimlik as kimlik_mod
 from scryne_quant.data.depo import ParquetDepo
-from scryne_quant.data.izgara import hizala, ortak_izgara, uyelik_matrisi
+from scryne_quant.data.izgara import (
+    hizala,
+    ortak_izgara,
+    uyelik_matrisi,
+    uyeligi_barlara_kis,
+)
 from scryne_quant.strategy.evren import EvrenGorunumu
 from scryne_quant.strategy.kosu import evren_gorunum_kur
 from scryne_quant.strategy.temel import PortfoyStratejisi
@@ -170,9 +175,10 @@ def veri_kur(
     olcum_baslangici = min(olcum_baslangici, len(izgara) - 2)
 
     diziler = {s: hizala(df, izgara) for s, df in cerceveler.items()}
-    uyelik = {
-        s: u for s, u in uyelik_matrisi(tablo, izgara, kimlikler).items() if s in diziler
-    }
+    uyelik, bar_yok_uyelik = uyeligi_barlara_kis(
+        {s: u for s, u in uyelik_matrisi(tablo, izgara, kimlikler).items() if s in diziler},
+        diziler,
+    )
     return EvrenVerisi(
         timeframe=timeframe,
         zamanlar=np.asarray(izgara, dtype="int64"),
@@ -190,6 +196,8 @@ def veri_kur(
             "bar_sayisi": int(len(izgara)),
             "isinma_bar": int(olcum_baslangici),
             "uye_bar_toplami": int(sum(int(u.sum()) for u in uyelik.values())),
+            # Barı olmadığı için üyelikten düşen saatler (`uyeligi_barlara_kis`).
+            "bar_yok_uyelik": dict(sorted(bar_yok_uyelik.items())),
         },
         olcum_baslangici=olcum_baslangici,
         kural_kimligi=str(meta.get("kural_kimlik", "")),

@@ -15,7 +15,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scryne_quant.data.izgara import IzgaraHatasi, hizala, ortak_izgara, uyelik_matrisi
+from scryne_quant.data.izgara import (
+    IzgaraHatasi,
+    hizala,
+    ortak_izgara,
+    uyeligi_barlara_kis,
+    uyelik_matrisi,
+)
 from scryne_quant.data.kimlik import Enstruman
 from scryne_quant.strategy.evren import LISTELENMEDI
 from tests.conftest import bar_uret
@@ -159,3 +165,31 @@ class TestUyelikMatrisi:
             uyelik_matrisi(
                 pd.DataFrame(), np.array([bas], dtype="int64"), {"AAAUSDT": [a, b]}
             )
+
+
+class TestUyeligiBarlaraKis:
+    """Ay içi kesinti / ay ortası delist: üye ama barı yok. (Faz 12)"""
+
+    def _diziler(self, kalite: list[str]) -> dict[str, np.ndarray]:
+        return {"quality_status": np.array(kalite, dtype=object)}
+
+    def test_bari_olmayan_saat_uyelikten_duser_ve_sayilir(self):
+        uyelik = {"A": np.array([True, True, True, False]), "B": np.array([True] * 4)}
+        diziler = {
+            "A": self._diziler(["ok", LISTELENMEDI, "ok", LISTELENMEDI]),
+            "B": self._diziler(["ok"] * 4),
+        }
+        kesik, dusen = uyeligi_barlara_kis(uyelik, diziler)
+        assert kesik["A"].tolist() == [True, False, True, False]
+        assert kesik["B"].tolist() == [True] * 4
+        assert dusen == {"A": 1}  # üye olmayan boş bar sayılmaz
+
+    def test_yalnizca_engelleyici(self):
+        """K-037: üyelik hiçbir zaman False → True olmaz."""
+        rng = np.random.default_rng(3)
+        u = rng.random(500) < 0.5
+        kalite = np.where(rng.random(500) < 0.2, LISTELENMEDI, "ok").astype(object)
+        kesik, _ = uyeligi_barlara_kis({"A": u}, {"A": {"quality_status": kalite}})
+        assert not (kesik["A"] & ~u).any()
+        assert not (kesik["A"] & (kalite == LISTELENMEDI)).any()
+
