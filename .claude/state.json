@@ -1,7 +1,7 @@
 {
   "proje_adi": "ScryneQuant",
   "asama": "uygulama",
-  "guncellendi": "2026-09-16",
+  "guncellendi": "2026-09-17",
   "surum": 2,
-  "not": "Faz 0-7, 9, 10, 11 kapali. Faz 12 devam: kesitsel_fiyat KAPANDI (durma kurali, 4/6, hipotez 39-42, hicbiri kiyasi gecmedi). turev_evren KAPANDI (butce 4/4, hipotez 43-46; kiyas+funding/basis dislamasi, 2'si OOS'ta kiyasi gecti ama en iyi 6/11 kapi; kiyasin kendisi ayni IS/WF bandinda - filtre deger katmiyor; docs/Faz-12-Turev-Evren-Raporu.md). K-059: barı biten sembolde pozisyon 48 bar sonra sifir deger (arastirma hattinda acik). Siradaki: makro_rejim (butce 3; VIX filtresi, NFCI vintage filtresi, rejim motoru; data/makro hazir). Acik tasarim karari: stres rejiminde 'yeni giris yok' kuralinin elde tutulan pozisyonlara etkisi. En sonda sq lab coklu-test ile oos_sharpe esigi yeniden olculur (defter 46). Bellek: OsintLab servisi aciksa --isci 1."
+  "not": "Faz 0-7, 9, 10, 11 kapali. Faz 12: uc program KAPANDI (kesitsel_fiyat 4/6, turev_evren 4/4, makro_rejim 2/3 - rejim motoru harcanmadi); 48 hipotez, hicbiri kapilari gecmedi; ortak bulgu: evren kiyasinin ustune secim/dislama/engel kiyastan ayrismiyor. Faz 12'nin son kriteri: oos_sharpe esiginin evren cekilislerini de sayan null ile yeniden olcumu (tools/faz12_coklu_test.py --deneme 500, arka planda; sonucu runs/faz12/coklu-test-birlesik-500-0.json). Sonra: research/kapilar.py esigi + COKLU_TEST_CEKILIS_SAYISI testi guncellenir, Faz 12 kapanir. Onayli plan (K-060): Faz 14 one alinir - surekli acik host (karar: VPS mi ev PC mi, Scryne'a sorulacak), surec disi kill switch, alarmlar, 7/24 paper; ileriye donuk izleme icin paper motoru bugun TEK SEMBOLLU - evren kiyasini paper'da kosmak icin cok enstrumanli paper motoru gerekir. Bellek: OsintLab servisi aciksa --isci 1."
 }
