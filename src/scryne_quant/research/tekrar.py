@@ -33,6 +33,16 @@ class TekrarHatasi(DeneyHatasi):
     """Deney kaydından yeniden üretilemedi."""
 
 
+#: Kaydından yeniden koşturulabilen deney tipleri. `coklu_test` **listede değil**: girdisi
+#: bar verisi değil, defterin kendisi (`docs/Hipotez-Defteri.jsonl`) ve o dosya append-only
+#: büyüyor — aynı seed'le bile aynı çıktıyı vermesi defterin o günkü hâline bağlı. Tipi
+#: sessizce `KeyError` ile patlatmak yerine burada adıyla dışarıda bırakmak, "yeniden
+#: üretilemez" ile "kodda eksik" arasındaki farkı görünür kılıyor.
+TEKRAR_EDILEBILIR: frozenset[str] = frozenset(
+    {"tarama", "walk_forward", "stres", "monte_carlo", "karsilastirma", "degerlendirme"}
+)
+
+
 def _maliyet(govde: Mapping[str, Any]) -> MaliyetModeli:
     """Kayıttaki maliyet bloğunu modele çevirir — dosyadan **okumaz**."""
     kalibrasyon = govde.get("kalibrasyon")
@@ -70,6 +80,11 @@ def tekrar_uret(
 
     tip = kayit["tip"]
     girdi = kayit["girdi"]
+    if tip not in TEKRAR_EDILEBILIR:
+        raise TekrarHatasi(
+            f"tekrar edilemeyen deney tipi: {tip!r}. Tekrar edilebilenler: "
+            f"{', '.join(sorted(TEKRAR_EDILEBILIR))}"
+        )
     maliyet = _maliyet(girdi["maliyet"])
     sembol, timeframe = girdi["sembol"], girdi["timeframe"]
     sermaye = float(girdi["baslangic_sermaye"])
@@ -168,4 +183,4 @@ def tekrar_uret(
             test_bar=int(girdi["test_bar"]),
         )
 
-    raise TekrarHatasi(f"tekrar edilemeyen deney tipi: {tip!r}")
+    raise TekrarHatasi(f"tekrar edilemeyen deney tipi: {tip!r}")  # pragma: no cover

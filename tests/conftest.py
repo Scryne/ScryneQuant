@@ -14,8 +14,9 @@ import pytest
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import BAR_SUTUNLARI, KaliteDurumu
 from scryne_quant.risk import limitler as limit_mod
+from scryne_quant.strategy.hedef import hedef_kur
 from scryne_quant.strategy.sinyal import Sinyal, Yon
-from scryne_quant.strategy.temel import Strateji
+from scryne_quant.strategy.temel import PortfoyStratejisi, Strateji
 
 
 def bar_uret(
@@ -143,3 +144,54 @@ def risk_limitleri(**degisiklik) -> limit_mod.RiskLimitleri:
         "gerekceler": risk_gerekceleri(),
     }
     return limit_mod.RiskLimitleri(**(alanlar | degisiklik))
+
+
+class PlanliHedef(PortfoyStratejisi):
+    """Takvimden **hedef portföy** üreten test stratejisi. (Faz 10)
+
+    `PlanliStrateji`nin çok enstrümanlı ikizi ve aynı gerekçeyle var: referans
+    senaryolarında ölçülen şey strateji mantığı değil, motorun fill ve muhasebe
+    aritmetiği. Takvim bar indeksine bakıyor; indeks `ctx.uzunluk - 1`den, yani zaten
+    görülmüş bar sayısından türüyor — geleceğe değil takvime bakmak.
+
+    Görünmeyen bir sembol için hedef veren bir takvim satırı sessizce atlanmaz: o sembol
+    hedefe **konmaz** ve testte sayılabilir olması için `atlanan_semboller` listesinde
+    birikir.
+    """
+
+    ad = "planli_hedef"
+
+    def __init__(self, takvim: dict[int, dict[str, float]]) -> None:
+        self._takvim = {b: dict(h) for b, h in takvim.items()}
+        self.atlanan_semboller: list[tuple[int, str]] = []
+        super().__init__(
+            takvim=tuple((b, tuple(sorted(h.items()))) for b, h in sorted(takvim.items()))
+        )
+
+    def ozellikler(self):
+        return ()
+
+    def hazirla(self) -> None:
+        self.atlanan_semboller = []
+
+    def on_bar(self, ctx):
+        hedefler = self._takvim.get(ctx.uzunluk - 1)
+        if hedefler is None:
+            return None
+        gorunur = set(ctx.gorunur())
+        sinyaller = []
+        for sembol, agirlik in sorted(hedefler.items()):
+            if sembol not in gorunur:
+                self.atlanan_semboller.append((ctx.uzunluk - 1, sembol))
+                continue
+            sinyaller.append(
+                Sinyal(
+                    symbol=sembol,
+                    side=Yon.BUY if agirlik > 0.0 else Yon.FLAT,
+                    target_exposure=agirlik,
+                    confidence=1.0,
+                    reason="PLANLI_TAKVIM",
+                    timestamp=ctx.zaman,
+                )
+            )
+        return hedef_kur(ctx.zaman, sinyaller) if sinyaller else None

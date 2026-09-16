@@ -2690,3 +2690,115 @@ aynı büyüklüğü %18 / %34 ölçmüştü. Bugünkü listeden kurulan bir evr
 **Açık kalem:** üç veri kaynağının da lisans alanı **"doğrulanmadı"**. Binance kullanım
 koşulları okunup kaynaklı kaydedilmedi; tahmin yazılmadı. Faz 9'u bloke etmiyor, ikinci
 varlık sınıfı (K-053, Faz 15) için bloke edici hâle gelir.
+
+---
+
+## K-057 — Çok enstrümanlı motor tek motordur; portföy kurma öneri, risk onaydır
+
+**Durum:** kabul · **Tarih:** 2026-09-16 · **Uygular:** K-001, K-052/2, K-052/3, K-037,
+K-030 · **Tamamlar:** K-009, K-019, K-054 · **Kaynak:** Faz 10,
+`docs/Faz-10-Coklu-Enstruman-Raporu.md`
+
+### Karar — yedi madde
+
+1. **Tek motor var, sarmalayıcısı var.** `backtest/motor.py` kendi event loop'unu
+   **taşımıyor**: tek sembollü koşu, tek elemanlı bir evren + `TekEnstruman` sarmalayıcısıyla
+   `backtest/coklu_motor.py`ye gidiyor. K-052/2 *"çok enstrümanlı motor ikinci bir motor
+   değildir"* diyor; iki motorun "aynı sonucu verdiğini" test etmek bu cümlenin zayıf
+   hâlidir — iki motor bir gün ayrışabilir, tek kod yolu ayrışamaz. Ayrışmayı
+   `test_coklu_motor.py::test_tek_motor_kalmadi` statik olarak engelliyor.
+
+2. **Hedef portföy, ağırlık sözlüğü değil `Sinyal` demetidir.** `HedefPortfoy` sembole göre
+   sıralı, sembolleri benzersiz, tek bir barın zamanını taşıyan bir `Sinyal` demetidir.
+   Ağırlık sözlüğü seçilseydi `side`, `confidence` ve `reason` kaybolur ve *"azaltan niyete
+   engel konmaz"* (K-008/3) kuralı çok enstrümanlı yolda **uygulanamaz** hâle gelirdi: hangi
+   hedefin bir çıkış olduğu ancak mevcut pozisyona bakılarak tahmin edilebilirdi. Sıralama
+   zorunlu, çünkü emir sırası kayan nokta toplamını etkiliyor (K-009).
+   **Bahsedilmeyen sembol "kapat" demek değildir** — `Sinyal` sözleşmesindeki kuralın portföy
+   hâli.
+
+3. **Portföy düzeyi risk yalnızca aşağı çeker (K-037).** İki yeni limit: `azami_brut_maruziyet`
+   ve `azami_enstruman`. Sıra sabit: önce sinyal düzeyindeki 0-8 adımı, **sonra** portföy
+   tavanları. Ters sırada, sinyal düzeyinde reddedilecek bir hedef brüt bütçeden yer kapar ve
+   geçecek bir hedefi sessizce kısardı. Tavanlar azaltan niyetlere uygulanmaz ve mevcut
+   maruziyetin **altına zorlamaz**: bir tavanın satış emri üretmesi, stratejinin istemediği
+   bir çıkışı risk motorunun yazması olurdu. İkinci bir mühür yok — onay hâlâ `OnayliNiyet`
+   düzeyinde ve sembol başına; `PortfoyKarari` yalnızca onları bir arada taşıyor.
+
+4. **Portföy kurma `strategy/` altındadır ve bir öneridir.** Saf hesap olduğu için K-003'ün
+   izolasyon testinin kapsamında; `portfolio/` altında olsaydı o testi genişletmek ya da
+   kapsam dışı bırakmak gerekirdi. Ürettiği ağırlıklar bir onay **değildir**; kurmadaki bir
+   sayıyı gevşetmek canlıda hiçbir kapıyı açmaz. Yöntemin her ayarı `KurmaAyarlari.sozluk()`e,
+   oradan hipotez kimliğine girer — yöntem bir çekiliştir (K-051/4).
+   §12'nin *cost-aware turnover penalty*'si **bant** olarak uygulanıyor, ceza katsayısı olarak
+   değil: bandın birimi ağırlık ve sayısı doğrudan maliyet modelinden türetilebilir, ceza
+   katsayısı ise stratejiden stratejiye değişen skor ölçeğine bağlı olurdu.
+
+5. **Barı olmayan enstrüman: ne karar, ne fill, ne tahmin.** Bir sembolün `t`de barı yoksa o
+   sembolde karar verilmez ve doldurulmaz (K-028'in uzantısı). Açık bir pozisyon bu sebeple
+   kapatılamıyorsa **son bilinen fiyattan** değerlenir ve `bayat_degerleme` sayacı artar.
+   Sıfıra yazmak olmayan bir zararı, portföyden atmak olmayan bir kârı gerçekleştirmek olurdu.
+   Ölçüldü: 2025-01…2026-08 penceresinde (205 sembol) bu durum **hiç** oluşmadı; sayacın
+   kendisi Faz 12'nin ölçeceği şey.
+
+6. **`sonuc_hash` sıfır atlama sayaçlarına karşı dayanıklı hâle getirildi.** `atlama_sayimi`
+   kaydın okunabilirliği için sıfır sayaçları da yazıyor, ama o liste `AtlamaSebebi` enum'unun
+   **bugünkü** hâlinden türüyordu: yeni bir atlama sebebi eklemek, o sebebi hiç üretmemiş eski
+   koşuların hash'ini de değiştiriyordu. **Ölçüldü ve zaten olmuş:** Faz 4'ün tarama kayıtları,
+   Faz 5/6'da eklenen `risk_reddetti` ve `veri_bayat` yüzünden Faz 10'dan **önce** yeniden
+   üretilemez hâldeydi — üstelik her ekonomik değer (getiri, Sharpe, işlem sayısı, drawdown,
+   profit factor) birebir aynıyken. Bundan sonra hash'e yalnızca sıfır olmayan sayaçlar giriyor.
+   Aynı gerekçeyle `Sonuc.evren` ve `Islem.sembol` yalnızca çok enstrümanlı koşuda yazılıyor:
+   tek sembollü bir koşuda sembol zaten `veri.sembol`de ve evren diye bir şey yok.
+
+7. **Evren kıyası bir kıyastır, aile değil (K-030).** Tek sembolde kıyas `al_tut`; evrende
+   *"o ay listelenmiş likit isimleri, hiçbir seçim yapmadan taşısaydım ne olurdu"*. Hipotez
+   defterine çekiliş olarak **girmez** ve K-045'in "yeni çekiliş yok" kuralının kapsamında
+   değildir — Faz 4'ün `al_tut`u da değildi. Sıralaması evren kuralının kendi ölçütüyle aynı
+   büyüklükten (30 günlük ortalama kote hacim) geliyor; skoru sabit bırakmak, tavan
+   bağladığında kıyası evrenin **alfabetik** ilk N'ini taşıyan keyfi bir alt kümeye çevirirdi.
+   Ölçüldü: 205 sembollü pencerede tavan gerçekten bağlıyor ve kapasite oranı alfabetik
+   seçimde 0,167%, hacim sıralamasında 0,0038% — 44 kat fark.
+
+### Gerekçe: neden sarmalayıcı, neden "bit düzeyinde"
+
+K-052/2 kriteri şuydu: *"Faz 3'ün bağımsız referans fixture'ı yeni motorda bit düzeyinde aynı
+sonucu veriyor — bu kriter düşerse K-001 düşer."* Eşitliğin **nereden** geldiği önemli:
+
+- Boyutlandırma tek fonksiyondan (`fill.emir_hazirla_genel`); tek ve çok sembollü yollar onu
+  çağırıyor.
+- Defter aritmetiği tek yerden (`portfolio.durum.Pozisyon.al/sat`); `Portfoy` ve `CokluPortfoy`
+  aynı iki metodu çağırıyor.
+- Tur muhasebesi tek kalıpta (`backtest.defter`), sembol başına.
+- Portföy düzeyi tavanları varsayılan değerlerinde (1,0 ve 1000) tek sembollü koşuda bağlamaz.
+
+Yani aynı sayılar aynı sırada toplanıyor. Doğrulandı: Faz 3'ün 12 turluk ve kısmi maruziyetli
+iki senaryosu, tek elemanlı bir evrende Decimal referansla 1e-12 bağıl tolerans içinde aynı; ve
+gerçek 5,2 yıllık veride 12 noktalık bir parametre taramasının **bütün** ekonomik değerleri
+değişmedi.
+
+### Kapsam dışı bırakılanlar ve sebepleri
+
+- **Tam risk paritesi / optimizasyon.** Ağırlık `w_i ∝ 1/σ_i`; korelasyon **budama**
+  aşamasında ele alınıyor, ağırlıkta değil. Optimizasyon aynı veriye daha çok soru sormaktır
+  ve ayrı bir çekiliş olarak kaydedilmelidir.
+- **Bağlayıcı portföy limit sayıları.** `azami_brut_maruziyet = 1,0` ve
+  `azami_enstruman = 1000` bugün **bağlamıyor** ve bağlamaması bilinçli: Faz 10 yöntemi
+  *kurar*, iştahı ölçmez. Sayılar Faz 12'de, turnover ve kapasitenin gerçek maliyeti
+  ölçüldüğünde yazılır. Bugünden bir sayı yazmak, ölçülmemiş bir kapı olurdu (K-019).
+- **VaR/CVaR ve kapasite kapı değil.** K-054'ün kalıbı: raporlanır, eşiği ölçülmediği için
+  kapı değildir.
+- **Evren `ctx`inde sıra bilgisi yok.** Strateji sıralamayı kendi ölçüsüyle yapar; evren
+  tablosunun `sira` sütununu `ctx`e koymak, kuralın seçim ölçütünü stratejiye ücretsiz bir
+  sinyal olarak vermek olurdu.
+
+### Geri dönüş koşulları
+
+Bu karar şu üç durumda yeniden açılır:
+
+1. **Bellek.** Ölçüldü: 323 sembol × 32.857 bar = 945 MB dizi (2023-01…2026-08). Bir pencere
+   4 GB'ı aşarsa ortak ızgara yerine akış (chunked) kurulumu ölçülür — bugün gereksiz.
+2. **`bayat_degerleme` sıfırdan büyük çıkarsa**, delist edilmiş pozisyonun değerlemesi bir
+   iştah kararına dönüşür ve K-033'ün gerekçe disiplinine girer.
+3. **Portföy tavanlarından biri gerçekten bağlarsa**, o sayı iştah olmaktan çıkıp ölçülmüş
+   olmak zorunda kalır.

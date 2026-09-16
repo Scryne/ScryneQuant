@@ -44,8 +44,9 @@ from scryne_quant.risk import niyet as niyet_mod
 from scryne_quant.risk.audit import Defter, Olay, OlayTuru
 from scryne_quant.risk.durum import RiskDurumu
 from scryne_quant.risk.limitler import RiskLimitleri
-from scryne_quant.risk.niyet import Karar, OnayliNiyet, Red, RedSebebi
+from scryne_quant.risk.niyet import Karar, OnayliNiyet, PortfoyKarari, Red, RedSebebi
 from scryne_quant.risk.promotion import MOD_ESIGI, Asama, yeterli_mi
+from scryne_quant.strategy.hedef import HedefPortfoy
 from scryne_quant.strategy.sinyal import Sinyal
 
 #: Çalışma modları. `MOD_ESIGI` her birinin hangi promotion aşamasını şart koştuğunu
@@ -58,7 +59,18 @@ from scryne_quant.strategy.sinyal import Sinyal
 MODLAR: Final[tuple[str, ...]] = ("backtest", "gozlem", "paper", "live")
 
 #: Hedefi aşağı çekebilen limitler. Audit'te "hangi limit kısıtladı" sayımı bunu kullanıyor.
-KISIT_ADLARI: Final[tuple[str, ...]] = ("azami_maruziyet", "islem_basina_risk")
+#: İlk ikisi sinyal düzeyinde, son ikisi portföy düzeyinde (Faz 10).
+KISIT_ADLARI: Final[tuple[str, ...]] = (
+    "azami_maruziyet",
+    "islem_basina_risk",
+    "azami_brut_maruziyet",
+    "azami_enstruman",
+)
+
+#: Portföy düzeyinde uygulanan kısıtlar. Bunlar **yalnızca aşağı çeker** ve yalnızca
+#: artıran niyetlere uygulanır: brüt maruziyeti düşüren bir emri brüt maruziyet limitiyle
+#: engellemek, limitin amacının tersini yapardı (K-008/3 ile aynı mantık).
+PORTFOY_KISIT_ADLARI: Final[tuple[str, ...]] = ("azami_brut_maruziyet", "azami_enstruman")
 
 #: Risk motorunun volatilite ölçüsünün penceresi. Stratejinin bildirdiği özelliklerden
 #: **bağımsız**: risk kendi ölçüsünü kendi alır (`PiyasaOlcumu`). 14, limitlerin
@@ -259,14 +271,31 @@ class RiskMotoru:
         return karar
 
     def _karar(self, sinyal: Sinyal, olcum: PiyasaOlcumu) -> Karar:
+        sonuc = self._karar_hedefi(sinyal, olcum)
+        if isinstance(sonuc, Red):
+            return sonuc
+        hedef, kisitlayan = sonuc
+        return self._onay(sinyal, hedef, olcum, kisitlayan)
+
+    def _karar_hedefi(
+        self, sinyal: Sinyal, olcum: PiyasaOlcumu
+    ) -> tuple[float, tuple[str, ...]] | Red:
+        """Sinyal düzeyindeki 0-8 adımı. Döner: `(onaylanabilir hedef, kısıtlayanlar)` ya da `Red`.
+
+        Onayı **üretmiyor**, yalnızca hedefi hesaplıyor. Ayrımın sebebi portföy düzeyi
+        (Faz 10): brüt maruziyet ve enstrüman sayısı tavanları hedefleri aşağı çekebilir ve
+        `OnayliNiyet` mühürlü/değişmez olduğu için bu düzeltmenin mühürden **önce** olması
+        şart. Aksi hâlde ya mühür kırılırdı ya da portföy düzeyi ikinci bir onay tipi
+        üretirdi — ikisi de "onay üreten tek yer" iddiasını böler.
+        """
         # 0) Azaltan niyet: hiçbir engel uygulanmaz. Bir çıkışı engellemek riski artırır.
         if sinyal.side in niyet_mod.AZALTAN_YONLER:
-            return self._onay(sinyal, sinyal.target_exposure, olcum, ())
+            return sinyal.target_exposure, ()
 
         # 1) Geçersiz ölçümle karar verilmez. Tahmin etmek yerine reddetmek, K-007'nin
         #    "belirsizlikte kötü yöne yuvarla" kuralının bu katmandaki karşılığı.
         if olcum.fiyat <= 0.0 or olcum.ozkaynak <= 0.0:
-            return self._red(
+            return self._red_nesnesi(
                 sinyal,
                 RedSebebi.GECERSIZ_OLCUM,
                 olcum,
@@ -275,7 +304,7 @@ class RiskMotoru:
 
         # 2) SAFE_MODE: yeni giriş yok, istisnasız (K-008/1).
         if self.durum.safe_mode:
-            return self._red(
+            return self._red_nesnesi(
                 sinyal,
                 RedSebebi.SAFE_MODE,
                 olcum,
@@ -289,7 +318,7 @@ class RiskMotoru:
         gereken = MOD_ESIGI[self.mod]
         asama = self.asamalar.get(self._strateji_adi(sinyal), Asama.YOK)
         if not yeterli_mi(asama, gereken):
-            return self._red(
+            return self._red_nesnesi(
                 sinyal,
                 RedSebebi.PROMOTION_YOK,
                 olcum,
@@ -318,7 +347,7 @@ class RiskMotoru:
                     "mevcut_maruziyet": olcum.mevcut_maruziyet,
                 },
             )
-            return self._red(
+            return self._red_nesnesi(
                 sinyal,
                 RedSebebi.DRAWDOWN,
                 olcum,
@@ -331,7 +360,7 @@ class RiskMotoru:
         if self.durum.son_ozkaynak < self.durum.gun_basi_ozkaynak * (
             1.0 - self.limitler.gunluk_zarar_limiti
         ):
-            return self._red(
+            return self._red_nesnesi(
                 sinyal,
                 RedSebebi.GUNLUK_ZARAR,
                 olcum,
@@ -344,7 +373,7 @@ class RiskMotoru:
 
         # 6) Cooldown: ardışık kayıp penceresi.
         if self.durum.cooldownda_mi(olcum.bar_ms):
-            return self._red(
+            return self._red_nesnesi(
                 sinyal,
                 RedSebebi.COOLDOWN,
                 olcum,
@@ -359,9 +388,11 @@ class RiskMotoru:
         #    volatiliteyi bilmeden boyut hesaplanamaz).
         oran = olcum.atr_oran
         if oran is None:
-            return self._red(sinyal, RedSebebi.VOLATILITE_OLCULEMEDI, olcum, {"atr": olcum.atr})
+            return self._red_nesnesi(
+                sinyal, RedSebebi.VOLATILITE_OLCULEMEDI, olcum, {"atr": olcum.atr}
+            )
         if oran > self.limitler.volatilite_esigi:
-            return self._red(
+            return self._red_nesnesi(
                 sinyal,
                 RedSebebi.VOLATILITE,
                 olcum,
@@ -371,13 +402,138 @@ class RiskMotoru:
         # 8) Boyutlandırma: iki tavan, düşük olanı bağlar.
         hedef, kisitlayan = self._boyutlandir(sinyal.target_exposure, oran)
         if hedef < ASGARI_MARUZIYET:
-            return self._red(
+            return self._red_nesnesi(
                 sinyal,
                 RedSebebi.SIFIR_BOYUT,
                 olcum,
                 {"kisitlayan": list(kisitlayan), "atr_oran": oran},
             )
-        return self._onay(sinyal, hedef, olcum, kisitlayan)
+        return hedef, kisitlayan
+
+    # ------------------------------------------------------------------ portföy düzeyi
+
+    def portfoy_degerlendir(
+        self,
+        hedef: HedefPortfoy,
+        olcumler: dict[str, PiyasaOlcumu],
+        *,
+        mevcut_maruziyetler: dict[str, float],
+    ) -> PortfoyKarari:
+        """Bir hedef portföyü değerlendirir. **Portföy düzeyinde onay üreten tek yol budur.**
+
+        Sıra: önce her sinyal kendi 0-8 adımından geçer, **sonra** portföy düzeyi tavanları
+        (brüt maruziyet, enstrüman sayısı) kalanları aşağı çeker. Ters sırada, sinyal
+        düzeyinde reddedilecek bir hedef brüt bütçeden yer kaplar ve geçecek bir hedefi
+        sessizce kısardı.
+
+        `mevcut_maruziyetler` **tüm** açık pozisyonları içerir — hedefte bahsedilmeyenleri
+        de. Bahsedilmeyen bir pozisyon da brüt maruziyetin parçasıdır; yalnızca bahsedilene
+        bakan bir tavan, portföyün yarısını görmeyen bir tavan olurdu.
+
+        Portföy katmanı **izin veremez** (K-037): hiçbir hedef sinyal düzeyinde onaylanan
+        değerin üstüne çıkamaz, yalnızca aşağı çekilir veya reddedilir.
+        """
+        self.degerlendirilen += len(hedef.sinyaller)
+
+        adaylar: dict[str, tuple[float, tuple[str, ...]]] = {}
+        redler: dict[str, Red] = {}
+        for sinyal in hedef.sinyaller:
+            sembol = sinyal.symbol
+            if sembol not in olcumler:
+                raise RiskHatasi(
+                    f"{sembol}: piyasa ölçümü verilmedi. Ölçümsüz karar vermek, "
+                    "volatiliteyi bilmeden boyut hesaplamak olurdu"
+                )
+            sonuc = self._karar_hedefi(sinyal, olcumler[sembol])
+            if isinstance(sonuc, Red):
+                redler[sembol] = sonuc
+            else:
+                adaylar[sembol] = sonuc
+
+        portfoy_kisiti = self._portfoy_kisitla(
+            hedef, adaylar, redler, mevcut_maruziyetler, olcumler
+        )
+
+        kararlar: list[Karar] = []
+        for sinyal in hedef.sinyaller:
+            sembol = sinyal.symbol
+            if sembol in redler:
+                karar: Karar = redler[sembol]
+            else:
+                h, kisit = adaylar[sembol]
+                karar = self._onay(sinyal, h, olcumler[sembol], kisit)
+            self._kaydet(karar, olcumler[sembol])
+            kararlar.append(karar)
+
+        return PortfoyKarari(hedef=hedef, kararlar=tuple(kararlar), portfoy_kisiti=portfoy_kisiti)
+
+    def _portfoy_kisitla(
+        self,
+        hedef: HedefPortfoy,
+        adaylar: dict[str, tuple[float, tuple[str, ...]]],
+        redler: dict[str, Red],
+        mevcut: dict[str, float],
+        olcumler: dict[str, PiyasaOlcumu],
+    ) -> tuple[str, ...]:
+        """Brüt maruziyet ve enstrüman sayısı tavanlarını uygular. `adaylar`ı yerinde kısar."""
+        uygulanan: list[str] = []
+        bahsedilen = set(hedef.semboller)
+        disarida = sum(d for s, d in sorted(mevcut.items()) if s not in bahsedilen and d > 0.0)
+
+        # --- brüt maruziyet: yalnızca **artıran** hedefler kısılır.
+        artiran = {s for s, (h, _) in adaylar.items() if h > mevcut.get(s, 0.0)}
+        sabit = disarida + sum(h for s, (h, _) in sorted(adaylar.items()) if s not in artiran)
+        istenen = sum(h for s, (h, _) in sorted(adaylar.items()) if s in artiran)
+        tavan = self.limitler.azami_brut_maruziyet
+
+        if artiran and sabit + istenen > tavan:
+            butce = max(0.0, tavan - sabit)
+            olcek = butce / istenen if istenen > 0.0 else 0.0
+            uygulanan.append("azami_brut_maruziyet")
+            self.kisit_sayimi["azami_brut_maruziyet"] += 1
+            for sembol in sorted(artiran):
+                h, kisit = adaylar[sembol]
+                # Tavan mevcut maruziyetin altına **indirmez**: bu bir zorunlu satış emri
+                # olurdu ve stratejinin istemediği bir çıkışı risk motoru üretmiş olurdu.
+                yeni_h = max(h * olcek, min(h, mevcut.get(sembol, 0.0)))
+                if yeni_h < ASGARI_MARUZIYET:
+                    redler[sembol] = self._red_nesnesi(
+                        hedef.sinyal(sembol),  # type: ignore[arg-type]
+                        RedSebebi.BRUT_MARUZIYET,
+                        olcumler[sembol],
+                        {"tavan": tavan, "bagli": sabit, "istenen": istenen},
+                    )
+                    del adaylar[sembol]
+                elif yeni_h < h:
+                    adaylar[sembol] = (yeni_h, (*kisit, "azami_brut_maruziyet"))
+
+        # --- enstrüman sayısı: yalnızca **yeni** girişler elenir, mevcutlara dokunulmaz.
+        acik = {s for s, d in mevcut.items() if d > 0.0}
+        yeni_girisler = [
+            s for s, (h, _) in adaylar.items() if s not in acik and h >= ASGARI_MARUZIYET
+        ]
+        kalacak = len(acik - {s for s, (h, _) in adaylar.items() if h < ASGARI_MARUZIYET})
+        yer = max(0, self.limitler.azami_enstruman - kalacak)
+        if len(yeni_girisler) > yer:
+            # Sıralama: stratejinin kendi güveni (yüksek önce), eşitlikte sembol adı.
+            # Risk motoru hangi fikrin daha iyi olduğunu bilmez ve bilmemeli; bildiği tek
+            # şey stratejinin kendi beyanı.
+            sirali = sorted(
+                yeni_girisler,
+                key=lambda s: (-(hedef.sinyal(s).confidence if hedef.sinyal(s) else 0.0), s),
+            )
+            uygulanan.append("azami_enstruman")
+            self.kisit_sayimi["azami_enstruman"] += 1
+            for sembol in sirali[yer:]:
+                redler[sembol] = self._red_nesnesi(
+                    hedef.sinyal(sembol),  # type: ignore[arg-type]
+                    RedSebebi.ENSTRUMAN_SAYISI,
+                    olcumler[sembol],
+                    {"tavan": self.limitler.azami_enstruman, "acik": kalacak},
+                )
+                del adaylar[sembol]
+
+        return tuple(uygulanan)
 
     # ------------------------------------------------------------------ boyutlandırma
 
@@ -441,13 +597,14 @@ class RiskMotoru:
             self.kisit_sayimi[ad] = self.kisit_sayimi.get(ad, 0) + 1
         return niyet_mod.onayla(sinyal, hedef, self.limit_kimligi, olcum.bar_ms, kisitlayan)
 
-    def _red(
+    def _red_nesnesi(
         self,
         sinyal: Sinyal,
         sebep: RedSebebi,
         olcum: PiyasaOlcumu,
         ayrinti: dict[str, Any],
     ) -> Red:
+        """Red kaydını kurar **ve sayar**. Sayım burada çünkü her red bir kez üretiliyor."""
         self.red_sayimi[sebep.value] += 1
         return Red(
             sinyal=sinyal,

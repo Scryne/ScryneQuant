@@ -21,8 +21,9 @@ import numpy as np
 
 from scryne_quant.features.motor import hesapla
 from scryne_quant.strategy.baglam import PiyasaGorunumu
+from scryne_quant.strategy.evren import EvrenGorunumu
 from scryne_quant.strategy.sinyal import Sinyal
-from scryne_quant.strategy.temel import Strateji
+from scryne_quant.strategy.temel import PortfoyStratejisi, Strateji
 
 
 def gorunum_kur(
@@ -52,3 +53,38 @@ def sinyalleri_uret(strateji: Strateji, gorunum: PiyasaGorunumu) -> list[Sinyal]
         for ctx in gorunum.akis(parametreler=strateji.parametreler)
         if (sinyal := strateji.on_bar(ctx)) is not None
     ]
+
+
+def evren_gorunum_kur(
+    timeframe: str,
+    bar_dizileri: Mapping[str, Mapping[str, np.ndarray]],
+    uyelik: Mapping[str, np.ndarray],
+    strateji: PortfoyStratejisi,
+    *,
+    kural_kimligi: str = "",
+) -> EvrenGorunumu:
+    """Ortak ızgaraya oturtulmuş bar dizilerinden evren görünümü kurar. (Faz 10)
+
+    Stratejinin bildirdiği özellikler **her enstrüman için ayrı ayrı** hesaplanır. Ortak
+    hesaplanamazlar: indikatörler nedensel ve seriye özgü; bir sembolün SMA'sını başka bir
+    sembolün barlarından üretmek, cross-sectional bir karşılaştırmayı anlamsız kılar.
+
+    Isınma penceresi enstrüman başına kendi barlarından doğar: geç listelenmiş bir sembol,
+    kendi ilk barından itibaren ısınır ve o süre boyunca `ctx.hazir(...)` `False` döner.
+    """
+    gorunumler = {
+        sembol: PiyasaGorunumu(
+            sembol=sembol,
+            timeframe=timeframe,
+            barlar=dict(diziler),
+            ozellikler=hesapla(diziler, strateji.ozellikler()),
+        )
+        for sembol, diziler in sorted(bar_dizileri.items())
+    }
+    return EvrenGorunumu(
+        timeframe=timeframe,
+        zamanlar=next(iter(gorunumler.values())).barlar["open_time"],
+        gorunumler=gorunumler,
+        uyelik={s: np.asarray(d, dtype=bool) for s, d in uyelik.items()},
+        kural_kimligi=kural_kimligi,
+    )

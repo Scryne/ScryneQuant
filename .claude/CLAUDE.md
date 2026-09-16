@@ -118,6 +118,11 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri. Faz 0-8 v1 (8'i kapalı),
   Faz 9-16 v2. **Faz 8 sıraya değil tetiklenmeye bağlıdır:** promotion'u geçen ilk strateji
   çıktığında başlar.
+- `docs/Faz-10-Coklu-Enstruman-Raporu.md` — **Faz 10 ölçümleri (K-057):** tek motor +
+  sarmalayıcı (bit düzeyinde eşitlik kanıtı), çok enstrümanlı Decimal referansı, evren
+  look-ahead, portföy düzeyi risk limitleri, VaR/CVaR + kapasite, evren kıyası, ölçek/bellek
+  (323 sembol × 32.857 bar = 945 MB), ve iki beklenmeyen bulgu (`sq lab dogrula` kırıktı;
+  `sonuc_hash` atlama sayacı listesi büyüdükçe kayıyordu).
 - `docs/Faz-9-Veri-Platformu-Raporu.md` — **Faz 9 ölçümleri (K-056):** arşivden 735 sembol,
   µs geçişi, checksum, ızgaraya oturmayan barlar, kimlik kırılması eşikleri (12 bar / ln 10),
   PIT evren tablosu ve yeniden ölçülen hayatta kalma yanlılığı (medyan %16,7).
@@ -149,6 +154,12 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `runs/paper/<kosu>.sqlite` — bir paper/gözlem koşusunun **tamamı**: koşu kimliği,
   kontrol noktası, fill defteri, koşu günlüğü ve risk audit'i tek dosyada. Koşuyu
   yedeklemek tek bir dosyayı kopyalamak demek. `.gitignore`'da.
+- `src/scryne_quant/backtest/coklu_motor.py` — **çok enstrümanlı event loop (K-057).** Tek
+  sembollü `backtest/motor.py` bunun sarmalayıcısıdır; kendi döngüsü yok ve bu statik testle
+  korunuyor. Evren `ctx`i `strategy/evren.py`, hedef portföy sözleşmesi `strategy/hedef.py`,
+  portföy kurma `strategy/kurma.py`de.
+- `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
+  **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor
   (`npm run tokens`), elle yazılmıyor.
 - `DESIGN.md` — arayüz kimliği. Token'lar Faz 6'da dolduruldu ve **normatif**: kesin

@@ -3,5 +3,5 @@
   "asama": "uygulama",
   "guncellendi": "2026-09-16",
   "surum": 2,
-  "not": "Faz 0-7 ve 9 kapali. Faz 6 K-055 ile kapandi (30 gunluk kosu kriteri Faz 8/14'e tasindi). Faz 9 K-056 ile kapandi: arsivden 734 sembol/20,06M bar indirildi (data/evren), kanonik enstruman kimligi ve PIT evren tablosu kuruldu, K-034 yeniden olculdu. Siradaki is Faz 10 (cok enstrumanli arastirma cekirdegi). Faz 8 promotion'u gecen strateji ve surekli acik host bekliyor. Program adayi 01 (transkript desenleri) donduruldu, en erken Faz 12."
+  "not": "Faz 0-7, 9 ve 10 kapali. Faz 10 K-057 ile kapandi: cok enstrumanli motor kuruldu ve tek sembollu motor onun sarmalayicisi oldu (tek kod yolu), hedef portfoy sozlesmesi + portfoy kurma + portfoy duzeyi risk limitleri eklendi, evren look-ahead testi yesil, coklu enstrumanli bagimsiz Decimal referansi tutuyor. Yan bulgu: sq lab dogrula kirikmis (duzeltildi) ve sonuc_hash atlama sayaci listesinin buyumesine karsi dayanikli hale getirildi. Siradaki is Faz 11 (Dogrulama v2: K-054'un dort kapisi, PBO/CSCV, program kaydi + arama butcesi). Faz 8 promotion'u gecen strateji ve surekli acik host bekliyor."
 }

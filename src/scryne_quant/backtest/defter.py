@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from scryne_quant.backtest.fill import Emir, IslemYonu
 from scryne_quant.backtest.metrikler import Islem
-from scryne_quant.portfolio.durum import Portfoy
+from scryne_quant.portfolio.durum import CokluPortfoy, Portfoy
 from scryne_quant.risk.motor import RiskMotoru
 
 
@@ -71,4 +71,57 @@ def uygula(
     return portfoy, acik, kapanan
 
 
-__all__ = ["DefterHatasi", "uygula"]
+def uygula_coklu(
+    emir: Emir,
+    portfoy: CokluPortfoy,
+    acik: dict[str, Islem],
+    islemler: list[Islem],
+    *,
+    risk: RiskMotoru | None = None,
+) -> tuple[CokluPortfoy, Islem | None]:
+    """`uygula`nın çok enstrümanlı hâli: tur defteri sembol başına tutulur. (Faz 10)
+
+    Döner: `(yeni portföy, bu emirle kapanan tur)`. `acik` sözlüğü **yerinde** güncellenir —
+    tek sembollü hâlde tek bir `Islem | None` taşımakla aynı şey, sembol başına.
+
+    Turun tanımı değişmiyor: ilk alımda açılır, o sembolün pozisyonu sıfıra döndüğünde
+    kapanır. Bir sembolün turu başka bir sembolün pozisyonundan etkilenmez; portföy düzeyi
+    kararları `Islem` değil `Metrikler` ölçüyor.
+    """
+    sembol = emir.sembol
+    if not sembol:
+        raise DefterHatasi("çok enstrümanlı defterde sembolsüz emir")
+
+    if emir.yon is IslemYonu.AL:
+        tur = acik.get(sembol)
+        if tur is None:
+            tur = Islem(acilis_ms=emir.zaman_ms, sembol=sembol)
+            acik[sembol] = tur
+            islemler.append(tur)
+        portfoy = portfoy.al(sembol, emir.miktar, emir.fiyat, emir.komisyon, emir.zaman_ms)
+        tur.giris_notional += emir.notional
+        tur.giris_miktar += emir.miktar
+    else:
+        tur = acik.get(sembol)
+        if tur is None:  # pragma: no cover - pozisyon yokken satış emri üretilmez
+            raise DefterHatasi(f"{sembol}: açık işlem yokken satış emri")
+        portfoy, gerceklesen = portfoy.sat(sembol, emir.miktar, emir.fiyat, emir.komisyon)
+        tur.cikis_notional += emir.notional
+        tur.cikis_miktar += emir.miktar
+        tur.net_pnl += gerceklesen
+
+    tur.komisyon += emir.komisyon
+    tur.slippage += emir.slippage_maliyeti
+    tur.fill_sayisi += 1
+
+    kapanan: Islem | None = None
+    if not portfoy.pozisyon(sembol).acik:
+        tur.kapanis_ms = emir.zaman_ms
+        if risk is not None:
+            risk.islem_kapandi(tur.net_pnl, emir.zaman_ms)
+        kapanan = tur
+        acik.pop(sembol, None)
+    return portfoy, kapanan
+
+
+__all__ = ["DefterHatasi", "uygula", "uygula_coklu"]

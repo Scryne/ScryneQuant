@@ -20,6 +20,7 @@ açar.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final
 
@@ -43,6 +44,18 @@ ASGARI_YILLIK_PENCERE_MS: Final = 30 * 24 * 3_600_000
 #: gerektiğini anlar. Sonsuz döndürmek olmazdı: JSON'da geçersiz, ve bir metrik tablosunda
 #: "sonsuz" iyi diye okunur.
 CAGR_TAVANI: Final = 1e6
+
+#: VaR/CVaR güven düzeyleri. Tarihsel (parametrik değil) yöntem: dağılımın normal olduğunu
+#: varsaymak, kripto getirilerinde kuyruğu sistematik olarak hafife alır — K-007'nin
+#: "belirsizlikte aleyhte yuvarla" kuralına aykırı bir varsayım olurdu.
+#:
+#: **Bunlar kapı değil, raporlanan metrik** (K-054): eşiği ölçülmemiş bir sayı kapı değildir.
+VAR_GUVENLERI: Final[tuple[float, ...]] = (0.95, 0.99)
+
+#: Kapasite ölçüsünün ortalama günlük hacim penceresi (gün). 30 gün, tek bir haber gününün
+#: hacim patlamasının oranı şişirmesini engelleyecek kadar uzun; likiditenin ay içinde
+#: değiştiği bir evrende bağlayıcı kalacak kadar kısa.
+KAPASITE_ADV_GUN: Final = 30
 
 
 @dataclass(slots=True)
@@ -68,6 +81,15 @@ class Islem:
 
     fill_sayisi: int = 0
 
+    sembol: str = ""
+    """Turun enstrümanı. Tek sembollü koşuda boş bırakılır ve `sozluk()`e **yazılmaz**.
+
+    Yazılsaydı Faz 1-7'de `runs/` altına kaydedilmiş her sonucun `sonuc_hash`i değişirdi —
+    yani çok enstrümanlı motoru eklemek, onu hiç kullanmayan eski deneyleri yeniden
+    üretilemez yapardı (K-009). Aynı gerekçeyle `Sonuc.risk` de hash'e yalnızca varsa
+    giriyor. Tek sembollü koşuda sembol zaten `veri.sembol`de duruyor, kaybolmuyor.
+    """
+
     @property
     def kapali(self) -> bool:
         return self.kapanis_ms is not None
@@ -90,8 +112,8 @@ class Islem:
         """İşleme bağlanan sermayeye göre getiri kesri."""
         return self.net_pnl / self.giris_notional if self.giris_notional > 0.0 else 0.0
 
-    def sozluk(self) -> dict[str, Any]:
-        return {
+    def sozluk(self, *, sembol_yaz: bool = False) -> dict[str, Any]:
+        return ({"sembol": self.sembol} if sembol_yaz else {}) | {
             "acilis_ms": self.acilis_ms,
             "kapanis_ms": self.kapanis_ms,
             "giris_notional": self.giris_notional,
@@ -149,6 +171,27 @@ class Metrikler:
     ortalama_tutma_ms: float
     ortalama_tutma_bar: float
 
+    # --- kuyruk riski (§16, K-054 — raporlanır, kapı değildir)
+    var_95: float
+    """Bar getirilerinin %95 tarihsel VaR'ı, **pozitif kesir**: 0,03 = barların %5'inde
+    en az %3 kaybedildi. Yıllıklandırılmadı; ölçek timeframe'in kendisi."""
+
+    cvar_95: float
+    """VaR'ı aşan kuyruğun ortalaması (expected shortfall), pozitif kesir."""
+
+    var_99: float
+    cvar_99: float
+
+    # --- kapasite (§16)
+    kapasite_adv_azami: float
+    """Tek bir fill'in, o enstrümanın 30 günlük ortalama günlük hacmine oranı — azami.
+
+    Kapasitenin en dürüst tek sayısı bu: portföy büyüdükçe hangi emrin piyasayı iteceğini
+    ortalama değil, **en kötü** oran söyler. Ölçüm nedensel: ADV, fill barından önceki
+    pencereden hesaplanır."""
+
+    kapasite_adv_ortalama: float
+
     # --- maliyet ve maruziyet
     toplam_komisyon: float
     toplam_slippage: float
@@ -185,6 +228,12 @@ class Metrikler:
                 "ardisik_kayip",
                 "ortalama_tutma_ms",
                 "ortalama_tutma_bar",
+                "var_95",
+                "cvar_95",
+                "var_99",
+                "cvar_99",
+                "kapasite_adv_azami",
+                "kapasite_adv_ortalama",
                 "toplam_komisyon",
                 "toplam_slippage",
                 "islem_hacmi",
@@ -240,6 +289,49 @@ def drawdown(ozkaynak: np.ndarray) -> Drawdown:
     return Drawdown(azami=float(seri.max()), en_uzun_bar=int(en_uzun), seri=seri)
 
 
+def var_cvar(getiriler: np.ndarray, guven: float) -> tuple[float, float]:
+    """Tarihsel VaR ve CVaR; ikisi de **pozitif kesir** (kayıp) olarak döner.
+
+    Pozitif raporlamak `max_drawdown` ile aynı gerekçe: "VaR −0,03'ten büyük olmalı" gibi
+    her okuyanın yönünü karıştırdığı eşikler doğmasın.
+
+    Kayıp yoksa sıfır döner — negatif bir VaR ("en kötü barda bile kazandık") matematiksel
+    olarak doğru ama bir risk metriği olarak yanıltıcıdır.
+    """
+    if getiriler.size == 0:
+        return 0.0, 0.0
+    esik = float(np.quantile(getiriler, 1.0 - guven))
+    kuyruk = getiriler[getiriler <= esik]
+    cvar = float(kuyruk.mean()) if kuyruk.size else esik
+    return max(0.0, -esik), max(0.0, -cvar)
+
+
+def gunluk_hacim(
+    quote_volume: np.ndarray, timeframe_ms: int, gun: int = KAPASITE_ADV_GUN
+) -> np.ndarray:
+    """Nedensel ortalama günlük hacim: `i`. barda, **`i` dahil önceki** `gun` günün ortalaması.
+
+    `i`yi dahil etmek bir look-ahead değil: kapasite ölçüsü fill barında hesaplanıyor ve o
+    barın hacmi fill anında henüz bilinmiyor olsa da, kapasite bir **karar girdisi değil**,
+    bir rapor. Karara girseydi (örneğin "ADV'nin %1'ini aşma" diye bir risk limiti) pencere
+    bir bar geriye kaydırılmak zorunda kalırdı; o gün limit yazıldığında burada da yazacak.
+
+    Isınma bölgesinde (ilk pencere dolmadan) eldeki barların ortalaması kullanılır: sıfır
+    döndürmek oranı sonsuz yapardı, NaN döndürmek kapasiteyi ölçülemez.
+    """
+    if quote_volume.size == 0:
+        return np.array([], dtype=np.float64)
+    bar_gun = max(1, round(86_400_000 / timeframe_ms))
+    pencere = max(1, bar_gun * gun)
+    v = np.asarray(quote_volume, dtype=np.float64)
+    kum = np.concatenate(([0.0], np.cumsum(np.nan_to_num(v, nan=0.0))))
+    idx = np.arange(1, v.size + 1)
+    bas = np.maximum(0, idx - pencere)
+    toplam = kum[idx] - kum[bas]
+    gun_sayisi = np.maximum((idx - bas) / bar_gun, 1.0 / bar_gun)
+    return toplam / gun_sayisi
+
+
 def _bolum(pay: float, payda: float, varsayilan: float = 0.0) -> float:
     """Sıfıra bölmeyi `inf` yerine açık bir varsayılana çevirir.
 
@@ -256,8 +348,15 @@ def hesapla(
     islemler: list[Islem],
     timeframe_ms: int,
     baslangic_sermaye: float,
+    *,
+    kapasite_oranlari: Sequence[float] = (),
 ) -> Metrikler:
-    """Equity eğrisi + işlem defterinden metrikleri üretir."""
+    """Equity eğrisi + işlem defterinden metrikleri üretir.
+
+    `kapasite_oranlari`: fill başına `notional / ADV` oranları. Motor hesaplar, çünkü hacim
+    serisi metrik katmanında yok — ve olmamalı: metrikler equity eğrisi ile işlem
+    defterinden türer, bar verisinden değil.
+    """
     if ozkaynak.size == 0:
         raise ValueError("boş equity eğrisi")
     if maruziyet.size != ozkaynak.size:
@@ -330,6 +429,14 @@ def hesapla(
         en_iyi_islem=max((i.net_pnl for i in kapali), default=0.0),
         en_kotu_islem=min((i.net_pnl for i in kapali), default=0.0),
         ardisik_kayip=enuzun,
+        var_95=var_cvar(getiriler, 0.95)[0],
+        cvar_95=var_cvar(getiriler, 0.95)[1],
+        var_99=var_cvar(getiriler, 0.99)[0],
+        cvar_99=var_cvar(getiriler, 0.99)[1],
+        kapasite_adv_azami=max(kapasite_oranlari, default=0.0),
+        kapasite_adv_ortalama=(
+            sum(kapasite_oranlari) / len(kapasite_oranlari) if kapasite_oranlari else 0.0
+        ),
         ortalama_tutma_ms=_bolum(sum(i.sure_ms for i in kapali), len(kapali)),
         ortalama_tutma_bar=_bolum(sum(i.sure_ms for i in kapali), len(kapali) * timeframe_ms),
         toplam_komisyon=sum(i.komisyon for i in islemler),

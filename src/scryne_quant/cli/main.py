@@ -23,6 +23,7 @@ from typing import Annotated, Any
 
 import typer
 
+from scryne_quant.backtest.coklu_motor import CokluBacktest
 from scryne_quant.backtest.motor import Backtest
 from scryne_quant.cli.testnet import testnet_app
 from scryne_quant.common import maliyet as maliyet_mod
@@ -54,6 +55,7 @@ from scryne_quant.research import bolme, tekrar
 from scryne_quant.research import coklu_test as coklu_mod
 from scryne_quant.research import degerlendirme as degerlendirme_mod
 from scryne_quant.research import deney as deney_mod
+from scryne_quant.research import evren_kosu as evren_kosu_mod
 from scryne_quant.research import hipotez as hipotez_mod
 from scryne_quant.research import kapilar as kapilar_mod
 from scryne_quant.research import karsilastirma as karsilastirma_mod
@@ -66,7 +68,13 @@ from scryne_quant.risk import limitler as limit_mod
 from scryne_quant.risk import promotion as promotion_mod
 from scryne_quant.risk.audit import OlayTuru, SqliteDefter
 from scryne_quant.risk.motor import RiskMotoru
-from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE, BilinmeyenStrateji, coz
+from scryne_quant.strategy.kutuphane import (
+    EVREN_KIYAS,
+    KIYAS,
+    KUTUPHANE,
+    BilinmeyenStrateji,
+    coz,
+)
 from scryne_quant.strategy.kutuphane import aile as _aile
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
 
@@ -103,6 +111,11 @@ paper_app = typer.Typer(
     help="Paper/gözlem koşusu: canlı veri, simüle emir, dashboard. (Faz 6)",
 )
 app.add_typer(paper_app)
+evren_app = typer.Typer(
+    name="evren",
+    help="Çok enstrümanlı araştırma çekirdeği: evren üzerinde backtest. (Faz 10)",
+)
+app.add_typer(evren_app)
 app.add_typer(testnet_app)
 
 #: Koşu dosyalarının varsayılan yeri. Koşu başına **tek** dosya: durum, fill defteri,
@@ -1437,10 +1450,20 @@ def lab_dogrula(
     yani bir betikten de çağrılabilir.
     """
     kayit = deney_mod.oku(kayit_yolu)
+    if kayit["tip"] not in tekrar.TEKRAR_EDILEBILIR:
+        typer.secho(
+            f"{kayit_yolu.name} · {kayit['tip']}: bu deney tipi kaydından yeniden "
+            "üretilemiyor (girdisi bar verisi değil).",
+            fg=typer.colors.YELLOW,
+        )
+        raise typer.Exit(1)
+    # Strateji adı kaydın **üst düzeyinde**, `girdi` içinde değil (`deney.kaydet` böyle
+    # yazıyor). Yanlış yerden okumak her kaydı `KeyError` ile düşürüyordu — ve bu komut
+    # Faz 4'ün "herhangi bir deney kaydından yeniden üretilebiliyor" kanıtının kendisi.
     diziler, veri_hash, funding_hash = _lab_veri(
         depo, kayit["girdi"]["sembol"], kayit["girdi"]["timeframe"]
     )
-    veri_hash = _veri_kimligi(kayit["girdi"]["strateji"], veri_hash, funding_hash)
+    veri_hash = _veri_kimligi(kayit["strateji"], veri_hash, funding_hash)
     yeniden = tekrar.tekrar_uret(kayit, diziler, veri_hash)
     ayni, aciklama = deney_mod.dogrula(kayit, yeniden)
 
@@ -2727,6 +2750,123 @@ def _konsolu_utf8_yap() -> None:
         # pragma: no cover - kapalı veya yönlendirilmiş akış
         with suppress(ValueError, OSError):
             yeniden(encoding="utf-8", errors="replace")
+
+
+@evren_app.command("backtest")
+def evren_backtest(
+    tablo: Annotated[Path, typer.Argument(help="PIT evren tablosu (.parquet).")],
+    strateji: Annotated[
+        str, typer.Option("--strateji", help="Çok enstrümanlı strateji/kıyas adı.")
+    ] = "evren_esit_agirlik",
+    baslangic_ay: Annotated[
+        str, typer.Option("--baslangic", help="Pencere başlangıcı, YYYY-MM.")
+    ] = "",
+    bitis_ay: Annotated[str, typer.Option("--bitis", help="Pencere bitişi, YYYY-MM.")] = "",
+    azami_enstruman: Annotated[
+        int, typer.Option("--azami-enstruman", help="Aynı anda taşınacak azami pozisyon.")
+    ] = 10,
+    azami_agirlik: Annotated[
+        float, typer.Option("--azami-agirlik", help="Tek enstrüman ağırlık tavanı.")
+    ] = 0.30,
+    yeniden_dengele: Annotated[
+        int, typer.Option("--yeniden-dengele", help="Yeniden dengeleme periyodu (bar).")
+    ] = 720,
+    oynaklik_ayarli: Annotated[
+        bool, typer.Option("--oynaklik-ayarli", help="Eşit ağırlık yerine oynaklık ayarlı boyut.")
+    ] = False,
+    azami_sembol: Annotated[
+        int, typer.Option("--azami-sembol", help="Bellek tavanı: yüklenecek azami sembol.")
+    ] = 120,
+    sermaye: Annotated[float, typer.Option("--sermaye")] = 10_000.0,
+    depo_kok: Depo = arsiv_mod.VARSAYILAN_EVREN_DEPO,
+    yaz: Annotated[bool, typer.Option("--yaz/--yazma", help="Sonucu runs/ altına yaz.")] = True,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Evren üzerinde çok enstrümanlı backtest koşturur. (Faz 10)
+
+    **Bu komut alfa aramaz.** Varsayılan strateji bir kıyastır (K-030): "o ay listelenmiş
+    likit isimlerin hepsini taşısaydım ne olurdu". Bir araştırma programı açmadan
+    (K-051) buradan bir hipotez üretilmez; ölçülen şey çekirdeğin kendisi.
+    """
+    if strateji not in EVREN_KIYAS:
+        raise typer.BadParameter(
+            f"{strateji!r} çok enstrümanlı kütüphanede yok; kayıtlı: "
+            f"{', '.join(sorted(EVREN_KIYAS))}"
+        )
+    sinif = EVREN_KIYAS[strateji]
+    nesne = sinif(
+        yeniden_dengele_bar=yeniden_dengele,
+        azami_enstruman=azami_enstruman,
+        azami_agirlik=azami_agirlik,
+        esit_agirlik=not oynaklik_ayarli,
+    )
+
+    basladi = time.perf_counter()
+    kurulum = evren_kosu_mod.kur(
+        tablo,
+        nesne,
+        depo_kok=depo_kok,
+        baslangic_ay=baslangic_ay or None,
+        bitis_ay=bitis_ay or None,
+        azami_sembol=azami_sembol,
+    )
+    kurulum_sn = time.perf_counter() - basladi
+
+    basladi = time.perf_counter()
+    sonuc = CokluBacktest(
+        nesne, maliyet_mod.yukle(), baslangic_sermaye=sermaye
+    ).calistir(
+        kurulum.gorunum,
+        veri_sha256=kurulum.veri_sha256,
+        olcum_baslangici=kurulum.olcum_baslangici,
+    )
+    kosu_sn = time.perf_counter() - basladi
+
+    yol: Path | None = None
+    if yaz:
+        yol = sonuc.yaz(
+            VARSAYILAN_KOSU_KOKU
+            / "evren"
+            / f"{sonuc.config_hash[:12]}-{sonuc.sonuc_hash[:12]}.json"
+        )
+
+    m = sonuc.metrikler
+    ozet = {
+        "evren": kurulum.meta,
+        "strateji": strateji,
+        "kurulum_sn": round(kurulum_sn, 2),
+        "kosu_sn": round(kosu_sn, 2),
+        "config_hash": sonuc.config_hash,
+        "sonuc_hash": sonuc.sonuc_hash,
+        "metrikler": m.sozluk(),
+        "akis": sonuc.sozluk()["akis"],
+        "kayit": str(yol) if yol else None,
+    }
+    if json_cikti:
+        _yaz_json(ozet)
+        return
+
+    typer.echo(f"evren backtest · {strateji} · {kurulum.meta['sembol_sayisi']} sembol")
+    typer.echo(
+        f"  pencere      : {baslangic_ay or 'başı'} … {bitis_ay or 'sonu'} "
+        f"({kurulum.meta['bar_sayisi']:,} bar, {kurulum.meta['uye_bar_toplami']:,} üye bar)"
+    )
+    typer.echo(f"  süre         : kurulum {kurulum_sn:.1f} s · koşu {kosu_sn:.1f} s")
+    typer.echo(
+        f"  sermaye      : {m.baslangic_sermaye:,.0f} → {m.bitis_sermaye:,.0f} "
+        f"({m.toplam_getiri:+.2%})"
+    )
+    typer.echo(f"  Sharpe/MaxDD : {m.sharpe:+.3f} / {m.max_drawdown:.2%}")
+    typer.echo(f"  işlem        : {m.islem_sayisi:,} (turnover {m.turnover:.1f}×)")
+    typer.echo(f"  VaR/CVaR %95 : {m.var_95:.3%} / {m.cvar_95:.3%}")
+    typer.echo(
+        f"  kapasite ADV : azami {m.kapasite_adv_azami:.4%} · "
+        f"ortalama {m.kapasite_adv_ortalama:.4%}"
+    )
+    typer.echo(f"  maliyet      : {m.toplam_komisyon + m.toplam_slippage:,.0f}")
+    typer.echo(f"  sonuc_hash   : {sonuc.sonuc_hash[:16]}")
+    if yol:
+        typer.echo(f"  kayıt        : {yol}")
 
 
 def main() -> int:

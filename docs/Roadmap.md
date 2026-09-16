@@ -33,7 +33,7 @@ yanlış sonuç olarak geri döner.
 | 7 | Execution sandbox (testnet) | ✅ Tamamlandı | Duplicate order üretilemiyor; reconciliation çalışıyor; testnet'te ≥100 emir hatasız |
 | 8 | Kontrollü live (tetiklemeli) | ⏳ Bekliyor | Promotion'u geçmiş ≥1 strateji, minimum sermaye, backtest-paper-live drift ölçülüyor |
 | 9 | Veri platformu v2 (PIT + evren + kimlik) | ✅ Tamamlandı | Delist dahil çoklu sembol indirilmiş; PIT evren tablosu üretiliyor; kimlik kırılması yakalanıyor; `available_time` kesmesi testli |
-| 10 | Çok enstrümanlı araştırma çekirdeği | ⏳ Bekliyor | Tek enstrüman özel hâlde bit düzeyinde aynı; çok enstrümanlı bağımsız referans tutuyor; evren look-ahead testi yeşil |
+| 10 | Çok enstrümanlı araştırma çekirdeği | ✅ Tamamlandı | Tek enstrüman özel hâlde bit düzeyinde aynı; çok enstrümanlı bağımsız referans tutuyor; evren look-ahead testi yeşil |
 | 11 | Doğrulama v2 | ⏳ Bekliyor | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
 | 12 | Araştırma programları (cross-sectional, türev, makro) | ⏳ Bekliyor | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
 | 13 | Haber/olay zekâsı + ML (koşullu) | ⏳ Bekliyor | Açılma koşulu: veri bütçesi kararı + kaynak spike'ı. Açılırsa: LLM kesim tarihi kayıtlı, `leak_riski` uygulanıyor |
@@ -756,7 +756,7 @@ mikrosaniyeye geçmiş, pandas'ın varsayılan float ayrıştırıcısı değerl
 REST'ten 45.576 barın 4'ünde farklı, ve 2018-02 kesintisinden sonra 6 sembolde 258 bar
 ızgaraya oturmuyor. Dördü de K-056'ya bağlandı.
 
-### Faz 10: Çok enstrümanlı araştırma çekirdeği
+### Faz 10: Çok enstrümanlı araştırma çekirdeği — ✅ kapandı (2026-09-16, K-057)
 
 - **İşler:** Evren `ctx`i (t anında üyelik + her enstrümanın kesilmiş görünümü); hedef portföy
   sözleşmesi; portföy kurma (oynaklık ayarlı boyut, korelasyon ve konsantrasyon limitleri,
@@ -775,6 +775,39 @@ REST'ten 45.576 barın 4'ünde farklı, ve 2018-02 kesintisinden sonra 6 sembold
     (`test_risk_bypass.py`) hâlâ yeşil; portföy kurma **izin veren** bir katman değil.
 - **Notlar:** Portföy kurma yöntemi bir **çekiliştir** (K-051/4) — bu fazda yöntem *kurulur*,
   strateji aranmaz.
+
+**Durum — beş kriterin beşi de karşılandı. Ölçümler `docs/Faz-10-Coklu-Enstruman-Raporu.md`de:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| Tek enstrüman özel hâl; Faz 3 referansı bit düzeyinde aynı | ✅ `backtest/motor.py` artık **sarmalayıcı**, kendi döngüsü yok (statik testle korunuyor). İki referans senaryosu da Decimal'e 1e-12 içinde; gerçek 5,2 yıllık veride 12 noktalık taramanın tüm ekonomik değerleri değişmedi |
+| Çok enstrümanlı bağımsız referans (≥2 enstrüman, ≥10 işlem), üretici projeyi import etmiyor | ✅ `tests/fixtures/coklu_referans.json` — 12 tur / 2 enstrüman, kapalı formülle çapraz doğrulandı (fark 4,39e-49); ikinci senaryo eşzamanlı dengeleme |
+| Evren look-ahead testi yeşil (fiyat **ve** listeleme/delist) | ✅ Üç bozma + birleşik; negatif kontrol (evrenin geleceğine bakan strateji) yakalanıyor; evren **geçmişi** değişince kararlar değişiyor |
+| Determinizm: aynı veri + config → aynı `sonuc_hash` | ✅ Birim testte ve 205 sembollü gerçek koşuda |
+| Risk motoru portföyü onaylıyor/reddediyor; bypass testi yeşil; kurma izin veren katman değil | ✅ İki portföy limiti (`azami_brut_maruziyet`, `azami_enstruman`); kurmanın %80 önerisi riskin %30 tavanında kesiliyor |
+
+**Fazın sürprizi kriterlerde değildi.** `sonuc_hash` beklenmedik biçimde kaydı ve sebep
+arandığında çıkan şey Faz 10 olmadı: `sq lab dogrula` komutu kayıttaki strateji adını yanlış
+yerden okuyordu (**her** kayıtta `KeyError`) ve düzeltildikten sonra Faz 4'ün tarama kaydının
+zaten yeniden üretilemediği görüldü — üstelik getiri, Sharpe, işlem sayısı, drawdown ve profit
+factor birebir aynıyken. Sebep `atlama_sayimi`nin `AtlamaSebebi` enum'unun bugünkü hâlini
+yazması; Faz 5 ve 6'da eklenen iki sayaç, hiç tetiklenmedikleri koşuların hash'ini
+değiştirmişti. `sonuc_hash` artık yalnızca sıfır olmayan sayaçları içeriyor (K-057/6).
+
+**İkinci ölçüm sürprizi kapasite metriğinden geldi:** evren kıyasının sıralaması sembol
+adına düşerken azami fill/ADV oranı %0,167 çıkıyordu; sıralama evren kuralının kendi ölçütüne
+(30 günlük ortalama kote hacim) bağlandığında aynı sayı %0,0038 oldu — **44 kat.** Getiri
+tablosu her iki hâlde de makul görünüyordu; farkı yalnızca yeni metrik yakaladı.
+
+**Üretilen paketler:** `strategy/` (`hedef.py`, `evren.py`, `kurma.py`, `temel.PortfoyStratejisi`
++ `TekEnstruman`, `kutuphane/evren_esit_agirlik.py`), `backtest/coklu_motor.py`,
+`portfolio/durum.Pozisyon` + `CokluPortfoy`, `data/izgara.py`, `research/evren_kosu.py`,
+`tools/coklu_referans_uret.py`, CLI: `sq evren backtest`.
+
+**Faz 10'un verdiği karar:** K-057 (tek motor + sarmalayıcı; hedef portföy sinyal demetidir;
+portföy düzeyi risk yalnızca aşağı çeker; kurma öneri, risk onay; barı olmayan enstrüman
+tahmin edilmez; `sonuc_hash` sayaç listesinin büyümesine karşı dayanıklı; evren kıyası
+kıyastır, aile değil).
 
 ### Faz 11: Doğrulama v2
 

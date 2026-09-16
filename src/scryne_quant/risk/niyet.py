@@ -24,6 +24,7 @@ from enum import StrEnum
 from typing import Any
 
 from scryne_quant.risk import muhur
+from scryne_quant.strategy.hedef import HedefPortfoy
 from scryne_quant.strategy.sinyal import Sinyal, Yon
 
 
@@ -50,6 +51,19 @@ class RedSebebi(StrEnum):
 
     VOLATILITE_OLCULEMEDI = "volatilite_olculemedi"
     """Volatilite ölçülemedi (ATR yok). Ölçülemeyen guard geçilmiş sayılmaz."""
+
+    BRUT_MARUZIYET = "brut_maruziyet"
+    """Portföyün brüt maruziyet tavanı doldu; bu hedef için yer kalmadı (Faz 10, §12).
+
+    Tavan **aşağı çeker**; sıfıra kadar çekmek zorunda kaldığında red olur. Azaltan
+    niyetlere uygulanmaz: brüt maruziyeti düşüren bir emri brüt maruziyet limitiyle
+    engellemek, limitin amacının tersini yapardı."""
+
+    ENSTRUMAN_SAYISI = "enstruman_sayisi"
+    """Eşzamanlı enstrüman tavanı dolu; bu **yeni** giriş açılmıyor (Faz 10, §12).
+
+    Mevcut pozisyonlar etkilenmez ve çıkışlar hiçbir zaman engellenmez. Hangi adayın
+    eleneceği stratejinin kendi `confidence`ına göre belirlenir, eşitlikte sembol sırasına."""
 
     SIFIR_BOYUT = "sifir_boyut"
     """Limitler hedefi sıfıra indirdi; gönderilecek bir pozisyon kalmadı."""
@@ -180,6 +194,46 @@ class Red:
 Karar = OnayliNiyet | Red
 
 
+@dataclass(frozen=True, slots=True)
+class PortfoyKarari:
+    """Bir hedef portföyün risk motorundan çıkan hâli: sembol başına karar. (Faz 10)
+
+    **İkinci bir mühür yok.** Onay hâlâ `OnayliNiyet` düzeyinde ve sembol başına
+    mühürlü; bu nesne yalnızca onları bir arada taşıyor. Portföy düzeyinde ayrı bir
+    mühür olsaydı execution kapısının iki farklı onay tipini tanıması gerekirdi ve
+    "onaylanmış intent dışında hiçbir şey geçmez" cümlesi iki cümleye bölünürdü.
+
+    `portfoy_kisiti` portföy düzeyinde **aşağı çeken** limitlerin adları. Bu katman
+    izin veremez, yalnızca kısabilir (K-037).
+    """
+
+    hedef: HedefPortfoy
+    kararlar: tuple[Karar, ...]
+    """Sembole göre sıralı — `HedefPortfoy.sinyaller` ile aynı sırada."""
+
+    portfoy_kisiti: tuple[str, ...] = ()
+
+    @property
+    def onaylar(self) -> tuple[OnayliNiyet, ...]:
+        return tuple(k for k in self.kararlar if isinstance(k, OnayliNiyet))
+
+    @property
+    def redler(self) -> tuple[Red, ...]:
+        return tuple(k for k in self.kararlar if isinstance(k, Red))
+
+    def onayli_hedefler(self) -> dict[str, tuple[Sinyal, float]]:
+        """Motorun emre çevireceği biçim: sembol → (sinyal, onaylı maruziyet)."""
+        return {o.sinyal.symbol: (o.sinyal, o.onayli_maruziyet) for o in self.onaylar}
+
+    def sozluk(self) -> dict[str, Any]:
+        return {
+            "timestamp": self.hedef.timestamp,
+            "yontem": self.hedef.yontem,
+            "portfoy_kisiti": list(self.portfoy_kisiti),
+            "kararlar": [k.sozluk() for k in self.kararlar],
+        }
+
+
 def onayla(
     sinyal: Sinyal,
     onayli_maruziyet: float,
@@ -227,6 +281,7 @@ __all__ = [
     "AZALTAN_YONLER",
     "Karar",
     "OnayliNiyet",
+    "PortfoyKarari",
     "Red",
     "RedSebebi",
     "dogrula",

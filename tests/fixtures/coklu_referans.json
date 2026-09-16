@@ -1,0 +1,3373 @@
+{
+ "baslangic_sermaye": 10000.0,
+ "hassasiyet": "Decimal, prec=50",
+ "maliyet": {
+  "fee_taker_bps": 10.0,
+  "slippage_bps": 5.0
+ },
+ "not": "Çok enstrümanlı bağımsız referans (Faz 10, K-029/K-052-2). Motor float64, bu dosya Decimal; senaryo C ayrıca kapalı formülle çapraz doğrulandı. Sayılar string olarak yazılıyor ki JSON'a yazarken hassasiyet kaybolmasın.",
+ "semboller": [
+  "AAAUSDT",
+  "BBBUSDT"
+ ],
+ "senaryolar": [
+  {
+   "aciklama": "12 tur, her biri tek bir enstrümana tüm nakitle giriş ve tam çıkış; turlar iki enstrüman arasında dönüşümlü. Kapalı formülle çapraz doğrulanabilen tek senaryo — ve formül tek enstrümanlı referansınkiyle birebir aynı.",
+   "ad": "donusumlu_tam_giris_cikis",
+   "barlar": {
+    "AAAUSDT": [
+     {
+      "close": "20000",
+      "high": "20050",
+      "low": "19950",
+      "open": "20000",
+      "open_time": 1699999200000,
+      "quality_status": "ok",
+      "quote_volume": "200000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20000",
+      "high": "20050",
+      "low": "19950",
+      "open": "20000",
+      "open_time": 1700002800000,
+      "quality_status": "ok",
+      "quote_volume": "200000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20000",
+      "high": "20050",
+      "low": "19950",
+      "open": "20000",
+      "open_time": 1700006400000,
+      "quality_status": "ok",
+      "quote_volume": "200000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20600",
+      "high": "20650",
+      "low": "19950",
+      "open": "20000",
+      "open_time": 1700010000000,
+      "quality_status": "ok",
+      "quote_volume": "200000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20600",
+      "high": "20650",
+      "low": "20550",
+      "open": "20600",
+      "open_time": 1700013600000,
+      "quality_status": "ok",
+      "quote_volume": "206000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20600",
+      "high": "20650",
+      "low": "20550",
+      "open": "20600",
+      "open_time": 1700017200000,
+      "quality_status": "ok",
+      "quote_volume": "206000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20600",
+      "high": "20650",
+      "low": "20550",
+      "open": "20600",
+      "open_time": 1700020800000,
+      "quality_status": "ok",
+      "quote_volume": "206000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20600",
+      "high": "20650",
+      "low": "20550",
+      "open": "20600",
+      "open_time": 1700024400000,
+      "quality_status": "ok",
+      "quote_volume": "206000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20600",
+      "high": "20650",
+      "low": "20550",
+      "open": "20600",
+      "open_time": 1700028000000,
+      "quality_status": "ok",
+      "quote_volume": "206000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20600",
+      "high": "20650",
+      "low": "20550",
+      "open": "20600",
+      "open_time": 1700031600000,
+      "quality_status": "ok",
+      "quote_volume": "206000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20600",
+      "high": "20650",
+      "low": "20550",
+      "open": "20600",
+      "open_time": 1700035200000,
+      "quality_status": "ok",
+      "quote_volume": "206000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20500",
+      "high": "20650",
+      "low": "20450",
+      "open": "20600",
+      "open_time": 1700038800000,
+      "quality_status": "ok",
+      "quote_volume": "206000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "20500",
+      "high": "20550",
+      "low": "20450",
+      "open": "20500",
+      "open_time": 1700042400000,
+      "quality_status": "ok",
+      "quote_volume": "205000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21320",
+      "high": "21370",
+      "low": "20450",
+      "open": "20500",
+      "open_time": 1700046000000,
+      "quality_status": "ok",
+      "quote_volume": "205000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21320",
+      "high": "21370",
+      "low": "21270",
+      "open": "21320",
+      "open_time": 1700049600000,
+      "quality_status": "ok",
+      "quote_volume": "213200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21320",
+      "high": "21370",
+      "low": "21270",
+      "open": "21320",
+      "open_time": 1700053200000,
+      "quality_status": "ok",
+      "quote_volume": "213200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21320",
+      "high": "21370",
+      "low": "21270",
+      "open": "21320",
+      "open_time": 1700056800000,
+      "quality_status": "ok",
+      "quote_volume": "213200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21320",
+      "high": "21370",
+      "low": "21270",
+      "open": "21320",
+      "open_time": 1700060400000,
+      "quality_status": "ok",
+      "quote_volume": "213200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21320",
+      "high": "21370",
+      "low": "21270",
+      "open": "21320",
+      "open_time": 1700064000000,
+      "quality_status": "ok",
+      "quote_volume": "213200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21320",
+      "high": "21370",
+      "low": "21270",
+      "open": "21320",
+      "open_time": 1700067600000,
+      "quality_status": "ok",
+      "quote_volume": "213200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21320",
+      "high": "21370",
+      "low": "21270",
+      "open": "21320",
+      "open_time": 1700071200000,
+      "quality_status": "ok",
+      "quote_volume": "213200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21370",
+      "low": "20950",
+      "open": "21320",
+      "open_time": 1700074800000,
+      "quality_status": "ok",
+      "quote_volume": "213200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700078400000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700082000000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700085600000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700089200000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700092800000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700096400000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700100000000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700103600000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21000",
+      "high": "21050",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700107200000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21400",
+      "high": "21450",
+      "low": "20950",
+      "open": "21000",
+      "open_time": 1700110800000,
+      "quality_status": "ok",
+      "quote_volume": "210000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21400",
+      "high": "21450",
+      "low": "21350",
+      "open": "21400",
+      "open_time": 1700114400000,
+      "quality_status": "ok",
+      "quote_volume": "214000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21186",
+      "high": "21450",
+      "low": "21136",
+      "open": "21400",
+      "open_time": 1700118000000,
+      "quality_status": "ok",
+      "quote_volume": "214000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21186",
+      "high": "21236",
+      "low": "21136",
+      "open": "21186",
+      "open_time": 1700121600000,
+      "quality_status": "ok",
+      "quote_volume": "211860",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21186",
+      "high": "21236",
+      "low": "21136",
+      "open": "21186",
+      "open_time": 1700125200000,
+      "quality_status": "ok",
+      "quote_volume": "211860",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21186",
+      "high": "21236",
+      "low": "21136",
+      "open": "21186",
+      "open_time": 1700128800000,
+      "quality_status": "ok",
+      "quote_volume": "211860",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21186",
+      "high": "21236",
+      "low": "21136",
+      "open": "21186",
+      "open_time": 1700132400000,
+      "quality_status": "ok",
+      "quote_volume": "211860",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21186",
+      "high": "21236",
+      "low": "21136",
+      "open": "21186",
+      "open_time": 1700136000000,
+      "quality_status": "ok",
+      "quote_volume": "211860",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21186",
+      "high": "21236",
+      "low": "21136",
+      "open": "21186",
+      "open_time": 1700139600000,
+      "quality_status": "ok",
+      "quote_volume": "211860",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21186",
+      "high": "21236",
+      "low": "21136",
+      "open": "21186",
+      "open_time": 1700143200000,
+      "quality_status": "ok",
+      "quote_volume": "211860",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21800",
+      "high": "21850",
+      "low": "21136",
+      "open": "21186",
+      "open_time": 1700146800000,
+      "quality_status": "ok",
+      "quote_volume": "211860",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21800",
+      "high": "21850",
+      "low": "21750",
+      "open": "21800",
+      "open_time": 1700150400000,
+      "quality_status": "ok",
+      "quote_volume": "218000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21582",
+      "high": "21850",
+      "low": "21532",
+      "open": "21800",
+      "open_time": 1700154000000,
+      "quality_status": "ok",
+      "quote_volume": "218000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21582",
+      "high": "21632",
+      "low": "21532",
+      "open": "21582",
+      "open_time": 1700157600000,
+      "quality_status": "ok",
+      "quote_volume": "215820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21582",
+      "high": "21632",
+      "low": "21532",
+      "open": "21582",
+      "open_time": 1700161200000,
+      "quality_status": "ok",
+      "quote_volume": "215820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21582",
+      "high": "21632",
+      "low": "21532",
+      "open": "21582",
+      "open_time": 1700164800000,
+      "quality_status": "ok",
+      "quote_volume": "215820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21582",
+      "high": "21632",
+      "low": "21532",
+      "open": "21582",
+      "open_time": 1700168400000,
+      "quality_status": "ok",
+      "quote_volume": "215820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21582",
+      "high": "21632",
+      "low": "21532",
+      "open": "21582",
+      "open_time": 1700172000000,
+      "quality_status": "ok",
+      "quote_volume": "215820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21582",
+      "high": "21632",
+      "low": "21532",
+      "open": "21582",
+      "open_time": 1700175600000,
+      "quality_status": "ok",
+      "quote_volume": "215820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21582",
+      "high": "21632",
+      "low": "21532",
+      "open": "21582",
+      "open_time": 1700179200000,
+      "quality_status": "ok",
+      "quote_volume": "215820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "22000",
+      "high": "22050",
+      "low": "21532",
+      "open": "21582",
+      "open_time": 1700182800000,
+      "quality_status": "ok",
+      "quote_volume": "215820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "22000",
+      "high": "22050",
+      "low": "21950",
+      "open": "22000",
+      "open_time": 1700186400000,
+      "quality_status": "ok",
+      "quote_volume": "220000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "22050",
+      "low": "21730",
+      "open": "22000",
+      "open_time": 1700190000000,
+      "quality_status": "ok",
+      "quote_volume": "220000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "21830",
+      "low": "21730",
+      "open": "21780",
+      "open_time": 1700193600000,
+      "quality_status": "ok",
+      "quote_volume": "217800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "21830",
+      "low": "21730",
+      "open": "21780",
+      "open_time": 1700197200000,
+      "quality_status": "ok",
+      "quote_volume": "217800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "21830",
+      "low": "21730",
+      "open": "21780",
+      "open_time": 1700200800000,
+      "quality_status": "ok",
+      "quote_volume": "217800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "21830",
+      "low": "21730",
+      "open": "21780",
+      "open_time": 1700204400000,
+      "quality_status": "ok",
+      "quote_volume": "217800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "21830",
+      "low": "21730",
+      "open": "21780",
+      "open_time": 1700208000000,
+      "quality_status": "ok",
+      "quote_volume": "217800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "21830",
+      "low": "21730",
+      "open": "21780",
+      "open_time": 1700211600000,
+      "quality_status": "ok",
+      "quote_volume": "217800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "21830",
+      "low": "21730",
+      "open": "21780",
+      "open_time": 1700215200000,
+      "quality_status": "ok",
+      "quote_volume": "217800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "21780",
+      "high": "21830",
+      "low": "21730",
+      "open": "21780",
+      "open_time": 1700218800000,
+      "quality_status": "ok",
+      "quote_volume": "217800",
+      "trades": 100,
+      "volume": "10"
+     }
+    ],
+    "BBBUSDT": [
+     {
+      "close": "1500",
+      "high": "1550",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1699999200000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1500",
+      "high": "1550",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1700002800000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1500",
+      "high": "1550",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1700006400000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1500",
+      "high": "1550",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1700010000000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1500",
+      "high": "1550",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1700013600000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1500",
+      "high": "1550",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1700017200000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1500",
+      "high": "1550",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1700020800000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1500",
+      "high": "1550",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1700024400000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1470",
+      "high": "1550",
+      "low": "1420",
+      "open": "1500",
+      "open_time": 1700028000000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1470",
+      "high": "1520",
+      "low": "1420",
+      "open": "1470",
+      "open_time": 1700031600000,
+      "quality_status": "ok",
+      "quote_volume": "14700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1470",
+      "high": "1520",
+      "low": "1420",
+      "open": "1470",
+      "open_time": 1700035200000,
+      "quality_status": "ok",
+      "quote_volume": "14700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1470",
+      "high": "1520",
+      "low": "1420",
+      "open": "1470",
+      "open_time": 1700038800000,
+      "quality_status": "ok",
+      "quote_volume": "14700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1470",
+      "high": "1520",
+      "low": "1420",
+      "open": "1470",
+      "open_time": 1700042400000,
+      "quality_status": "ok",
+      "quote_volume": "14700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1470",
+      "high": "1520",
+      "low": "1420",
+      "open": "1470",
+      "open_time": 1700046000000,
+      "quality_status": "ok",
+      "quote_volume": "14700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1470",
+      "high": "1520",
+      "low": "1420",
+      "open": "1470",
+      "open_time": 1700049600000,
+      "quality_status": "ok",
+      "quote_volume": "14700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1470",
+      "high": "1520",
+      "low": "1420",
+      "open": "1470",
+      "open_time": 1700053200000,
+      "quality_status": "ok",
+      "quote_volume": "14700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1480",
+      "high": "1530",
+      "low": "1420",
+      "open": "1470",
+      "open_time": 1700056800000,
+      "quality_status": "ok",
+      "quote_volume": "14700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1480",
+      "high": "1530",
+      "low": "1430",
+      "open": "1480",
+      "open_time": 1700060400000,
+      "quality_status": "ok",
+      "quote_volume": "14800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1465",
+      "high": "1530",
+      "low": "1415",
+      "open": "1480",
+      "open_time": 1700064000000,
+      "quality_status": "ok",
+      "quote_volume": "14800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1465",
+      "high": "1515",
+      "low": "1415",
+      "open": "1465",
+      "open_time": 1700067600000,
+      "quality_status": "ok",
+      "quote_volume": "14650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1465",
+      "high": "1515",
+      "low": "1415",
+      "open": "1465",
+      "open_time": 1700071200000,
+      "quality_status": "ok",
+      "quote_volume": "14650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1465",
+      "high": "1515",
+      "low": "1415",
+      "open": "1465",
+      "open_time": 1700074800000,
+      "quality_status": "ok",
+      "quote_volume": "14650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1465",
+      "high": "1515",
+      "low": "1415",
+      "open": "1465",
+      "open_time": 1700078400000,
+      "quality_status": "ok",
+      "quote_volume": "14650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1465",
+      "high": "1515",
+      "low": "1415",
+      "open": "1465",
+      "open_time": 1700082000000,
+      "quality_status": "ok",
+      "quote_volume": "14650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1465",
+      "high": "1515",
+      "low": "1415",
+      "open": "1465",
+      "open_time": 1700085600000,
+      "quality_status": "ok",
+      "quote_volume": "14650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1465",
+      "high": "1515",
+      "low": "1415",
+      "open": "1465",
+      "open_time": 1700089200000,
+      "quality_status": "ok",
+      "quote_volume": "14650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1450",
+      "high": "1515",
+      "low": "1400",
+      "open": "1465",
+      "open_time": 1700092800000,
+      "quality_status": "ok",
+      "quote_volume": "14650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1450",
+      "high": "1500",
+      "low": "1400",
+      "open": "1450",
+      "open_time": 1700096400000,
+      "quality_status": "ok",
+      "quote_volume": "14500",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1537",
+      "high": "1587",
+      "low": "1400",
+      "open": "1450",
+      "open_time": 1700100000000,
+      "quality_status": "ok",
+      "quote_volume": "14500",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1537",
+      "high": "1587",
+      "low": "1487",
+      "open": "1537",
+      "open_time": 1700103600000,
+      "quality_status": "ok",
+      "quote_volume": "15370",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1537",
+      "high": "1587",
+      "low": "1487",
+      "open": "1537",
+      "open_time": 1700107200000,
+      "quality_status": "ok",
+      "quote_volume": "15370",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1537",
+      "high": "1587",
+      "low": "1487",
+      "open": "1537",
+      "open_time": 1700110800000,
+      "quality_status": "ok",
+      "quote_volume": "15370",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1537",
+      "high": "1587",
+      "low": "1487",
+      "open": "1537",
+      "open_time": 1700114400000,
+      "quality_status": "ok",
+      "quote_volume": "15370",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1537",
+      "high": "1587",
+      "low": "1487",
+      "open": "1537",
+      "open_time": 1700118000000,
+      "quality_status": "ok",
+      "quote_volume": "15370",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1537",
+      "high": "1587",
+      "low": "1487",
+      "open": "1537",
+      "open_time": 1700121600000,
+      "quality_status": "ok",
+      "quote_volume": "15370",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1537",
+      "high": "1587",
+      "low": "1487",
+      "open": "1537",
+      "open_time": 1700125200000,
+      "quality_status": "ok",
+      "quote_volume": "15370",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1520",
+      "high": "1587",
+      "low": "1470",
+      "open": "1537",
+      "open_time": 1700128800000,
+      "quality_status": "ok",
+      "quote_volume": "15370",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1520",
+      "high": "1570",
+      "low": "1470",
+      "open": "1520",
+      "open_time": 1700132400000,
+      "quality_status": "ok",
+      "quote_volume": "15200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1596",
+      "high": "1646",
+      "low": "1470",
+      "open": "1520",
+      "open_time": 1700136000000,
+      "quality_status": "ok",
+      "quote_volume": "15200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1596",
+      "high": "1646",
+      "low": "1546",
+      "open": "1596",
+      "open_time": 1700139600000,
+      "quality_status": "ok",
+      "quote_volume": "15960",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1596",
+      "high": "1646",
+      "low": "1546",
+      "open": "1596",
+      "open_time": 1700143200000,
+      "quality_status": "ok",
+      "quote_volume": "15960",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1596",
+      "high": "1646",
+      "low": "1546",
+      "open": "1596",
+      "open_time": 1700146800000,
+      "quality_status": "ok",
+      "quote_volume": "15960",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1596",
+      "high": "1646",
+      "low": "1546",
+      "open": "1596",
+      "open_time": 1700150400000,
+      "quality_status": "ok",
+      "quote_volume": "15960",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1596",
+      "high": "1646",
+      "low": "1546",
+      "open": "1596",
+      "open_time": 1700154000000,
+      "quality_status": "ok",
+      "quote_volume": "15960",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1596",
+      "high": "1646",
+      "low": "1546",
+      "open": "1596",
+      "open_time": 1700157600000,
+      "quality_status": "ok",
+      "quote_volume": "15960",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1596",
+      "high": "1646",
+      "low": "1546",
+      "open": "1596",
+      "open_time": 1700161200000,
+      "quality_status": "ok",
+      "quote_volume": "15960",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1580",
+      "high": "1646",
+      "low": "1530",
+      "open": "1596",
+      "open_time": 1700164800000,
+      "quality_status": "ok",
+      "quote_volume": "15960",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1580",
+      "high": "1630",
+      "low": "1530",
+      "open": "1580",
+      "open_time": 1700168400000,
+      "quality_status": "ok",
+      "quote_volume": "15800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1659",
+      "high": "1709",
+      "low": "1530",
+      "open": "1580",
+      "open_time": 1700172000000,
+      "quality_status": "ok",
+      "quote_volume": "15800",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1659",
+      "high": "1709",
+      "low": "1609",
+      "open": "1659",
+      "open_time": 1700175600000,
+      "quality_status": "ok",
+      "quote_volume": "16590",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1659",
+      "high": "1709",
+      "low": "1609",
+      "open": "1659",
+      "open_time": 1700179200000,
+      "quality_status": "ok",
+      "quote_volume": "16590",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1659",
+      "high": "1709",
+      "low": "1609",
+      "open": "1659",
+      "open_time": 1700182800000,
+      "quality_status": "ok",
+      "quote_volume": "16590",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1659",
+      "high": "1709",
+      "low": "1609",
+      "open": "1659",
+      "open_time": 1700186400000,
+      "quality_status": "ok",
+      "quote_volume": "16590",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1659",
+      "high": "1709",
+      "low": "1609",
+      "open": "1659",
+      "open_time": 1700190000000,
+      "quality_status": "ok",
+      "quote_volume": "16590",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1659",
+      "high": "1709",
+      "low": "1609",
+      "open": "1659",
+      "open_time": 1700193600000,
+      "quality_status": "ok",
+      "quote_volume": "16590",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1659",
+      "high": "1709",
+      "low": "1609",
+      "open": "1659",
+      "open_time": 1700197200000,
+      "quality_status": "ok",
+      "quote_volume": "16590",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1640",
+      "high": "1709",
+      "low": "1590",
+      "open": "1659",
+      "open_time": 1700200800000,
+      "quality_status": "ok",
+      "quote_volume": "16590",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1640",
+      "high": "1690",
+      "low": "1590",
+      "open": "1640",
+      "open_time": 1700204400000,
+      "quality_status": "ok",
+      "quote_volume": "16400",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1738",
+      "high": "1788",
+      "low": "1590",
+      "open": "1640",
+      "open_time": 1700208000000,
+      "quality_status": "ok",
+      "quote_volume": "16400",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1738",
+      "high": "1788",
+      "low": "1688",
+      "open": "1738",
+      "open_time": 1700211600000,
+      "quality_status": "ok",
+      "quote_volume": "17380",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1738",
+      "high": "1788",
+      "low": "1688",
+      "open": "1738",
+      "open_time": 1700215200000,
+      "quality_status": "ok",
+      "quote_volume": "17380",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1738",
+      "high": "1788",
+      "low": "1688",
+      "open": "1738",
+      "open_time": 1700218800000,
+      "quality_status": "ok",
+      "quote_volume": "17380",
+      "trades": 100,
+      "volume": "10"
+     }
+    ]
+   },
+   "beklenen": {
+    "atlanan": [],
+    "fill_ler": [
+     {
+      "bar": 2,
+      "fiyat": "20010.0000",
+      "komisyon": "9.9900099900099900099900099900099900099900099900100",
+      "miktar": "0.49925087406346776661619240329885007546176961469315",
+      "miktar_sonra": "0.49925087406346776661619240329885007546176961469315",
+      "nakit_sonra": "0E-45",
+      "notional": "9990.0099900099900099900099900099900099900099900100",
+      "referans_fiyat": "20000",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 4,
+      "fiyat": "20589.7000",
+      "komisyon": "10.279425721704582274297416726202333398735197835648",
+      "miktar": "0.49925087406346776661619240329885007546176961469317",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10269.146295982877692023119309476131065336462637812",
+      "notional": "10279.425721704582274297416726202333398735197835648",
+      "referans_fiyat": "20600",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 7,
+      "fiyat": "1500.7500",
+      "komisyon": "10.258887408574303388634484824651479585750711925886",
+      "miktar": "6.8358403522067655429848308010338028224225966522645",
+      "miktar_sonra": "6.8358403522067655429848308010338028224225966522645",
+      "nakit_sonra": "0E-45",
+      "notional": "10258.887408574303388634484824651479585750711925886",
+      "referans_fiyat": "1500",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 9,
+      "fiyat": "1469.2650",
+      "komisyon": "10.043660975085073375513607426880930303886736470289",
+      "miktar": "6.8358403522067655429848308010338028224225966522642",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10033.617314109988302138093819454049373582849733819",
+      "notional": "10043.660975085073375513607426880930303886736470289",
+      "referans_fiyat": "1470",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 12,
+      "fiyat": "20510.2500",
+      "komisyon": "10.023593720389598703434659160293755617964884848970",
+      "miktar": "0.48871143552075663160783799126260068102362890988506",
+      "miktar_sonra": "0.48871143552075663160783799126260068102362890988506",
+      "nakit_sonra": "0E-45",
+      "notional": "10023.593720389598703434659160293755617964884848970",
+      "referans_fiyat": "20500",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 14,
+      "fiyat": "21309.3400",
+      "komisyon": "10.414118141399880120186166420731787196164056474570",
+      "miktar": "0.48871143552075663160783799126260068102362890988506",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10403.704023258480240065980254311055408967892418095",
+      "notional": "10414.118141399880120186166420731787196164056474570",
+      "referans_fiyat": "21320",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 17,
+      "fiyat": "1480.7400",
+      "komisyon": "10.393310712545934305760220034276778630337554863232",
+      "miktar": "7.0189977393370438468334886842232793267809033748207",
+      "miktar_sonra": "7.0189977393370438468334886842232793267809033748207",
+      "nakit_sonra": "0E-45",
+      "notional": "10393.310712545934305760220034276778630337554863232",
+      "referans_fiyat": "1480",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 19,
+      "fiyat": "1464.2675",
+      "komisyon": "10.277690272284704850993255391925910661627156432390",
+      "miktar": "7.0189977393370438468334886842232793267809033748205",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10267.412582012420146142262136533984750965529275958",
+      "notional": "10277.690272284704850993255391925910661627156432390",
+      "referans_fiyat": "1465",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 22,
+      "fiyat": "21010.5000",
+      "komisyon": "10.257155426585834311830431704829155595370159116841",
+      "miktar": "0.48819187675618544593562417385731684611837695994103",
+      "miktar_sonra": "0.48819187675618544593562417385731684611837695994103",
+      "nakit_sonra": "0E-45",
+      "notional": "10257.155426585834311830431704829155595370159116841",
+      "referans_fiyat": "21000",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 24,
+      "fiyat": "20989.5000",
+      "komisyon": "10.246903397173954417465783597178151941601673200682",
+      "miktar": "0.48819187675618544593562417385731684611837695994102",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10236.656493776780463048317813580973789660071527481",
+      "notional": "10246.903397173954417465783597178151941601673200682",
+      "referans_fiyat": "21000",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 27,
+      "fiyat": "1450.7250",
+      "komisyon": "10.226430063713067395652665148432541248411659867613",
+      "miktar": "7.0491857958696978377381413765066027320213409623554",
+      "miktar_sonra": "7.0491857958696978377381413765066027320213409623554",
+      "nakit_sonra": "0E-45",
+      "notional": "10226.430063713067395652665148432541248411659867613",
+      "referans_fiyat": "1450",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 29,
+      "fiyat": "1536.2315",
+      "komisyon": "10.829181268967599713815221534042803074917242658611",
+      "miktar": "7.0491857958696978377381413765066027320213409623556",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10818.352087698632114101406312508760271842325415952",
+      "notional": "10829.181268967599713815221534042803074917242658611",
+      "referans_fiyat": "1537",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 32,
+      "fiyat": "21410.7000",
+      "komisyon": "10.807544543155476637463942370138621650192133282669",
+      "miktar": "0.50477305941213863336854667853636834153914319861887",
+      "miktar_sonra": "0.50477305941213863336854667853636834153914319861887",
+      "nakit_sonra": "0E-45",
+      "notional": "10807.544543155476637463942370138621650192133282669",
+      "referans_fiyat": "21400",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 34,
+      "fiyat": "21175.4070",
+      "komisyon": "10.688774975687216302002756916505763934006363662036",
+      "miktar": "0.50477305941213863336854667853636834153914319861885",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10678.086200711529085700754159589258170072357298374",
+      "notional": "10688.774975687216302002756916505763934006363662036",
+      "referans_fiyat": "21186",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 37,
+      "fiyat": "1520.7600",
+      "komisyon": "10.667418781929599486214539619969288881191166132242",
+      "miktar": "7.0145314066187955273774557589424293650485060971107",
+      "miktar_sonra": "7.0145314066187955273774557589424293650485060971107",
+      "nakit_sonra": "0E-45",
+      "notional": "10667.418781929599486214539619969288881191166132242",
+      "referans_fiyat": "1520",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 39,
+      "fiyat": "1595.2020",
+      "komisyon": "11.189594528901115862863572181576481207984107023123",
+      "miktar": "7.0145314066187955273774557589424293650485060971106",
+      "miktar_sonra": "0",
+      "nakit_sonra": "11178.404934372214747000708609394904726776122916100",
+      "notional": "11189.594528901115862863572181576481207984107023123",
+      "referans_fiyat": "1596",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 42,
+      "fiyat": "21810.9000",
+      "komisyon": "11.167237696675539207792915693701203523252870046054",
+      "miktar": "0.51200260863492745406163503998923490196428712460531",
+      "miktar_sonra": "0.51200260863492745406163503998923490196428712460531",
+      "nakit_sonra": "0E-45",
+      "notional": "11167.237696675539207792915693701203523252870046054",
+      "referans_fiyat": "21800",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 44,
+      "fiyat": "21571.2090",
+      "komisyon": "11.044515279409224811401428329331143820366148100870",
+      "miktar": "0.51200260863492745406163503998923490196428712460530",
+      "miktar_sonra": "0",
+      "nakit_sonra": "11033.470764129815586590026901001812676545781952769",
+      "notional": "11044.515279409224811401428329331143820366148100870",
+      "referans_fiyat": "21582",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 47,
+      "fiyat": "1580.7900",
+      "komisyon": "11.022448315814001585005021879122689986559222730039",
+      "miktar": "6.9727467379057316816307174761497036206954894261977",
+      "miktar_sonra": "6.9727467379057316816307174761497036206954894261977",
+      "nakit_sonra": "0E-45",
+      "notional": "11022.448315814001585005021879122689986559222730039",
+      "referans_fiyat": "1580",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 49,
+      "fiyat": "1658.1705",
+      "komisyon": "11.562002944766516055395447612785892127580450049583",
+      "miktar": "6.9727467379057316816307174761497036206954894261977",
+      "miktar_sonra": "0",
+      "nakit_sonra": "11550.440941821749539340052165173106235452869599533",
+      "notional": "11562.002944766516055395447612785892127580450049583",
+      "referans_fiyat": "1659",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 52,
+      "fiyat": "22011.0000",
+      "komisyon": "11.538902039781967571768283881291814421031837761771",
+      "miktar": "0.52423343054754293633947952756766227890744799244791",
+      "miktar_sonra": "0.52423343054754293633947952756766227890744799244791",
+      "nakit_sonra": "0E-45",
+      "notional": "11538.902039781967571768283881291814421031837761771",
+      "referans_fiyat": "22000",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 54,
+      "fiyat": "21769.1100",
+      "komisyon": "11.412095215266822410897127178368472592386915166878",
+      "miktar": "0.52423343054754293633947952756766227890744799244792",
+      "miktar_sonra": "0",
+      "nakit_sonra": "11400.683120051555588486230051190104119794528251711",
+      "notional": "11412.095215266822410897127178368472592386915166878",
+      "referans_fiyat": "21780",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 57,
+      "fiyat": "1640.8200",
+      "komisyon": "11.389293826225330258228002049140963156637890361350",
+      "miktar": "6.9412207470809292050486964134645867045976343299996",
+      "miktar_sonra": "6.9412207470809292050486964134645867045976343299996",
+      "nakit_sonra": "0E-45",
+      "notional": "11389.293826225330258228002049140963156637890361350",
+      "referans_fiyat": "1640",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 59,
+      "fiyat": "1737.1310",
+      "komisyon": "12.057809737597441630895447049418150966744393121307",
+      "miktar": "6.9412207470809292050486964134645867045976343299999",
+      "miktar_sonra": "0",
+      "nakit_sonra": "12045.751927859844189264551602368732815777648728186",
+      "notional": "12057.809737597441630895447049418150966744393121307",
+      "referans_fiyat": "1738",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     }
+    ],
+    "ozet": {
+     "bitis_sermaye": "12045.751927859844189264551602368732815777648728186",
+     "islem_sayisi": 12,
+     "kaybeden": 6,
+     "kazanan": 6,
+     "nakit": "12045.751927859844189264551602368732815777648728186",
+     "net_pnl_toplam": "2045.751927859844189264551602368732815777648728186",
+     "toplam_komisyon": "257.78800498364477468750240672080610353269054112265",
+     "toplam_slippage": "128.89461060045824833055427401247382726953191552913"
+    },
+    "ozkaynak": [
+     "10000",
+     "10000",
+     "9985.0174812693553323238480659770015092353922938630",
+     "10284.568005707435992293563507956311554512454062679",
+     "10269.146295982877692023119309476131065336462637812",
+     "10269.146295982877692023119309476131065336462637812",
+     "10269.146295982877692023119309476131065336462637812",
+     "10253.760528310148314477246201550704233633894978397",
+     "10048.685317743945348187701277519690148961217078829",
+     "10033.617314109988302138093819454049373582849733819",
+     "10033.617314109988302138093819454049373582849733819",
+     "10033.617314109988302138093819454049373582849733819",
+     "10018.584428175510947960678820883313960984392652644",
+     "10419.327805302531385879105973718646519423768358749",
+     "10403.704023258480240065980254311055408967892418095",
+     "10403.704023258480240065980254311055408967892418095",
+     "10403.704023258480240065980254311055408967892418095",
+     "10388.116654218824893313563252650453403635736994735",
+     "10282.831688128769235611060922387104213734023444112",
+     "10267.412582012420146142262136533984750965529275958",
+     "10267.412582012420146142262136533984750965529275958",
+     "10267.412582012420146142262136533984750965529275958",
+     "10252.029411879894364648107651003653768485916158762",
+     "10252.029411879894364648107651003653768485916158762",
+     "10236.656493776780463048317813580973789660071527481",
+     "10236.656493776780463048317813580973789660071527481",
+     "10236.656493776780463048317813580973789660071527481",
+     "10221.319404011061864720304995934573961430944395415",
+     "10834.598568251725576603523295690648399116801059140",
+     "10818.352087698632114101406312508760271842325415952",
+     "10818.352087698632114101406312508760271842325415952",
+     "10818.352087698632114101406312508760271842325415952",
+     "10802.143471419766754086898920678282508937664450444",
+     "10694.122036705569086546029931471499683848287805939",
+     "10678.086200711529085700754159589258170072357298374",
+     "10678.086200711529085700754159589258170072357298374",
+     "10678.086200711529085700754159589258170072357298374",
+     "10662.087738060569201613732753592492634873729267608",
+     "11195.192124963597661694419391272117266617415730989",
+     "11178.404934372214747000708609394904726776122916100",
+     "11178.404934372214747000708609394904726776122916100",
+     "11178.404934372214747000708609394904726776122916100",
+     "11161.656868241418498543643871765320862821459316396",
+     "11050.040299559004313558207433047667654193244723232",
+     "11033.470764129815586590026901001812676545781952769",
+     "11033.470764129815586590026901001812676545781952769",
+     "11033.470764129815586590026901001812676545781952769",
+     "11016.939845891056056976533612316531720698873293392",
+     "11567.786838185608859825360292932358306733816958062",
+     "11550.440941821749539340052165173106235452869599533",
+     "11550.440941821749539340052165173106235452869599533",
+     "11550.440941821749539340052165173106235452869599533",
+     "11533.135472045944599468549606488570135963855833854",
+     "11417.804117325485153473864110423684434604217275515",
+     "11400.683120051555588486230051190104119794528251711",
+     "11400.683120051555588486230051190104119794528251711",
+     "11400.683120051555588486230051190104119794528251711",
+     "11383.602025212723896279862118081922195540120301199",
+     "12063.841658426654958374634366601451692590688465539",
+     "12045.751927859844189264551602368732815777648728186",
+     "12045.751927859844189264551602368732815777648728186",
+     "12045.751927859844189264551602368732815777648728186"
+    ],
+    "turlar": [
+     {
+      "acilis_ms": 1700006400000,
+      "cikis_notional": "10279.425721704582274297416726202333398735197835648",
+      "fill_sayisi": 2,
+      "giris_notional": "9990.0099900099900099900099900099900099900099900100",
+      "kapanis_ms": 1700013600000,
+      "komisyon": "20.269435711714572284287426716212323408725207825658",
+      "miktar": "0.49925087406346776661619240329885007546176961469315",
+      "net_pnl": "269.146295982877692023119309476131065336462637812",
+      "sembol": "AAAUSDT",
+      "slippage": "10.134792743488395662308705786966656531873923178271"
+     },
+     {
+      "acilis_ms": 1700024400000,
+      "cikis_notional": "10043.660975085073375513607426880930303886736470289",
+      "fill_sayisi": 2,
+      "giris_notional": "10258.887408574303388634484824651479585750711925886",
+      "kapanis_ms": 1700031600000,
+      "komisyon": "20.302548383659376764148092251532409889637448396175",
+      "miktar": "6.8358403522067655429848308010338028224225966522645",
+      "net_pnl": "-235.528981872889389885025490022081691753612903992",
+      "sembol": "BBBUSDT",
+      "slippage": "10.151222923027046831332473739535197191297556028613"
+     },
+     {
+      "acilis_ms": 1700042400000,
+      "cikis_notional": "10414.118141399880120186166420731787196164056474570",
+      "fill_sayisi": 2,
+      "giris_notional": "10023.593720389598703434659160293755617964884848970",
+      "kapanis_ms": 1700049600000,
+      "komisyon": "20.437711861789478823620825581025542814128941323540",
+      "miktar": "0.48871143552075663160783799126260068102362890988506",
+      "net_pnl": "370.086709148491937927886434857006035385042684276",
+      "sembol": "AAAUSDT",
+      "slippage": "10.218956116739021166919892397300980240204080505697"
+     },
+     {
+      "acilis_ms": 1700060400000,
+      "cikis_notional": "10277.690272284704850993255391925910661627156432390",
+      "fill_sayisi": 2,
+      "giris_notional": "10393.310712545934305760220034276778630337554863232",
+      "kapanis_ms": 1700067600000,
+      "komisyon": "20.671000984830639156753475426202689291964711295622",
+      "miktar": "7.0189977393370438468334886842232793267809033748207",
+      "net_pnl": "-136.291441246060093923718117777070658002363142137",
+      "sembol": "BBBUSDT",
+      "slippage": "10.335474171173797064462312087518778808684880219423"
+     },
+     {
+      "acilis_ms": 1700078400000,
+      "cikis_notional": "10246.903397173954417465783597178151941601673200682",
+      "fill_sayisi": 2,
+      "giris_notional": "10257.155426585834311830431704829155595370159116841",
+      "kapanis_ms": 1700085600000,
+      "komisyon": "20.504058823759788729296215302007307536971832317523",
+      "miktar": "0.48819187675618544593562417385731684611837695994103",
+      "net_pnl": "-30.756088235639683093944322953010961305457748477",
+      "sembol": "AAAUSDT",
+      "slippage": "10.252029411879894364648107651003653768485916158762"
+     },
+     {
+      "acilis_ms": 1700096400000,
+      "cikis_notional": "10829.181268967599713815221534042803074917242658611",
+      "fill_sayisi": 2,
+      "giris_notional": "10226.430063713067395652665148432541248411659867613",
+      "kapanis_ms": 1700103600000,
+      "komisyon": "21.055611332680667109467886682475344323328902526224",
+      "miktar": "7.0491857958696978377381413765066027320213409623554",
+      "net_pnl": "581.695593921851651053088498927786482182253888471",
+      "sembol": "BBBUSDT",
+      "slippage": "10.527958986131393720661914145812611180273872727278"
+     },
+     {
+      "acilis_ms": 1700114400000,
+      "cikis_notional": "10688.774975687216302002756916505763934006363662036",
+      "fill_sayisi": 2,
+      "giris_notional": "10807.544543155476637463942370138621650192133282669",
+      "kapanis_ms": 1700121600000,
+      "komisyon": "21.496319518842692939466699286644385584198496944705",
+      "miktar": "0.50477305941213863336854667853636834153914319861887",
+      "net_pnl": "-140.265886987103028400652152919502101769968117578",
+      "sembol": "AAAUSDT",
+      "slippage": "10.748132754062667920316464426074891096392976128191"
+     },
+     {
+      "acilis_ms": 1700132400000,
+      "cikis_notional": "11189.594528901115862863572181576481207984107023123",
+      "fill_sayisi": 2,
+      "giris_notional": "10667.418781929599486214539619969288881191166132242",
+      "kapanis_ms": 1700139600000,
+      "komisyon": "21.857013310830715349078111801545770089175273155365",
+      "miktar": "7.0145314066187955273774557589424293650485060971107",
+      "net_pnl": "500.318733660685661299954449805646556703765617726",
+      "sembol": "BBBUSDT",
+      "slippage": "10.928639931512083431654076072432304950745572499298"
+     },
+     {
+      "acilis_ms": 1700150400000,
+      "cikis_notional": "11044.515279409224811401428329331143820366148100870",
+      "fill_sayisi": 2,
+      "giris_notional": "11167.237696675539207792915693701203523252870046054",
+      "kapanis_ms": 1700157600000,
+      "komisyon": "22.211752976084764019194344023032347343619018146924",
+      "miktar": "0.51200260863492745406163503998923490196428712460531",
+      "net_pnl": "-144.934170242399160410681708393092050230340963331",
+      "sembol": "AAAUSDT",
+      "slippage": "11.105848583900211406050925652406494258507352019814"
+     },
+     {
+      "acilis_ms": 1700168400000,
+      "cikis_notional": "11562.002944766516055395447612785892127580450049583",
+      "fill_sayisi": 2,
+      "giris_notional": "11022.448315814001585005021879122689986559222730039",
+      "kapanis_ms": 1700175600000,
+      "komisyon": "22.584451260580517640400469491908582114139672779622",
+      "miktar": "6.9727467379057316816307174761497036206954894261977",
+      "net_pnl": "516.970177691933952750025264171293558907087646764",
+      "sembol": "BBBUSDT",
+      "slippage": "11.292363342038332458400946952624445013716345125727"
+     },
+     {
+      "acilis_ms": 1700186400000,
+      "cikis_notional": "11412.095215266822410897127178368472592386915166878",
+      "fill_sayisi": 2,
+      "giris_notional": "11538.902039781967571768283881291814421031837761771",
+      "kapanis_ms": 1700193600000,
+      "komisyon": "22.950997255048789982665411059660287013418752928649",
+      "miktar": "0.52423343054754293633947952756766227890744799244791",
+      "net_pnl": "-149.757821770193950853822113983002115658341347822",
+      "sembol": "AAAUSDT",
+      "slippage": "11.475469794685714876471206858456127285284036554685"
+     },
+     {
+      "acilis_ms": 1700204400000,
+      "cikis_notional": "12057.809737597441630895447049418150966744393121307",
+      "fill_sayisi": 2,
+      "giris_notional": "11389.293826225330258228002049140963156637890361350",
+      "kapanis_ms": 1700211600000,
+      "komisyon": "23.447103563822771889123449098559114123382283482657",
+      "miktar": "6.9412207470809292050486964134645867045976343299996",
+      "net_pnl": "645.068807808288600778321551178628695983120476474",
+      "sembol": "BBBUSDT",
+      "slippage": "11.723721841819689427327248242341686944065404383370"
+     }
+    ]
+   },
+   "hedefler": [
+    {
+     "agirliklar": {
+      "AAAUSDT": "1"
+     },
+     "bar": 1
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0"
+     },
+     "bar": 3
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "1"
+     },
+     "bar": 6
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "0"
+     },
+     "bar": 8
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "1"
+     },
+     "bar": 11
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0"
+     },
+     "bar": 13
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "1"
+     },
+     "bar": 16
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "0"
+     },
+     "bar": 18
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "1"
+     },
+     "bar": 21
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0"
+     },
+     "bar": 23
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "1"
+     },
+     "bar": 26
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "0"
+     },
+     "bar": 28
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "1"
+     },
+     "bar": 31
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0"
+     },
+     "bar": 33
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "1"
+     },
+     "bar": 36
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "0"
+     },
+     "bar": 38
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "1"
+     },
+     "bar": 41
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0"
+     },
+     "bar": 43
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "1"
+     },
+     "bar": 46
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "0"
+     },
+     "bar": 48
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "1"
+     },
+     "bar": 51
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0"
+     },
+     "bar": 53
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "1"
+     },
+     "bar": 56
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "0"
+     },
+     "bar": 58
+    }
+   ],
+   "kapali_form": {
+    "carpan": "0.99700449475561919340030284558020689954722938231184",
+    "defter_ile_azami_bagil_fark": "4.3857021086797729140691802898650143669417370739017E-49",
+    "formul": "C_son = C_ilk × (o_cikis / o_giris) × (1−s)(1−f) / [(1+s)(1+f)]",
+    "tur_sonu_sermaye": [
+     "10269.146295982877692023119309476131065336462637812",
+     "10033.617314109988302138093819454049373582849733820",
+     "10403.704023258480240065980254311055408967892418097",
+     "10267.412582012420146142262136533984750965529275960",
+     "10236.656493776780463048317813580973789660071527484",
+     "10818.352087698632114101406312508760271842325415956",
+     "10678.086200711529085700754159589258170072357298378",
+     "11178.404934372214747000708609394904726776122916104",
+     "11033.470764129815586590026901001812676545781952773",
+     "11550.440941821749539340052165173106235452869599538",
+     "11400.683120051555588486230051190104119794528251716",
+     "12045.751927859844189264551602368732815777648728190"
+    ]
+   }
+  },
+  {
+   "aciklama": "Aynı barda hem satış hem alım, bahsedilmeyen sembol, değişmeyen hedef ve tam çıkış. Kapalı formül geçerli değil; referans yalnızca Decimal defteri. Ölçtüğü şey sıralama kuralı: önce satışlar, tek özkaynak anlık görüntüsü, nakit tavanı.",
+   "ad": "eszamanli_dengeleme",
+   "barlar": {
+    "AAAUSDT": [
+     {
+      "close": "30200",
+      "high": "30250",
+      "low": "29950",
+      "open": "30000",
+      "open_time": 1699999200000,
+      "quality_status": "ok",
+      "quote_volume": "300000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30500",
+      "high": "30550",
+      "low": "30150",
+      "open": "30200",
+      "open_time": 1700002800000,
+      "quality_status": "ok",
+      "quote_volume": "302000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30300",
+      "high": "30550",
+      "low": "30250",
+      "open": "30500",
+      "open_time": 1700006400000,
+      "quality_status": "ok",
+      "quote_volume": "305000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30800",
+      "high": "30850",
+      "low": "30250",
+      "open": "30300",
+      "open_time": 1700010000000,
+      "quality_status": "ok",
+      "quote_volume": "303000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31200",
+      "high": "31250",
+      "low": "30750",
+      "open": "30800",
+      "open_time": 1700013600000,
+      "quality_status": "ok",
+      "quote_volume": "308000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31000",
+      "high": "31250",
+      "low": "30950",
+      "open": "31200",
+      "open_time": 1700017200000,
+      "quality_status": "ok",
+      "quote_volume": "312000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30700",
+      "high": "31050",
+      "low": "30650",
+      "open": "31000",
+      "open_time": 1700020800000,
+      "quality_status": "ok",
+      "quote_volume": "310000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30400",
+      "high": "30750",
+      "low": "30350",
+      "open": "30700",
+      "open_time": 1700024400000,
+      "quality_status": "ok",
+      "quote_volume": "307000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30900",
+      "high": "30950",
+      "low": "30350",
+      "open": "30400",
+      "open_time": 1700028000000,
+      "quality_status": "ok",
+      "quote_volume": "304000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31500",
+      "high": "31550",
+      "low": "30850",
+      "open": "30900",
+      "open_time": 1700031600000,
+      "quality_status": "ok",
+      "quote_volume": "309000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31800",
+      "high": "31850",
+      "low": "31450",
+      "open": "31500",
+      "open_time": 1700035200000,
+      "quality_status": "ok",
+      "quote_volume": "315000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31600",
+      "high": "31850",
+      "low": "31550",
+      "open": "31800",
+      "open_time": 1700038800000,
+      "quality_status": "ok",
+      "quote_volume": "318000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31100",
+      "high": "31650",
+      "low": "31050",
+      "open": "31600",
+      "open_time": 1700042400000,
+      "quality_status": "ok",
+      "quote_volume": "316000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30600",
+      "high": "31150",
+      "low": "30550",
+      "open": "31100",
+      "open_time": 1700046000000,
+      "quality_status": "ok",
+      "quote_volume": "311000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30200",
+      "high": "30650",
+      "low": "30150",
+      "open": "30600",
+      "open_time": 1700049600000,
+      "quality_status": "ok",
+      "quote_volume": "306000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "29800",
+      "high": "30250",
+      "low": "29750",
+      "open": "30200",
+      "open_time": 1700053200000,
+      "quality_status": "ok",
+      "quote_volume": "302000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30100",
+      "high": "30150",
+      "low": "29750",
+      "open": "29800",
+      "open_time": 1700056800000,
+      "quality_status": "ok",
+      "quote_volume": "298000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30500",
+      "high": "30550",
+      "low": "30050",
+      "open": "30100",
+      "open_time": 1700060400000,
+      "quality_status": "ok",
+      "quote_volume": "301000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31000",
+      "high": "31050",
+      "low": "30450",
+      "open": "30500",
+      "open_time": 1700064000000,
+      "quality_status": "ok",
+      "quote_volume": "305000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31400",
+      "high": "31450",
+      "low": "30950",
+      "open": "31000",
+      "open_time": 1700067600000,
+      "quality_status": "ok",
+      "quote_volume": "310000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31900",
+      "high": "31950",
+      "low": "31350",
+      "open": "31400",
+      "open_time": 1700071200000,
+      "quality_status": "ok",
+      "quote_volume": "314000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "32300",
+      "high": "32350",
+      "low": "31850",
+      "open": "31900",
+      "open_time": 1700074800000,
+      "quality_status": "ok",
+      "quote_volume": "319000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "32000",
+      "high": "32350",
+      "low": "31950",
+      "open": "32300",
+      "open_time": 1700078400000,
+      "quality_status": "ok",
+      "quote_volume": "323000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31600",
+      "high": "32050",
+      "low": "31550",
+      "open": "32000",
+      "open_time": 1700082000000,
+      "quality_status": "ok",
+      "quote_volume": "320000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31200",
+      "high": "31650",
+      "low": "31150",
+      "open": "31600",
+      "open_time": 1700085600000,
+      "quality_status": "ok",
+      "quote_volume": "316000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30900",
+      "high": "31250",
+      "low": "30850",
+      "open": "31200",
+      "open_time": 1700089200000,
+      "quality_status": "ok",
+      "quote_volume": "312000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31300",
+      "high": "31350",
+      "low": "30850",
+      "open": "30900",
+      "open_time": 1700092800000,
+      "quality_status": "ok",
+      "quote_volume": "309000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31700",
+      "high": "31750",
+      "low": "31250",
+      "open": "31300",
+      "open_time": 1700096400000,
+      "quality_status": "ok",
+      "quote_volume": "313000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "32200",
+      "high": "32250",
+      "low": "31650",
+      "open": "31700",
+      "open_time": 1700100000000,
+      "quality_status": "ok",
+      "quote_volume": "317000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "32600",
+      "high": "32650",
+      "low": "32150",
+      "open": "32200",
+      "open_time": 1700103600000,
+      "quality_status": "ok",
+      "quote_volume": "322000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "33000",
+      "high": "33050",
+      "low": "32550",
+      "open": "32600",
+      "open_time": 1700107200000,
+      "quality_status": "ok",
+      "quote_volume": "326000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "32700",
+      "high": "33050",
+      "low": "32650",
+      "open": "33000",
+      "open_time": 1700110800000,
+      "quality_status": "ok",
+      "quote_volume": "330000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "32300",
+      "high": "32750",
+      "low": "32250",
+      "open": "32700",
+      "open_time": 1700114400000,
+      "quality_status": "ok",
+      "quote_volume": "327000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31900",
+      "high": "32350",
+      "low": "31850",
+      "open": "32300",
+      "open_time": 1700118000000,
+      "quality_status": "ok",
+      "quote_volume": "323000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31500",
+      "high": "31950",
+      "low": "31450",
+      "open": "31900",
+      "open_time": 1700121600000,
+      "quality_status": "ok",
+      "quote_volume": "319000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "31100",
+      "high": "31550",
+      "low": "31050",
+      "open": "31500",
+      "open_time": 1700125200000,
+      "quality_status": "ok",
+      "quote_volume": "315000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30800",
+      "high": "31150",
+      "low": "30750",
+      "open": "31100",
+      "open_time": 1700128800000,
+      "quality_status": "ok",
+      "quote_volume": "311000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "30800",
+      "high": "30850",
+      "low": "30750",
+      "open": "30800",
+      "open_time": 1700132400000,
+      "quality_status": "ok",
+      "quote_volume": "308000",
+      "trades": 100,
+      "volume": "10"
+     }
+    ],
+    "BBBUSDT": [
+     {
+      "close": "1512",
+      "high": "1562",
+      "low": "1450",
+      "open": "1500",
+      "open_time": 1699999200000,
+      "quality_status": "ok",
+      "quote_volume": "15000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1495",
+      "high": "1562",
+      "low": "1445",
+      "open": "1512",
+      "open_time": 1700002800000,
+      "quality_status": "ok",
+      "quote_volume": "15120",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1520",
+      "high": "1570",
+      "low": "1445",
+      "open": "1495",
+      "open_time": 1700006400000,
+      "quality_status": "ok",
+      "quote_volume": "14950",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1538",
+      "high": "1588",
+      "low": "1470",
+      "open": "1520",
+      "open_time": 1700010000000,
+      "quality_status": "ok",
+      "quote_volume": "15200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1525",
+      "high": "1588",
+      "low": "1475",
+      "open": "1538",
+      "open_time": 1700013600000,
+      "quality_status": "ok",
+      "quote_volume": "15380",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1550",
+      "high": "1600",
+      "low": "1475",
+      "open": "1525",
+      "open_time": 1700017200000,
+      "quality_status": "ok",
+      "quote_volume": "15250",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1544",
+      "high": "1600",
+      "low": "1494",
+      "open": "1550",
+      "open_time": 1700020800000,
+      "quality_status": "ok",
+      "quote_volume": "15500",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1560",
+      "high": "1610",
+      "low": "1494",
+      "open": "1544",
+      "open_time": 1700024400000,
+      "quality_status": "ok",
+      "quote_volume": "15440",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1575",
+      "high": "1625",
+      "low": "1510",
+      "open": "1560",
+      "open_time": 1700028000000,
+      "quality_status": "ok",
+      "quote_volume": "15600",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1568",
+      "high": "1625",
+      "low": "1518",
+      "open": "1575",
+      "open_time": 1700031600000,
+      "quality_status": "ok",
+      "quote_volume": "15750",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1590",
+      "high": "1640",
+      "low": "1518",
+      "open": "1568",
+      "open_time": 1700035200000,
+      "quality_status": "ok",
+      "quote_volume": "15680",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1602",
+      "high": "1652",
+      "low": "1540",
+      "open": "1590",
+      "open_time": 1700038800000,
+      "quality_status": "ok",
+      "quote_volume": "15900",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1588",
+      "high": "1652",
+      "low": "1538",
+      "open": "1602",
+      "open_time": 1700042400000,
+      "quality_status": "ok",
+      "quote_volume": "16020",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1610",
+      "high": "1660",
+      "low": "1538",
+      "open": "1588",
+      "open_time": 1700046000000,
+      "quality_status": "ok",
+      "quote_volume": "15880",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1625",
+      "high": "1675",
+      "low": "1560",
+      "open": "1610",
+      "open_time": 1700049600000,
+      "quality_status": "ok",
+      "quote_volume": "16100",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1618",
+      "high": "1675",
+      "low": "1568",
+      "open": "1625",
+      "open_time": 1700053200000,
+      "quality_status": "ok",
+      "quote_volume": "16250",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1640",
+      "high": "1690",
+      "low": "1568",
+      "open": "1618",
+      "open_time": 1700056800000,
+      "quality_status": "ok",
+      "quote_volume": "16180",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1655",
+      "high": "1705",
+      "low": "1590",
+      "open": "1640",
+      "open_time": 1700060400000,
+      "quality_status": "ok",
+      "quote_volume": "16400",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1648",
+      "high": "1705",
+      "low": "1598",
+      "open": "1655",
+      "open_time": 1700064000000,
+      "quality_status": "ok",
+      "quote_volume": "16550",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1670",
+      "high": "1720",
+      "low": "1598",
+      "open": "1648",
+      "open_time": 1700067600000,
+      "quality_status": "ok",
+      "quote_volume": "16480",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1682",
+      "high": "1732",
+      "low": "1620",
+      "open": "1670",
+      "open_time": 1700071200000,
+      "quality_status": "ok",
+      "quote_volume": "16700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1665",
+      "high": "1732",
+      "low": "1615",
+      "open": "1682",
+      "open_time": 1700074800000,
+      "quality_status": "ok",
+      "quote_volume": "16820",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1690",
+      "high": "1740",
+      "low": "1615",
+      "open": "1665",
+      "open_time": 1700078400000,
+      "quality_status": "ok",
+      "quote_volume": "16650",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1705",
+      "high": "1755",
+      "low": "1640",
+      "open": "1690",
+      "open_time": 1700082000000,
+      "quality_status": "ok",
+      "quote_volume": "16900",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1698",
+      "high": "1755",
+      "low": "1648",
+      "open": "1705",
+      "open_time": 1700085600000,
+      "quality_status": "ok",
+      "quote_volume": "17050",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1720",
+      "high": "1770",
+      "low": "1648",
+      "open": "1698",
+      "open_time": 1700089200000,
+      "quality_status": "ok",
+      "quote_volume": "16980",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1735",
+      "high": "1785",
+      "low": "1670",
+      "open": "1720",
+      "open_time": 1700092800000,
+      "quality_status": "ok",
+      "quote_volume": "17200",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1728",
+      "high": "1785",
+      "low": "1678",
+      "open": "1735",
+      "open_time": 1700096400000,
+      "quality_status": "ok",
+      "quote_volume": "17350",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1750",
+      "high": "1800",
+      "low": "1678",
+      "open": "1728",
+      "open_time": 1700100000000,
+      "quality_status": "ok",
+      "quote_volume": "17280",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1762",
+      "high": "1812",
+      "low": "1700",
+      "open": "1750",
+      "open_time": 1700103600000,
+      "quality_status": "ok",
+      "quote_volume": "17500",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1745",
+      "high": "1812",
+      "low": "1695",
+      "open": "1762",
+      "open_time": 1700107200000,
+      "quality_status": "ok",
+      "quote_volume": "17620",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1770",
+      "high": "1820",
+      "low": "1695",
+      "open": "1745",
+      "open_time": 1700110800000,
+      "quality_status": "ok",
+      "quote_volume": "17450",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1785",
+      "high": "1835",
+      "low": "1720",
+      "open": "1770",
+      "open_time": 1700114400000,
+      "quality_status": "ok",
+      "quote_volume": "17700",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1778",
+      "high": "1835",
+      "low": "1728",
+      "open": "1785",
+      "open_time": 1700118000000,
+      "quality_status": "ok",
+      "quote_volume": "17850",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1800",
+      "high": "1850",
+      "low": "1728",
+      "open": "1778",
+      "open_time": 1700121600000,
+      "quality_status": "ok",
+      "quote_volume": "17780",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1812",
+      "high": "1862",
+      "low": "1750",
+      "open": "1800",
+      "open_time": 1700125200000,
+      "quality_status": "ok",
+      "quote_volume": "18000",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1795",
+      "high": "1862",
+      "low": "1745",
+      "open": "1812",
+      "open_time": 1700128800000,
+      "quality_status": "ok",
+      "quote_volume": "18120",
+      "trades": 100,
+      "volume": "10"
+     },
+     {
+      "close": "1795",
+      "high": "1845",
+      "low": "1745",
+      "open": "1795",
+      "open_time": 1700132400000,
+      "quality_status": "ok",
+      "quote_volume": "17950",
+      "trades": 100,
+      "volume": "10"
+     }
+    ]
+   },
+   "beklenen": {
+    "atlanan": [
+     "hedef_zaten_tutturulmus"
+    ],
+    "fill_ler": [
+     {
+      "bar": 2,
+      "fiyat": "30515.2500",
+      "komisyon": "5.00000",
+      "miktar": "0.16385249997951843750256019531217997558597750305175",
+      "miktar_sonra": "0.16385249997951843750256019531217997558597750305175",
+      "nakit_sonra": "4995.00000",
+      "notional": "5000.0",
+      "referans_fiyat": "30500",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 2,
+      "fiyat": "1495.7475",
+      "komisyon": "3.00000",
+      "miktar": "2.0056861201506270276233120897745107379420657564194",
+      "miktar_sonra": "2.0056861201506270276233120897745107379420657564194",
+      "nakit_sonra": "1992.00000",
+      "notional": "3000.0",
+      "referans_fiyat": "1495",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 5,
+      "fiyat": "31184.4000",
+      "komisyon": "3.0796241328428389566387922876107864155536684204638",
+      "miktar": "0.098755279333347409494452107066699581058274920167257",
+      "miktar_sonra": "0.065097220646171028008108088245480394527702582884493",
+      "nakit_sonra": "5068.5445087099961176821534953231756291381147520433",
+      "notional": "3079.6241328428389566387922876107864155536684204638",
+      "referans_fiyat": "31200",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 5,
+      "fiyat": "1525.7625",
+      "komisyon": "3.0390502663247026631977064814815575928248387457128",
+      "miktar": "1.9918239348028953806360468824483218016072873371267",
+      "miktar_sonra": "3.9975100549535224082593589722228325395493530935461",
+      "nakit_sonra": "2026.4551921189687518212493073601364787204511675848",
+      "notional": "3039.0502663247026631977064814815575928248387457128",
+      "referans_fiyat": "1525",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 8,
+      "fiyat": "1559.2200",
+      "komisyon": "4.1878104086294823648541329593295469148850707232909",
+      "miktar": "2.6858367700706009189557169349607796942606371925007",
+      "miktar_sonra": "1.3116732848829214893036420372620528452887159010454",
+      "nakit_sonra": "6210.0777903398216343105281337303538466906368201524",
+      "notional": "4187.8104086294823648541329593295469148850707232909",
+      "referans_fiyat": "1560",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 8,
+      "fiyat": "30415.2000",
+      "komisyon": "4.1659603236504385246449152293516115467936017882344",
+      "miktar": "0.13696968369928320460312328143006166478581767630114",
+      "miktar_sonra": "0.20206690434545423261123136967554205931352025918563",
+      "nakit_sonra": "2039.9515063657326711409679891493906883502414301298",
+      "notional": "4165.9603236504385246449152293516115467936017882344",
+      "referans_fiyat": "30400",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 11,
+      "fiyat": "31784.1000",
+      "komisyon": "6.4225146944063518747386389769043963674268592699820",
+      "miktar": "0.20206690434545423261123136967554205931352025918563",
+      "miktar_sonra": "0",
+      "nakit_sonra": "8456.0436860776781940048683270768826594096738408418",
+      "notional": "6422.5146944063518747386389769043963674268592699820",
+      "referans_fiyat": "31800",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 11,
+      "fiyat": "1589.2050",
+      "komisyon": "2.0845177427023632454087944438270406919970537535209",
+      "miktar": "1.3116732848829214893036420372620528452887159010454",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10538.476911037339076168253976460096310714730540609",
+      "notional": "2084.5177427023632454087944438270406919970537535209",
+      "referans_fiyat": "1590",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 14,
+      "fiyat": "30615.3000",
+      "komisyon": "4.7423146099668025842757142894070433398216287432740",
+      "miktar": "0.15490015155712348349602043061498803996111841932870",
+      "miktar_sonra": "0.15490015155712348349602043061498803996111841932870",
+      "nakit_sonra": "5791.4199864605696893082639727636459275532801685917",
+      "notional": "4742.3146099668025842757142894070433398216287432740",
+      "referans_fiyat": "30600",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 14,
+      "fiyat": "1610.8050",
+      "komisyon": "4.7423146099668025842757142894070433398216287432740",
+      "miktar": "2.9440649923279370155144255756637478402547972866200",
+      "miktar_sonra": "2.9440649923279370155144255756637478402547972866200",
+      "nakit_sonra": "1044.3630618838003024482739690671955443918297965744",
+      "notional": "4742.3146099668025842757142894070433398216287432740",
+      "referans_fiyat": "1610",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 17,
+      "fiyat": "1639.1800",
+      "komisyon": "0.08746069239085146793869185048844955566015475426560",
+      "miktar": "0.053356368666559784733032278632273182725603505573274",
+      "miktar_sonra": "2.8907086236613772307813932970314746575291937810467",
+      "nakit_sonra": "1131.7362935822609189190271277051566504963243960857",
+      "notional": "87.4606923908514679386918504884495556601547542656",
+      "referans_fiyat": "1640",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 17,
+      "fiyat": "30115.0500",
+      "komisyon": "0.07831133315754838427475113208895689952804837399730",
+      "miktar": "0.0026004052179076038151937696297684014978573296075318",
+      "miktar_sonra": "0.15750055677503108731121420024475644145897574893623",
+      "nakit_sonra": "1053.3466490915549862600012444841107940687479737144",
+      "notional": "78.3113331575483842747511320889568995280483739973",
+      "referans_fiyat": "30100",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 20,
+      "fiyat": "31415.7000",
+      "komisyon": "1.0522943547368181680919093351489618322365114622521",
+      "miktar": "0.033495811162470298866232786000278899793304349807647",
+      "miktar_sonra": "0.19099636793750138617744698624503534125228009874388",
+      "nakit_sonra": "0E-46",
+      "notional": "1052.2943547368181680919093351489618322365114622521",
+      "referans_fiyat": "31400",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 23,
+      "fiyat": "1689.1550",
+      "komisyon": "4.8828549252007336562605443946472005751387253212239",
+      "miktar": "2.8907086236613772307813932970314746575291937810467",
+      "miktar_sonra": "0",
+      "nakit_sonra": "4877.9720702755329226042838502525533745635865959027",
+      "notional": "4882.8549252007336562605443946472005751387253212239",
+      "referans_fiyat": "1690",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 26,
+      "fiyat": "30884.5500",
+      "komisyon": "5.8988368753841584364666703190341062486731073236603",
+      "miktar": "0.19099636793750138617744698624503534125228009874388",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10770.910108784307200634487498967625516988020812239",
+      "notional": "5898.8368753841584364666703190341062486731073236603",
+      "referans_fiyat": "30900",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 29,
+      "fiyat": "32216.1000",
+      "komisyon": "3.7698185380745075202220706246386689309458072842836",
+      "miktar": "0.11701660157730164483665219019802735063976729909218",
+      "miktar_sonra": "0.11701660157730164483665219019802735063976729909218",
+      "nakit_sonra": "6997.3217521717251728921948037043179171112677206711",
+      "notional": "3769.8185380745075202220706246386689309458072842836",
+      "referans_fiyat": "32200",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 29,
+      "fiyat": "1750.8750",
+      "komisyon": "3.7698185380745075202220706246386689309458072842836",
+      "miktar": "2.1531054690223502649944002996437032517717183032961",
+      "miktar_sonra": "2.1531054690223502649944002996437032517717183032961",
+      "nakit_sonra": "3223.7333955591431451499021084410103172345146291032",
+      "notional": "3769.8185380745075202220706246386689309458072842836",
+      "referans_fiyat": "1750",
+      "sembol": "BBBUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 32,
+      "fiyat": "1769.1150",
+      "komisyon": "3.8090911818294751890555684861041700782581234261357",
+      "miktar": "2.1531054690223502649944002996437032517717183032961",
+      "miktar_sonra": "0",
+      "nakit_sonra": "7029.0154862067888590164150260590762254143799318128",
+      "notional": "3809.0911818294751890555684861041700782581234261357",
+      "referans_fiyat": "1770",
+      "sembol": "BBBUSDT",
+      "yon": "SAT"
+     },
+     {
+      "bar": 32,
+      "fiyat": "32716.3500",
+      "komisyon": "3.7763781915367630440854354613246072412332020140621",
+      "miktar": "0.11542785767778994429651949136516167730303661667827",
+      "miktar_sonra": "0.23244445925509158913317168156318902794280391577045",
+      "nakit_sonra": "3248.8609164784890518868941292731443769399447157366",
+      "notional": "3776.3781915367630440854354613246072412332020140621",
+      "referans_fiyat": "32700",
+      "sembol": "AAAUSDT",
+      "yon": "AL"
+     },
+     {
+      "bar": 35,
+      "fiyat": "31484.2500",
+      "komisyon": "7.3183394663021173651660605152558341530082241850958",
+      "miktar": "0.23244445925509158913317168156318902794280391577045",
+      "miktar_sonra": "0",
+      "nakit_sonra": "10559.882043314304299687788584013722695795160676647",
+      "notional": "7318.3394663021173651660605152558341530082241850958",
+      "referans_fiyat": "31500",
+      "sembol": "AAAUSDT",
+      "yon": "SAT"
+     }
+    ],
+    "ozet": {
+     "bitis_sermaye": "10559.882043314304299687788584013722695795160676647",
+     "islem_sayisi": 6,
+     "kaybeden": 1,
+     "kazanan": 5,
+     "nakit": "10559.882043314304299687788584013722695795160676647",
+     "net_pnl_toplam": "559.88204331430429968778858401372269579516067664828",
+     "toplam_komisyon": "74.907310885177263549818181700688650654752061617013",
+     "toplam_slippage": "37.453823503383057491064273018104008456214757340379"
+    },
+    "ozkaynak": [
+     "10000",
+     "10000",
+     "10005.373652008361738315008294416309581927058292226",
+     "10123.402252160832243563508009688340763003004227367",
+     "10162.869332590681467205429030646144113644148373754",
+     "10240.609617328230352874606449915419145380728532001",
+     "10197.095390804657910022617869608438031785121638574",
+     "10241.526385490062960152335186690359234059600513205",
+     "10349.704274330869804481253520811373552467744983112",
+     "10461.762703943961893622866848355864418138836127316",
+     "10551.239587515022436170916384078292198529243954895",
+     "10538.476911037339076168253976460096310714730540609",
+     "10538.476911037339076168253976460096310714730540609",
+     "10538.476911037339076168253976460096310714730540609",
+     "10506.453251441827154239032534093424591631651651059",
+     "10423.884735872682201732023382817783140765420702321",
+     "10535.124211171033861122146874666882005239361768425",
+     "10641.236402889582466195240258536272816778324023902",
+     "10699.751720911468369235377605579430714905107541902",
+     "10826.347533342031103237053938212025733954340104660",
+     "10954.956042204730721234862386823567759911839089650",
+     "10982.212542777487862782557495272046827234754834870",
+     "10997.181347987771877698858231824323091297300649773",
+     "10913.457297100576725811608615595670158135637716209",
+     "10837.058749925576171340629821097656021634725676712",
+     "10779.759839544325755487395725224145419259041647089",
+     "10770.910108784307200634487498967625516988020812239",
+     "10770.910108784307200634487498967625516988020812239",
+     "10770.910108784307200634487498967625516988020812239",
+     "10832.246443396557933744896836868907077712696229916",
+     "10842.450291054098637174652907854175062688483938397",
+     "10861.172947306466900348517258285859438790846706252",
+     "10756.816950417947380888339443764149979492511195122",
+     "10663.839166715910745235070771138874368315389628814",
+     "10570.861383013874109581802098513598757138268062506",
+     "10559.882043314304299687788584013722695795160676647",
+     "10559.882043314304299687788584013722695795160676647",
+     "10559.882043314304299687788584013722695795160676647"
+    ],
+    "turlar": [
+     {
+      "acilis_ms": 1700006400000,
+      "cikis_notional": "9502.1388272491908313774312645151827829805276904458",
+      "fill_sayisi": 4,
+      "giris_notional": "9165.9603236504385246449152293516115467936017882344",
+      "kapanis_ms": 1700038800000,
+      "komisyon": "18.668099150899629356022346493866794329774129478680",
+      "miktar": "0.30082218367880164210568347674224164037179517935289",
+      "net_pnl": "317.5104044478526773764936886697044418571517727326",
+      "sembol": "AAAUSDT",
+      "slippage": "9.3341359536097027685135485043293141400246464769772"
+     },
+     {
+      "acilis_ms": 1700006400000,
+      "cikis_notional": "6272.3281513318456102629274031565876068821244768118",
+      "fill_sayisi": 4,
+      "giris_notional": "6039.0502663247026631977064814815575928248387457128",
+      "kapanis_ms": 1700038800000,
+      "komisyon": "12.311378417656548273460633884638145199706963222525",
+      "miktar": "3.9975100549535224082593589722228325395493530935461",
+      "net_pnl": "220.9665065894863987917602877903918688575787678765",
+      "sembol": "BBBUSDT",
+      "slippage": "6.1557490672367927316652661638660323238650768989642"
+     },
+     {
+      "acilis_ms": 1700049600000,
+      "cikis_notional": "5898.8368753841584364666703190341062486731073236603",
+      "fill_sayisi": 4,
+      "giris_notional": "5872.9202978611691366423747566449620715861885795234",
+      "kapanis_ms": 1700092800000,
+      "komisyon": "11.771757173245327573109045075679068320259295903184",
+      "miktar": "0.19099636793750138617744698624503534125228009874388",
+      "net_pnl": "14.1448203497439722511865173134651087666594482338",
+      "sembol": "AAAUSDT",
+      "slippage": "5.8858865372386788435491894990275062030504704438955"
+     },
+     {
+      "acilis_ms": 1700049600000,
+      "cikis_notional": "4970.3156175915851241992362451356501307988800754895",
+      "fill_sayisi": 3,
+      "giris_notional": "4742.3146099668025842757142894070433398216287432740",
+      "kapanis_ms": 1700082000000,
+      "komisyon": "9.7126302275583877084749505345426934706205088187635",
+      "miktar": "2.9440649923279370155144255756637478402547972866200",
+      "net_pnl": "218.28837739722415221504700519406409750663082339688",
+      "sembol": "BBBUSDT",
+      "slippage": "4.8563733281244320809804763928793771068522754352837"
+     },
+     {
+      "acilis_ms": 1700103600000,
+      "cikis_notional": "7318.3394663021173651660605152558341530082241850958",
+      "fill_sayisi": 3,
+      "giris_notional": "7546.1967296112705643075060859632761721790092983457",
+      "kapanis_ms": 1700125200000,
+      "komisyon": "14.864536195913387929473566601219110325187233483442",
+      "miktar": "0.23244445925509158913317168156318902794280391577045",
+      "net_pnl": "-242.7217995050665870709191373086611294959723467333",
+      "sembol": "AAAUSDT",
+      "slippage": "7.4322129916941145999656479306288609593040638714584"
+     },
+     {
+      "acilis_ms": 1700103600000,
+      "cikis_notional": "3809.0911818294751890555684861041700782581234261357",
+      "fill_sayisi": 2,
+      "giris_notional": "3769.8185380745075202220706246386689309458072842836",
+      "kapanis_ms": 1700114400000,
+      "komisyon": "7.5789097199039827092776391107428390092039307104193",
+      "miktar": "2.1531054690223502649944002996437032517717183032961",
+      "net_pnl": "31.6937340350636861242202223547583083031122111418",
+      "sembol": "BBBUSDT",
+      "slippage": "3.7894656254793364663901445273729177231182242138011"
+     }
+    ]
+   },
+   "hedefler": [
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.5",
+      "BBBUSDT": "0.3"
+     },
+     "bar": 1
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.2",
+      "BBBUSDT": "0.6"
+     },
+     "bar": 4
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.6",
+      "BBBUSDT": "0.2"
+     },
+     "bar": 7
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.0",
+      "BBBUSDT": "0.0"
+     },
+     "bar": 10
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.45",
+      "BBBUSDT": "0.45"
+     },
+     "bar": 13
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.45",
+      "BBBUSDT": "0.45"
+     },
+     "bar": 16
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.9"
+     },
+     "bar": 19
+    },
+    {
+     "agirliklar": {
+      "BBBUSDT": "0.0"
+     },
+     "bar": 22
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.0"
+     },
+     "bar": 25
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.35",
+      "BBBUSDT": "0.35"
+     },
+     "bar": 28
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.7",
+      "BBBUSDT": "0.0"
+     },
+     "bar": 31
+    },
+    {
+     "agirliklar": {
+      "AAAUSDT": "0.0",
+      "BBBUSDT": "0.0"
+     },
+     "bar": 34
+    }
+   ],
+   "olcum": {
+    "ayni_barda_satis_ve_alim": 4
+   }
+  }
+ ],
+ "timeframe": "1h",
+ "ureten": "tools/coklu_referans_uret.py",
+ "uretildi": "2026-09-16"
+}

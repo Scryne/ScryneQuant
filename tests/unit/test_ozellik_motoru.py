@@ -171,3 +171,29 @@ class TestHesapla:
         b = hesapla(d, tanimlar)
         for ad in a:
             np.testing.assert_array_equal(a[ad], b[ad])
+
+    def test_kote_hacim_sma_hacim_sma_ile_ayni_fonksiyon(self):
+        """`kote_hacim_sma` (Faz 10) yalnızca **girdi sütunu** bakımından farklı.
+
+        Ayrı bir referans doğrulaması (K-026) gerekmiyor çünkü hesap `hacim_sma` ile aynı
+        fonksiyon; ölçülmesi gereken tek şey, deftere yanlış sütunla kaydedilmemiş olması.
+        Aynı seriyi iki sütuna koyup çıktıların birebir aynı olmasını bekliyoruz.
+        """
+        d = self._diziler()
+        seri = d["volume"]
+        ayni = dict(d) | {"volume": seri, "quote_volume": seri}
+        a = hesapla(ayni, [OzellikTanimi("x", "hacim_sma", {"pencere": 10})])
+        b = hesapla(ayni, [OzellikTanimi("x", "kote_hacim_sma", {"pencere": 10})])
+        np.testing.assert_array_equal(a["x"], b["x"])
+
+    def test_kote_hacim_sma_quote_volume_okuyor(self):
+        """Negatif kontrol: iki sütun farklıysa çıktılar da farklı olmalı.
+
+        Olmasaydı üstteki test, `kote_hacim_sma`nın hâlâ `volume` okuduğu bir dünyada da
+        yeşil kalırdı.
+        """
+        d = self._diziler()
+        farkli = dict(d) | {"quote_volume": d["volume"] * 3.0 + 1.0}
+        a = hesapla(farkli, [OzellikTanimi("x", "hacim_sma", {"pencere": 10})])
+        b = hesapla(farkli, [OzellikTanimi("x", "kote_hacim_sma", {"pencere": 10})])
+        assert not np.array_equal(a["x"][20:], b["x"][20:])

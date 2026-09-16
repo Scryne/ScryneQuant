@@ -54,6 +54,14 @@ DEFTER: Final[dict[str, Kayit]] = {
     "atr": Kayit(("high", "low", "close"), ("pencere",), ("",), ind.atr),
     "true_range": Kayit(("high", "low", "close"), (), ("",), ind.gercek_aralik),
     "hacim_sma": Kayit(("volume",), ("pencere",), ("",), ind.hacim_ortalamasi),
+    # Aynı fonksiyon, farklı sütun: **kote** para birimindeki hacim. Faz 10'da eklendi
+    # (K-057) çünkü cross-sectional bir sıralamada baz varlık hacmi karşılaştırılamaz —
+    # 1 BTC ile 1 DOGE aynı sayı değildir. Evren kuralı da (`data/evren.py`) `quote_volume`
+    # topluyor; sıralamanın onunla aynı büyüklüğü kullanması, iki katmanın aynı şeyi
+    # ölçmesini sağlıyor. Hesap `hacim_sma` ile birebir aynı fonksiyon olduğu için ayrı bir
+    # referans doğrulaması gerekmiyor; `test_ozellik_motoru.py` ikisinin aynı girdide aynı
+    # çıktıyı verdiğini kontrol ediyor.
+    "kote_hacim_sma": Kayit(("quote_volume",), ("pencere",), ("",), ind.hacim_ortalamasi),
     "en_yuksek": Kayit(("high",), ("pencere",), ("",), ind.en_yuksek),
     "en_dusuk": Kayit(("low",), ("pencere",), ("",), ind.en_dusuk),
     "roc": Kayit(("close",), ("pencere",), ("",), ind.roc),

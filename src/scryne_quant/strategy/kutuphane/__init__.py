@@ -18,13 +18,14 @@ from scryne_quant.strategy.kutuphane.al_tut import AlTut
 from scryne_quant.strategy.kutuphane.breakout import DonchianKirilim
 from scryne_quant.strategy.kutuphane.cok_faktor import CokFaktor
 from scryne_quant.strategy.kutuphane.ema_kesisim import EmaKesisim
+from scryne_quant.strategy.kutuphane.evren_esit_agirlik import EvrenEsitAgirlik
 from scryne_quant.strategy.kutuphane.funding_egilim import FundingEgilim
 from scryne_quant.strategy.kutuphane.funding_filtre import FundingFiltre
 from scryne_quant.strategy.kutuphane.funding_ters import FundingTers
 from scryne_quant.strategy.kutuphane.momentum import Momentum
 from scryne_quant.strategy.kutuphane.rsi_donus import RsiOrtalamaDonus
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
-from scryne_quant.strategy.temel import Strateji
+from scryne_quant.strategy.temel import PortfoyStratejisi, Strateji
 
 #: Ad → sınıf. Faz 4'ün beş ailesi; `sma_kesisim` ile `ema_kesisim` aynı ailenin
 #: (trend takibi / kesişim) iki üyesi olduğu için beş aile altı sınıf eder.
@@ -46,6 +47,16 @@ KUTUPHANE: Final[dict[str, type[Strateji]]] = {
 #: çizgi. Karşılaştırma raporlarına ayrı bir satır olarak giriyor — bir stratejinin
 #: "%15 kazandı" cümlesi, aynı dönemde varlığın ne yaptığı bilinmeden okunamaz.
 KIYAS: Final[dict[str, type[Strateji]]] = {AlTut.ad: AlTut}
+
+#: Çok enstrümanlı kıyas. Ayrı bir sözlükte çünkü tipi farklı (`PortfoyStratejisi`) ve
+#: `coz()` ile çözülen tek sembollü stratejilerle aynı yere konsaydı, çağıranın hangi
+#: sözleşmeyi beklediği çalışma zamanında belli olurdu — tipte değil.
+#:
+#: Evren kıyası da bir **kıyastır**, aile değil (K-030): hipotez defterine çekiliş olarak
+#: girmez, K-045'in "yeni çekiliş yok" kuralının kapsamında değildir.
+EVREN_KIYAS: Final[dict[str, type[PortfoyStratejisi]]] = {
+    EvrenEsitAgirlik.ad: EvrenEsitAgirlik
+}
 
 #: Aile → o ailenin stratejileri. Roadmap "5 aile de aynı veri ve aynı maliyet
 #: varsayımlarıyla çalıştırılmış, sonuçlar yan yana" diyor; karşılaştırma bu gruplamayı
@@ -87,6 +98,7 @@ def aile(ad: str) -> str:
 
 __all__ = [
     "AILELER",
+    "EVREN_KIYAS",
     "KIYAS",
     "KUTUPHANE",
     "AlTut",
@@ -94,6 +106,7 @@ __all__ = [
     "CokFaktor",
     "DonchianKirilim",
     "EmaKesisim",
+    "EvrenEsitAgirlik",
     "FundingEgilim",
     "FundingFiltre",
     "FundingTers",

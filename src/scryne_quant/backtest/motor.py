@@ -1,57 +1,38 @@
-"""Event loop: bar bar ilerleyen deterministik backtest motoru. (Faz 3)
+"""Tek sembollü backtest: çok enstrümanlı motorun **özel hâli**. (Faz 3, Faz 10)
 
-Bir barın iç sırası **sabittir** ve bu sıra kararların yarısıdır:
+Faz 3'te bu dosya event loop'un kendisiydi. Faz 10'da döngü `coklu_motor.py`ye taşındı ve
+burada bir sarmalayıcı kaldı — çünkü K-052/2 *"çok enstrümanlı motor ikinci bir motor
+değildir"* diyor ve iki motorun "aynı sonucu verdiğini" test etmek, tek motorun aynı
+sonucu vermesiyle aynı şey değil. İkisi bir gün ayrışabilir; tek kod yolu ayrışamaz.
 
-1. **Fill** — bir önceki barda üretilmiş bekleyen sinyal, bu barın **açılışından** dolar
-   (K-004). Önce fill olması şart: strateji bu barın kapanışında karar verirken elindeki
-   pozisyonun güncel olması gerekir.
-2. **Risk durumu** — risk motoru devredeyse (Faz 5) bu barın özkaynağını işler: gün
-   dönümü, zirve, drawdown. Karardan **önce**; sonra olsaydı drawdown ve günlük zarar bir
-   bar gecikmeli ölçülür, yani limitler bir bar geç devreye girerdi.
-3. **Karar** — strateji bu barın **kapanmış** hâliyle çağrılır, `ctx` `t`'de kesiktir
-   (K-002). Ürettiği sinyal risk motorundan geçer; onaylanırsa bekleyene alınır (riskin
-   izin verdiği hedefle), reddedilirse `risk_reddetti` olarak sayılır. Hiçbir hâlde bu
-   barda dolmaz.
-4. **Değerleme** — özkaynak ve maruziyet bu barın kapanışıyla işaretlenir.
+**Sarmalayıcının yaptığı üç şey:**
 
-Sıra tersine dönseydi (önce karar, sonra fill) sinyal kendi barının açılışında dolardı —
-yani karar verilirken bilinmeyen bir fiyatla, gizli look-ahead.
+1. Tek sembolü tek elemanlı bir evrene çevirir (üyelik: her barda üye — tek sembollü bir
+   koşuda evren kuralı diye bir şey yoktur, sembol verilmiştir).
+2. `Strateji`yi `TekEnstruman` ile portföy sözleşmesine taşır; sarmalayıcı `sozluk()`ü
+   olduğu gibi devrettiği için `config_hash` değişmez (K-009).
+3. Sonucu **tek sembollü biçimde** kurdurur (`tekil_sembol=`): `veri` o sembolü anlatır,
+   `evren` alanı yazılmaz, işlem satırlarına sembol eklenmez. Böylece Faz 1-7'de `runs/`
+   altına kaydedilmiş her sonucun `sonuc_hash`i aynı kalır.
 
-**Risk kararı sinyal barında verilir, fill barında değil.** Fill barında verilseydi risk
-motoru `t+1`in açılışını görmüş olurdu — kararı bilinmeyen bir fiyatla vermek, K-002'nin
-yasakladığı şeyin risk katmanındaki hâli.
-
-**`ok` olmayan barlarda ne olur (K-006, K-028):** ne karar verilir ne fill yapılır. Bir
-`suspect` barın açılışından doldurmak, şüpheli bir fiyattan gerçek bir P&L üretmek olurdu.
-Atlanan sinyaller sebebiyle birlikte sayılır ve sonuç kaydına yazılır — K-006'nın
-"sessizce kullanılmaz" kuralının "sessizce **atılmaz**" tarafı da bu.
-
-Motorun kendisi rastgelelik içermez; `seed` kayda yazılır çünkü Faz 4'ün Monte Carlo'su
-onu kullanacak ve o gün kaydın şekli değişmemeli.
+Barın iç sırası, fill kuralı (K-004), maliyet (K-007), `ok` olmayan bar davranışı (K-028)
+ve risk kesme noktası (K-032) değişmedi — hepsi `coklu_motor.py`de ve oradaki docstring
+aynı gerekçeleri taşıyor.
 """
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Mapping
 
 import numpy as np
 
-from scryne_quant.backtest.defter import uygula as defter_uygula
-from scryne_quant.backtest.fill import AtlamaSebebi, Emir, emir_hazirla
-from scryne_quant.backtest.metrikler import Islem, hesapla
-from scryne_quant.backtest.sonuc import VARSAYILAN_KALITE_ESIGI, Sonuc, VeriKimligi, atlama_sayimi
+from scryne_quant.backtest.coklu_motor import CokluBacktest
+from scryne_quant.backtest.sonuc import VARSAYILAN_KALITE_ESIGI, Sonuc
 from scryne_quant.common.maliyet import MaliyetModeli
-from scryne_quant.common.zaman import timeframe_ms
-from scryne_quant.data.semalar import KaliteDurumu
-from scryne_quant.features.indikator import atr as atr_hesapla
-from scryne_quant.portfolio.durum import Portfoy
-from scryne_quant.risk.motor import RISK_ATR_PENCERESI, PiyasaOlcumu, RiskMotoru
-from scryne_quant.risk.niyet import OnayliNiyet
+from scryne_quant.risk.motor import RISK_ATR_PENCERESI, RiskMotoru
 from scryne_quant.strategy.baglam import PiyasaGorunumu
-from scryne_quant.strategy.kosu import gorunum_kur
-from scryne_quant.strategy.sinyal import Sinyal
-from scryne_quant.strategy.temel import Strateji
+from scryne_quant.strategy.kosu import evren_gorunum_kur
+from scryne_quant.strategy.temel import Strateji, TekEnstruman
 
 
 class BacktestHatasi(ValueError):
@@ -61,10 +42,8 @@ class BacktestHatasi(ValueError):
 class Backtest:
     """Tek sembol, tek strateji, spot, uzun-yönlü backtest.
 
-    Kapsam bilinçli olarak dar (Final-Doküman v1): çoklu sembol, açığa satış, kaldıraç ve
-    portföy düzeyi tahsis yok. Genişletmek için doğru zaman Faz 4'ün ihtiyacı belli
-    olduğunda; şimdiden genel yazmak, hiç kullanılmayacak kod yollarını test edilmemiş
-    hâlde bırakırdı.
+    Kapsam v1'de bilinçli olarak dardı ve dar kalıyor: bu sınıf tek sembolü anlatır. Çok
+    enstrümanlı koşular `CokluBacktest` ile yapılır; ikisi aynı döngüyü çalıştırır.
     """
 
     def __init__(
@@ -121,9 +100,7 @@ class Backtest:
         önceki barları hesaba katmak look-ahead değil, **gerçekçilik**tir; ölçümü o
         barlardan başlatmak ise katmanın sınırını korur.
         """
-        adim = timeframe_ms(timeframe)
-        gorunum = gorunum_kur(sembol, timeframe, bar_dizileri, self.strateji)
-        n = len(gorunum)
+        n = len(bar_dizileri["open_time"])
         if n < 2:
             raise BacktestHatasi(f"backtest için en az 2 bar gerekir, verilen: {n}")
         if not 0 <= olcum_baslangici < n - 1:
@@ -131,181 +108,29 @@ class Backtest:
                 f"ölçüm başlangıcı 0..{n - 2} aralığında olmalı, verilen: {olcum_baslangici}"
             )
 
-        acilis = gorunum.barlar["open"]
-        kapanis = gorunum.barlar["close"]
-        zamanlar = gorunum.barlar["open_time"]
-        kalite = gorunum.barlar["quality_status"]
-
-        self.strateji.hazirla()
-        portfoy = Portfoy(nakit=self.baslangic_sermaye)
-
-        ozkaynak = np.empty(n, dtype=np.float64)
-        maruziyet = np.empty(n, dtype=np.float64)
-        islemler: list[Islem] = []
-        acik: Islem | None = None
-        # Bekleyen = (sinyal, riskin onayladığı hedef). Risk devre dışıysa hedef sinyalin
-        # kendi hedefi; devredeyse onun aşağı çekilmiş hâli.
-        bekleyen: tuple[Sinyal, float] | None = None
-        atlanan: list[AtlamaSebebi] = []
-        uretilen = 0
-
-        # Risk motorunun volatilite ölçüsü. Stratejinin bildirdiği özelliklerden bağımsız
-        # hesaplanıyor: strateji ATR bildirmese de guard çalışmak zorunda.
-        risk_atr = (
-            atr_hesapla(
-                gorunum.barlar["high"], gorunum.barlar["low"], kapanis, RISK_ATR_PENCERESI
-            )
-            if self.risk is not None
-            else None
+        sarmal = TekEnstruman(self.strateji, sembol)
+        gorunum = evren_gorunum_kur(
+            timeframe,
+            {sembol: dict(bar_dizileri)},
+            # Tek sembollü koşuda evren kuralı yok: sembol verilmiştir, seçilmemiştir.
+            # Hep-üye bir maske, "evren seçimi bu koşunun sorusu değil" demenin kod hâli.
+            {sembol: np.ones(n, dtype=bool)},
+            sarmal,
         )
-
-        for i in range(n):
-            bar_ok = str(kalite[i]) == KaliteDurumu.OK
-
-            # 1) Fill — bekleyen sinyal bu barın açılışından dolar (K-004).
-            if bekleyen is not None:
-                if not bar_ok:
-                    atlanan.append(AtlamaSebebi.FILL_BARI_OK_DEGIL)
-                else:
-                    sinyal_b, hedef_b = bekleyen
-                    sonuc = emir_hazirla(
-                        sinyal_b,
-                        portfoy,
-                        float(acilis[i]),
-                        int(zamanlar[i]),
-                        self.maliyet,
-                        hedef_maruziyet=hedef_b,
-                    )
-                    if isinstance(sonuc, AtlamaSebebi):
-                        atlanan.append(sonuc)
-                    else:
-                        portfoy, acik = self._uygula(sonuc, portfoy, acik, islemler)
-                bekleyen = None
-
-            fiyat = float(kapanis[i])
-
-            # 2) Risk durumunun bu barla güncellenmesi — **karardan önce.** Sonra olsaydı
-            #    drawdown ve günlük zarar bir bar gecikmeli ölçülür, yani limit bir bar
-            #    geç devreye girerdi.
-            if self.risk is not None:
-                self.risk.bar_isle(int(zamanlar[i]), portfoy.ozkaynak(fiyat))
-
-            # 3) Karar — strateji kapanmış barı görür, `ctx` `t`'de kesiktir (K-002).
-            if bar_ok:
-                ctx = gorunum.baglam(i, portfoy.gorunum(fiyat))
-                sinyal = self.strateji.on_bar(ctx)
-                if sinyal is not None:
-                    uretilen += 1
-                    if i < olcum_baslangici:
-                        atlanan.append(AtlamaSebebi.ISINMA_PENCERESI)
-                    elif i == n - 1:
-                        # Son barın sinyali dolacağı barı bulamaz. Bir sonraki barın
-                        # açılışını beklemek yerine kendi kapanışından doldurmak K-004'ün
-                        # açıkça yasakladığı şey olurdu.
-                        atlanan.append(AtlamaSebebi.SONRAKI_BAR_YOK)
-                    else:
-                        hedef = self._risk_onayi(
-                            sinyal, portfoy, fiyat, int(zamanlar[i]), risk_atr, i
-                        )
-                        if hedef is None:
-                            atlanan.append(AtlamaSebebi.RISK_REDDETTI)
-                        else:
-                            bekleyen = (sinyal, hedef)
-
-            # 4) Değerleme — bu barın kapanışıyla işaretle.
-            ozkaynak[i] = portfoy.ozkaynak(fiyat)
-            maruziyet[i] = portfoy.maruziyet(fiyat)
-
-        # Ölçüm penceresi: ısınma barları kayda girmez. Girselerdi katmanın Sharpe'ı
-        # işlem yapılmayan düz barlarla sulandırılır ve katmanlar arası karşılaştırma
-        # ısınma uzunluğuna göre değişirdi.
-        ozkaynak = ozkaynak[olcum_baslangici:]
-        maruziyet = maruziyet[olcum_baslangici:]
-        olcum_zamanlari = np.asarray(zamanlar)[olcum_baslangici:]
-        olcum_kalite = np.asarray(kalite)[olcum_baslangici:]
-        olcum_n = len(olcum_zamanlari)
-
-        sayim = Counter(str(k) for k in olcum_kalite)
-        ok_olmayan = olcum_n - sayim.get(str(KaliteDurumu.OK), 0)
-
-        return Sonuc(
-            veri=VeriKimligi(
-                sembol=sembol,
-                timeframe=timeframe,
-                sha256=veri_sha256,
-                bar_sayisi=olcum_n,
-                ilk_ms=int(olcum_zamanlari[0]),
-                son_ms=int(olcum_zamanlari[-1]),
-                ok_olmayan_bar=ok_olmayan,
-                ok_olmayan_oran=ok_olmayan / olcum_n,
-                kalite_sayimi=dict(sayim),
-            ),
-            strateji=self.strateji.sozluk(),
-            maliyet=self.maliyet.sozluk(),
+        coklu = CokluBacktest(
+            sarmal,
+            self.maliyet,
             baslangic_sermaye=self.baslangic_sermaye,
             seed=self.seed,
-            metrikler=hesapla(ozkaynak, maruziyet, islemler, adim, self.baslangic_sermaye),
-            islemler=islemler,
-            ozkaynak=ozkaynak,
-            maruziyet=maruziyet,
-            zamanlar=olcum_zamanlari,
-            atlanan=atlama_sayimi(atlanan),
-            uretilen_sinyal=uretilen,
-            acik_pozisyon_sonda=portfoy.acik,
             kalite_esigi=self.kalite_esigi,
-            risk=None if self.risk is None else self.risk.ozet(),
+            risk=self.risk,
         )
-
-    # ------------------------------------------------------------------ risk
-
-    def _risk_onayi(
-        self,
-        sinyal: Sinyal,
-        portfoy: Portfoy,
-        fiyat: float,
-        zaman_ms: int,
-        risk_atr: np.ndarray | None,
-        i: int,
-    ) -> float | None:
-        """Sinyali risk motoruna sunar. Onaylanırsa hedef maruziyet, reddedilirse `None`.
-
-        Risk devre dışıysa sinyalin kendi hedefi dönüyor — yani risksiz koşuda bu fonksiyon
-        kimliktir ve Faz 1-4'ün ölçümleri bit düzeyinde korunur.
-        """
-        if self.risk is None or risk_atr is None:
-            return sinyal.target_exposure
-
-        atr_degeri = float(risk_atr[i])
-        karar = self.risk.degerlendir(
-            sinyal,
-            PiyasaOlcumu(
-                fiyat=fiyat,
-                ozkaynak=portfoy.ozkaynak(fiyat),
-                mevcut_maruziyet=portfoy.maruziyet(fiyat),
-                bar_ms=zaman_ms,
-                # NaN (ısınma penceresi) "ölçülemedi" demek, sıfır değil: sıfır ATR
-                # volatilite guard'ını geçer ve boyut tavanını sonsuz yapardı.
-                atr=None if np.isnan(atr_degeri) else atr_degeri,
-            ),
+        return coklu.calistir(
+            gorunum,
+            veri_sha256={sembol: veri_sha256},
+            olcum_baslangici=olcum_baslangici,
+            tekil_sembol=sembol,
         )
-        return karar.onayli_maruziyet if isinstance(karar, OnayliNiyet) else None
-
-    # ------------------------------------------------------------------ defter
-
-    def _uygula(
-        self,
-        emir: Emir,
-        portfoy: Portfoy,
-        acik: Islem | None,
-        islemler: list[Islem],
-    ) -> tuple[Portfoy, Islem | None]:
-        """Emri portföye uygular. Mantık `backtest/defter.py`de — paper döngüsüyle ortak.
-
-        Faz 6'da buradan taşındı (K-001): ortalama maliyet, tur muhasebesi ve cooldown'ı
-        tetikleyen "kapanan tur" tanımı backtest ile paper arasında ikiye ayrılamaz.
-        """
-        portfoy, acik, _ = defter_uygula(emir, portfoy, acik, islemler, risk=self.risk)
-        return portfoy, acik
 
 
 def calistir(
@@ -325,4 +150,12 @@ def calistir(
     ).calistir(sembol, timeframe, bar_dizileri, veri_sha256=veri_sha256)
 
 
-__all__ = ["Backtest", "BacktestHatasi", "PiyasaGorunumu", "calistir"]
+#: Faz 3'te bu sabit burada doğdu ve Faz 6'da `risk/motor.py`ye taşındı; adı burada da
+#: görünür kalıyor çünkü Faz 5'in testleri backtest tarafından okuyor.
+__all__ = [
+    "RISK_ATR_PENCERESI",
+    "Backtest",
+    "BacktestHatasi",
+    "PiyasaGorunumu",
+    "calistir",
+]

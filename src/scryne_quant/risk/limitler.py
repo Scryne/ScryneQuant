@@ -140,6 +140,30 @@ class RiskLimitleri(BaseModel):
     volatilite_esigi: float = Field(gt=0.0)
     """ATR/fiyat bu oranı aşarsa yeni giriş yapılmaz. Ölçülmüş olmak zorunda."""
 
+    # ------------------------------------------------------------------ portföy (Faz 10)
+
+    azami_brut_maruziyet: float = Field(default=1.0, gt=0.0, le=1.0)
+    """Nakit dışı toplam kesrin tavanı — §12'nin *gross exposure* limiti.
+
+    `azami_maruziyet` tek bir enstrümanı sınırlar; bu, hepsinin toplamını. İkisi farklı
+    şeyler: %30 tek-enstrüman tavanı dört enstrümanla %120 brüt maruziyet demektir — yani
+    kaldıraç. Kaldıraçsız spotta üst sınır 1,0 ve varsayılan da odur: **tek sembollü koşuda
+    bağlayıcı olmasın** diye. Bağlayıcı bir sayı, ölçüldüğünde (Faz 12) yazılır.
+
+    İkisi arasında bir sıralama kuralı **yok** ve olmaması bilinçli: brüt tavanın tek
+    enstrüman tavanının altında olduğu bir konfigürasyon geçerlidir (örn. enstrüman başına
+    %30, toplamda %20) ve o hâlde brüt olan bağlar. Hangisinin bağladığı tahmin edilmiyor,
+    `OnayliNiyet.kisitlayan` alanında **adıyla** kaydediliyor.
+    """
+
+    azami_enstruman: int = Field(default=1_000, ge=1)
+    """Aynı anda kaç enstrümanda pozisyon taşınabileceği — §12'nin *concentration* limiti.
+
+    Varsayılan bilinçli olarak bağlamayacak kadar büyük: Faz 10 yöntemi **kurar**, sayıyı
+    ölçmez. Gerçek sayı, portföy kurma yönteminin kapasite ve turnover ölçümüyle birlikte
+    Faz 12'de belirlenir. Bugünden bir sayı yazmak, ölçülmemiş bir kapı olurdu (K-019).
+    """
+
     # ------------------------------------------------------------------ gerekçe
 
     gerekceler: dict[str, Gerekce] = Field(default_factory=dict)
@@ -206,6 +230,8 @@ LIMIT_ADLARI: Final[tuple[str, ...]] = (
     "ardisik_kayip_limiti",
     "cooldown_bar",
     "volatilite_esigi",
+    "azami_brut_maruziyet",
+    "azami_enstruman",
 )
 
 #: K-019'un `max_drawdown` kapısı. Drawdown freninin altında kalmak zorunda olduğu sınır.

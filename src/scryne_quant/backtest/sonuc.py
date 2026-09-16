@@ -87,6 +87,17 @@ class Sonuc:
     acik_pozisyon_sonda: bool = False
     kalite_esigi: float = VARSAYILAN_KALITE_ESIGI
 
+    evren: dict[str, Any] | None = None
+    """Çok enstrümanlı koşunun evren kimliği; tek sembollü koşuda `None`. (Faz 10)
+
+    İçeriği: evren kuralının hash'i, enstrüman sayısı ve enstrüman başına veri kimliği
+    (sha256, bar sayısı, üye bar sayısı, `ok` olmayan bar). `veri` alanı çok enstrümanlı
+    koşuda evrenin **toplamını** anlatır; hangi sembolün hangi dosyadan geldiği burada.
+
+    `risk` ile aynı kural: hash'e yalnızca **varsa** giriyor. `"evren": None` yazmak Faz
+    1-7'de kaydedilmiş her sonucun hash'ini değiştirirdi (K-009).
+    """
+
     risk: dict[str, Any] | None = None
     """Risk motoru özeti (`RiskMotoru.ozet()`); motor devre dışıysa `None`. (Faz 5)
 
@@ -116,17 +127,33 @@ class Sonuc:
         """Çıktıyı özetler. Determinizm testinin karşılaştırdığı sayı bu."""
         govde: dict[str, Any] = {
             "metrikler": self.metrikler.sozluk(),
-            "islemler": [i.sozluk() for i in self.islemler],
+            "islemler": [i.sozluk(sembol_yaz=self.coklu) for i in self.islemler],
             "ozkaynak": self.ozkaynak.tolist(),
             "maruziyet": self.maruziyet.tolist(),
-            "atlanan": dict(sorted(self.atlanan.items())),
+            # **Yalnızca sıfır olmayanlar.** `atlama_sayimi` kaydın okunabilirliği için
+            # sıfır sayaçları da yazıyor ("yokluk da bir bilgi") ama o liste `AtlamaSebebi`
+            # enum'unun **bugünkü** hâlinden türüyor: yeni bir atlama sebebi eklemek, o
+            # sebebi hiç üretmemiş eski koşuların hash'ini de değiştiriyordu. Ölçüldü —
+            # Faz 4'ün tarama kayıtları Faz 5/6'da eklenen `risk_reddetti` ve `veri_bayat`
+            # yüzünden zaten yeniden üretilemiyordu; ekonomik değerlerin **hepsi** aynıydı,
+            # yalnızca hash kaymıştı (Faz 10 raporu §3). Sıfırı hash'e sokmamak, davranışın
+            # tamamını kapsamaya devam ederken kaydı sebep listesinin büyümesine karşı
+            # dayanıklı yapıyor.
+            "atlanan": {a: d for a, d in sorted(self.atlanan.items()) if d},
         }
         # Risk özeti hash'e yalnızca **varsa** giriyor. `"risk": None` yazmak, Faz 1-4'te
         # kaydedilmiş her sonucun hash'ini değiştirirdi — yani risk motorunu eklemek, onu
         # hiç kullanmayan eski deneyleri yeniden üretilemez yapardı (`sq lab dogrula`).
+        if self.evren is not None:
+            govde["evren"] = _kanonik(self.evren)
         if self.risk is not None:
             govde["risk"] = _kanonik(self.risk)
         return nesne_hash(govde)
+
+    @property
+    def coklu(self) -> bool:
+        """Bu koşu çok enstrümanlı mı? İşlem satırına sembol yazılıp yazılmayacağını belirler."""
+        return self.evren is not None
 
     @property
     def data_quality_warning(self) -> bool:
@@ -198,10 +225,12 @@ class Sonuc:
                 "data_quality_warning": self.data_quality_warning,
             },
         }
+        if self.evren is not None:
+            kayit["evren"] = self.evren
         if self.risk is not None:
             kayit["risk"] = self.risk
         if islem_listesi:
-            kayit["islemler"] = [i.sozluk() for i in self.islemler]
+            kayit["islemler"] = [i.sozluk(sembol_yaz=self.coklu) for i in self.islemler]
         if egri:
             kayit["egri"] = {
                 "zamanlar": self.zamanlar.tolist(),

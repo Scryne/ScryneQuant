@@ -1,5 +1,7 @@
 {
   "ardisik_kayip_limiti": 10,
+  "azami_brut_maruziyet": 1.0,
+  "azami_enstruman": 1000,
   "azami_maruziyet": 0.3,
   "cooldown_bar": 24,
   "drawdown_limiti": 0.2,
@@ -10,6 +12,22 @@
       "kaynak": "istah",
       "metin": "Faz 4'ün 6 stratejisinin 564 kayıp serisinde 10+ ardışık kayıp serilerin %5,9'unda görüldü (p95 = 10); 3+ ise %49,1'inde. Yani 10, 'olağan kötü gidiş' değil 'olağandışı' tarafta — daha düşük bir limit stratejinin normal davranışını cooldown'a sokardı.",
       "olcum_tarihi": "2026-09-10",
+      "veri_sha256": ""
+    },
+    "azami_brut_maruziyet": {
+      "dagilim": {},
+      "gozden_gecirme": "Faz 12'de, ilk cross-sectional programın kapasite ve korelasyon ölçümüyle birlikte. O ölçüm gelene kadar bağlayıcı bir sayı yazmak, ölçülmemiş bir kapı olurdu (K-019).",
+      "kaynak": "istah",
+      "metin": "1,0 = kaldıraçsız spotun matematiksel üst sınırı; yani bugün bu limit bağlamıyor ve bağlamaması bilinçli. Faz 10 portföy kurma yöntemini kurar, brüt maruziyet iştahını ölçmez. Tek sembollü koşularda (Faz 1-7) bu tavanın bağlayıcı olmaması, o koşuların bit düzeyinde yeniden üretilebilirliğinin ön koşulu (K-057).",
+      "olcum_tarihi": "2026-09-16",
+      "veri_sha256": ""
+    },
+    "azami_enstruman": {
+      "dagilim": {},
+      "gozden_gecirme": "Faz 12'de, ilk cross-sectional programın turnover ve kapasite (ADV oranı) ölçümüyle birlikte. Evren genişledikçe eşzamanlı pozisyon sayısının maliyeti ölçülebilir hâle gelir.",
+      "kaynak": "istah",
+      "metin": "1000 = pratikte bağlamayan bir sayı (Faz 9'da inen evren 734 sembol). Konsantrasyon limiti bir iştah kararıdır ve iştahın sayısı ancak yöntemin maliyeti ölçüldükten sonra konuşulabilir; bugün yazılacak her sayı, sonucu görmeden konmuş gibi görünse de aslında hiçbir ölçüme dayanmazdı.",
+      "olcum_tarihi": "2026-09-16",
       "veri_sha256": ""
     },
     "azami_maruziyet": {
