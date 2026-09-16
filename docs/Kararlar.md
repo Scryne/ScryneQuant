@@ -3035,3 +3035,19 @@ K-060 plan kaydı · **Açar:** Faz 14
    üretildi (`~/.ssh/scrynequant_vps`), başka hiçbir yerde kullanılmaz.
 5. **Mod paper.** Hostta borsa **işlem** anahtarı bulunmaz; Faz 8 tetiklenene kadar gerçek
    emir yolu yok.
+
+## K-063 — Host şimdilik yerel bir Windows makinesi; K-062'nin VPS kararı askıda
+
+**Durum:** kabul · **Tarih:** 2026-09-17 · **Karar veren:** Scryne · **Askıya alır:** K-062/1-4
+(VPS) · **Korur:** K-062/5 (paper modda, hostta işlem anahtarı yok)
+
+1. **Host Scryne'ın kendi bilgisayarlarından biri.** Tercih sırası: araştırma koşularının
+   yapılmadığı **ikinci bilgisayar** (bellek ve kesinti çakışması yok), olmazsa ana makine.
+2. **Bedeli yazılı:** elektrik, internet ve Windows güncellemesi kesintileri K-055'in ≥30 gün
+   kesintisiz koşu kriterini zorlaştırır. Kriter gevşetilmez; kesinti olursa sebebi kaydedilir
+   ve sayaç yeniden başlar. Toparlanma yolu (K-038) kesintinin iz bırakmadığını zaten ölçüyor.
+3. **Asgari hazırlık:** uyku/hazırda bekleme kapalı, Windows Update etkin saatleri ayarlı,
+   kablolu ağ tercih edilir; koşu zamanlanmış görevle oturum açılmadan başlar (Faz 6'daki
+   `tools/paper-kosu.ps1` kalıbı).
+4. **Geri dönüş koşulu:** 30 günlük pencerede iki veya daha fazla kontrol dışı kesinti
+   (elektrik/ağ/güncelleme) ölçülürse K-062 (VPS) yeniden açılır.
