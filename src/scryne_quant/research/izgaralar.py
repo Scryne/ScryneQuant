@@ -112,3 +112,54 @@ def boyut(strateji_adi: str) -> int:
     for degerler in izgara(strateji_adi).values():
         n *= len(degerler)
     return n
+
+
+# --------------------------------------------------------------------- Faz 12: evren
+
+#: Çok enstrümanlı çekilişler: çekiliş adı → (strateji adı, ızgara). (Faz 12, K-051)
+#:
+#: Tek sembollü `IZGARALAR` strateji adıyla anahtarlanıyor çünkü orada strateji başına tek
+#: ızgara vardı. Programlarda aynı aile birden çok çekiliş veriyor (haftalık / aylık
+#: yeniden dengeleme); her biri ayrı bir ızgara, dolayısıyla ayrı bir hipotez kimliği.
+#:
+#: **Hepsi 12 noktalı** (4 pencere × 3 yoğunluk): K-058'in sıkı `pbo` eşiği 12 noktalı
+#: donchian ızgarasında ölçüldü; aynı boyutta kalmak "yeni ızgara biçimi" farkını
+#: küçültür ama kapatmaz — çok enstrümanlı null ölçülmedi (Faz 12 raporu, açık kalem).
+#: `yeniden_dengele_bar` ve `hedef_brut` tek değerli: ekseni değil, çekilişin kimliği.
+#: Pencereler 1h barda: 24 = 1 gün, 168 = 1 hafta, 720 = 30 gün, 1440 = 60 gün.
+_YOGUNLUK: Final = (5, 10, 20)
+_ORTA_VADE: Final = (168, 336, 720, 1440)
+_KISA_VADE: Final = (24, 72, 168, 336)
+HAFTALIK: Final = 168
+AYLIK: Final = 720
+
+
+def _evren(pencere: Sequence[int], dengeleme: int) -> dict[str, Sequence[Any]]:
+    return {
+        "pencere": tuple(pencere),
+        "azami_enstruman": _YOGUNLUK,
+        "yeniden_dengele_bar": (dengeleme,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }
+
+
+#: Sıra durma kuralının sırasıdır: ilk dört çekiliş ilk iki ailenin (güç, ters dönüş).
+EVREN_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "kesitsel_guc_haftalik": ("kesitsel_guc", _evren(_ORTA_VADE, HAFTALIK)),
+    "kesitsel_guc_aylik": ("kesitsel_guc", _evren(_ORTA_VADE, AYLIK)),
+    "kesitsel_ters_haftalik": ("kesitsel_ters", _evren(_KISA_VADE, HAFTALIK)),
+    "kesitsel_ters_aylik": ("kesitsel_ters", _evren(_KISA_VADE, AYLIK)),
+    "kesitsel_dusuk_oynaklik_haftalik": ("kesitsel_dusuk_oynaklik", _evren(_ORTA_VADE, HAFTALIK)),
+    "kesitsel_dusuk_oynaklik_aylik": ("kesitsel_dusuk_oynaklik", _evren(_ORTA_VADE, AYLIK)),
+}
+
+
+def evren_cekilisi(ad: str) -> tuple[str, Mapping[str, Sequence[Any]]]:
+    """Bir evren çekilişinin `(strateji adı, ızgara)` çifti."""
+    try:
+        return EVREN_CEKILISLERI[ad]
+    except KeyError:
+        raise IzgaraYok(
+            f"{ad!r} tanımlı bir evren çekilişi değil; tanımlı: "
+            f"{', '.join(EVREN_CEKILISLERI)}"
+        ) from None

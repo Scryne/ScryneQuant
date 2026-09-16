@@ -22,6 +22,11 @@ from scryne_quant.strategy.kutuphane.evren_esit_agirlik import EvrenEsitAgirlik
 from scryne_quant.strategy.kutuphane.funding_egilim import FundingEgilim
 from scryne_quant.strategy.kutuphane.funding_filtre import FundingFiltre
 from scryne_quant.strategy.kutuphane.funding_ters import FundingTers
+from scryne_quant.strategy.kutuphane.kesitsel import (
+    KesitselDusukOynaklik,
+    KesitselGuc,
+    KesitselTers,
+)
 from scryne_quant.strategy.kutuphane.momentum import Momentum
 from scryne_quant.strategy.kutuphane.rsi_donus import RsiOrtalamaDonus
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
@@ -56,6 +61,15 @@ KIYAS: Final[dict[str, type[Strateji]]] = {AlTut.ad: AlTut}
 #: girmez, K-045'in "yeni çekiliş yok" kuralının kapsamında değildir.
 EVREN_KIYAS: Final[dict[str, type[PortfoyStratejisi]]] = {
     EvrenEsitAgirlik.ad: EvrenEsitAgirlik
+}
+
+#: Çok enstrümanlı **aileler** (Faz 12, `kesitsel_fiyat` programı). `EVREN_KIYAS`tan ayrı:
+#: kıyas çekiliş değildir (K-030), bunlar çekiliştir ve yalnızca defterde kayıtlı bir
+#: hipotezle koşturulur (K-039, K-051/2).
+EVREN_AILELER: Final[dict[str, type[PortfoyStratejisi]]] = {
+    KesitselGuc.ad: KesitselGuc,
+    KesitselTers.ad: KesitselTers,
+    KesitselDusukOynaklik.ad: KesitselDusukOynaklik,
 }
 
 #: Aile → o ailenin stratejileri. Roadmap "5 aile de aynı veri ve aynı maliyet
@@ -98,6 +112,7 @@ def aile(ad: str) -> str:
 
 __all__ = [
     "AILELER",
+    "EVREN_AILELER",
     "EVREN_KIYAS",
     "KIYAS",
     "KUTUPHANE",
@@ -110,6 +125,9 @@ __all__ = [
     "FundingEgilim",
     "FundingFiltre",
     "FundingTers",
+    "KesitselDusukOynaklik",
+    "KesitselGuc",
+    "KesitselTers",
     "Momentum",
     "RsiOrtalamaDonus",
     "SmaKesisim",

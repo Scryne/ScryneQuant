@@ -1,0 +1,213 @@
+"""Faz 12 evren çekilişleri: ön kayıt ve 11 kapılık değerlendirme. (K-039, K-051, K-058)
+
+    python tools/faz12_evren_kos.py kaydet <cekilis> -g "<gerekçe>"
+    python tools/faz12_evren_kos.py kos <cekilis> [--isci 4]
+    python tools/faz12_evren_kos.py durum
+
+`kaydet` hipotezi defterde **sonuç görülmeden** açar ve programın bütçesinden düşer.
+`kos` yalnızca kayıtlı bir hipotezi koşturur; kaçış kapısı yok (`_defteri_zorla`nın
+evren karşılığı). Hipotez nesnesi iki komutta da `evren_degerlendirme.hipotez_kur`dan
+kurulur, yani kayıt ile koşu aynı kimliği görür.
+
+Kıyas (`evren_esit_agirlik`, K-030) her koşuda aynı OOS penceresinde ve aynı iskeletle
+(yeniden dengeleme, `hedef_brut`, yoğunluk 10) ölçülür: programın durma kuralı "OOS'ta
+kıyasın Sharpe'ını geçmek" diyor ve o sayı sonuç dosyasında durmalı. Kıyas çekiliş değildir.
+
+Havuz: her işçi veriyi kendisi yükler (≈2,5 GB). İşler bağımsız ve deterministik; sonuç
+koşucudan bağımsızdır (`tests/unit/test_evren_degerlendirme.py`).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import sys
+import time
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from scryne_quant.common import maliyet as maliyet_mod
+from scryne_quant.common.hash import git_durumu
+from scryne_quant.common.zaman import simdi_ms, utc_str
+from scryne_quant.research import evren_degerlendirme as ed
+from scryne_quant.research import evren_kosu
+from scryne_quant.research import hipotez as hipotez_mod
+from scryne_quant.research import program as program_mod
+from scryne_quant.research.izgaralar import EVREN_CEKILISLERI, evren_cekilisi
+from scryne_quant.strategy.kutuphane import EVREN_AILELER, EvrenEsitAgirlik
+
+KOK = Path(__file__).resolve().parent.parent
+TABLO = KOK / "data" / "evren" / "_evren" / "27b7a16ed0ed.parquet"
+DEPO = KOK / "data" / "evren"
+CIKTI = KOK / "runs" / "faz12"
+PROGRAM = "kesitsel_fiyat"
+AZAMI_SEMBOL = 600
+KIYAS_YOGUNLUK = 10
+
+_veri = partial(evren_kosu.veri_kur, TABLO, depo_kok=DEPO, azami_sembol=AZAMI_SEMBOL)
+
+
+def _temiz(x: Any) -> Any:
+    """JSON'a yazılabilir hâl: NaN/inf → None, numpy skalerleri → Python."""
+    if isinstance(x, dict):
+        return {str(k): _temiz(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_temiz(v) for v in x]
+    if isinstance(x, np.ndarray):
+        return _temiz(x.tolist())
+    if isinstance(x, np.generic):
+        x = x.item()
+    if isinstance(x, float) and not math.isfinite(x):
+        return None
+    return x
+
+
+def _defter_sirasi(cekilis: str, veri: evren_kosu.EvrenVerisi) -> tuple[int | None, Any]:
+    hip = ed.hipotez_kur(
+        cekilis, veri, program=PROGRAM, gerekce="kimlik kontrolü için geçici nesne"
+    )
+    return hipotez_mod.HipotezDefteri().sira(hip), hip
+
+
+def kaydet(cekilis: str, gerekce: str) -> int:
+    veri = _veri()
+    hip = ed.hipotez_kur(cekilis, veri, program=PROGRAM, gerekce=gerekce)
+    defter = hipotez_mod.HipotezDefteri()
+    programlar = program_mod.ProgramDefteri()
+    onceki = defter.sira(hip)
+    sira = defter.kaydet(hip, programlar=None if onceki is not None else programlar)
+    butce = programlar.butce(PROGRAM, defter.tumu())
+    print(("zaten kayıtlı" if onceki is not None else "kaydedildi") + f": {sira}. hipotez")
+    print(f"kimlik : {hip.kimlik[:16]} · strateji {hip.strateji} · veri {hip.veri_sha256[:12]}")
+    print(
+        f"bütçe  : {PROGRAM} {butce['harcanan']}/{butce['azami_cekilis']} "
+        f"(kalan {butce['kalan']})"
+    )
+    return 0
+
+
+def kos(cekilis: str, isci: int) -> int:
+    strateji_adi, secenekler = evren_cekilisi(cekilis)
+    sinif = EVREN_AILELER[strateji_adi]
+    basladi = time.perf_counter()
+    veri = _veri()
+    sira, hip = _defter_sirasi(cekilis, veri)
+    if sira is None:
+        print(
+            f"HATA: {cekilis} hipotez defterinde kayıtlı değil. Sonucu gördükten sonra "
+            f"kaydetmek ön kayıt değildir (K-039). Önce: kaydet {cekilis} -g ...",
+            file=sys.stderr,
+        )
+        return 2
+    maliyet = maliyet_mod.yukle()
+
+    def ilerleme(m: str) -> None:
+        print(f"[{time.perf_counter() - basladi:7.0f} s] {m}", flush=True)
+
+    ilerleme(f"veri hazır · {len(veri.diziler)} sembol · {len(veri):,} bar · hipotez {sira}")
+    havuz = (
+        ProcessPoolExecutor(max_workers=isci, initializer=ed.isci_baslat,
+                            initargs=(_veri, maliyet))
+        if isci > 1 else None
+    )
+    try:
+        kosucu = ed.havuz_kosucu(havuz) if havuz else None
+        sonuc = ed.degerlendir(
+            sinif, secenekler, maliyet, veri,
+            secim=ed.KESITSEL_SECIM, kosucu=kosucu, ilerleme=ilerleme,
+        )
+    finally:
+        if havuz:
+            havuz.shutdown()
+
+    ilerleme("kıyas (OOS)")
+    _, oos, _, _ = ed.pencereler(veri)
+    tek = dict((a, d[0]) for a, d in secenekler.items() if len(d) == 1)
+    kiyas = ed.kosu(
+        EvrenEsitAgirlik(
+            yeniden_dengele_bar=int(tek["yeniden_dengele_bar"]),
+            azami_enstruman=KIYAS_YOGUNLUK,
+            azami_agirlik=float(tek["hedef_brut"]) / KIYAS_YOGUNLUK,
+            hedef_brut=float(tek["hedef_brut"]),
+        ),
+        maliyet, veri, oos,
+    )
+    oos_sharpe = sonuc["olcumler"].get("oos_sharpe")
+    govde = {
+        "cekilis": cekilis,
+        "program": PROGRAM,
+        "hipotez": {"sira": sira, "kimlik": hip.kimlik, "veri_kimligi": hip.veri_sha256},
+        "evren": veri.meta,
+        "kiyas_oos": {
+            "strateji": EvrenEsitAgirlik.ad,
+            "parametreler": {
+                "yeniden_dengele_bar": int(tek["yeniden_dengele_bar"]),
+                "azami_enstruman": KIYAS_YOGUNLUK,
+                "hedef_brut": float(tek["hedef_brut"]),
+            },
+            "metrikler": kiyas.metrikler.sozluk(),
+            "sonuc_hash": kiyas.sonuc_hash,
+        },
+        "durma_kurali_olcumu": {
+            "oos_sharpe": oos_sharpe,
+            "kiyas_oos_sharpe": kiyas.metrikler.sharpe,
+            "kiyasi_gecti": (oos_sharpe is not None and math.isfinite(oos_sharpe)
+                             and oos_sharpe > kiyas.metrikler.sharpe),
+        },
+        "sonuc": sonuc,
+        "git": git_durumu(KOK),
+        "sure_sn": round(time.perf_counter() - basladi, 1),
+        "zaman_utc": utc_str(simdi_ms()),
+    }
+    CIKTI.mkdir(parents=True, exist_ok=True)
+    yol = CIKTI / f"{cekilis}.json"
+    yol.write_text(json.dumps(_temiz(govde), ensure_ascii=False, indent=1), encoding="utf-8")
+
+    k = sonuc["kapilar"]
+    ilerleme(f"yazıldı: {yol}")
+    print(json.dumps(_temiz({"olcumler": sonuc["olcumler"], "durma": govde["durma_kurali_olcumu"]}),
+                     ensure_ascii=False, indent=1))
+    print(json.dumps(_temiz(k), ensure_ascii=False, indent=1)[:4000])
+    return 0
+
+
+def durum() -> int:
+    defter = hipotez_mod.HipotezDefteri()
+    butce = program_mod.ProgramDefteri().butce(PROGRAM, defter.tumu())
+    print(f"defter {defter.sayi()} · {PROGRAM} {butce['harcanan']}/{butce['azami_cekilis']}")
+    for ad in EVREN_CEKILISLERI:
+        yol = CIKTI / f"{ad}.json"
+        if not yol.exists():
+            print(f"  {ad:36s} sonuç yok")
+            continue
+        d = json.loads(yol.read_text(encoding="utf-8"))["durma_kurali_olcumu"]
+        print(f"  {ad:36s} oos {d['oos_sharpe']} · kıyas {d['kiyas_oos_sharpe']:.3f} · "
+              f"geçti={d['kiyasi_gecti']}")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    alt = ap.add_subparsers(dest="komut", required=True)
+    k = alt.add_parser("kaydet")
+    k.add_argument("cekilis", choices=list(EVREN_CEKILISLERI))
+    k.add_argument("-g", "--gerekce", required=True)
+    r = alt.add_parser("kos")
+    r.add_argument("cekilis", choices=list(EVREN_CEKILISLERI))
+    r.add_argument("--isci", type=int, default=4)
+    alt.add_parser("durum")
+    a = ap.parse_args()
+    if a.komut == "kaydet":
+        return kaydet(a.cekilis, a.gerekce)
+    if a.komut == "kos":
+        return kos(a.cekilis, a.isci)
+    return durum()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

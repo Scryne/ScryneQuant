@@ -71,16 +71,42 @@ def tablo_oku(tablo_yolu: str | Path) -> tuple[pd.DataFrame, dict[str, Any]]:
     return pd.read_parquet(yol), json.loads(meta_yolu.read_text(encoding="utf-8"))
 
 
-def kur(
+@dataclass(frozen=True, slots=True)
+class EvrenVerisi:
+    """Stratejiden bağımsız ham evren: ortak ızgaradaki bar dizileri + PIT üyelik. (Faz 12)
+
+    `EvrenKurulumu` bir stratejinin özellikleriyle hesaplanmış **tek** bir görünüm taşıyor.
+    Araştırma hattı (tarama, walk-forward, PBO) aynı veriyi onlarca farklı parametre ve
+    pencereyle koşturuyor; her koşu kendi özelliklerini kendi penceresinde hesaplamalı
+    (`research/evren_degerlendirme.py`). Ham veri bu yüzden ayrı bir tip.
+    """
+
+    timeframe: str
+    zamanlar: np.ndarray
+    diziler: dict[str, dict[str, np.ndarray]]
+    uyelik: dict[str, np.ndarray]
+    veri_sha256: dict[str, str]
+    meta: dict[str, Any]
+    olcum_baslangici: int
+    kural_kimligi: str
+
+    def __len__(self) -> int:
+        return len(self.zamanlar)
+
+
+def veri_kur(
     tablo_yolu: str | Path,
-    strateji: PortfoyStratejisi,
     *,
     depo_kok: str | Path,
+    isinma_bar: int = 0,
     baslangic_ay: str | None = None,
     bitis_ay: str | None = None,
     azami_sembol: int | None = None,
-) -> EvrenKurulumu:
-    """Evren tablosundan koşulabilir bir görünüm kurar.
+) -> EvrenVerisi:
+    """Evren tablosundan ham, stratejiden bağımsız evren verisi kurar.
+
+    `isinma_bar`: pencere başından önce yüklenecek bar sayısı. Birden çok strateji veya
+    ızgara noktası aynı veriyi kullanacaksa **en büyüğü** verilmeli.
 
     `azami_sembol`: bellek tavanı. Aşılırsa **hata verir**, sessizce kırpmaz — kırpmak
     evreni daraltmak, yani hayatta kalma yanlılığını elle geri getirmek olurdu.
@@ -112,8 +138,7 @@ def kur(
 
     adim = timeframe_ms(timeframe)
     alt_ms, ust_ms = _pencere_sinirlari(baslangic_ay, bitis_ay)
-    isinma_bar = max(0, strateji.isinma_bar())
-    yukleme_alt = None if alt_ms is None else alt_ms - isinma_bar * adim
+    yukleme_alt = None if alt_ms is None else alt_ms - max(0, isinma_bar) * adim
 
     depo = ParquetDepo(depo_kok)
     cerceveler: dict[str, pd.DataFrame] = {}
@@ -148,16 +173,11 @@ def kur(
     uyelik = {
         s: u for s, u in uyelik_matrisi(tablo, izgara, kimlikler).items() if s in diziler
     }
-
-    gorunum = evren_gorunum_kur(
-        timeframe,
-        diziler,
-        uyelik,
-        strateji,
-        kural_kimligi=str(meta.get("kural_kimlik", "")),
-    )
-    return EvrenKurulumu(
-        gorunum=gorunum,
+    return EvrenVerisi(
+        timeframe=timeframe,
+        zamanlar=np.asarray(izgara, dtype="int64"),
+        diziler=diziler,
+        uyelik=uyelik,
         veri_sha256=veri_sha256,
         meta={
             "tablo": str(tablo_yolu),
@@ -172,6 +192,40 @@ def kur(
             "uye_bar_toplami": int(sum(int(u.sum()) for u in uyelik.values())),
         },
         olcum_baslangici=olcum_baslangici,
+        kural_kimligi=str(meta.get("kural_kimlik", "")),
+    )
+
+
+def kur(
+    tablo_yolu: str | Path,
+    strateji: PortfoyStratejisi,
+    *,
+    depo_kok: str | Path,
+    baslangic_ay: str | None = None,
+    bitis_ay: str | None = None,
+    azami_sembol: int | None = None,
+) -> EvrenKurulumu:
+    """Evren tablosundan tek bir strateji için koşulabilir bir görünüm kurar."""
+    veri = veri_kur(
+        tablo_yolu,
+        depo_kok=depo_kok,
+        isinma_bar=strateji.isinma_bar(),
+        baslangic_ay=baslangic_ay,
+        bitis_ay=bitis_ay,
+        azami_sembol=azami_sembol,
+    )
+    gorunum = evren_gorunum_kur(
+        veri.timeframe,
+        veri.diziler,
+        veri.uyelik,
+        strateji,
+        kural_kimligi=veri.kural_kimligi,
+    )
+    return EvrenKurulumu(
+        gorunum=gorunum,
+        veri_sha256=veri.veri_sha256,
+        meta=veri.meta,
+        olcum_baslangici=veri.olcum_baslangici,
     )
 
 
@@ -206,4 +260,4 @@ def _kirp(df: pd.DataFrame, alt_ms: int | None, ust_ms: int | None) -> pd.DataFr
     return df.loc[maske]
 
 
-__all__ = ["EvrenKosuHatasi", "EvrenKurulumu", "kur", "tablo_oku"]
+__all__ = ["EvrenKosuHatasi", "EvrenKurulumu", "EvrenVerisi", "kur", "tablo_oku", "veri_kur"]
