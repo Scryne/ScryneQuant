@@ -3,5 +3,5 @@
   "asama": "uygulama",
   "guncellendi": "2026-09-16",
   "surum": 2,
-  "not": "Faz 0-7, 9, 10 ve 11 kapali. Faz 11 K-058 ile kapandi: K-054'un dort kapisi kuruldu (pbo 0,0087 / perturbasyon 0,0565 / rejim 0,685 edge'siz null'dan; evren_dayanikliligi 0,75 yapisal), 38 cekilis yeni kapilardan gecirildi (0/38), program kaydi + arama butcesi zorunlu, leak_riski mutlak engel, DSR raporlaniyor. Siradaki is Faz 12 (arastirma programlari: cross-sectional, turev, makro) - her program sq lab program-kaydet ile acilir. Faz 8 promotion'u gecen strateji ve surekli acik host bekliyor."
+  "not": "Faz 0-7, 9, 10, 11 kapali. Faz 12 devam: uc program acik kaydedildi (kesitsel_fiyat 6, turev_evren 4, makro_rejim 3). kesitsel_fiyat KAPANDI (durma kurali, 4/6 cekilis, hipotez 39-42, hicbiri kiyasi gecmedi, 11 kapidan en iyi 4/11; docs/Faz-12-Kesitsel-Fiyat-Raporu.md). Acik kalem: OOS bayat_degerleme 13k-58k (delist sembolde kalan pozisyon), yonu olculmedi - sonraki evren programindan once olculmeli. Siradaki: turev_evren (funding verisi data/turev/funding hazir; basis henuz indirilmedi), sonra makro_rejim; en sonda sq lab coklu-test ile oos_sharpe esigi yeniden olculur. Bellek: OsintLab servisi aciksa evren kosulari --isci 1. Faz 8 promotion'u gecen strateji ve surekli acik host bekliyor."
 }
