@@ -48,6 +48,8 @@ CIKTI = KOK / "runs" / "faz12"
 PROGRAM = "kesitsel_fiyat"
 AZAMI_SEMBOL = 600
 KIYAS_YOGUNLUK = 10
+#: Tam pencere (79.420 bar) 4 işçide belleği aştı, in-sample (55.594) sığdı.
+BUYUK_IS_BAR = 60_000
 
 _veri = partial(evren_kosu.veri_kur, TABLO, depo_kok=DEPO, azami_sembol=AZAMI_SEMBOL)
 
@@ -116,7 +118,10 @@ def kos(cekilis: str, isci: int) -> int:
         if isci > 1 else None
     )
     try:
-        kosucu = ed.havuz_kosucu(havuz) if havuz else None
+        kosucu = (
+            ed.havuz_kosucu(havuz, buyuk_is_bar=BUYUK_IS_BAR, buyuk_is_eszamanli=2)
+            if havuz else None
+        )
         sonuc = ed.degerlendir(
             sinif, secenekler, maliyet, veri,
             secim=ed.KESITSEL_SECIM, kosucu=kosucu, ilerleme=ilerleme,

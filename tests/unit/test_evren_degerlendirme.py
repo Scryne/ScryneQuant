@@ -227,7 +227,12 @@ class TestHavuzKosucu:
                 KesitselGuc, IZGARA, MALIYET, veri, pencere, asgari_islem=1,
                 kosucu=ed.havuz_kosucu(havuz),
             )
+            _, kisitli_sonuc = ed.tara(
+                KesitselGuc, IZGARA, MALIYET, veri, pencere, asgari_islem=1,
+                kosucu=ed.havuz_kosucu(havuz, buyuk_is_bar=10, buyuk_is_eszamanli=1),
+            )
         assert [s.sonuc_hash for s in seri_sonuc] == [s.sonuc_hash for s in paralel_sonuc]
+        assert [s.sonuc_hash for s in seri_sonuc] == [s.sonuc_hash for s in kisitli_sonuc]
         assert seri.sozluk() == paralel.sozluk()
 
 

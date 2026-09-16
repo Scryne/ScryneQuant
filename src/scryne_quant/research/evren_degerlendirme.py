@@ -174,9 +174,30 @@ def isci_kos(is_: KosuIsi) -> Sonuc:
     return isi_kos(is_, _ISCI["maliyet"], _ISCI["veri"])
 
 
-def havuz_kosucu(havuz: Any) -> Kosucu:
-    """`isci_baslat` ile başlatılmış bir havuzdan koşucu. `map` sırayı korur."""
-    return lambda isler: list(havuz.map(isci_kos, isler))
+def havuz_kosucu(
+    havuz: Any, *, buyuk_is_bar: int | None = None, buyuk_is_eszamanli: int = 1
+) -> Kosucu:
+    """`isci_baslat` ile başlatılmış bir havuzdan koşucu. Sonuç sırası iş sırasıdır.
+
+    Bellek işçi başına pencere uzunluğuyla büyüyor (görünüm + özellikler sembol × bar).
+    Faz 12'de ölçüldü: tam pencere (79.420 bar) taraması 4 işçide 24 GB'lık makinede
+    sistemin koşuyu öldürmesine yol açtı; in-sample (55.594 bar) 4 işçide sığdı. Uzunluğu
+    `buyuk_is_bar`ı aşan işler en fazla `buyuk_is_eszamanli` tanesi bir arada gönderilir.
+    Eşzamanlılık sonucu değiştirmez: işler bağımsız ve deterministik.
+    """
+    def kos(isler: list[KosuIsi]) -> list[Sonuc]:
+        buyuk = buyuk_is_bar is not None and any(
+            i.pencere.bitis - i.pencere.isinma_baslangic > buyuk_is_bar for i in isler
+        )
+        if not buyuk:
+            return list(havuz.map(isci_kos, isler))
+        adim = max(1, buyuk_is_eszamanli)
+        out: list[Sonuc] = []
+        for bas in range(0, len(isler), adim):
+            out.extend(havuz.map(isci_kos, isler[bas:bas + adim]))
+        return out
+
+    return kos
 
 
 class EvrenDegerlendirmeHatasi(ValueError):
