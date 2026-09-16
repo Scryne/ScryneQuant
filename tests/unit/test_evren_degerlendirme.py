@@ -86,7 +86,8 @@ class TestTekKosu:
             kural_kimligi="test",
         )
         elle = CokluBacktest(
-            KesitselGuc(pencere=24, azami_enstruman=2, yeniden_dengele_bar=24), MALIYET
+            KesitselGuc(pencere=24, azami_enstruman=2, yeniden_dengele_bar=24), MALIYET,
+            sifira_yaz_bar=ed.SIFIRA_YAZ_BAR,
         ).calistir(g, veri_sha256=veri.veri_sha256, olcum_baslangici=pencere.olcum_baslangici)
         assert hat.ozkaynak.tobytes() == elle.ozkaynak.tobytes()
         assert hat.sonuc_hash == elle.sonuc_hash

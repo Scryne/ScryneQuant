@@ -83,6 +83,12 @@ from scryne_quant.strategy.temel import PortfoyStratejisi
 #: Rejim etiketinin kıyası. Bkz. modül başlığı, karar 2.
 REJIM_KIYASI: Final = "BTCUSDT"
 
+#: Barı art arda bu kadar gelmeyen pozisyon sıfır değerlenir (K-059). Faz 12'de ölçüldü: evrenin
+#: geçici boşlukları 7-26 bar (bakım), kalıcı/uzun olanlar 96-7.466 bar (durdurma, göç,
+#: delist); arada gözlem yok. 48 iki kümenin arasında — bir iştah değil ama ölçülen aralığın
+#: içinden seçilmiş bir sayı. Kesitsel program (hipotez 39-42) bu politika **öncesi** koşuldu.
+SIFIRA_YAZ_BAR: Final = 48
+
 #: Kesitsel ailelerin portföy kurma yöntemi (`kesitsel._Kesitsel`), hipotez kimliğine girer.
 KESITSEL_PORTFOY: Final = "KESITSEL_ESIT"
 
@@ -140,6 +146,7 @@ class KosuIsi:
     pencere: Pencere
     baslangic_sermaye: float
     cikarilanlar: frozenset[str] = frozenset()
+    sifira_yaz_bar: int | None = SIFIRA_YAZ_BAR
 
 
 #: İşleri koşturup **aynı sırada** sonuç döndüren fonksiyon. Varsayılanı seri;
@@ -152,6 +159,7 @@ def isi_kos(is_: KosuIsi, maliyet: MaliyetModeli, veri: EvrenVerisi) -> Sonuc:
     return kosu(
         is_.sinif(**dict(is_.parametreler)), maliyet, veri, is_.pencere,
         baslangic_sermaye=is_.baslangic_sermaye, cikarilanlar=is_.cikarilanlar,
+        sifira_yaz_bar=is_.sifira_yaz_bar,
     )
 
 
@@ -235,10 +243,13 @@ def kosu(
     *,
     baslangic_sermaye: float = 10_000.0,
     cikarilanlar: frozenset[str] = frozenset(),
+    sifira_yaz_bar: int | None = SIFIRA_YAZ_BAR,
 ) -> Sonuc:
     """Tek bir portföy stratejisini tek bir pencerede koşturur."""
     g = gorunum(veri, strateji, pencere, cikarilanlar=cikarilanlar)
-    return CokluBacktest(strateji, maliyet, baslangic_sermaye=baslangic_sermaye).calistir(
+    return CokluBacktest(
+        strateji, maliyet, baslangic_sermaye=baslangic_sermaye, sifira_yaz_bar=sifira_yaz_bar
+    ).calistir(
         g, veri_sha256=veri.veri_sha256, olcum_baslangici=pencere.olcum_baslangici
     )
 
@@ -602,6 +613,7 @@ def degerlendir(
         "izgara": {a: list(d) for a, d in sorted(secenekler.items())},
         "secim": secim,
         "olcut": olcut,
+        "sifira_yaz_bar": SIFIRA_YAZ_BAR,
         "pencereler": {
             "in_sample": ins.sozluk(),
             "out_of_sample": oos.sozluk(),
@@ -619,6 +631,7 @@ __all__ = [
     "KESITSEL_PORTFOY",
     "KESITSEL_SECIM",
     "REJIM_KIYASI",
+    "SIFIRA_YAZ_BAR",
     "EvrenDegerlendirmeHatasi",
     "KosuIsi",
     "Kosucu",

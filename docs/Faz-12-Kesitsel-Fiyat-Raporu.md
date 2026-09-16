@@ -81,7 +81,12 @@ Evren dayanıklılığının oranı yalnızca pozitif OOS Sharpe'ta tanımlı; d
    delist öncesi çöküşü içerebilir de, sermayeyi dondurup volatiliteyi düşürebilir de.
    Kapanış kararını değiştirmiyor (PBO ve pertürbasyon kapıları bundan bağımsız, OOS
    Sharpe'lar kıyasın 0,5-1,2 altında) ama bir sonraki evren programı başlamadan önce
-   ölçülmeli: delist duyurusundan sonra çıkış varsayımıyla yeniden koşu, sayaç ve fark.
+   ölçülmeli.
+
+   **Ölçüldü → K-059.** 9 takılı pozisyon (4'ü token göçü: MATIC, RNDR, EOS, BNX); sonda
+   özkaynağın %1,0-8,3'ü. Sıfır değer alt sınırında OOS Sharpe −0,630 / −0,198 / −1,047 /
+   −1,082; kıyasta takılı pozisyon yok. Kapanış sağlam. Sonraki programlar 48 bar sonra
+   sıfır değerleme politikasıyla koşar.
 2. **`evren_dayanikliligi` eşiği yeniden ölçülemedi** (K-058 geri dönüş 2): pozitif Sharpe'lı
    gerçek aday çıkmadı. İştah olarak kalıyor.
 3. **Çok enstrümanlı null** (K-058 geri dönüş 1) ölçülmedi; hiçbir çekiliş kapı sınırına

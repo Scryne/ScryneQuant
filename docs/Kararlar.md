@@ -2883,3 +2883,53 @@ timeframe'lerde aynı soruyu soruyor.
 
 **0/38** geçti. `evren_dayanikliligi` tek sembolde 38/38 ölçülemez; diğer üç kapıda en iyi
 aday `cok_faktor` 1h/plato (PBO ✓, pertürbasyon ✓, rejim ✗) — Faz 4'ün de en yakın adayı.
+
+## K-059 — Barı biten sembolde kalan pozisyon: 48 bar sonra sıfır değer; token göçü kimlik sorunudur
+
+**Durum:** kabul · **Tarih:** 2026-09-16 · **Tamamlar:** K-057 (motorun "son bilinen fiyat"
+kuralı), K-007, K-052/4 · **Kaynak:** Faz 12, `docs/Faz-12-Kesitsel-Fiyat-Raporu.md` §4,
+`tools/faz12_bayat_olcumu.py` → `runs/faz12/bayat-olcumu.json`
+
+### Bağlam
+
+K-057 motoru barı olmayan sembolde pozisyonu son bilinen fiyattan değerliyor ve sayacı
+(`bayat_degerleme`) Faz 12'nin ölçmesine bırakmıştı. `kesitsel_fiyat`'ın OOS'unda sayaç
+13.101-58.254 çıktı. Ölçüm (kayıtlı `sonuc_hash`ler bit düzeyinde yeniden üretilerek):
+
+- **9 takılı pozisyon**, hepsi barı pencere sonundan önce biten sembolde, 693-18.837 bar.
+  Strateji onlardan **çıkamıyor**: barı olmayan sembol `ctx.gorunur()` dışında, hedef
+  üretilemiyor, fill de yok.
+- Sonda özkaynağın %1,0-8,3'ü takılı değer. Bir örnekte (BNX) son fiyat girişin 1,7 katı.
+- İki sınır: son fiyat (a) ve son bardan itibaren sıfır (b). OOS Sharpe a → b: −0,510 →
+  −0,630 · −0,177 → −0,198 · −0,922 → −1,047 · −0,967 → −1,082. Kıyasta takılı pozisyon 0.
+- Takılanlardan en az dördü delist değil **token göçü** (MATIC→POL 2024-09, RNDR→RENDER
+  2024-07, EOS rebrand 2025-05, BNX 2025-03): değer yeni ticker altında sürüyor, veride iki
+  ayrı sembol.
+- Evrendeki barsız aralıklar iki ayrık küme: **7-26 bar** (bakım; 2018-06-26 on dört sembolde
+  10 bar) ve **96-7.466 bar** (durdurma, göç, delist; FTT 7.466, CVC 3.700). Arada gözlem yok.
+
+### Karar — dört madde
+
+1. **`CokluBacktest(sifira_yaz_bar=N)`:** art arda N bar barı gelmeyen pozisyon **sıfır**
+   değerlenir; bar geri gelirse piyasa fiyatına döner. Karar `t`ye kadarki barlardan
+   verilir (look-ahead yok, testle), yalnızca kötü yöne işler (K-007). Varsayılan `None`:
+   eski davranış ve eski `sonuc_hash`ler değişmez; açıkken `evren.sifira_yazma` kaydına
+   yazılır.
+2. **Araştırma hattı N = 48 kullanır** (`evren_degerlendirme.SIFIRA_YAZ_BAR`). İki ölçülen
+   kümenin arasından; bakım boşluğunu sıfıra yazmaz, delist/göçü iki günde yazar.
+3. **`kesitsel_fiyat` yeniden değerlendirilmez.** Her iki sınırda da dört çekiliş kıyasın
+   altında ve PBO/pertürbasyon kapıları bu değerlemeden bağımsız kalıyor; kapanış sağlam.
+   Hipotez 39-42 bu kararın öncesinde (N = None) koşuldu ve öyle kayıtlı.
+4. **Token göçü bir kimlik sorunudur, değerleme sorunu değil** (K-052/4'ün tersi yönü:
+   aynı varlık, iki ticker). Bugün bağlanmıyor; sıfıra yazma göçte **kötümser** bir
+   yanlılık bırakıyor ve bu bilinçli (K-007). Göç eşlemesi PIT bir kaynaktan (duyuru
+   tarihi + dönüşüm oranı) gelmeden uydurulmaz.
+
+### Geri dönüş koşulları
+
+1. Göç eşleme verisi PIT bulunursa: göçte pozisyon yeni kimliğe taşınır, N yalnız delistte
+   uygulanır.
+2. Delist duyuru tarihleri PIT bulunursa: duyurudan sonra zorunlu çıkış modellenir ve
+   sıfıra yazma yalnızca kaçırılan çıkışlar için kalır.
+3. Bir çekiliş kapıları geçer ve takılı değer payı özkaynağın %1'ini aşarsa: sonuç N'ye
+   duyarlılıkla (N = 24 / 96) yeniden raporlanır.

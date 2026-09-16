@@ -246,6 +246,88 @@ class TestBariOlmayanEnstruman:
         # üretilmedi ve bu sessizce değil, sayılabilir biçimde oldu.
         assert (60, "BBBUSDT") in strateji.atlanan_semboller
 
+    # ---------------------------------------------------- sıfıra yazma politikası (K-059)
+
+    @staticmethod
+    def _bosluklu(n: int, bas: int, bit: int | None):
+        """BBB `bas`..`bit` arasında barsız (bit None = delist)."""
+        diziler, uyelik = _iki_sembollu(n)
+        son = n if bit is None else bit
+        b = diziler["BBBUSDT"]
+        for alan in ("open", "high", "low", "close", "volume", "quote_volume"):
+            b[alan] = np.array(b[alan])
+            b[alan][bas:son] = np.nan
+        b["quality_status"] = np.array(b["quality_status"], dtype=object)
+        b["quality_status"][bas:son] = LISTELENMEDI
+        uyelik["BBBUSDT"] = np.array(uyelik["BBBUSDT"])
+        uyelik["BBBUSDT"][bas:son] = False
+        return diziler, uyelik
+
+    @staticmethod
+    def _kos(diziler, uyelik, sifira_yaz_bar):
+        strateji = PlanliHedef({10: {"AAAUSDT": 0.4, "BBBUSDT": 0.4}})
+        g = evren_gorunum_kur("1h", diziler, uyelik, strateji)
+        return CokluBacktest(
+            strateji, MaliyetModeli(fee_taker_bps=10.0, slippage_bps=5.0),
+            sifira_yaz_bar=sifira_yaz_bar,
+        ).calistir(g)
+
+    def test_politika_kapaliyken_kayit_degismiyor(self):
+        diziler, uyelik = self._bosluklu(120, 40, None)
+        a = self._kos(diziler, uyelik, None)
+        assert "sifira_yazma" not in a.evren
+
+    def test_esikten_once_son_fiyat_esikte_sifir(self):
+        n, bas, esik = 120, 40, 12
+        diziler, uyelik = self._bosluklu(n, bas, None)
+        eski = self._kos(diziler, uyelik, None)
+        yeni = self._kos(diziler, uyelik, esik)
+        # Barı olmayan ilk `esik - 1` barda iki politika aynı değerliyor.
+        assert np.array_equal(eski.ozkaynak[: bas + esik - 1], yeni.ozkaynak[: bas + esik - 1])
+        # Eşikten sonra fark tam olarak BBB'nin son fiyattan değeri: sıfıra yazıldı.
+        miktar = sum(i.giris_miktar - i.cikis_miktar for i in eski.islemler
+                     if i.sembol == "BBBUSDT" and i.kapanis_ms is None)
+        son_fiyat = float(diziler["BBBUSDT"]["close"][bas - 1])
+        fark = eski.ozkaynak[bas + esik:] - yeni.ozkaynak[bas + esik:]
+        assert miktar > 0.0
+        assert np.allclose(fark, miktar * son_fiyat, rtol=1e-12, atol=1e-9)
+        assert yeni.evren["sifira_yazma"] == {
+            "bar": esik, "sifira_yazilan_pozisyon_bar": n - (bas + esik - 1),
+        }
+        assert yeni.sonuc_hash != eski.sonuc_hash
+
+    def test_bar_geri_gelince_piyasa_fiyatina_donuyor(self):
+        """Uzun durdurma (FTT tipi): sıfır geçici, bar dönünce değerleme yeniden piyasadan."""
+        n, bas, bit, esik = 160, 40, 90, 12
+        diziler, uyelik = self._bosluklu(n, bas, bit)
+        eski = self._kos(diziler, uyelik, None)
+        yeni = self._kos(diziler, uyelik, esik)
+        assert np.all(eski.ozkaynak[bas + esik:bit] > yeni.ozkaynak[bas + esik:bit])
+        assert np.array_equal(eski.ozkaynak[bit:], yeni.ozkaynak[bit:])
+
+    def test_kisa_bosluk_sifira_yazilmiyor(self):
+        diziler, uyelik = self._bosluklu(120, 40, 50)  # 10 bar: 2018 bakımı
+        eski = self._kos(diziler, uyelik, None)
+        yeni = self._kos(diziler, uyelik, 48)
+        assert np.array_equal(eski.ozkaynak, yeni.ozkaynak)
+        assert yeni.evren["sifira_yazma"]["sifira_yazilan_pozisyon_bar"] == 0
+
+    def test_sifira_yazma_gelecegi_gormuyor(self):
+        """K-002: `t` sonrası bar bozulunca (dönüş/kalış) `t`ye kadarki özkaynak aynı."""
+        n, bas, esik, t = 160, 40, 12, 70
+        kalici, uk = self._bosluklu(n, bas, None)
+        donen, ud = self._bosluklu(n, bas, t + 1)
+        a = self._kos(kalici, uk, esik)
+        b = self._kos(donen, ud, esik)
+        assert np.array_equal(a.ozkaynak[: t + 1], b.ozkaynak[: t + 1])
+
+    def test_gecersiz_esik_reddediliyor(self):
+        with pytest.raises(CokluBacktestHatasi):
+            CokluBacktest(
+                PlanliHedef({}), MaliyetModeli(fee_taker_bps=10.0, slippage_bps=5.0),
+                sifira_yaz_bar=0,
+            )
+
     def test_gorunmeyen_sembol_icin_hedef_uretilemiyor(self):
         """Strateji `ctx.gorunur()` dışında bir sembol için hedef veremez."""
         n = 60
