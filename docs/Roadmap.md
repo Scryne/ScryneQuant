@@ -713,7 +713,7 @@ kısmı **veri → çekirdek → doğrulama → araştırma**. Doğrulama araşt
 bu bilinçli: kapıları sonuçları gördükten sonra tanımlamak, bu projenin her yerde yasakladığı
 şey.
 
-### Faz 9: Veri platformu v2 — PIT, evren, enstrüman kimliği
+### Faz 9: Veri platformu v2 — PIT, evren, enstrüman kimliği — ✅ kapandı (2026-09-16, K-056)
 
 - **İşler:** Kanonik enstrüman kimliği (geçerlilik aralıklı) ve kimlik kırılması tespiti;
   çoklu sembol indirici (delist edilenler dahil, `data.binance.vision` arşivinden); PIT evren
@@ -739,6 +739,22 @@ bu bilinçli: kapıları sonuçları gördükten sonra tanımlamak, bu projenin 
   - **K-034 yeniden ölçüldü** ve sonuç (geçiş veya kalma) karar günlüğüne yazıldı.
 - **Notlar:** Bu faz strateji içermez ve içermemeli. Veri katmanı yanlışsa üstündeki her ölçüm
   yanlış olur — ve bu projede yanlış ölçüm, ölçüm yokluğundan tehlikelidir.
+
+**Durum — altı kriterin altısı karşılandı. Ölçümler `docs/Faz-9-Veri-Platformu-Raporu.md`de:**
+
+| Kriter | Sonuç |
+| --- | --- |
+| Aday evrenin 1h geçmişi inmiş, idempotent, her dosyanın SHA-256'sı kayıtlı | ✅ 735 sembol istendi, 734'ünde veri (arşivde 1h'i olmayan tek sembol `USDSOLDUSDT`), 34.519 dosya, 20.055.412 bar, 628 MB, 0 hata. İkinci koşu 0 dosya indiriyor; hash'ler sembol başına `1h.kaynak.json` manifestosunda |
+| `sq data evren` PIT tablo üretiyor; gelecek veri bozulduğunda geçmiş üyelik bit düzeyinde değişmiyor | ✅ 109 ay, 4.464 satır; look-ahead testi `test_evren.py::TestLookAhead` (hacim çarpıtma + sahte kırılma + gelecek barları silme) |
+| Kimlik kırılması yakalanıyor; `LUNAUSDT` 2022-05 fixture olarak testte, seri iki kimliğe bölünüyor | ✅ Eşikler **ölçüldü** (12 bar, ln 10); 734 sembolde 27 kırılma / 24 sembol; LUNA fixture'ı gerçek arşiv satırlarından (`test_kimlik.py`) |
+| Bar olmayan gözlem `available_time`e göre kesiliyor; `event_time` kesicisi reddediliyor; gün çözünürlüğü gün sonuna yuvarlanıyor | ✅ `data/pit.py` + `kesme_sozlesmesini_dogrula`; yanlış kesiciler testte kalıyor (`test_pit.py`) |
+| Her kaynağın sözleşme dosyası var; tamlık kontrolü otomatik koşuyor; `1mo` katmanındaki eksiklik yakalanıyor | ✅ `data/sozlesme.py` (3 kaynak); katman kontrolü `sq data arsiv-indir` içinde otomatik ve arşivde `1mo`'nun eksik aylarını (2024-03, 2026-03, 2026-07…) yakalıyor. **Açık kalem:** üç sözleşmede de lisans "doğrulanmadı" |
+| K-034 yeniden ölçüldü ve sonuç karar günlüğüne yazıldı | ✅ Koşul 3 (çok sembollü çalışma) gerçekleşti, ölçüldü, PostgreSQL'i **gerektirmedi** (K-034 gözden geçirme bloğu, 2026-09-16) |
+
+**Fazın sürprizi kriterlerde değil, arşivin kendisindeydi:** zaman damgası 2025-01'de
+mikrosaniyeye geçmiş, pandas'ın varsayılan float ayrıştırıcısı değerleri kaydırıyor, arşiv
+REST'ten 45.576 barın 4'ünde farklı, ve 2018-02 kesintisinden sonra 6 sembolde 258 bar
+ızgaraya oturmuyor. Dördü de K-056'ya bağlandı.
 
 ### Faz 10: Çok enstrümanlı araştırma çekirdeği
 

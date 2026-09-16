@@ -16,6 +16,7 @@ import hashlib
 import json
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from pathlib import Path
 from typing import Annotated, Any
@@ -27,7 +28,11 @@ from scryne_quant.cli.testnet import testnet_app
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.hash import git_durumu, ortam_kaydi
 from scryne_quant.common.zaman import simdi_ms, utc_str
+from scryne_quant.data import arsiv_indirici as arsiv_mod
+from scryne_quant.data import evren as evren_mod
 from scryne_quant.data import funding as funding_mod
+from scryne_quant.data import kimlik as kimlik_mod
+from scryne_quant.data import sozlesme as sozlesme_mod
 from scryne_quant.data.depo import ParquetDepo
 from scryne_quant.data.dogrulama import rapor_cikar
 from scryne_quant.data.indirici import TarihselIndirici
@@ -38,6 +43,7 @@ from scryne_quant.data.kalibrasyon import (
     kalibre_et,
 )
 from scryne_quant.exchange.binance import BinanceAdaptoru
+from scryne_quant.exchange.binance_arsiv import HttpArsiv, spot_sembolleri
 from scryne_quant.features.barlar import bar_dizileri
 from scryne_quant.live import baslat as baslat_mod
 from scryne_quant.live import durdurma
@@ -181,12 +187,10 @@ def data_indir(
     k = sonuc.kalite
     typer.echo(f"{sonuc.sembol} {sonuc.timeframe}  {sonuc.aralik}")
     typer.echo(
-        f"  inen bar      : {sonuc.inen_bar:,} "
-        f"({sonuc.cagri_sayisi} çağrı, {sonuc.sure_s:.1f} s)"
+        f"  inen bar      : {sonuc.inen_bar:,} ({sonuc.cagri_sayisi} çağrı, {sonuc.sure_s:.1f} s)"
     )
     typer.echo(
-        f"  depoda toplam : {sonuc.depo.bar_sayisi:,} bar, "
-        f"{sonuc.depo.bayt / 1024**2:.2f} MB"
+        f"  depoda toplam : {sonuc.depo.bar_sayisi:,} bar, {sonuc.depo.bayt / 1024**2:.2f} MB"
     )
     typer.echo(f"  aralık        : {utc_str(k.ilk_ms)} → {utc_str(k.son_ms)}")
     typer.echo(
@@ -294,6 +298,329 @@ def data_ls(
         )
 
 
+# ------------------------------------------------------- data arsiv-indir
+
+
+@data_app.command("arsiv-indir")
+def data_arsiv_indir(
+    semboller: Annotated[
+        list[str] | None, typer.Argument(help="Örn. BTCUSDT LUNAUSDT (boşsa --usdt/--hepsi)")
+    ] = None,
+    usdt: Annotated[
+        bool, typer.Option("--usdt", help="Arşivdeki USDT ile biten tüm spot semboller")
+    ] = False,
+    hepsi: Annotated[bool, typer.Option("--hepsi", help="Arşivdeki tüm spot semboller")] = False,
+    timeframe: Annotated[str, typer.Option("--timeframe", help="Örn. 1h")] = "1h",
+    depo_kok: Depo = arsiv_mod.VARSAYILAN_EVREN_DEPO,
+    paralel: Annotated[
+        int, typer.Option("--paralel", help="Sembol içi eşzamanlı dosya")
+    ] = arsiv_mod.VARSAYILAN_PARALEL,
+    tam_dogrulama: Annotated[
+        bool,
+        typer.Option("--tam-dogrulama", help="Kayıtlı dosyaların checksum'ını da yeniden sor"),
+    ] = False,
+    rapor: Annotated[
+        Path | None, typer.Option("--rapor", help="JSON raporun yazılacağı yol")
+    ] = None,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Binance arşivinden (delist edilenler dahil) bar indirir, doğrular, depoya yazar. (Faz 9)
+
+    Varsayılan depo `data/evren` — `data/market` değil: oradaki dosyaların hash'i hipotez
+    defterindeki çekilişlerin veri kimliği. Aynı komutu ikinci kez çalıştırmak hiçbir dosya
+    indirmez; yalnızca arşive yeni eklenen dosyalar iner.
+    """
+    secim = sum(bool(x) for x in (semboller, usdt, hepsi))
+    if secim != 1:
+        raise typer.BadParameter("sembol listesi, --usdt veya --hepsi seçeneklerinden tam biri")
+
+    kaynak = HttpArsiv(havuz=paralel)
+    if semboller:
+        liste = sorted({s.upper() for s in semboller})
+    else:
+        tumu = spot_sembolleri(kaynak)
+        liste = [s for s in tumu if s.endswith("USDT")] if usdt else tumu
+
+    indirici = arsiv_mod.ArsivIndirici(kaynak, ParquetDepo(depo_kok), paralel=paralel)
+    t0 = time.perf_counter()
+
+    def ilerleme(i: int, toplam: int, sembol: str) -> None:
+        if not json_cikti and (i % 25 == 0 or i == toplam):
+            gecen = time.perf_counter() - t0
+            typer.echo(f"  … {i:>4}/{toplam} {sembol:<14} {gecen:>6.0f} s", err=True)
+
+    sonuclar, hatalar = arsiv_mod.coklu_indir(
+        indirici, liste, timeframe, tam_dogrulama=tam_dogrulama, ilerleme=ilerleme
+    )
+
+    # Katman tamlığı her indirmede koşar (Faz 9: "tamlık kontrolü otomatik"). Referans indirilen
+    # katman; karşılaştırılan arşivin türetilmiş `1mo` katmanı (Spike 6 §4b).
+    veri_olan = [s.sembol for s in sonuclar if not s.veri_yok]
+    with ThreadPoolExecutor(16) as havuz:
+        tamlik = list(
+            havuz.map(
+                lambda s: sozlesme_mod.katman_tamligi(kaynak, s, referans_katman=timeframe),
+                veri_olan,
+            )
+        )
+    eksik_katman = [t.sozluk() for t in tamlik if not t.tam]
+
+    govde = {
+        "uretildi": utc_str(simdi_ms()),
+        "depo": str(depo_kok),
+        "timeframe": timeframe,
+        "istenen_sembol": len(liste),
+        "sure_s": round(time.perf_counter() - t0, 1),
+        "inen_dosya": sum(len(s.inen_dosyalar) for s in sonuclar),
+        "degisen_sembol": sum(s.degisti for s in sonuclar),
+        "veri_yok": sorted(s.sembol for s in sonuclar if s.veri_yok),
+        "hatalar": hatalar,
+        "katman_tamligi": {
+            "kontrol_edilen": len(tamlik),
+            "tam": len(tamlik) - len(eksik_katman),
+            "eksik": eksik_katman,
+        },
+        "git": git_durumu(),
+        "sonuclar": [s.sozluk() for s in sonuclar],
+    }
+    if rapor is not None:
+        rapor.parent.mkdir(parents=True, exist_ok=True)
+        rapor.write_text(
+            json.dumps(govde, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+
+    if json_cikti:
+        _yaz_json(govde)
+    else:
+        toplam_bar = sum(s.depo.bar_sayisi for s in sonuclar if s.depo)
+        toplam_mb = sum(s.depo.bayt for s in sonuclar if s.depo) / 1024**2
+        typer.echo(f"arşiv → {depo_kok}  ({timeframe})")
+        typer.echo(
+            f"  sembol        : {len(liste):,} istendi · {len(sonuclar):,} tamam · "
+            f"{len(hatalar)} hata · {len(govde['veri_yok'])} veri yok"
+        )
+        typer.echo(f"  inen dosya    : {govde['inen_dosya']:,} ({govde['sure_s']:.0f} s)")
+        typer.echo(f"  değişen sembol: {govde['degisen_sembol']:,}")
+        typer.echo(f"  depoda        : {toplam_bar:,} bar, {toplam_mb:,.1f} MB")
+        typer.echo(
+            f"  katman tamlığı: {len(tamlik) - len(eksik_katman):,}/{len(tamlik):,} tam "
+            f"({timeframe} ↔ 1mo)"
+        )
+        for sembol, mesaj in sorted(hatalar.items())[:20]:
+            typer.echo(f"  HATA {sembol}: {mesaj}")
+        if rapor is not None:
+            typer.echo(f"  rapor         : {rapor}")
+    if hatalar:
+        raise typer.Exit(code=1)
+
+
+def _depo_sembolleri(kok: Path, timeframe: str) -> list[str]:
+    """Depoda `<timeframe>.parquet`i olan semboller. `_` ile başlayan dizinler üst veri."""
+    return sorted(
+        p.parent.name
+        for p in kok.glob(f"*/{timeframe}.parquet")
+        if not p.parent.name.startswith("_")
+    )
+
+
+# ------------------------------------------------------- data kimlik-olc
+
+
+@data_app.command("kimlik-olc")
+def data_kimlik_olc(
+    depo_kok: Depo = arsiv_mod.VARSAYILAN_EVREN_DEPO,
+    timeframe: Annotated[str, typer.Option("--timeframe")] = "1h",
+    rapor: Annotated[
+        Path | None, typer.Option("--rapor", help="JSON raporun yazılacağı yol")
+    ] = None,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Depodaki tüm serilerin boşluklarını ölçer: eksik bar × |ln(fiyat oranı)|. (Faz 9)
+
+    Kimlik kırılması eşiklerinin kaynağı bu dağılım (K-052/4). Eşik uygulanmaz; tüm boşluklar
+    sayılır ve en büyük oranlılar listelenir.
+    """
+    depo = ParquetDepo(depo_kok)
+    satirlar: list[dict[str, Any]] = []
+    for sembol in _depo_sembolleri(Path(depo_kok), timeframe):
+        df = depo.oku(sembol, timeframe)
+        satirlar.extend(b.sozluk() for b in kimlik_mod.bosluklar(df, timeframe, sembol))
+
+    uzunluk_sinif = [(1, 1), (2, 23), (24, 167), (168, 719), (720, 10**9)]
+    oran_sinif = [0.0, 0.1, 0.5, 1.0, 2.0, 3.0, 5.0, float("inf")]
+    tablo: list[dict[str, Any]] = []
+    for alt, ust in uzunluk_sinif:
+        grup = [s["log_oran"] for s in satirlar if alt <= s["eksik_bar"] <= ust]
+        sayim = {
+            f"[{oran_sinif[i]}, {oran_sinif[i + 1]})": sum(
+                oran_sinif[i] <= x < oran_sinif[i + 1] for x in grup
+            )
+            for i in range(len(oran_sinif) - 1)
+        }
+        tablo.append(
+            {"eksik_bar": f"{alt}-{ust if ust < 10**9 else '∞'}", "bosluk": len(grup), **sayim}
+        )
+
+    govde = {
+        "uretildi": utc_str(simdi_ms()),
+        "depo": str(depo_kok),
+        "timeframe": timeframe,
+        "sembol": len(_depo_sembolleri(Path(depo_kok), timeframe)),
+        "bosluk": len(satirlar),
+        "dagilim": tablo,
+        "en_buyuk_oranlar": sorted(satirlar, key=lambda s: -s["log_oran"])[:60],
+    }
+    if rapor is not None:
+        rapor.parent.mkdir(parents=True, exist_ok=True)
+        rapor.write_text(
+            json.dumps(govde, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+    if json_cikti:
+        _yaz_json(govde)
+        return
+    typer.echo(f"{govde['sembol']} sembol, {govde['bosluk']:,} boşluk ({timeframe})")
+    basliklar = list(tablo[0].keys())
+    typer.echo("  " + " ".join(f"{b:>12}" for b in basliklar))
+    for satir in tablo:
+        typer.echo("  " + " ".join(f"{satir[b]!s:>12}" for b in basliklar))
+    typer.echo("  en büyük |ln oran|:")
+    for s in govde["en_buyuk_oranlar"][:25]:
+        typer.echo(
+            f"    {s['sembol']:<14} {s['onceki_son']} → {s['sonraki_ilk']}  "
+            f"eksik {s['eksik_bar']:>5}  oran {s['oran']:.6g}  |ln| {s['log_oran']:.2f}"
+        )
+
+
+# ------------------------------------------------------------- data evren
+
+
+@data_app.command("evren")
+def data_evren(
+    son_ay: Annotated[str, typer.Option("--son-ay", help="Üyeliği üretilecek son ay, YYYY-MM")],
+    ust_n: Annotated[int, typer.Option("--ust-n", help="Ay başına azami üye")],
+    asgari_hacim: Annotated[
+        float, typer.Option("--asgari-hacim", help="M−1 ayı quote hacmi alt sınırı")
+    ],
+    kirilma_eksik_bar: Annotated[
+        int,
+        typer.Option("--kirilma-eksik-bar", help="Kimlik kırılması: asgari eksik bar"),
+    ] = kimlik_mod.KIRILMA_ASGARI_EKSIK_BAR,
+    kirilma_log_oran: Annotated[
+        float,
+        typer.Option("--kirilma-log-oran", help="Kimlik kırılması: asgari |ln(oran)|"),
+    ] = kimlik_mod.KIRILMA_ASGARI_LOG_ORAN,
+    depo_kok: Depo = arsiv_mod.VARSAYILAN_EVREN_DEPO,
+    timeframe: Annotated[str, typer.Option("--timeframe")] = "1h",
+    json_cikti: JsonCikti = False,
+) -> None:
+    """PIT evren tablosunu üretir ve `<depo>/_evren/` altına yazar. (K-052/3, Faz 9)
+
+    M ayının üyeliği yalnızca M−1'in tamamlanmış verisiyle kurulur. `--son-ay`, M−1'i
+    tamamlanmış olan en son M olmalı; komut tamamlanmamış bir M−1'i reddeder.
+    """
+    try:
+        son = dt.datetime.strptime(son_ay, "%Y-%m").replace(tzinfo=dt.UTC)
+    except ValueError as hata:
+        raise typer.BadParameter(f"--son-ay YYYY-MM olmalı: {son_ay!r}") from hata
+    simdi = dt.datetime.now(dt.UTC)
+    if (son.year, son.month) > (simdi.year, simdi.month):
+        raise typer.BadParameter(
+            f"--son-ay {son_ay}: M−1 ayı henüz tamamlanmadı (bugün {simdi:%Y-%m-%d})"
+        )
+
+    kural = evren_mod.EvrenKurali(ust_n=ust_n, asgari_quote_hacim=asgari_hacim)
+    depo = ParquetDepo(depo_kok)
+    ozetler: list[Any] = []
+    enstrumanlar: list[dict[str, Any]] = []
+    kirilma_kayit: list[dict[str, Any]] = []
+    veri: dict[str, str] = {}
+    for sembol in _depo_sembolleri(Path(depo_kok), timeframe):
+        df = depo.oku(sembol, timeframe)
+        veri[sembol] = depo.sha256(sembol, timeframe)
+        kir = kimlik_mod.kirilmalar(
+            df,
+            timeframe,
+            asgari_eksik_bar=kirilma_eksik_bar,
+            asgari_log_oran=kirilma_log_oran,
+            sembol=sembol,
+        )
+        kimlikler = kimlik_mod.kimlikleri_kur(df, timeframe, sembol, kir)
+        kirilma_kayit.extend(k.sozluk() for k in kir)
+        enstrumanlar.extend(e.sozluk() for e in kimlikler)
+        ozetler.append(evren_mod.aylik_ozet(df, kimlikler))
+
+    ozet = evren_mod.ozetleri_birlestir(ozetler)
+    tablo = evren_mod.evren_tablosu(ozet, kural, son_uye_ay=son_ay)
+    tablo_hash = evren_mod.tablo_hash(tablo)
+
+    cikti = Path(depo_kok) / "_evren"
+    cikti.mkdir(parents=True, exist_ok=True)
+    ad = kural.kimlik[:12]
+    tablo_yolu = cikti / f"{ad}.parquet"
+    tablo.to_parquet(tablo_yolu, index=False)
+    uye_olmus = set(tablo["kanonik_id"])
+    bitis = {e["kanonik_id"]: e["gecerli_bitis_ms"] for e in enstrumanlar}
+    son_ay_basi_ms = int(son.timestamp() * 1000)
+    olu = sorted(k for k in uye_olmus if bitis[k] < son_ay_basi_ms - 30 * 86_400_000)
+    meta = {
+        "uretildi": utc_str(simdi_ms()),
+        "kural": kural.sozluk(),
+        "kural_kimlik": kural.kimlik,
+        "kimlik_kirilmasi": {
+            "asgari_eksik_bar": kirilma_eksik_bar,
+            "asgari_log_oran": kirilma_log_oran,
+        },
+        "son_uye_ay": son_ay,
+        "timeframe": timeframe,
+        "tablo": str(tablo_yolu),
+        "tablo_hash": tablo_hash,
+        "ay_sayisi": int(tablo["ay"].nunique()),
+        "satir": len(tablo),
+        "uye_olmus_kimlik": len(uye_olmus),
+        "son_aydan_30_gun_once_bitmis_uye": len(olu),
+        "kirilmalar": kirilma_kayit,
+        "git": git_durumu(),
+        "veri_sha256": dict(sorted(veri.items())),
+    }
+    (cikti / f"{ad}.json").write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    (cikti / "kimlik-katalogu.json").write_text(
+        json.dumps(
+            {"kirilmalar": kirilma_kayit, "enstrumanlar": enstrumanlar},
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    if json_cikti:
+        _yaz_json({k: v for k, v in meta.items() if k not in ("veri_sha256", "kirilmalar")})
+        return
+    typer.echo(f"evren {ad}  (N={ust_n}, hacim ≥ {asgari_hacim:,.0f}, son ay {son_ay})")
+    typer.echo(f"  sembol / kimlik : {len(veri):,} / {len(enstrumanlar):,}")
+    typer.echo(f"  kimlik kırılması: {len(kirilma_kayit)}")
+    for k in kirilma_kayit[:20]:
+        typer.echo(
+            f"    {k['sembol']:<14} {k['onceki_son']} → {k['sonraki_ilk']}  oran {k['oran']:.6g}"
+        )
+    typer.echo(f"  ay / satır      : {meta['ay_sayisi']} / {len(tablo):,}")
+    typer.echo(
+        f"  üye olmuş       : {len(uye_olmus):,} kimlik, {len(olu):,} tanesi son aydan önce bitmiş"
+    )
+    typer.echo(f"  tablo_hash      : {tablo_hash}")
+    typer.echo(f"  dosya           : {tablo_yolu}")
+
+
 # ------------------------------------------------------ data slippage-kalibre
 
 
@@ -304,9 +631,7 @@ def data_slippage_kalibre(
     persentil: Annotated[float, typer.Option("--persentil")] = VARSAYILAN_PERSENTIL,
     depo_kok: Depo = VARSAYILAN_DEPO,
     config: Annotated[Path, typer.Option("--config")] = maliyet_mod.VARSAYILAN_YOL,
-    gerekce: Annotated[
-        str, typer.Option("--gerekce", help="Persentil seçiminin gerekçesi")
-    ] = "",
+    gerekce: Annotated[str, typer.Option("--gerekce", help="Persentil seçiminin gerekçesi")] = "",
     yaz: Annotated[
         bool, typer.Option("--yaz", help="Sonucu maliyet konfigürasyonuna işle")
     ] = False,
@@ -357,13 +682,9 @@ def data_slippage_kalibre(
         return
 
     typer.echo(
-        f"{sonuc.sembol} {sonuc.timeframe}  "
-        f"{utc_str(sonuc.ilk_ms)} → {utc_str(sonuc.son_ms)}"
+        f"{sonuc.sembol} {sonuc.timeframe}  {utc_str(sonuc.ilk_ms)} → {utc_str(sonuc.son_ms)}"
     )
-    typer.echo(
-        f"  kullanılan    : {sonuc.kullanilan_bar:,} hareket "
-        f"({sonuc.atilan_bar:,} atıldı)"
-    )
+    typer.echo(f"  kullanılan    : {sonuc.kullanilan_bar:,} hareket ({sonuc.atilan_bar:,} atıldı)")
     typer.echo("  1dk hareket (bps):")
     for ad, deger in sonuc.dagilim_bps.items():
         typer.echo(f"    {ad:<5}: {deger:>10.4f}")
@@ -395,15 +716,13 @@ def data_maliyet(
     typer.echo(f"gidiş-dönüş     : {model.gidis_donus_bps} bps")
     if model.gecici:
         typer.echo(
-            "durum           : GEÇİCİ — bu modelle üretilen sonuç "
-            "promotion'a giremez (K-021)"
+            "durum           : GEÇİCİ — bu modelle üretilen sonuç promotion'a giremez (K-021)"
         )
     else:
         k = model.kalibrasyon
         assert k is not None
         typer.echo(
-            f"durum           : kalibre ({k.tarih}, p{k.persentil:g}, "
-            f"{k.sembol} {k.timeframe})"
+            f"durum           : kalibre ({k.tarih}, p{k.persentil:g}, {k.sembol} {k.timeframe})"
         )
         typer.echo(f"gerekçe         : {k.gerekce}")
 
@@ -456,9 +775,7 @@ def backtest(
         risk_motoru = RiskMotoru(limit_mod.yukle(), timeframe, mod="backtest", defter=defter)
 
     strateji = SmaKesisim(hizli=hizli, yavas=yavas, maruziyet=maruziyet)
-    motor = Backtest(
-        strateji, model, baslangic_sermaye=sermaye, seed=seed, risk=risk_motoru
-    )
+    motor = Backtest(strateji, model, baslangic_sermaye=sermaye, seed=seed, risk=risk_motoru)
     sonuc = motor.calistir(
         sembol,
         timeframe,
@@ -595,9 +912,7 @@ def _lab_veri(depo: Path, sembol: str, timeframe: str):
 
 def _funding_hash(f: Any) -> str:
     """Funding serisinin içerik hash'i. Veri kimliğinin funding yarısı (K-009, K-042)."""
-    return hashlib.sha256(
-        f[["funding_time", "funding_rate"]].to_numpy().tobytes()
-    ).hexdigest()
+    return hashlib.sha256(f[["funding_time", "funding_rate"]].to_numpy().tobytes()).hexdigest()
 
 
 def _kosu_kimligi(adlar: list[str], bar_hash: str, funding_hash: str | None) -> str:
@@ -695,17 +1010,29 @@ def lab_tara(
         len(diziler["open_time"]), [strateji], oos_orani=oos_orani
     )
     sonuc = tarama_mod.tara(
-        sinif, secenekler, model, sembol, timeframe, diziler, ins,
-        olcut=olcut, baslangic_sermaye=sermaye,
+        sinif,
+        secenekler,
+        model,
+        sembol,
+        timeframe,
+        diziler,
+        ins,
+        olcut=olcut,
+        baslangic_sermaye=sermaye,
     )
 
     yol = deney_mod.Deney(
-        tip="tarama", strateji=strateji, veri_sha256=veri_hash,
+        tip="tarama",
+        strateji=strateji,
+        veri_sha256=veri_hash,
         girdi={
-            "sembol": sembol, "timeframe": timeframe,
+            "sembol": sembol,
+            "timeframe": timeframe,
             "izgara": {a: list(d) for a, d in secenekler.items()},
-            "pencere": ins.sozluk(), "olcut": olcut,
-            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+            "pencere": ins.sozluk(),
+            "olcut": olcut,
+            "baslangic_sermaye": sermaye,
+            "maliyet": _maliyet_govdesi(model),
             "asgari_islem": sonuc.asgari_islem,
         },
         cikti=sonuc.sozluk(),
@@ -766,20 +1093,36 @@ def lab_walkforward(
     isinma = karsilastirma_mod.ortak_isinma([strateji])
     katmanlar = bolme.walk_forward(n, isinma, egitim, test, kaydirmali=not sabit_capa)
     sonuc = wf_mod.calistir(
-        sinif, secenekler, model, sembol, timeframe, diziler, katmanlar, secim=secim,
-        olcut=olcut, baslangic_sermaye=sermaye,
+        sinif,
+        secenekler,
+        model,
+        sembol,
+        timeframe,
+        diziler,
+        katmanlar,
+        secim=secim,
+        olcut=olcut,
+        baslangic_sermaye=sermaye,
         # Kıyas ölçütünde optimize edilecek bir şey yok ve kapanmış tur da yok.
         asgari_islem=0 if strateji in KIYAS else tarama_mod.ASGARI_ISLEM,
     )
 
     yol = deney_mod.Deney(
-        tip="walk_forward", strateji=strateji, veri_sha256=veri_hash,
+        tip="walk_forward",
+        strateji=strateji,
+        veri_sha256=veri_hash,
         girdi={
-            "sembol": sembol, "timeframe": timeframe,
+            "sembol": sembol,
+            "timeframe": timeframe,
             "izgara": {a: list(d) for a, d in secenekler.items()},
-            "bar_sayisi": n, "isinma": isinma, "egitim_bar": egitim, "test_bar": test,
-            "kaydirmali": not sabit_capa, "olcut": olcut,
-            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+            "bar_sayisi": n,
+            "isinma": isinma,
+            "egitim_bar": egitim,
+            "test_bar": test,
+            "kaydirmali": not sabit_capa,
+            "olcut": olcut,
+            "baslangic_sermaye": sermaye,
+            "maliyet": _maliyet_govdesi(model),
         },
         cikti=sonuc.sozluk(),
     ).yaz(deney_kok)
@@ -798,8 +1141,7 @@ def lab_walkforward(
     typer.echo("")
     typer.echo("  bileşik OOS:")
     typer.echo(
-        f"    sermaye {b.baslangic_sermaye:,.0f} → {b.bitis_sermaye:,.2f} "
-        f"({b.toplam_getiri:+.1%})"
+        f"    sermaye {b.baslangic_sermaye:,.0f} → {b.bitis_sermaye:,.2f} ({b.toplam_getiri:+.1%})"
     )
     typer.echo(
         f"    Sharpe {b.sharpe:.3f} · maxDD {b.max_drawdown:.1%} · "
@@ -845,12 +1187,18 @@ def lab_montecarlo(
     sonuc = analiz_mod.monte_carlo(kosu_sonucu.islemler, sermaye, deneme=deneme, seed=seed)
 
     yol = deney_mod.Deney(
-        tip="monte_carlo", strateji=strateji, veri_sha256=veri_hash, seed=seed,
+        tip="monte_carlo",
+        strateji=strateji,
+        veri_sha256=veri_hash,
+        seed=seed,
         girdi={
-            "sembol": sembol, "timeframe": timeframe,
+            "sembol": sembol,
+            "timeframe": timeframe,
             "parametreler": dict(nesne.parametreler),
-            "pencere": pencere.sozluk(), "deneme": deneme,
-            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+            "pencere": pencere.sozluk(),
+            "deneme": deneme,
+            "baslangic_sermaye": sermaye,
+            "maliyet": _maliyet_govdesi(model),
         },
         cikti=sonuc.sozluk(),
     ).yaz(deney_kok)
@@ -861,8 +1209,7 @@ def lab_montecarlo(
 
     typer.echo(f"{strateji} · {sonuc.islem_sayisi} işlem · {deneme:,} deneme · seed={seed}")
     typer.echo(
-        f"  gerçekleşen: maxDD {sonuc.gercek_max_drawdown:.1%} · "
-        f"getiri {sonuc.gercek_getiri:+.1%}"
+        f"  gerçekleşen: maxDD {sonuc.gercek_max_drawdown:.1%} · getiri {sonuc.gercek_getiri:+.1%}"
     )
     typer.echo(
         "  max drawdown dağılımı: "
@@ -901,11 +1248,15 @@ def lab_stres(
     )
 
     yol = deney_mod.Deney(
-        tip="stres", strateji=strateji, veri_sha256=veri_hash,
+        tip="stres",
+        strateji=strateji,
+        veri_sha256=veri_hash,
         girdi={
-            "sembol": sembol, "timeframe": timeframe,
+            "sembol": sembol,
+            "timeframe": timeframe,
             "parametreler": dict(nesne.parametreler),
-            "pencere": pencere.sozluk(), "baslangic_sermaye": sermaye,
+            "pencere": pencere.sozluk(),
+            "baslangic_sermaye": sermaye,
             "maliyet": _maliyet_govdesi(model),
         },
         cikti=sonuc.sozluk(),
@@ -971,8 +1322,7 @@ def _defteri_zorla(
     if not eksik:
         return
     komutlar = chr(10).join(
-        f'  sq lab hipotez-kaydet {ad} -t {timeframe} -g "<neden deniyorsun>"'
-        for ad in eksik
+        f'  sq lab hipotez-kaydet {ad} -t {timeframe} -g "<neden deniyorsun>"' for ad in eksik
     )
     raise hipotez_mod.HipotezHatasi(
         f"hipotez defterinde kayıtlı olmayan strateji(ler): {', '.join(eksik)} "
@@ -1002,16 +1352,29 @@ def lab_karsilastir(
     veri_hash = _kosu_kimligi(adlar, veri_hash, funding_hash)
 
     sonuc = karsilastirma_mod.calistir(
-        model, sembol, timeframe, diziler, stratejiler=adlar,
-        oos_orani=oos_orani, olcut=olcut, baslangic_sermaye=sermaye, veri_sha256=veri_hash,
+        model,
+        sembol,
+        timeframe,
+        diziler,
+        stratejiler=adlar,
+        oos_orani=oos_orani,
+        olcut=olcut,
+        baslangic_sermaye=sermaye,
+        veri_sha256=veri_hash,
     )
 
     yol = deney_mod.Deney(
-        tip="karsilastirma", strateji="+".join(adlar), veri_sha256=veri_hash,
+        tip="karsilastirma",
+        strateji="+".join(adlar),
+        veri_sha256=veri_hash,
         girdi={
-            "sembol": sembol, "timeframe": timeframe, "stratejiler": adlar,
-            "oos_orani": oos_orani, "olcut": olcut,
-            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+            "sembol": sembol,
+            "timeframe": timeframe,
+            "stratejiler": adlar,
+            "oos_orani": oos_orani,
+            "olcut": olcut,
+            "baslangic_sermaye": sermaye,
+            "maliyet": _maliyet_govdesi(model),
         },
         cikti=sonuc.sozluk(),
     ).yaz(deney_kok)
@@ -1089,9 +1452,7 @@ def lab_dogrula(
 
     typer.echo(f"{kayit_yolu.name} · {kayit['tip']} · {kayit['strateji']}")
     kimlik = kayit["kimlik"]
-    typer.echo(
-        f"  kayıt commit: {kimlik['commit']}{' (DIRTY)' if kimlik['dirty'] else ''}"
-    )
+    typer.echo(f"  kayıt commit: {kimlik['commit']}{' (DIRTY)' if kimlik['dirty'] else ''}")
     typer.echo(f"  veri: {kimlik['veri_sha256'][:16]}…")
     if ayni:
         typer.secho(f"  yeniden üretildi: {aciklama}", fg=typer.colors.GREEN)
@@ -1134,18 +1495,34 @@ def lab_kapilar(
     veri_hash = _kosu_kimligi(adlar, veri_hash, funding_hash)
 
     sonuc = degerlendirme_mod.degerlendir(
-        model, sembol, timeframe, diziler, stratejiler=adlar, oos_orani=oos_orani,
-        olcut=olcut, secim=secim, baslangic_sermaye=sermaye, egitim_bar=egitim,
+        model,
+        sembol,
+        timeframe,
+        diziler,
+        stratejiler=adlar,
+        oos_orani=oos_orani,
+        olcut=olcut,
+        secim=secim,
+        baslangic_sermaye=sermaye,
+        egitim_bar=egitim,
         test_bar=test,
     )
 
     yol = deney_mod.Deney(
-        tip="degerlendirme", strateji="+".join(adlar), veri_sha256=veri_hash,
+        tip="degerlendirme",
+        strateji="+".join(adlar),
+        veri_sha256=veri_hash,
         girdi={
-            "sembol": sembol, "timeframe": timeframe, "stratejiler": adlar,
-            "oos_orani": oos_orani, "olcut": olcut, "secim": secim,
-            "egitim_bar": egitim, "test_bar": test,
-            "baslangic_sermaye": sermaye, "maliyet": _maliyet_govdesi(model),
+            "sembol": sembol,
+            "timeframe": timeframe,
+            "stratejiler": adlar,
+            "oos_orani": oos_orani,
+            "olcut": olcut,
+            "secim": secim,
+            "egitim_bar": egitim,
+            "test_bar": test,
+            "baslangic_sermaye": sermaye,
+            "maliyet": _maliyet_govdesi(model),
         },
         cikti=sonuc,
     ).yaz(deney_kok)
@@ -1235,9 +1612,7 @@ def risk_kalibre(
     diziler = bar_dizileri(df)
     bugun = utc_str(simdi_ms())[:10]
 
-    vol = risk_kalibrasyon.volatilite_olc(
-        diziler["high"], diziler["low"], diziler["close"]
-    )
+    vol = risk_kalibrasyon.volatilite_olc(diziler["high"], diziler["low"], diziler["close"])
     ters = risk_kalibrasyon.ters_hareket_olc(
         diziler["open"], diziler["low"], diziler["high"], diziler["close"], ufuk_bar=ufuk
     )
@@ -1404,9 +1779,7 @@ def risk_kalibre(
     typer.echo(f"    {'ardisik_kayip_limiti':<24}: {limitler.ardisik_kayip_limiti}")
     typer.echo(f"    {'cooldown_bar':<24}: {limitler.cooldown_bar}")
     typer.echo("")
-    tipik = limitler.islem_basina_risk / (
-        limitler.ters_hareket_atr_carpani * vol.dagilim["p50"]
-    )
+    tipik = limitler.islem_basina_risk / (limitler.ters_hareket_atr_carpani * vol.dagilim["p50"])
     typer.echo(
         f"  tipik volatilitede bağlayıcı maruziyet tavanı: {min(tipik, azami_maruziyet):.1%}"
         f"  ({'islem_basina_risk' if tipik < azami_maruziyet else 'azami_maruziyet'})"
@@ -1444,9 +1817,7 @@ def risk_durum(
     audit: Annotated[Path, typer.Option("--audit", help="Audit defteri yolu.")] = (
         VARSAYILAN_AUDIT
     ),
-    durum_yolu: Annotated[Path, typer.Option("--durum")] = (
-        risk_durum_mod.VARSAYILAN_DURUM_YOLU
-    ),
+    durum_yolu: Annotated[Path, typer.Option("--durum")] = (risk_durum_mod.VARSAYILAN_DURUM_YOLU),
     json_cikti: JsonCikti = False,
 ) -> None:
     """Kalıcı risk durumu + audit özeti. SAFE_MODE açıksa bunu ilk satırda söyler."""
@@ -1544,9 +1915,7 @@ def risk_serbest(
     not_metni: Annotated[
         str, typer.Option("--not", help="SAFE_MODE'dan çıkış gerekçesi (≥10 karakter).")
     ],
-    durum_yolu: Annotated[Path, typer.Option("--durum")] = (
-        risk_durum_mod.VARSAYILAN_DURUM_YOLU
-    ),
+    durum_yolu: Annotated[Path, typer.Option("--durum")] = (risk_durum_mod.VARSAYILAN_DURUM_YOLU),
     audit: Annotated[Path, typer.Option("--audit")] = VARSAYILAN_AUDIT,
 ) -> None:
     """SAFE_MODE'u **elle** kapatır. (K-008/4)
@@ -1597,9 +1966,7 @@ def _kanit_kur(
             alanlar |= {
                 "risk_limit_kimligi": risk_govdesi.get("limit_kimligi"),
                 "risk_max_drawdown": kayit.get("metrikler", {}).get("max_drawdown"),
-                "risk_drawdown_limiti": risk_govdesi.get("limitler", {}).get(
-                    "drawdown_limiti"
-                ),
+                "risk_drawdown_limiti": risk_govdesi.get("limitler", {}).get("drawdown_limiti"),
             }
 
     if kapi_yolu is not None:
@@ -1625,8 +1992,12 @@ def promotion_durum(
     kayitlar = [defter.oku(strateji)] if strateji else defter.hepsi()
 
     if json_cikti:
-        _yaz_json({"zincir": [str(a) for a in promotion_mod.SIRA],
-                   "kayitlar": [k.sozluk() for k in kayitlar]})
+        _yaz_json(
+            {
+                "zincir": [str(a) for a in promotion_mod.SIRA],
+                "kayitlar": [k.sozluk() for k in kayitlar],
+            }
+        )
         return
 
     typer.echo("zincir: " + " -> ".join(str(a) for a in promotion_mod.SIRA[1:]))
@@ -1826,8 +2197,10 @@ def paper_baslat(
             fg=typer.colors.YELLOW,
         )
     if kimlik.dirty:
-        typer.secho("uyarı    : kirli çalışma ağacı — bu koşu promotion'a giremez (K-009)",
-                    fg=typer.colors.YELLOW)
+        typer.secho(
+            "uyarı    : kirli çalışma ağacı — bu koşu promotion'a giremez (K-009)",
+            fg=typer.colors.YELLOW,
+        )
 
     if not ag:
         kurulum.kapat()
@@ -1838,8 +2211,7 @@ def paper_baslat(
     sonuc = asyncio.run(baslat_mod.calistir(kurulum, uygulama, host=host, port=port))
     ozet = sonuc.get("ozet") or {}
     typer.echo(
-        f"durdu    : {ozet.get('islenen_bar', 0)} bar işlendi, "
-        f"{ozet.get('sure_gun', 0.0):.2f} gün"
+        f"durdu    : {ozet.get('islenen_bar', 0)} bar işlendi, {ozet.get('sure_gun', 0.0):.2f} gün"
     )
 
 
@@ -1877,8 +2249,7 @@ def paper_durum(
 
     k = govde["kosu"] or {}
     typer.echo(
-        f"koşu     : {k.get('kosu_adi')} ({k.get('mod')}) "
-        f"{k.get('sembol')} {k.get('timeframe')}"
+        f"koşu     : {k.get('kosu_adi')} ({k.get('mod')}) {k.get('sembol')} {k.get('timeframe')}"
     )
     typer.echo(f"strateji : {(k.get('strateji') or {}).get('ad')}")
     if govde["calisma_gun"] is not None:
@@ -2066,9 +2437,7 @@ def lab_hipotez_kaydet(
     if _funding_okuyor_mu(strateji_adi):
         f_sha = _funding_hash(funding_mod.oku(sembol))
     sha = _veri_kimligi(strateji_adi, bar_sha, f_sha)
-    hipotez = hipotez_mod.Hipotez.kur(
-        strateji_adi, timeframe, sha, izgara, gerekce, secim=secim
-    )
+    hipotez = hipotez_mod.Hipotez.kur(strateji_adi, timeframe, sha, izgara, gerekce, secim=secim)
 
     defter = hipotez_mod.HipotezDefteri()
     onceki = defter.sira(hipotez)
@@ -2214,9 +2583,7 @@ def lab_coklu_test(
     Pahalıdır (31 çekiliş × 1.000 iterasyon ≈ 15 dakika). Ucuz olmamalı: çıktısı bir
     promotion eşiği.
     """
-    cekilisler, ayar, diziler_ob, atlanan, defter_sayisi = _coklu_test_cekilisleri(
-        depo, deney_kok
-    )
+    cekilisler, ayar, diziler_ob, atlanan, defter_sayisi = _coklu_test_cekilisleri(depo, deney_kok)
     if not cekilisler:
         raise typer.BadParameter("ölçülebilir çekiliş yok")
 
@@ -2236,9 +2603,7 @@ def lab_coklu_test(
             veri_sha256=c.veri_sha256,
         )
         islem = len([i for i in r.islemler if i.kapali])
-        uygun = bool(asgari.gecti_mi(islem)) and bool(
-            azami_dd.gecti_mi(r.metrikler.max_drawdown)
-        )
+        uygun = bool(asgari.gecti_mi(islem)) and bool(azami_dd.gecti_mi(r.metrikler.max_drawdown))
         return r.metrikler.sharpe, uygun
 
     null = coklu_mod.null_dagilimi(cekilisler, kosturucu, deneme=deneme, seed=seed)
@@ -2253,9 +2618,7 @@ def lab_coklu_test(
         "mevcut_esik": sharpe_kapisi.sinir,
         "null": null.sozluk(),
         "duzeltilmis_esikler": {f"{o:.2f}": null.duzeltilmis_esik(o) for o in oranlar},
-        "esik_guven_araliklari": {
-            f"{o:.2f}": list(null.esik_guven_araligi(o)) for o in oranlar
-        },
+        "esik_guven_araliklari": {f"{o:.2f}": list(null.esik_guven_araligi(o)) for o in oranlar},
         "mevcut_esigin_yanlis_pozitifi": float((null.azami >= sharpe_kapisi.sinir).mean()),
         "cekilisler": [c.sozluk() for c in cekilisler],
     }
@@ -2276,8 +2639,7 @@ def lab_coklu_test(
         return
 
     typer.echo(
-        f"defter {defter_sayisi} hipotez · ölçülebilir {len(cekilisler)} · "
-        f"atlanan {len(atlanan)}"
+        f"defter {defter_sayisi} hipotez · ölçülebilir {len(cekilisler)} · atlanan {len(atlanan)}"
     )
     for a in atlanan:
         typer.echo(f"    atlandı: {a['strateji']:<15} {a['timeframe']:<3} {a['sebep']}")

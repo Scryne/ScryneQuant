@@ -1,7 +1,7 @@
 {
   "proje_adi": "ScryneQuant",
   "asama": "uygulama",
-  "guncellendi": "2026-09-12",
+  "guncellendi": "2026-09-16",
   "surum": 2,
-  "not": "Vizyon v2 (K-048) kabul edildi: denetim, kararlar, final dokuman ve roadmap guncellendi. Faz 0-5 ve 7 kapali; Faz 6'nin 30 gunluk kosusu suruyor; siradaki is Faz 9 (PIT veri platformu + coklu sembol evreni)."
+  "not": "Faz 0-7 ve 9 kapali. Faz 6 K-055 ile kapandi (30 gunluk kosu kriteri Faz 8/14'e tasindi). Faz 9 K-056 ile kapandi: arsivden 734 sembol/20,06M bar indirildi (data/evren), kanonik enstruman kimligi ve PIT evren tablosu kuruldu, K-034 yeniden olculdu. Siradaki is Faz 10 (cok enstrumanli arastirma cekirdegi). Faz 8 promotion'u gecen strateji ve surekli acik host bekliyor. Program adayi 01 (transkript desenleri) donduruldu, en erken Faz 12."
 }

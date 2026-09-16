@@ -1208,6 +1208,24 @@ gerçekleşmediği** görülmüştür. Faz 8'e taşınan şey karar değil, **bi
 hizası testi sürüyor — göç yolu açık tutuluyor, ama açık tutmak ile kullanmak farklı
 şeyler.
 
+### Gözden geçirme ölçümü — 2026-09-16 (Faz 9, K-052/6'nın istediği ölçüm)
+
+Koşul 3 (**çok sembollü çalışma**) araştırma tarafında gerçekleşti: 734 sembol, 20,06 milyon
+bar, 628 MB (K-056). K-052/6 bu durumda kararın *yeniden verilmesini* istiyordu; verildi.
+
+| # | Koşul | Eşik | **Ölçülen** | Gerçekleşti mi |
+| --- | --- | ---: | ---: | --- |
+| 1 | İkinci yazıcı süreç | — | Tek yazıcı; arşiv indirici tek süreç, dosya başına atomik `replace` | **Hayır** |
+| 2a | Audit satır sayısı | 10.000.000 | **1.091** (değişmedi) | **Hayır** |
+| 2b | `runs/` toplam boyut | 5 GB | **3,8 MB** | **Hayır** |
+| 3 | Çok sembollü çalışma | — | **Evet, araştırma deposunda** (628 MB parquet); operasyonel state tek sembol, tek koşu | **Kısmen** |
+
+**Karar yine değişmiyor, ama gerekçe değişiyor.** Koşul 3'ün sorusu *"operasyonel state
+PostgreSQL'e taşınmalı mı"*ydı; ölçülen yazma deseni gerektirmiyor: çoklu sembol verisi
+**araştırma deposudur** (parquet + DuckDB, K-011), operasyonel state değil — transaction yok,
+eşzamanlı yazıcı yok, tek süreç dosya yazıyor. Yani koşul gerçekleşti, ölçüldü ve
+**gerektirmediği görüldü**. Bir sonraki tetikleyici koşul 1 veya 2'dir; koşul 3 kapanmıştır.
+
 ---
 
 ## K-035 — Gözlem modu: promotion geçmemiş strateji canlı veride koşabilir, ama kanıt üretemez
@@ -2618,3 +2636,57 @@ doğruluyor.
    yukarıdaki iki madde bunu zorluyor.
 
 **Faz sırası:** Faz 9 bu karardan bağımsızdır (strateji ve canlı koşu içermez), bekleme yok.
+
+---
+
+## K-056 — Arşiv ikinci veri kaynağıdır ve karıştırılmaz; kimlik ölçüyle bölünür; evren PIT'tir
+
+**Durum:** kabul · **Tarih:** 2026-09-16 · **Faz:** 9 · **Uygular:** K-052/3, K-052/4,
+K-052/5, K-051/4 · **İlgili:** K-005, K-006, K-009, K-011, K-024, K-039 ·
+**Kanıt:** `docs/Faz-9-Veri-Platformu-Raporu.md`
+
+**Bağlam.** Çoklu sembol evreni REST'ten kurulamaz: delist edilmiş sembollerin geçmişi orada
+yok, arşivde var (Spike 6). Arşiv kullanılınca dört şey ölçüldü ve dördü de karar gerektirdi.
+
+**Karar — altı madde:**
+
+1. **Arşiv (`data.binance.vision`) ikinci bir veri kaynağıdır ve REST ile karıştırılmaz.**
+   Evren `data/evren/` altında yaşar, `data/market/` REST'ten kalır. İki sebep: (a) REST
+   dosyalarının hash'i hipotez defterindeki 38 çekilişin `veri_sha256`sı (K-039); (b) iki
+   kaynak birebir aynı değil — BTCUSDT 1h'in ortak 45.576 barının **4'ünde** hacim, işlem
+   sayısı veya kapanış farklı. Hangisinin doğru olduğu bilinmiyor ve **tahmin edilmiyor**;
+   bir seri tek kaynaktan kurulur.
+2. **Arşiv dosyası doğrulanmadan kabul edilmez.** Her zip'in `.CHECKSUM` dosyasıyla SHA-256'sı
+   karşılaştırılır; checksum'ı olmayan veya tutmayan dosya reddedilir ve o sembol için hiçbir
+   şey yazılmaz. İndirilen her dosyanın adı ve hash'i parquet'in yanındaki manifestoda durur:
+   "kaldığı yerden devam"ın ölçüsü bar değil, **dosya**.
+3. **İki ayrıştırma kuralı sabitlenir.** (a) `open_time` birimi 2025-01'de ms'den µs'e geçti;
+   birim büyüklükten çıkarılır, dosya içinde karışık birim ve 1000'e bölünmeyen µs
+   **reddedilir**. (b) CSV `float_precision="round_trip"` ile okunur: varsayılan ayrıştırıcı
+   744 satırlık bir ayda 50 değeri 2,4e-7 kaydırıyordu ve veri seti kimliği dosyanın
+   hash'idir (K-009).
+4. **Izgaraya oturmayan bar atılır, yuvarlanmaz, ve sayılır.** 2018-02 kesintisinden sonra 6
+   sembolde toplam 258 bar 28 dk kaymış açılışla yazılmış. Yuvarlamak, 09:28–10:28 barını
+   09:00–10:00 barı gibi göstermek olurdu (K-024). Doğrulama katmanının K-005 kuralı
+   gevşetilmiyor; ayıklama arşiv katmanında yapılır, atılan sayı manifestoda ve raporda.
+5. **Kimlik kırılması eşikleri ölçüldü** (K-052/4'ün "uzun boşluk + imkânsız oran" kuralına
+   sayı): `eksik_bar >= 12` **ve** `|ln(sonraki açılış / önceki kapanış)| >= ln 10`. 3.598
+   boşluğun dağılımında 0,99–2,30 arası **boş**; üstündeki 28 vakanın tamamı bilinen kimlik
+   değişimi (LUNA, VEN→VET, 1:1000/1:100/1:10 redenominasyonlar, kaldıraçlı token ters
+   bölünmeleri), altındaki en yakın vakalar 2021-05-19 çöküşündeki gerçek fiyat hareketi.
+   Kanonik kimlik `binance-spot:<ticker>@<segmentin ilk barının UTC tarihi>`. **Şüphede
+   bölünür:** yanlış pozitif bilgi kaybettirir, yanlış negatif olmayan bir getiriyi seriye
+   gömer. Eşikler 1h için ölçüldü; başka timeframe'de yeniden ölçülür.
+6. **Evren tablosu PIT'tir ve evren kuralı bir çekiliştir.** M ayının üyeliği yalnızca M−1'in
+   tamamlanmış verisiyle kurulur; hacim kendi barlarımızdan (arşivin `1mo` özet katmanından
+   değil — o katman 2026-03'ten beri eksik) ve `suspect` barlar hariç hesaplanır; enstrüman
+   M−1'in son gününde işlem görüyor olmalıdır. Kuralın her alanı `EvrenKurali.kimlik`
+   hash'ine girer ve hipotez kimliğinin `evren` alanıdır (K-051/4).
+
+**Ölçülen yanlılık, ikinci kez ve bağımsız yoldan:** N=50, hacim ≥ 30 M USDT kuralıyla kurulan
+evrende bir ayın üyelerinin **medyan %16,7'si** (en kötü ay %33,3) bugün kapanmış. Spike 6
+aynı büyüklüğü %18 / %34 ölçmüştü. Bugünkü listeden kurulan bir evren bu isimleri atardı.
+
+**Açık kalem:** üç veri kaynağının da lisans alanı **"doğrulanmadı"**. Binance kullanım
+koşulları okunup kaynaklı kaydedilmedi; tahmin yazılmadı. Faz 9'u bloke etmiyor, ikinci
+varlık sınıfı (K-053, Faz 15) için bloke edici hâle gelir.

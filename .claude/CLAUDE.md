@@ -118,6 +118,13 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri. Faz 0-8 v1 (8'i kapalı),
   Faz 9-16 v2. **Faz 8 sıraya değil tetiklenmeye bağlıdır:** promotion'u geçen ilk strateji
   çıktığında başlar.
+- `docs/Faz-9-Veri-Platformu-Raporu.md` — **Faz 9 ölçümleri (K-056):** arşivden 735 sembol,
+  µs geçişi, checksum, ızgaraya oturmayan barlar, kimlik kırılması eşikleri (12 bar / ln 10),
+  PIT evren tablosu ve yeniden ölçülen hayatta kalma yanlılığı (medyan %16,7).
+- `data/evren/` — arşivden inen çoklu sembol deposu (`.gitignore`'da). Sembol başına
+  `1h.parquet` + `1h.kaynak.json` (indirilen her arşiv dosyasının SHA-256'sı); `_evren/`
+  altında PIT evren tablosu ve kimlik kataloğu. `data/market/` REST verisiyle **karıştırılmaz**
+  (K-056/1).
 - `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,
   `docs/Faz-5-Risk-Raporu.md`, `docs/Faz-6-Paper-Raporu.md`,
   `docs/Faz-7-Execution-Raporu.md` — faz sonu ölçüm raporları.
