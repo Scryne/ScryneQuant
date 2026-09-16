@@ -80,6 +80,13 @@ DEFTER: Final[dict[str, Kayit]] = {
     # Premium index kapanışının (basis, `data/funding.py::evren_premium_dizisi`) kayan
     # ortalaması. Penceresinde eksik bar varsa `NaN`: eksik basis uydurulmaz (K-024).
     "basis_sma": Kayit(("basis",), ("pencere",), ("",), ind.sma),
+    # Makro persentil alanları (Faz 12, `data/makro.py`): yükleyicide günlük PIT seriden
+    # hesaplanmış, burada yalnızca taşınıyor. Pencereler önceden sabit; alan adı = kayıt adı.
+    **{
+        f"{seri}_p{w}": Kayit((f"{seri}_p{w}",), (), ("",), ind.kopya)
+        for seri in ("vix", "nfci")
+        for w in (30, 90, 180, 365)
+    },
     "bollinger": Kayit(
         ("close",),
         ("pencere", "katsayi"),

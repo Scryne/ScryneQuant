@@ -51,6 +51,7 @@ DEPO = KOK / "data" / "evren"
 CIKTI = KOK / "runs" / "faz12"
 FUNDING_DEPO = KOK / "data" / "turev" / "funding"
 PREMIUM_DEPO = KOK / "data" / "turev" / "premium"
+MAKRO_DEPO = KOK / "data" / "makro"
 #: Premium verisi yüklenen çekilişler (basis). Funding çekilişleri (43-44) premium'suz
 #: kaydedildi; onların veri kimliği premium hash'ini içermez ve değişmemeli.
 PREMIUM_CEKILISLERI = frozenset({"turev_basis", "turev_funding_basis"})
@@ -63,6 +64,7 @@ KIYAS_YOGUNLUK = 10
 PROGRAM_AYARI = {
     "kesitsel_fiyat": (False, ed.KESITSEL_PORTFOY, False),
     "turev_evren": (True, ed.TUREV_PORTFOY, True),
+    "makro_rejim": (False, ed.TUREV_PORTFOY, True),
 }
 #: Ölçüm (24 GB makine): veri yüklü süreç ≈4,5 GB; tek koşunun tepesi in-sample +0,6 GB,
 #: tam pencere +0,9 GB. Ana süreç + 3 işçi in-sample'da ≈20 GB; tam pencere 2 işçiyle.
@@ -78,6 +80,7 @@ def _veri_uretici(program: str, cekilis: str = ""):
         evren_kosu.veri_kur, TABLO, depo_kok=DEPO, azami_sembol=AZAMI_SEMBOL,
         funding_depo=FUNDING_DEPO if funding else None,
         premium_depo=PREMIUM_DEPO if cekilis in PREMIUM_CEKILISLERI else None,
+        makro_depo=MAKRO_DEPO if program == "makro_rejim" else None,
     )
 
 

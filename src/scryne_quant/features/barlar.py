@@ -27,7 +27,13 @@ SAYISAL: tuple[str, ...] = ("open", "high", "low", "close", "volume", "quote_vol
 #:
 #: "Varsa al" davranışı yumuşak görünüyor ama sessiz değil: funding isteyen bir özellik,
 #: alan yoksa `features/motor.py`'de açık bir hatayla karşılaşır.
-EK_SAYISAL: tuple[str, ...] = ("funding", "funding_odeme", "basis")
+EK_SAYISAL: tuple[str, ...] = (
+    "funding",
+    "funding_odeme",
+    "basis",
+    # Makro persentil alanları (Faz 12, `data/makro.py`): seri × önceden sabit pencere.
+    *(f"{s}_p{w}" for s in ("vix", "nfci") for w in (30, 90, 180, 365)),
+)
 
 
 class BarHatasi(ValueError):

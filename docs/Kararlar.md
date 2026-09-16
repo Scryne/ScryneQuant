@@ -2933,3 +2933,32 @@ K-057 motoru barı olmayan sembolde pozisyonu son bilinen fiyattan değerliyor v
    sıfıra yazma yalnızca kaçırılan çıkışlar için kalır.
 3. Bir çekiliş kapıları geçer ve takılı değer payı özkaynağın %1'ini aşarsa: sonuç N'ye
    duyarlılıkla (N = 24 / 96) yeniden raporlanır.
+
+## K-060 — Makro stres engeli: günlük PIT, ertesi gün görünürlük, stres rejiminde yalnızca risk azaltan niyet
+
+**Durum:** kabul · **Tarih:** 2026-09-16 · **Uygular:** K-037, K-052/5, K-052/15, K-050 ·
+**Kaynak:** Faz 12 `makro_rejim` programı, `src/scryne_quant/data/makro.py`,
+`src/scryne_quant/strategy/kutuphane/evren_makro.py`
+
+### Karar — dört madde
+
+1. **PIT:** ALFRED vintage satırı `d` gününde görülebilir ⇔ `realtime_start ≤ d ≤ realtime_end`;
+   `d` gününün değeri o gün görülebilen en geç gözlem tarihli satırınki. Saat bilgisi yok:
+   değer gün sonunda bilinir ve **`d+1` 00:00 barından itibaren** görünür (testle).
+2. **Persentil günlük seride, yükleyicide, önceden sabit pencerelerle** (30/90/180/365 gün).
+   Bar başına kayan persentil çekiliş başına günler sürerdi; gün içinde değer sabit olduğu
+   için sonuç aynı. Izgara bu kümenin dışına çıkamaz.
+3. **Stres rejiminde** kıyasın hedefi normal kurulur; yalnızca hedefi 0 olan (çıkış) ve
+   elde olan sembolde hedefi mevcut ağırlığı aşmayan niyetler geçer. Yeni isim ve büyütme
+   silinir; silinen niyet satış değildir ("bahsedilmeyen sembol olduğu gibi kalır"). Bu,
+   K-050'nin asimetrisinin strateji içindeki hâli: engel yalnızca riski artıranı durdurur.
+4. **Makro bilgisi yoksa stres yok sayılır.** Bilgi yokluğu engelleme gerekçesi değil
+   (funding filtresiyle aynı kural). Makro bilgisi olmadan strateji kıyasla bit düzeyinde
+   aynı (testle).
+
+### Plan kaydı (Scryne onayı, 2026-09-16)
+
+Faz 12 makro programıyla kapanır; ardından **Faz 14 öne alınır**: sürekli açık host, süreç
+dışı kill switch, alarmlar ve paper modda 7/24 koşu. Bu koşuda kıyas ve en yakın adaylar
+dondurulmuş hâlde **ileriye dönük** izlenir (30-60 gün). Gerçek sermaye yalnızca promotion
+kapılarını geçen stratejiyle (K-010, K-018); kapılar gevşetilmez.

@@ -269,6 +269,12 @@ def roc(kapanis: np.ndarray, pencere: int = 10) -> np.ndarray:
     return out
 
 
+def kopya(degerler: np.ndarray) -> np.ndarray:
+    """Alanın kendisi, float64 kopya. Yükleyicide hesaplanmış bir seriyi (makro persentil,
+    Faz 12) `ctx` özelliği olarak taşımanın defterdeki yolu; hesap yok, nedensellik girdide."""
+    return _dizi(degerler).copy()
+
+
 def persentil_sirasi(degerler: np.ndarray, pencere: int) -> np.ndarray:
     """Değerin kendi kayan penceresi içindeki persentil sırası, [0,1]. (K-042/3)
 

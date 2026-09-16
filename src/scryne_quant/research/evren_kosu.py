@@ -29,6 +29,7 @@ import pyarrow as pa
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data import funding as funding_mod
 from scryne_quant.data import kimlik as kimlik_mod
+from scryne_quant.data import makro as makro_mod
 from scryne_quant.data.depo import ParquetDepo
 from scryne_quant.data.izgara import (
     hizala,
@@ -112,6 +113,7 @@ def veri_kur(
     azami_sembol: int | None = None,
     funding_depo: str | Path | None = None,
     premium_depo: str | Path | None = None,
+    makro_depo: str | Path | None = None,
 ) -> EvrenVerisi:
     """Evren tablosundan ham, stratejiden bağımsız evren verisi kurar.
 
@@ -122,6 +124,9 @@ def veri_kur(
 
     `premium_depo` verilirse (`data/turev/premium/`) her sembole `basis` dizisi eklenir
     (`data/funding.evren_premium_dizisi`); hash'leri aynı yere yazılır.
+
+    `makro_depo` verilirse (`data/makro/`) her sembole makro persentil alanları eklenir
+    (`data/makro.bar_alanlari`). Alanlar semboller arasında **aynı dizi**: ek bellek yok.
 
     `isinma_bar`: pencere başından önce yüklenecek bar sayısı. Birden çok strateji veya
     ızgara noktası aynı veriyi kullanacaksa **en büyüğü** verilmeli.
@@ -209,6 +214,12 @@ def veri_kur(
             else:
                 pdf = pd.DataFrame()
             dz["basis"] = funding_mod.evren_premium_dizisi(izgara, pdf)
+    if makro_depo is not None:
+        alanlar, dosyalar = makro_mod.bar_alanlari(izgara, makro_depo)
+        for sid, yol in dosyalar.items():
+            ek_sha[f"makro/{sid}"] = hashlib.sha256(yol.read_bytes()).hexdigest()
+        for dz in diziler.values():
+            dz.update(alanlar)
     # Parquet çerçeveleri artık gereksiz; Arrow havuzu boşalan belleği kendiliğinden işletim
     # sistemine geri vermiyor. Faz 12'de ölçüldü: tam evrende süreç başına ≈1 GB. Havuzlu
     # araştırma hattında her işçi veriyi ayrıca yüklediği için bu fark çarpılıyor.
@@ -241,6 +252,7 @@ def veri_kur(
             **(
                 {"ek_veri_sha256": dict(sorted(ek_sha.items()))}
                 if funding_depo is not None or premium_depo is not None
+                or makro_depo is not None
                 else {}
             ),
         },

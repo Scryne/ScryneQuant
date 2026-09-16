@@ -149,6 +149,9 @@ class TestHesapla:
         d["basis"] = np.linspace(-2e-4, 2e-4, d["close"].size)
         varsayilan = {"pencere": 14, "katsayi": 2.0, "birikim": 5}
         for ad, kayit in DEFTER.items():
+            # Yükleyicide eklenen diğer ek alanlar (makro persentil, Faz 12) için sentetik seri.
+            for girdi in kayit.girdiler:
+                d.setdefault(girdi, np.linspace(0.0, 1.0, d["close"].size))
             tanim = OzellikTanimi(
                 "x", ad, {p: varsayilan[p] for p in kayit.parametreler}
             )

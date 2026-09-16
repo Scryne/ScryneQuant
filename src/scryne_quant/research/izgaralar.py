@@ -184,16 +184,33 @@ TUREV_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
     "turev_funding_basis": ("evren_funding_basis", _TUREV_PENCERELI),
 }
 
+#: `makro_rejim` programının çekilişleri (Faz 12). Makro yalnızca **engelleyici** (K-037):
+#: stres rejiminde yeni giriş/artış yok. Pencere kümesi `data/makro.PENCERELER_GUN` ile aynı
+#: (yükleyicide önceden hesaplanıyor); eşik persentil. İskelet türev programıyla aynı.
+#: Sıra durma kuralının sırası: VIX ve NFCI kıyası geçmezse rejim motoru harcanmaz.
+_MAKRO: Final[dict[str, Sequence[Any]]] = {
+    "pencere_gun": (30, 90, 180, 365),
+    "esik": (0.7, 0.8, 0.9),
+    "azami_enstruman": (10,),
+    "yeniden_dengele_bar": (HAFTALIK,),
+    "hedef_brut": (SABIT_MARUZIYET,),
+}
+MAKRO_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "makro_vix": ("evren_makro_vix", _MAKRO),
+    "makro_nfci": ("evren_makro_nfci", _MAKRO),
+}
+
 #: Program → çekilişleri. Koşucu çekilişin programını buradan bulur.
 PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "kesitsel_fiyat": tuple(EVREN_CEKILISLERI),
     "turev_evren": tuple(TUREV_CEKILISLERI),
+    "makro_rejim": tuple(MAKRO_CEKILISLERI),
 }
 
 
 def evren_cekilisi(ad: str) -> tuple[str, Mapping[str, Sequence[Any]]]:
     """Bir evren çekilişinin `(strateji adı, ızgara)` çifti."""
-    hepsi = {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI}
+    hepsi = {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI}
     try:
         return hepsi[ad]
     except KeyError:
