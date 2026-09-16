@@ -23,6 +23,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data import kimlik as kimlik_mod
@@ -175,6 +176,11 @@ def veri_kur(
     olcum_baslangici = min(olcum_baslangici, len(izgara) - 2)
 
     diziler = {s: hizala(df, izgara) for s, df in cerceveler.items()}
+    # Parquet çerçeveleri artık gereksiz; Arrow havuzu boşalan belleği kendiliğinden işletim
+    # sistemine geri vermiyor. Faz 12'de ölçüldü: tam evrende süreç başına ≈1 GB. Havuzlu
+    # araştırma hattında her işçi veriyi ayrıca yüklediği için bu fark çarpılıyor.
+    del cerceveler
+    pa.default_memory_pool().release_unused()
     uyelik, bar_yok_uyelik = uyeligi_barlara_kis(
         {s: u for s, u in uyelik_matrisi(tablo, izgara, kimlikler).items() if s in diziler},
         diziler,

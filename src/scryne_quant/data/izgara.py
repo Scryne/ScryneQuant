@@ -19,6 +19,7 @@ barda ne karar veriyor ne dolduruyor (K-028'in doğal uzantısı).
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Mapping, Sequence
 from typing import Final
 
@@ -88,8 +89,21 @@ def hizala(df: pd.DataFrame, zamanlar: np.ndarray) -> dict[str, np.ndarray]:
     for ad in NAN_SUTUNLARI:
         diziler[ad][idx] = df[ad].to_numpy(dtype="float64")
     diziler["trades"][idx] = df["trades"].to_numpy(dtype="int64")
-    diziler["quality_status"][idx] = df["quality_status"].astype("string").to_numpy(dtype=object)
+    diziler["quality_status"][idx] = _paylasimli(df["quality_status"])
     return diziler
+
+
+def _paylasimli(kalite: pd.Series) -> np.ndarray:
+    """Kalite bayraklarını **paylaşımlı** `str` nesnelerinden oluşan bir diziye çevirir.
+
+    Faz 12'de ölçüldü: tam evrende 34.071.180 bayrağın her biri ayrı bir Python nesnesiydi
+    (5 farklı değer). Süreç başına ≈6,2 GB'ın büyük kısmı bu; dört işçilik havuz 24 GB'lık
+    makinede sistemin koşuyu öldürmesine yol açtı. Değerler ve eşitlik aynı, yalnızca
+    nesneler paylaşılıyor.
+    """
+    degerler = kalite.astype("string").to_numpy(dtype=object)
+    benzersiz, ters = np.unique(degerler.astype(str), return_inverse=True)
+    return np.array([sys.intern(str(b)) for b in benzersiz], dtype=object)[ters]
 
 
 def _ay(ms: np.ndarray) -> np.ndarray:

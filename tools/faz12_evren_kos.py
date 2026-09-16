@@ -1,7 +1,7 @@
 """Faz 12 evren çekilişleri: ön kayıt ve 11 kapılık değerlendirme. (K-039, K-051, K-058)
 
     python tools/faz12_evren_kos.py kaydet <cekilis> -g "<gerekçe>"
-    python tools/faz12_evren_kos.py kos <cekilis> [--isci 4]
+    python tools/faz12_evren_kos.py kos <cekilis> [--isci 3]
     python tools/faz12_evren_kos.py durum
 
 `kaydet` hipotezi defterde **sonuç görülmeden** açar ve programın bütçesinden düşer.
@@ -48,7 +48,10 @@ CIKTI = KOK / "runs" / "faz12"
 PROGRAM = "kesitsel_fiyat"
 AZAMI_SEMBOL = 600
 KIYAS_YOGUNLUK = 10
-#: Tam pencere (79.420 bar) 4 işçide belleği aştı, in-sample (55.594) sığdı.
+#: Ölçüm (24 GB makine): veri yüklü süreç ≈4,5 GB; tek koşunun tepesi in-sample +0,6 GB,
+#: tam pencere +0,9 GB. Ana süreç + 3 işçi in-sample'da ≈20 GB; tam pencere 2 işçiyle.
+#: 4 işçi (≈6,2 GB/süreç, düzeltmelerden önce) sistemin koşuyu iki kez öldürmesine yol açtı.
+VARSAYILAN_ISCI = 3
 BUYUK_IS_BAR = 60_000
 
 _veri = partial(evren_kosu.veri_kur, TABLO, depo_kok=DEPO, azami_sembol=AZAMI_SEMBOL)
@@ -204,7 +207,7 @@ def main() -> int:
     k.add_argument("-g", "--gerekce", required=True)
     r = alt.add_parser("kos")
     r.add_argument("cekilis", choices=list(EVREN_CEKILISLERI))
-    r.add_argument("--isci", type=int, default=4)
+    r.add_argument("--isci", type=int, default=VARSAYILAN_ISCI)
     alt.add_parser("durum")
     a = ap.parse_args()
     if a.komut == "kaydet":
