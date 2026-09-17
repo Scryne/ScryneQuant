@@ -3,7 +3,7 @@
 # Kosu dosyasina dokunmaz (SQLite yedegi uzerinde olcer). Her olcum bir JSON satiri olarak
 # runs\paper\<kosu>.sapma.jsonl dosyasina eklenir.
 
-param([string]$KosuAdi = "evren-kiyas,evren-funding-basis")
+param([string]$KosuAdi = "evren-kiyas,evren-funding-basis,evren-makro-nfci")
 
 $ErrorActionPreference = "Stop"
 $Kok = Split-Path -Parent $PSScriptRoot

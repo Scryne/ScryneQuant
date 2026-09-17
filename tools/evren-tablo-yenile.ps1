@@ -5,7 +5,7 @@
 # degilse arsivden indirir, hala eksikse cikis 3 verir ve ertesi gun yeniden dener. Kosu
 # dosyanin degistigini kendisi gorur (`evren_tablosu_yenilendi` olayi).
 
-param([string]$KosuAdi = "evren-kiyas,evren-funding-basis")
+param([string]$KosuAdi = "evren-kiyas,evren-funding-basis,evren-makro-nfci")
 
 $ErrorActionPreference = "Stop"
 $Kok = Split-Path -Parent $PSScriptRoot

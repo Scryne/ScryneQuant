@@ -3,7 +3,7 @@
 # Etkin alarmlar runs\izleme\durum.json, degisimler runs\izleme\alarmlar.jsonl.
 # Her kodun mudahalesi docs\Runbook.md. Cikis 2 = kritik alarm var (gorev gecmisinde gorunur).
 
-param([string]$Evren = "evren-kiyas,evren-funding-basis", [string]$Tek = "host-1")
+param([string]$Evren = "evren-kiyas,evren-funding-basis,evren-makro-nfci", [string]$Tek = "host-1")
 
 $ErrorActionPreference = "Stop"
 $Kok = Split-Path -Parent $PSScriptRoot

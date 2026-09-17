@@ -416,3 +416,74 @@ def test_turev_toparlanma_ve_sapma(tmp_path):
     assert r.canli_adim == 60
     assert m.adimci.islemler
     depo.kapat()
+
+
+def test_makro_motoru_arastirma_yoluyla_ayni(tmp_path):
+    """Günlük PIT değerleri gün gün gelir (d günü, d+1'in ilk adımından önce), bir gün sonradan
+    revize edilir; motor = aynı `gunlukten_alanlar` ile kurulan backtest, bit düzeyinde.
+    Revizyon yalnızca bilindiği adımdan sonra etkiler: referans (son değer) ile canlı
+    arasında fark ancak o günden sonra doğabilir."""
+    from scryne_quant.data import makro as makro_mod
+    from scryne_quant.strategy.kutuphane import EVREN_AILELER
+
+    GUN = 86_400_000
+    barlar = _barlar()
+    izgara = np.asarray(_izgara(barlar), dtype="int64")
+    gunler = makro_mod.gunluk_gerekli(izgara)
+    rng = np.random.default_rng(3)
+    deger = {int(g): float(v) for g, v in zip(gunler, np.cumsum(rng.normal(0, 1, len(gunler))),
+                                               strict=True)}
+
+    def strateji():
+        return EVREN_AILELER["evren_makro_nfci"](pencere_gun=30, esik=0.6, azami_enstruman=3,
+                                                 yeniden_dengele_bar=24, hedef_brut=0.2)
+
+    isinma = strateji().isinma_bar()
+    diziler = {}
+    for s, bs in barlar.items():
+        p = BarPenceresi(s, "1h", kapasite=len(bs))
+        p.doldur(bs)
+        diziler[s] = hizala(pd.DataFrame(p.diziler()), izgara)
+    alanlar = makro_mod.gunlukten_alanlar(
+        izgara, {"nfci": lambda gs: np.array([deger.get(int(g), np.nan) for g in gs])})
+    for dz in diziler.values():
+        dz.update(alanlar)
+    tk = UyelikTakvimi()
+    for u in _takvim_uyumlu(barlar):
+        tk.ekle(u)
+    uyelik, _ = uyeligi_barlara_kis(tk.dizileri(izgara, diziler), diziler)
+    st = strateji()
+    beklenen = CokluBacktest(st, MALIYET, sifira_yaz_bar=48).calistir(
+        evren_gorunum_kur("1h", diziler, uyelik, st), olcum_baslangici=isinma)
+    assert st.stres_dengeleme > 0  # engel gerçekten devreye giriyor
+
+    depo = EvrenKosuDeposu(tmp_path / "m.sqlite")
+    motor = EvrenPaperMotoru(depo=depo, makro=("nfci",), **{**_kurulum(), "strateji": strateji()})
+    for u in _takvim_uyumlu(barlar):
+        motor.uyelik_ekle(u)
+    for s, bs in barlar.items():
+        for b in bs:
+            if b.open_time <= izgara[isinma - 1]:
+                motor.bar_ekle(s, b)
+    for g, v in deger.items():
+        if g <= izgara[isinma - 1] // GUN - 1:
+            motor.makro_ekle("nfci", g, v)
+    ozkaynak = [a.ozkaynak for a in motor.isinma(izgara[:isinma])]
+    for t in izgara[isinma:]:
+        for s, bs in barlar.items():
+            for b in bs:
+                if b.open_time == t:
+                    motor.bar_ekle(s, b)
+        g = int(t) // GUN - 1
+        if motor.son_makro_gunu("nfci") < g:
+            motor.makro_ekle("nfci", g, deger[g])
+        ozkaynak.append(motor.adim(int(t)).ozkaynak)
+    assert np.asarray(ozkaynak[isinma:]).tobytes() == beklenen.ozkaynak.tobytes()
+    assert [i.sozluk(sembol_yaz=True) for i in motor.adimci.islemler] == [
+        i.sozluk(sembol_yaz=True) for i in beklenen.islemler]
+    depo.kapat()
+
+    depo = EvrenKosuDeposu(tmp_path / "m.sqlite")
+    kur = {**_kurulum(), "strateji": strateji(), "makro": ("nfci",)}
+    assert EvrenPaperMotoru.toparlan(depo, **kur).son_sonuc.ozkaynak == ozkaynak[-1]
+    depo.kapat()

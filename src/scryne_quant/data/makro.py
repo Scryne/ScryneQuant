@@ -26,6 +26,7 @@ bu kümenin dışına çıkamaz.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Final
 
@@ -82,6 +83,40 @@ def pit_gunluk(vintage: pd.DataFrame, gunler: np.ndarray) -> np.ndarray:
     return out
 
 
+def gunluk_gerekli(zamanlar: np.ndarray) -> np.ndarray:
+    """Izgaranın alanlarını kurmak için PIT değeri gereken günler (epoch gün)."""
+    bar_gunu = np.asarray(zamanlar, dtype="int64") // GUN_MS
+    ilk, son = int(bar_gunu[0]) - 1, int(bar_gunu[-1])
+    return np.arange(ilk - max(PENCERELER_GUN), son + 1, dtype="int64")
+
+
+def gunlukten_alanlar(
+    zamanlar: np.ndarray, gunluk: Mapping[str, Callable[[np.ndarray], np.ndarray]]
+) -> dict[str, np.ndarray]:
+    """Seri başına günlük PIT değer kaynağından bar alanları.
+
+    `gunluk[kisa](gunler)` o günlerin gün sonunda bilinen değerini verir. Araştırma
+    (`bar_alanlari`) vintage dosyasından `pit_gunluk` ile, canlı motor günü gününe saklanan
+    değerlerden besler; persentil ve bara yayma **tek** yerde (K-001).
+    """
+    zamanlar = np.asarray(zamanlar, dtype="int64")
+    if zamanlar.size == 0:
+        raise MakroHatasi("boş ızgara")
+    bar_gunu = zamanlar // GUN_MS
+    gunler = gunluk_gerekli(zamanlar)
+    alanlar: dict[str, np.ndarray] = {}
+    for kisa, kaynak in gunluk.items():
+        seri_gunluk = np.asarray(kaynak(gunler), dtype="float64")
+        # `d` gününün değeri `d+1` gününün barlarında görünür.
+        idx = bar_gunu - 1 - gunler[0]
+        for w in PENCERELER_GUN:
+            p = persentil_sirasi(seri_gunluk, w)
+            dizi = p[idx]
+            dizi.flags.writeable = False
+            alanlar[alan_adi(kisa, w)] = dizi
+    return alanlar
+
+
 def bar_alanlari(zamanlar: np.ndarray, depo: str | Path) -> tuple[dict[str, np.ndarray], dict]:
     """Ortak ızgara için makro persentil alanları + kaynak bilgisi.
 
@@ -91,25 +126,16 @@ def bar_alanlari(zamanlar: np.ndarray, depo: str | Path) -> tuple[dict[str, np.n
     zamanlar = np.asarray(zamanlar, dtype="int64")
     if zamanlar.size == 0:
         raise MakroHatasi("boş ızgara")
-    bar_gunu = zamanlar // GUN_MS
-    ilk, son = int(bar_gunu[0]) - 1, int(bar_gunu[-1])
-    gunler = np.arange(ilk - max(PENCERELER_GUN), son + 1, dtype="int64")
-    alanlar: dict[str, np.ndarray] = {}
     dosyalar: dict[str, Path] = {}
+    kaynaklar: dict[str, Callable[[np.ndarray], np.ndarray]] = {}
     for kisa, sid in SERILER.items():
         yol = Path(depo) / f"{sid}.parquet"
         if not yol.is_file():
             raise MakroHatasi(f"makro verisi yok: {yol}")
         dosyalar[sid] = yol
-        gunluk = pit_gunluk(pd.read_parquet(yol), gunler)
-        # `d` gününün değeri `d+1` gününün barlarında görünür.
-        idx = bar_gunu - 1 - gunler[0]
-        for w in PENCERELER_GUN:
-            p = persentil_sirasi(gunluk, w)
-            dizi = p[idx]
-            dizi.flags.writeable = False
-            alanlar[alan_adi(kisa, w)] = dizi
-    return alanlar, dosyalar
+        vintage = pd.read_parquet(yol)
+        kaynaklar[kisa] = lambda gunler, v=vintage: pit_gunluk(v, gunler)
+    return gunlukten_alanlar(zamanlar, kaynaklar), dosyalar
 
 
 __all__ = [
@@ -119,6 +145,8 @@ __all__ = [
     "MakroHatasi",
     "alan_adi",
     "bar_alanlari",
+    "gunluk_gerekli",
+    "gunlukten_alanlar",
     "butun_alanlar",
     "pit_gunluk",
 ]

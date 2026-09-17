@@ -81,6 +81,15 @@ CREATE TABLE IF NOT EXISTS premium (
     bilindi_adim INTEGER NOT NULL,
     PRIMARY KEY (sembol, open_time)
 );
+CREATE TABLE IF NOT EXISTS makro (
+    seri         TEXT    NOT NULL,
+    gun          INTEGER NOT NULL,
+    deger        REAL,
+    bilindi_adim INTEGER NOT NULL,
+    PRIMARY KEY (seri, gun, bilindi_adim)
+);
+CREATE TRIGGER IF NOT EXISTS makro_degismez BEFORE UPDATE ON makro
+BEGIN SELECT RAISE(ABORT, 'makro kaydı değiştirilemez'); END;
 CREATE TRIGGER IF NOT EXISTS funding_degismez BEFORE UPDATE ON funding
 BEGIN SELECT RAISE(ABORT, 'funding kaydı değiştirilemez'); END;
 CREATE TRIGGER IF NOT EXISTS premium_degismez BEFORE UPDATE ON premium
@@ -221,6 +230,23 @@ class EvrenKosuDeposu:
         return list(self._baglanti.execute(
             "SELECT sembol, open_time, close, bilindi_adim FROM premium "
             "ORDER BY bilindi_adim, sembol, open_time"))
+
+    def makro_yaz(self, seri: str, gun: int, deger: float | None, bilindi_adim: int) -> bool:
+        """Bir günün gün sonunda bilinen PIT değeri (`NaN` → `NULL`). Aynı gün sonradan
+        farklı bilinirse yeni satır (revizyon kaydı); görünüm en son bilineni alır."""
+        try:
+            self._baglanti.execute(
+                "INSERT INTO makro VALUES (?,?,?,?)",
+                (seri, gun, None if deger is None or deger != deger else deger, bilindi_adim))
+        except sqlite3.IntegrityError:
+            return False
+        return True
+
+    def makrolar(self) -> list[tuple[str, int, float, int]]:
+        return [(r[0], r[1], float("nan") if r[2] is None else r[2], r[3])
+                for r in self._baglanti.execute(
+                    "SELECT seri, gun, deger, bilindi_adim FROM makro "
+                    "ORDER BY bilindi_adim, seri, gun")]
 
     # ------------------------------------------------------------------ adımlar
 

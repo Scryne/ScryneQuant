@@ -30,6 +30,7 @@ from scryne_quant.backtest.coklu_motor import CokluAdimci, CokluBacktest
 from scryne_quant.common.maliyet import MaliyetModeli
 from scryne_quant.common.zaman import timeframe_ms, utc_str
 from scryne_quant.data import funding as funding_mod
+from scryne_quant.data import makro as makro_mod
 from scryne_quant.data.izgara import hizala, uyeligi_barlara_kis
 from scryne_quant.live.akis import Bar
 from scryne_quant.live.canli_evren import AyUyeligi, UyelikTakvimi
@@ -56,6 +57,8 @@ class _Girdiler:
     funding: dict[str, dict[int, tuple[int, float, int]]] = field(default_factory=dict)
     # sembol → open_time → (basis close, bilindi adım)
     premium: dict[str, dict[int, tuple[float, int]]] = field(default_factory=dict)
+    # seri → gün → [(değer, bilindi adım), ...] bilindi sırasıyla (revizyon olabilir)
+    makro: dict[str, dict[int, list[tuple[float, int]]]] = field(default_factory=dict)
 
 
 class EvrenPaperMotoru:
@@ -70,8 +73,11 @@ class EvrenPaperMotoru:
         timeframe: str = "1h",
         sifira_yaz_bar: int | None = 48,
         turev: bool = False,
+        makro: tuple[str, ...] = (),
     ) -> None:
         self.timeframe = timeframe
+        self.makro = tuple(makro)
+        """Makro PIT alanları kurulacak seriler (kısa ad, `data/makro.SERILER`)."""
         self.turev = turev
         """Funding + basis dizileri görünüme eklenir (Aşama F; `research/evren_kosu.veri_kur`
         ile aynı fonksiyonlar: `funding_mod.evren_dizileri`, `evren_premium_dizisi`)."""
@@ -200,9 +206,45 @@ class EvrenPaperMotoru:
                 diziler[sembol].update(self._turev_dizileri(sembol, k, izgara))
         if not diziler:
             raise EvrenMotorHatasi(f"{utc_str(t_ms)}: hiçbir sembolün barı yok")
+        if self.makro:
+            alanlar = makro_mod.gunlukten_alanlar(
+                izgara, {kisa: self._makro_kaynagi(kisa, k) for kisa in self.makro})
+            for dz in diziler.values():
+                dz.update(alanlar)
         uyelik, _ = uyeligi_barlara_kis(self.takvim(k).dizileri(izgara, diziler), diziler)
         gorunum = evren_gorunum_kur(self.timeframe, diziler, uyelik, self.strateji)
         return self.backtest.girdi_kur(gorunum)
+
+    def _makro_kaynagi(self, kisa: str, k: int) -> Any:
+        seri = self._g.makro.get(kisa, {})
+
+        def kaynak(gunler: np.ndarray) -> np.ndarray:
+            out = np.full(len(gunler), np.nan)
+            for i, g in enumerate(gunler.tolist()):
+                bilinen = [d for d, b in seri.get(g, ()) if b <= k]
+                if bilinen:
+                    out[i] = bilinen[-1]
+            return out
+
+        return kaynak
+
+    def makro_ekle(self, seri: str, gun: int, deger: float, *, kaydet: bool = True,
+                   bilindi_adim: int | None = None) -> bool:
+        """Bir günün PIT değeri. Aynı gün aynı değerle tekrar gelirse eklenmez; farklı
+        değerle gelirse revizyon olarak eklenir (görünüm o adımdan sonra yenisini kullanır)."""
+        adim = self.adim_sayisi if bilindi_adim is None else bilindi_adim
+        kayitlar = self._g.makro.setdefault(seri, {}).setdefault(int(gun), [])
+        deger = float(deger)
+        if kayitlar and repr(kayitlar[-1][0]) == repr(deger):
+            return False
+        kayitlar.append((deger, adim))
+        if kaydet and self.depo is not None:
+            self.depo.makro_yaz(seri, int(gun), deger, adim)
+        return True
+
+    def son_makro_gunu(self, seri: str) -> int | None:
+        gunler = self._g.makro.get(seri)
+        return max(gunler) if gunler else None
 
     def _turev_dizileri(self, sembol: str, k: int, izgara: np.ndarray) -> dict[str, np.ndarray]:
         """`k` adımından önce bilinen funding ve premium kayıtlarından, araştırmayla aynı yol."""
@@ -329,6 +371,9 @@ class EvrenPaperMotoru:
         premiumlar: dict[int, list[tuple[str, int, float]]] = {}
         for sembol, t, c, bilindi in depo.premiumlar():
             premiumlar.setdefault(bilindi, []).append((sembol, t, c))
+        makrolar: dict[int, list[tuple[str, int, float]]] = {}
+        for seri, g, d, bilindi in depo.makrolar():
+            makrolar.setdefault(bilindi, []).append((seri, g, d))
         uyelikler: dict[int, list[AyUyeligi]] = {}
         for ay, semboller, h, bilindi in depo.uyelikler():
             uyelikler.setdefault(bilindi, []).append(AyUyeligi(ay, semboller, h))
@@ -342,6 +387,8 @@ class EvrenPaperMotoru:
                 motor.funding_ekle(sembol, t, a, o, kaydet=False, bilindi_adim=adim)
             for sembol, t, c in premiumlar.get(adim, []):
                 motor.premium_ekle(sembol, t, c, kaydet=False, bilindi_adim=adim)
+            for seri, g, d in makrolar.get(adim, []):
+                motor.makro_ekle(seri, g, d, kaydet=False, bilindi_adim=adim)
 
         kayitli = depo.adimlar()
         isinma_sayisi = 0

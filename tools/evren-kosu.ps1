@@ -16,7 +16,8 @@ param(
     [string]$Strateji = "evren_esit_agirlik",
     [string[]]$Parametre = @("yeniden_dengele_bar=168", "azami_enstruman=10",
                              "azami_agirlik=0.02", "hedef_brut=0.2"),
-    [switch]$Turev
+    [switch]$Turev,
+    [string]$Makro = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,6 +37,7 @@ $Gunluk = Join-Path $Dizin ($KosuAdi + ".log")
 $PArg = @()
 foreach ($p in (($Parametre -join ",") -split ",")) { $PArg += @("-p", $p) }
 if ($Turev) { $PArg += @("--turev") }
+if ($Makro) { foreach ($m in ($Makro -split ",")) { $PArg += @("--makro", $m) } }
 
 & $Python -m scryne_quant.cli.main paper evren-baslat $KosuAdi `
     --evren-tablo $Tablo --strateji $Strateji @PArg *>> $Gunluk

@@ -13,6 +13,7 @@
 param(
     [string]$KosuAdi = "evren-kiyas",
     [string]$FbKosuAdi = "evren-funding-basis",
+    [string]$NfciKosuAdi = "evren-makro-nfci",
     [string]$ArastirmaTablosu = "data\evren\_evren\27b7a16ed0ed"
 )
 
@@ -22,7 +23,7 @@ Set-Location $Kok
 
 $Dizin = Join-Path $Kok "runs\paper"
 New-Item -ItemType Directory -Force $Dizin | Out-Null
-foreach ($Kosu in @($KosuAdi, $FbKosuAdi)) {
+foreach ($Kosu in @($KosuAdi, $FbKosuAdi, $NfciKosuAdi)) {
     $Hedef = Join-Path $Dizin ($Kosu + ".evren")
     if (-not (Test-Path ($Hedef + ".parquet"))) {
         Copy-Item ($ArastirmaTablosu + ".parquet") ($Hedef + ".parquet")
@@ -46,6 +47,13 @@ Register-ScheduledTask -TaskName "ScryneQuant-Evren" -Action $Kosu -Principal $P
 $Fb = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
     -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-kosu.ps1") + '" -KosuAdi ' + $FbKosuAdi + ' -Strateji evren_funding_basis -Turev -Parametre yeniden_dengele_bar=168,azami_enstruman=10,hedef_brut=0.2,dislama_orani=0.2,pencere=720')
 Register-ScheduledTask -TaskName "ScryneQuant-EvrenFB" -Action $Fb -Principal $Principal `
+    -Settings $Ayar -Trigger (New-ScheduledTaskTrigger -AtStartup) -Force | Out-Null
+
+# Faz 12 #48'in secilen noktasi (runsaz12\makro_nfci.json detay/secim/secilen).
+# FRED_API_KEY hostun .env dosyasinda olmali (2026-09-17 Scryne onayi).
+$Nfci = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-kosu.ps1") + '" -KosuAdi ' + $NfciKosuAdi + ' -Strateji evren_makro_nfci -Makro nfci -Parametre pencere_gun=365,esik=0.7,azami_enstruman=10,yeniden_dengele_bar=168,hedef_brut=0.2')
+Register-ScheduledTask -TaskName "ScryneQuant-EvrenNFCI" -Action $Nfci -Principal $Principal `
     -Settings $Ayar -Trigger (New-ScheduledTaskTrigger -AtStartup) -Force | Out-Null
 
 $AyarTablo = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2) `

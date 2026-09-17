@@ -150,8 +150,21 @@ girdiler arşivin örtüştüğü dönemde (5-31 Ağustos) satır satır karşı
 funding satırı (aralık dahil) ve 21.830 premium satırı birebir aynı**, arşivde olup canlıda
 eksik ya da tersi sembol yok.
 
-**#48 `evren_makro_nfci`:** ALFRED vintage'ları FRED API anahtarı istiyor; hostta anahtar yok.
-Anahtarın hosta konması Scryne'ın kararı (sır yönetimi) — bekliyor.
+**#48 `evren_makro_nfci` (aynı gün, Scryne onayıyla FRED anahtarı hostta):** dondurulmuş nokta
+`runs/faz12/makro_nfci.json` → pencere_gun=365, esik=0,7, azami_enstruman=10,
+yeniden_dengele_bar=168, hedef_brut=0,2.
+
+- ALFRED indirmesi araçtan `data/alfred.py`ye taşındı; araştırma aracı ve canlı aynı kodu
+  çağırıyor. `data/makro.bar_alanlari` persentil + bara yayma kısmını `gunlukten_alanlar`a
+  ayırdı; refaktör öncesi/sonrası 2019-2026 bütün alanların hash'i **aynı** (`f221e0e1…`).
+- Motor günlük PIT değerini `bilindi_adim` ile saklar (`makro` tablosu; aynı gün farklı değer
+  gelirse revizyon satırı, görünüm en son bilineni kullanır). Isınmada persentil geçmişinin
+  tamamı, sonra her gün bir önceki gün; 12:00 UTC barında son 14 gün yeniden sorulur (gün
+  sonundan sonra yayımlanan vintage `makro_revizyon` olayıyla kaydedilir — araştırmanın "gün
+  sonunda bilinir" kuralının canlıdaki tek sızıntı noktası bu, ve görünür).
+- **Ölçüm:** canlı kaynağın 421 günlük NFCI değeri araştırma deposundan `pit_gunluk` ile
+  çıkanla **birebir aynı**; duman koşusunda saklanan 398 günün arşivle örtüşen 391'i aynı.
+  Motor = aynı fonksiyonlarla kurulan backtest, bit düzeyinde (stres engeli testte devrede).
 
 ## 7. Aşamalar ve tahmin
 

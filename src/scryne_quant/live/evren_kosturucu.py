@@ -25,9 +25,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+import numpy as np
 import pandas as pd
 
 from scryne_quant.common.zaman import simdi_ms, timeframe_ms, utc_str
+from scryne_quant.data import makro as makro_mod
 from scryne_quant.exchange.akis import df_barlara
 from scryne_quant.live import durdurma as durdurma_mod
 from scryne_quant.live import kill as kill_mod
@@ -42,6 +44,7 @@ from scryne_quant.risk.motor import RiskMotoru
 
 #: Isınmaya stratejinin kendi ısınmasının üstüne eklenen pay (bar).
 ISINMA_PAYI = 48
+GUN_MS = 86_400_000
 
 #: Toplayıcı yoklama periyodu (saniye).
 YOKLAMA_S = 5.0
@@ -130,6 +133,9 @@ class EvrenKosucu:
     saat: Callable[[], int] = simdi_ms
     bekleme_ms: int = VARSAYILAN_BEKLEME_MS
     gunluk: Callable[[str], None] = print
+    makro: Any = None
+    """Makro kaynağı (`data/alfred.AlfredMakroKaynagi` arayüzü: `gunluk(kisa, gunler)`);
+    yalnızca `kurulum["makro"]` doluysa kullanılır."""
     turev: Any = None
     """Funding/premium kaynağı (`exchange/turev_rest.BinanceTurevRest` arayüzü); yalnızca
     `kurulum["turev"]` açıksa kullanılır."""
@@ -233,6 +239,7 @@ class EvrenKosucu:
                     motor.bar_ekle(sembol, bar)
             self._turev_guncelle(motor, semboller, son, funding_bas=bas - 24 * self._adim,
                                  premium_bas=bas)
+            self._makro_uygula(motor, son, self._makro_cek(motor, son, izgara_basi=bas))
             motor.isinma(range(bas, son + self._adim, self._adim))
             self.depo.olay_yaz("isinma", bar_ms=son,
                                ayrinti={"bar": isinma, "sembol": len(semboller)})
@@ -244,6 +251,46 @@ class EvrenKosucu:
         self.motor = motor
         self._durum_yaz(motor)
         return motor
+
+    def _makro_cek(self, motor: EvrenPaperMotoru, t: int,
+                   izgara_basi: int | None = None) -> list[tuple[str, np.ndarray, np.ndarray]]:
+        """`t` barı için gereken günlerin PIT değerleri (yalnızca ağ, motoru değiştirmez).
+
+        İlk seferde ısınma ızgarasının bütün persentil geçmişi; sonra bilinen son günden
+        `t`nin gününden bir önceki güne kadar. Günde bir kez (12:00 UTC barında) son 14 gün
+        yeniden sorulur: gün sonundan sonra yayımlanan bir vintage, bilindiği adımla revizyon
+        olarak kaydedilir (araştırmanın gün sonu kuralı canlıda ancak böyle yakalanır).
+        """
+        if not self.kurulum.get("makro") or self.makro is None:
+            return []
+        gerekli_son = t // GUN_MS - 1
+        cikti = []
+        for kisa in self.kurulum["makro"]:
+            son = motor.son_makro_gunu(kisa)
+            if son is None:
+                bas_ms = t if izgara_basi is None else izgara_basi
+                gunler = makro_mod.gunluk_gerekli(np.array([bas_ms, t], dtype="int64"))
+            elif t % GUN_MS == 12 * self._adim:
+                gunler = np.arange(min(son + 1, gerekli_son - 13), gerekli_son + 1)
+            elif son < gerekli_son:
+                gunler = np.arange(son + 1, gerekli_son + 1)
+            else:
+                continue
+            gunler = gunler[gunler <= gerekli_son]
+            if len(gunler):
+                cikti.append((kisa, gunler, self.makro.gunluk(kisa, gunler)))
+        return cikti
+
+    def _makro_uygula(self, motor: EvrenPaperMotoru, t: int,
+                      cekilen: list[tuple[str, np.ndarray, np.ndarray]]) -> None:
+        revize = 0
+        for kisa, gunler, degerler in cekilen:
+            son = motor.son_makro_gunu(kisa)
+            for g, d in zip(gunler.tolist(), degerler.tolist(), strict=True):
+                if motor.makro_ekle(kisa, g, d) and son is not None and g <= son:
+                    revize += 1
+        if revize:
+            motor.depo.olay_yaz("makro_revizyon", bar_ms=t, ayrinti={"gun": revize})
 
     def _turev_guncelle(self, motor: EvrenPaperMotoru, semboller: Sequence[str], t: int,
                         *, funding_bas: int | None = None, premium_bas: int | None = None) -> None:
@@ -310,6 +357,7 @@ class EvrenKosucu:
                 for bar in _rest_barlar(self.rest, sembol, self.timeframe, t, t + self._adim):
                     motor.bar_ekle(sembol, bar)
             self._turev_guncelle(motor, motor.beklenen_semboller(t), t)
+            self._makro_uygula(motor, t, self._makro_cek(motor, t))
             motor.adim(t)
             islenen += 1
             t += self._adim
@@ -357,6 +405,10 @@ class EvrenKosucu:
                                 self._turev_cek, motor,
                                 motor.beklenen_semboller(ib.open_time), ib.open_time)
                             self._turev_uygula(motor, ib.open_time, cekilen)
+                        if self.kurulum.get("makro") and self.makro is not None:
+                            m_cekilen = await asyncio.to_thread(self._makro_cek, motor,
+                                                                ib.open_time)
+                            self._makro_uygula(motor, ib.open_time, m_cekilen)
                         sonuc = motor.adim(ib.open_time, eksik=ib.eksik)
                         self._durum_yaz(motor)
                         self.gunluk(f"{utc_str(ib.open_time)} özkaynak {sonuc.ozkaynak:,.2f} "

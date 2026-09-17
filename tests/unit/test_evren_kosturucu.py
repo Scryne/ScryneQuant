@@ -247,3 +247,38 @@ def test_turev_girdileri_toplanir_ve_yeniden_uretilir(tmp_path):
     r = sapma_olc(depo, **k.kurulum)
     assert r.ilk_ayrisan_adim is None
     depo.kapat()
+
+
+class SahteMakro:
+    def __init__(self):
+        self.istekler = []
+
+    def gunluk(self, kisa, gunler):
+        self.istekler.append((kisa, int(gunler[0]), int(gunler[-1])))
+        return np.array([float((g % 13) - 6) for g in gunler])
+
+
+def test_makro_girdileri_toplanir_ve_yeniden_uretilir(tmp_path):
+    from scryne_quant.data import makro as makro_mod
+    from scryne_quant.live.evren_motor import EvrenPaperMotoru
+
+    yol = tmp_path / "makro.sqlite"
+    saat = Saat(T0 + 200 * SAAT + 30 * 60_000)
+    k = _kosucu(yol, saat, T0 + 200 * SAAT, T0 + 230 * SAAT, SahteRest())
+    k.kurulum["makro"] = ("nfci",)
+    k.makro = SahteMakro()
+
+    async def ilerleyen_uyku(_):
+        saat.ms += 10 * 60_000
+        await asyncio.sleep(0)
+
+    asyncio.run(kos(k, uyku=ilerleyen_uyku, azami_adim=30))
+    m = k.motor
+    gun = 86_400_000
+    ilk_bar = int(min(m._izgara))
+    # Isınma: persentil geçmişinin tamamı; sonra her gün bir önceki gün eklenmiş.
+    assert min(m._g.makro["nfci"]) == int(makro_mod.gunluk_gerekli(np.array([ilk_bar]))[0])
+    assert m.son_makro_gunu("nfci") == m.son_bar_ms // gun - 1
+    depo = EvrenKosuDeposu(yol)
+    assert EvrenPaperMotoru.toparlan(depo, **k.kurulum).son_sonuc.ozkaynak == m.son_sonuc.ozkaynak
+    depo.kapat()
