@@ -5,6 +5,8 @@
 #
 # 1. ScryneQuant-Evren       : acilista, oturumsuz (S4U), cokerse 1 dk arayla yeniden baslar.
 # 2. ScryneQuant-EvrenTablo  : her gun 03:15 UTC (06:15 TR) tablo yenileme denemesi.
+# 3. ScryneQuant-EvrenSapma  : her gun 03:45 UTC (06:45 TR) canli-backtest sapma olcumu.
+# 4. ScryneQuant-Izleme      : 15 dakikada bir alarm kontrolu (docs\Runbook.md).
 #
 # Kosu tablosu yoksa arastirma tablosundan kopyalanir (bir kez). Sonrasi yalnizca yenileme.
 
@@ -45,4 +47,19 @@ $Saat = [DateTime]::SpecifyKind([DateTime]::UtcNow.Date.AddHours(3).AddMinutes(1
 Register-ScheduledTask -TaskName "ScryneQuant-EvrenTablo" -Action $Yenile -Principal $Principal `
     -Settings $AyarTablo -Trigger (New-ScheduledTaskTrigger -Daily -At $Saat) -Force | Out-Null
 
-Get-ScheduledTask ScryneQuant-Evren*, ScryneQuant-Paper | Select-Object TaskName, State
+$Sapma = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-sapma.ps1") + '" -KosuAdi ' + $KosuAdi)
+$SaatSapma = [DateTime]::SpecifyKind([DateTime]::UtcNow.Date.AddHours(3).AddMinutes(45), "Utc").ToLocalTime()
+Register-ScheduledTask -TaskName "ScryneQuant-EvrenSapma" -Action $Sapma -Principal $Principal `
+    -Settings $AyarTablo -Trigger (New-ScheduledTaskTrigger -Daily -At $SaatSapma) -Force | Out-Null
+
+$Izleme = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\izleme.ps1") + '"')
+$AyarIzleme = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 10) `
+    -MultipleInstances IgnoreNew -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$Tetik = New-ScheduledTaskTrigger -Once -At (Get-Date).Date `
+    -RepetitionInterval (New-TimeSpan -Minutes 15)
+Register-ScheduledTask -TaskName "ScryneQuant-Izleme" -Action $Izleme -Principal $Principal `
+    -Settings $AyarIzleme -Trigger $Tetik -Force | Out-Null
+
+Get-ScheduledTask ScryneQuant-* | Select-Object TaskName, State

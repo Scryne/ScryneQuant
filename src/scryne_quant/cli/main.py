@@ -26,6 +26,7 @@ import typer
 
 from scryne_quant.backtest.coklu_motor import CokluBacktest
 from scryne_quant.backtest.motor import Backtest
+from scryne_quant.cli.izle import izle_app
 from scryne_quant.cli.kill import kill_app
 from scryne_quant.cli.testnet import testnet_app
 from scryne_quant.common import maliyet as maliyet_mod
@@ -123,6 +124,7 @@ evren_app = typer.Typer(
 app.add_typer(evren_app)
 app.add_typer(testnet_app)
 app.add_typer(kill_app)
+app.add_typer(izle_app)
 
 #: Koşu dosyalarının varsayılan yeri. Koşu başına **tek** dosya: durum, fill defteri,
 #: koşu günlüğü ve risk audit'i aynı SQLite dosyasında (K-034). Koşuyu yedeklemek tek bir
@@ -2490,6 +2492,81 @@ def paper_evren_tablo_yenile(
                f"{(sonuc.tablo_hash or '')[:12]}  {sonuc.ayrinti}")
     if sonuc.durum == "m1_eksik":
         raise typer.Exit(code=3)
+
+
+@paper_app.command("evren-sapma")
+def paper_evren_sapma(
+    kosu_adi: Annotated[str, typer.Argument()],
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    rapor: Annotated[Path | None, typer.Option("--rapor", help="JSON satırı eklenecek dosya.")]
+    = None,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Canlı-backtest sapması: aynı motor, girdiler baştan biliniyormuş gibi. (Faz 14, §6/2)
+
+    Koşu dosyasına dokunmaz: SQLite yedeği geçici bir dosyaya alınır. Konfigürasyon koşu
+    kimliğinden yeniden kurulur ve kimlikle bire bir tutması doğrulanır; tutmazsa ölçmez.
+    """
+    import inspect
+    import sqlite3
+    import tempfile
+
+    from scryne_quant.live.evren_depo import EvrenKosuDeposu
+    from scryne_quant.live.evren_sapma import sapma_olc
+    from scryne_quant.strategy.kutuphane import EVREN_AILELER
+
+    kosu_yolu = _paper_yolu(kosu_adi, kok)
+    if not kosu_yolu.exists():
+        raise typer.BadParameter(f"koşu yok: {kosu_yolu}")
+    with tempfile.TemporaryDirectory() as gecici:
+        kopya = Path(gecici) / "kopya.sqlite"
+        kaynak = sqlite3.connect(f"file:{kosu_yolu.as_posix()}?mode=ro", uri=True)
+        hedef = sqlite3.connect(kopya)
+        kaynak.backup(hedef)
+        kaynak.close()
+        hedef.close()
+        depo = EvrenKosuDeposu(kopya)
+        try:
+            kimlik = depo.kimlik_oku() or {}
+            st = kimlik.get("strateji", {})
+            kutuphane = {**EVREN_KIYAS, **EVREN_AILELER}
+            if st.get("ad") not in kutuphane:
+                raise typer.BadParameter(f"koşu kimliğinde bilinmeyen strateji: {st.get('ad')}")
+            sinif = kutuphane[st["ad"]]
+            imza = inspect.signature(sinif).parameters
+            strateji = sinif(**{k: v for k, v in st["parametreler"].items() if k in imza})
+            maliyet = maliyet_mod.yukle()
+            limitler = limit_mod.yukle()
+            uyusmayan = [ad for ad, beklenen, gercek in (
+                ("strateji", st, strateji.sozluk()),
+                ("maliyet", kimlik.get("maliyet"), maliyet.sozluk()),
+                ("limit_kimligi", kimlik.get("limit_kimligi"), limitler.kimlik()),
+            ) if json.loads(json.dumps(gercek)) != beklenen]
+            if uyusmayan:
+                raise typer.BadParameter(
+                    f"bugünkü konfigürasyon koşu kimliğiyle uyuşmuyor: {', '.join(uyusmayan)}")
+            kurulum = {
+                "strateji": strateji, "maliyet": maliyet,
+                "baslangic_sermaye": float(kimlik["baslangic_sermaye"]),
+                "risk": RiskMotoru(limitler, "1h", mod="gozlem"),
+                "timeframe": kimlik.get("timeframe", "1h"),
+                "sifira_yaz_bar": kimlik.get("sifira_yaz_bar"),
+            }
+            t0 = time.perf_counter()
+            sonuc = sapma_olc(depo, **kurulum).sozluk()
+        finally:
+            depo.kapat()
+    govde = {"kosu": kosu_adi, "olculdu": utc_str(simdi_ms()),
+             "sure_s": round(time.perf_counter() - t0, 1), **sonuc}
+    if rapor is not None:
+        rapor.parent.mkdir(parents=True, exist_ok=True)
+        with rapor.open("a", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps(govde, ensure_ascii=False, sort_keys=True) + "\n")
+    if json_cikti:
+        _yaz_json(govde)
+        return
+    for anahtar, deger in govde.items():
+        typer.echo(f"{anahtar:<22}: {deger}")
 
 
 @paper_app.command("evren-durum")

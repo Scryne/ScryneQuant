@@ -205,3 +205,26 @@ def test_izgara_sirasi_atlanamaz():
     motor.isinma(izgara[:40])
     with pytest.raises(Exception, match="sırası"):
         motor.adim(izgara[40] + SAAT)
+
+
+def test_sapma_geciksiz_kosuda_sifir_gec_barda_sebebine_baglanir(tmp_path):
+    from scryne_quant.live.evren_sapma import sapma_olc
+
+    barlar = {s: bs[:260] for s, bs in _barlar().items()}
+    depo = EvrenKosuDeposu(tmp_path / "temiz.sqlite")
+    _canli_kos(EvrenPaperMotoru(depo=depo, **_kurulum()), barlar, 200)
+    r = sapma_olc(depo, **_kurulum())
+    assert r.ilk_ayrisan_adim is None and r.azami_ozkaynak_farki == 0.0
+    assert r.canli_adim == 200 - ISINMA and r.gec_bilinen_bar == 0
+    depo.kapat()
+
+    # BBB'nin 100. barı 150. adımda geliyor: 100-149 arası canlı onu görmedi.
+    kayip = barlar["BBBUSDT"][100]
+    eksik = {s: [b for b in bs if b is not kayip] for s, bs in barlar.items()}
+    depo = EvrenKosuDeposu(tmp_path / "gec.sqlite")
+    _canli_kos(EvrenPaperMotoru(depo=depo, **_kurulum()), eksik, 200,
+               gec=(150, "BBBUSDT", kayip))
+    r = sapma_olc(depo, **_kurulum())
+    assert r.gec_bilinen_bar == 1
+    assert r.ilk_ayrisan_adim is None or r.ilk_ayrisan_adim >= 100
+    depo.kapat()
