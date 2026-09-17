@@ -70,9 +70,27 @@ ssh -i ~/.ssh/scrynequant_vps scryn@192.168.1.4 "cd %USERPROFILE%\Documents\Proj
 1. Ana makinede: `git bundle create scrynequant.bundle master` → `scp` hosta.
 2. Hostta: `sq paper durdur host-1 --sebep "kod guncellemesi"`.
 3. Hostta: `git pull <bundle> master`, `uv sync --frozen`, testler.
-4. `Start-ScheduledTask ScryneQuant-Paper`.
+4. `Start-ScheduledTask ScryneQuant-Paper` (ve `ScryneQuant-Evren`). **Zorunlu adım:** düzgün
+   kapanan koşuyu görev yeniden başlatmıyor; `RestartCount` yalnızca sıfırdan farklı çıkışta
+   devreye giriyor (2026-09-17'de görüldü). Aynı gün bulunan ikinci kusur: başlatıcı betikler
+   python'un çıkış kodunu geçirmiyordu, yani **çökme de** yeniden başlatılmıyordu —
+   `exit $LASTEXITCODE` eklendi (100dea6).
 
 **Görevi kaldırmak:** `Unregister-ScheduledTask -TaskName ScryneQuant-Paper -Confirm:$false`
+
+## 3b. Koşu: `evren-kiyas` (2026-09-17)
+
+| | |
+| --- | --- |
+| Görev | `ScryneQuant-Evren`: açılışta, S4U, çökerse 1 dk arayla yeniden başlar (`tools\evren-gorev-kur.ps1` kurar) |
+| Komut | `tools\evren-kosu.ps1 -KosuAdi evren-kiyas` → `sq paper evren-baslat` |
+| Strateji | `evren_esit_agirlik` yeniden_dengele_bar=168, azami_enstruman=10, azami_agirlik=0,02, hedef_brut=0,2 — kıyas (K-030), aday değil |
+| Mod | gözlem; kayıt `runs\paper\evren-kiyas.sqlite`, günlük `runs\paper\evren-kiyas.log` |
+| Evren tablosu | `runs\paper\evren-kiyas.evren.parquet` (araştırma tablosunun kopyası `b06857c0…`) |
+| Yenileme | `ScryneQuant-EvrenTablo`, her gün 06:15 TR (03:15 UTC); günlük `runs\paper\evren-kiyas.yenileme.log` |
+| Veri deposu | `data\evren` ana makineden kopyalandı (735 sembol). Doğrulama: hostta Ağustos kopyasından uzatılan tablo araştırma hash'ini bit düzeyinde verdi. `tar` Çince adlı bir sembolü (`币安人生USDT`) atladı, `scp` ile ayrıca taşındı. |
+
+**Durum:** `sq paper evren-durum evren-kiyas`
 
 ## 5. Açık kalemler
 

@@ -2356,8 +2356,8 @@ def paper_durdur(
     if durdu:
         typer.secho("koşu düzgün kapandı; kesinti sayılmadı", fg=typer.colors.GREEN)
         typer.echo(
-            "not: zamanlanmış görev koşuyu birkaç dakika içinde yeniden başlatır. "
-            "Kapalı kalması gerekiyorsa: Disable-ScheduledTask -TaskName ScryneQuant-Paper"
+            "not: düzgün kapanan koşuyu zamanlanmış görev yeniden BAŞLATMAZ (yeniden başlatma "
+            "yalnızca çökmede; ölçüldü 2026-09-17). Açmak: Start-ScheduledTask <görev adı>"
         )
         return
     typer.secho(
