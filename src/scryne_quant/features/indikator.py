@@ -269,6 +269,27 @@ def roc(kapanis: np.ndarray, pencere: int = 10) -> np.ndarray:
     return out
 
 
+def log_degisim(degerler: np.ndarray, pencere: int) -> np.ndarray:
+    """``ln(x[t] / x[t-n])``. İlk geçerli değer indeks ``pencere``. (Faz 16)
+
+    Açık pozisyon için anlamı: son N barda kaldıracın **kaç kat** değiştiği. Oran değil
+    logaritma, çünkü kesitte sıralanacak: %50 artış ile %50 azalış logaritmada simetrik,
+    oranda değil — ve asimetrik bir ölçü sıralamayı sessizce yukarı yönlü çarpıtır.
+
+    Pozitif olmayan ya da `NaN` değerde sonuç `NaN`: sıfır açık pozisyon bir gözlemdir,
+    logaritması yoktur ve uydurulmaz (K-024).
+    """
+    x = _dizi(degerler)
+    _pencere_kontrol(x.size, pencere + 1)
+
+    out = np.full(x.size, YOK)
+    onceki, simdi = x[:-pencere], x[pencere:]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        oran = np.where((onceki > 0.0) & (simdi > 0.0), simdi / onceki, np.nan)
+        out[pencere:] = np.log(oran)
+    return out
+
+
 def kopya(degerler: np.ndarray) -> np.ndarray:
     """Alanın kendisi, float64 kopya. Yükleyicide hesaplanmış bir seriyi (makro persentil,
     Faz 12) `ctx` özelliği olarak taşımanın defterdeki yolu; hesap yok, nedensellik girdide."""

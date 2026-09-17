@@ -34,8 +34,8 @@ from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.research import pbo as pbo_mod
 from scryne_quant.research import perturbasyon as pert_mod
 from scryne_quant.research import rejim as rejim_mod
-from scryne_quant.research.kapilar import Esik, KapiSonucu, degerlendir
 from scryne_quant.research.bolme import Pencere
+from scryne_quant.research.kapilar import Esik, KapiSonucu, degerlendir
 from scryne_quant.research.tarama import ASGARI_ISLEM, kosu, tara
 from scryne_quant.strategy.temel import Strateji
 

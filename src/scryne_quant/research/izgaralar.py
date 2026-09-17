@@ -200,17 +200,38 @@ MAKRO_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
     "makro_nfci": ("evren_makro_nfci", _MAKRO),
 }
 
+#: `konumlanma_evren` programının çekilişleri (Faz 16). İskelet türev programıyla birebir
+#: aynı: kıyas + tek dışlama, haftalık dengeleme, sabit yoğunluk (10), eksen pencere ve
+#: dışlama oranı. Pencere kümesi türev programının aynası — sonuca bakılarak seçilmedi.
+#: Sıra durma kuralının sırası: açık pozisyon birikimi ve taker baskısı kıyası geçmezse
+#: büyük hesap ve birleşim çekilişleri harcanmaz.
+_KONUMLANMA: Final[dict[str, Sequence[Any]]] = {
+    "pencere": (24, 72, 168, 720),
+    "dislama_orani": (0.1, 0.2, 0.3),
+    "azami_enstruman": (10,),
+    "yeniden_dengele_bar": (HAFTALIK,),
+    "hedef_brut": (SABIT_MARUZIYET,),
+}
+KONUMLANMA_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "konumlanma_oi": ("evren_oi_birikim", _KONUMLANMA),
+    "konumlanma_taker": ("evren_taker_baski", _KONUMLANMA),
+    "konumlanma_buyuk_hesap": ("evren_buyuk_hesap", _KONUMLANMA),
+    "konumlanma_oi_taker": ("evren_oi_taker", _KONUMLANMA),
+}
+
 #: Program → çekilişleri. Koşucu çekilişin programını buradan bulur.
 PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "kesitsel_fiyat": tuple(EVREN_CEKILISLERI),
     "turev_evren": tuple(TUREV_CEKILISLERI),
     "makro_rejim": tuple(MAKRO_CEKILISLERI),
+    "konumlanma_evren": tuple(KONUMLANMA_CEKILISLERI),
 }
 
 
 def evren_cekilisi(ad: str) -> tuple[str, Mapping[str, Sequence[Any]]]:
     """Bir evren çekilişinin `(strateji adı, ızgara)` çifti."""
-    hepsi = {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI}
+    hepsi = {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
+             **KONUMLANMA_CEKILISLERI}
     try:
         return hepsi[ad]
     except KeyError:

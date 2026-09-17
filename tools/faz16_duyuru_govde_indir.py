@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -68,7 +69,15 @@ def _govde(kod: str) -> str | None:
                 if not ham:
                     return ""
                 parcalar: list[str] = []
-                _metin(json.loads(ham) if isinstance(ham, str) else ham, parcalar)
+                agac: Any = ham
+                if isinstance(ham, str):
+                    try:
+                        agac = json.loads(ham)
+                    except json.JSONDecodeError:
+                        # Eski duyurularda gövde JSON ağacı değil düz HTML; etiketler
+                        # temizlenir, metin olduğu gibi saklanır (ölçüldü: ~%0,1).
+                        return re.sub(r"<[^>]+>", " ", ham)
+                _metin(agac, parcalar)
                 return "".join(parcalar)
             if y.status_code in (400, 404):
                 return None

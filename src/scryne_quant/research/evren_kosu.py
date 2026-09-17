@@ -29,13 +29,14 @@ import pyarrow as pa
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data import funding as funding_mod
 from scryne_quant.data import kimlik as kimlik_mod
+from scryne_quant.data import konumlanma as konumlanma_mod
 from scryne_quant.data import makro as makro_mod
 from scryne_quant.data.depo import ParquetDepo
 from scryne_quant.data.izgara import (
     hizala,
     ortak_izgara,
-    uyelik_matrisi,
     uyeligi_barlara_kis,
+    uyelik_matrisi,
 )
 from scryne_quant.strategy.evren import EvrenGorunumu
 from scryne_quant.strategy.kosu import evren_gorunum_kur
@@ -114,6 +115,7 @@ def veri_kur(
     funding_depo: str | Path | None = None,
     premium_depo: str | Path | None = None,
     makro_depo: str | Path | None = None,
+    konumlanma_depo: str | Path | None = None,
 ) -> EvrenVerisi:
     """Evren tablosundan ham, stratejiden bağımsız evren verisi kurar.
 
@@ -124,6 +126,11 @@ def veri_kur(
 
     `premium_depo` verilirse (`data/turev/premium/`) her sembole `basis` dizisi eklenir
     (`data/funding.evren_premium_dizisi`); hash'leri aynı yere yazılır.
+
+    `konumlanma_depo` verilirse (`data/turev/metrics/`) her sembole konumlanma dizileri
+    eklenir (`data/konumlanma.evren_dizileri`): açık pozisyon adedi, taker oranı, büyük hesap
+    ve hesap sayısı dengeleri. Verisi olmayan sembolde hepsi `NaN`. Dosya hash'leri
+    `meta["ek_veri_sha256"]`a yazılır ve veri kimliğine girer (Faz 16).
 
     `makro_depo` verilirse (`data/makro/`) her sembole makro persentil alanları eklenir
     (`data/makro.bar_alanlari`). Alanlar semboller arasında **aynı dizi**: ek bellek yok.
@@ -214,6 +221,16 @@ def veri_kur(
             else:
                 pdf = pd.DataFrame()
             dz["basis"] = funding_mod.evren_premium_dizisi(izgara, pdf)
+    if konumlanma_depo is not None:
+        kdepo = Path(konumlanma_depo)
+        for sembol_, dz in diziler.items():
+            yol = kdepo / f"{sembol_}.parquet"
+            if yol.is_file():
+                ek_sha[f"konumlanma/{sembol_}"] = hashlib.sha256(yol.read_bytes()).hexdigest()
+                kdf = pd.read_parquet(yol)
+            else:
+                kdf = pd.DataFrame()
+            dz.update(konumlanma_mod.evren_dizileri(izgara, kdf))
     if makro_depo is not None:
         alanlar, dosyalar = makro_mod.bar_alanlari(izgara, makro_depo)
         for sid, yol in dosyalar.items():
@@ -252,7 +269,7 @@ def veri_kur(
             **(
                 {"ek_veri_sha256": dict(sorted(ek_sha.items()))}
                 if funding_depo is not None or premium_depo is not None
-                or makro_depo is not None
+                or makro_depo is not None or konumlanma_depo is not None
                 else {}
             ),
         },

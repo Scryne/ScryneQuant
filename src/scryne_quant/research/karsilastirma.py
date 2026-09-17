@@ -26,8 +26,8 @@ from scryne_quant.backtest.metrikler import Metrikler
 from scryne_quant.common.maliyet import MaliyetModeli
 from scryne_quant.research.bolme import Pencere, is_oos
 from scryne_quant.research.izgaralar import izgara
-from scryne_quant.research.tarama import izgara as izgara_noktalari
 from scryne_quant.research.tarama import ASGARI_ISLEM, kosu, tara
+from scryne_quant.research.tarama import izgara as izgara_noktalari
 from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE, aile
 from scryne_quant.strategy.temel import Strateji
 

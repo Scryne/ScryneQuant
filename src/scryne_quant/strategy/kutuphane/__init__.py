@@ -25,6 +25,12 @@ from scryne_quant.strategy.kutuphane.evren_funding import (
     EvrenFundingBirikim,
     EvrenFundingKesit,
 )
+from scryne_quant.strategy.kutuphane.evren_konumlanma import (
+    EvrenBuyukHesap,
+    EvrenOiBirikim,
+    EvrenOiTaker,
+    EvrenTakerBaski,
+)
 from scryne_quant.strategy.kutuphane.evren_makro import EvrenMakroNfci, EvrenMakroVix
 from scryne_quant.strategy.kutuphane.funding_egilim import FundingEgilim
 from scryne_quant.strategy.kutuphane.funding_filtre import FundingFiltre
@@ -85,6 +91,11 @@ EVREN_AILELER: Final[dict[str, type[PortfoyStratejisi]]] = {
     # `makro_rejim` programı: kıyasın üstüne makro stres engeli (Faz 12).
     EvrenMakroVix.ad: EvrenMakroVix,
     EvrenMakroNfci.ad: EvrenMakroNfci,
+    # `konumlanma_evren` programı: kıyasın üstüne konumlanma dışlaması (Faz 16).
+    EvrenOiBirikim.ad: EvrenOiBirikim,
+    EvrenTakerBaski.ad: EvrenTakerBaski,
+    EvrenBuyukHesap.ad: EvrenBuyukHesap,
+    EvrenOiTaker.ad: EvrenOiTaker,
 }
 
 #: Aile → o ailenin stratejileri. Roadmap "5 aile de aynı veri ve aynı maliyet
@@ -141,8 +152,12 @@ __all__ = [
     "EvrenFundingBasis",
     "EvrenFundingBirikim",
     "EvrenFundingKesit",
+    "EvrenBuyukHesap",
     "EvrenMakroNfci",
     "EvrenMakroVix",
+    "EvrenOiBirikim",
+    "EvrenOiTaker",
+    "EvrenTakerBaski",
     "FundingEgilim",
     "FundingFiltre",
     "FundingTers",

@@ -87,6 +87,13 @@ DEFTER: Final[dict[str, Kayit]] = {
         for seri in ("vix", "nfci")
         for w in (30, 90, 180, 365)
     },
+    # Konumlanma alanları (Faz 16, `data/konumlanma.py`): açık pozisyon **adedi**, taker
+    # akışı ve hesap dengeleri. Bar çerçevesine yükleyici nedensel olarak ekler; yoksa
+    # `hesapla` açık hata verir.
+    "acik_pozisyon_degisimi": Kayit(("acik_pozisyon",), ("pencere",), ("",), ind.log_degisim),
+    "taker_sma": Kayit(("taker_oran",), ("pencere",), ("",), ind.sma),
+    "buyuk_hesap_sma": Kayit(("buyuk_hesap_oran",), ("pencere",), ("",), ind.sma),
+    "hesap_orani_sma": Kayit(("hesap_oran",), ("pencere",), ("",), ind.sma),
     "bollinger": Kayit(
         ("close",),
         ("pencere", "katsayi"),
