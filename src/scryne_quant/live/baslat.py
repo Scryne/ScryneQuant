@@ -31,6 +31,7 @@ from scryne_quant.data.depo import ParquetDepo
 from scryne_quant.exchange.akis import BinanceBarAkisi, df_barlara
 from scryne_quant.exchange.binance import BinanceAdaptoru
 from scryne_quant.live import durdurma as durdurma_mod
+from scryne_quant.live import kill as kill_mod
 from scryne_quant.live.akis import Bar, Kaynak
 from scryne_quant.live.api import Yayinci, bar_yayini, uygulama_kur
 from scryne_quant.live.depo import KosuDeposu, KosuKimligi, KosuOlayi
@@ -70,6 +71,8 @@ class Kurulum:
         durum) checkpoint'i yorumlayıcının çıkış sırasına bırakmak olurdu — 30 günlük bir
         koşunun kapanışını çöp toplayıcının kaprisine bağlamak.
         """
+        with suppress(Exception):
+            kill_mod.pid_sil(self.motor.depo.yol)
         for kapatilabilir in (self.motor.depo, self.defter, self.kilit):
             with suppress(Exception):
                 kapatilabilir.kapat()
@@ -175,6 +178,9 @@ def kur(
     olurdu. Kilit, koşuya dokunan ilk işlem olmalı.
     """
     kilit = KosuKilidi(kosu_yolu).al()
+    # Süreç dışı kill switch (K-065) süreci bu dosyadan bulur: kilit dosyası tutulurken
+    # Windows'ta okunamıyor.
+    kill_mod.pid_yaz(kosu_yolu)
     # Önceki oturumdan kalmış bir durdurma bayrağı silinir. Kalsaydı yeni koşu
     # başlar başlamaz kendini durdururdu — hem de "elle durduruldu" sebebiyle.
     durdurma_mod.temizle(kosu_yolu)
@@ -206,6 +212,14 @@ def kur(
             kapasite=kapasite,
         ),
     )
+
+    # Süreç dışı kill işareti varsa koşu **SAFE_MODE'da** açılır (K-065). Toparlanmadan
+    # sonra: önce uygulansaydı toparlanma kayıtlı kararları SAFE_MODE altında yeniden
+    # üretir ve `Red(SAFE_MODE)` ile ayrışırdı (`live/depo.py`). İşaretin kalkması elle.
+    isaret = kill_mod.safe_isareti(kosu_yolu)
+    if isaret is not None:
+        risk.kill(str(isaret.get("sebep", "süreç dışı kill")), simdi_ms(),
+                  {"kaynak": "safemode_isareti", **isaret})
 
     yayinci = Yayinci()
     akis = BinanceBarAkisi(

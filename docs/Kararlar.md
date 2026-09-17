@@ -3091,3 +3091,34 @@ görmüş olur. Kesitsel skorun penceresi 336 bar olduğu için sızıntı bölg
 4. **Açık kalem:** sızıntı paylı **yeni koşu** (`k` doğrudan daraltılmış aralıktan) ve daha
    çok iterasyon (GA'yı K-044'ün genişliğine indirmek için ≈2.000+). Uzun iş: sürekli açık
    hostta koşturulur (K-063).
+
+## K-065 — Süreç dışı kill switch: işaret → süreç → emirler
+
+**Durum:** kabul · **Tarih:** 2026-09-17 · **Kapatır:** Denetim-v2 A8, Faz 14'ün kill switch
+kriteri · **Tamamlar:** K-008 (süreç içi SAFE_MODE), K-043 (durdurma bayrağı) · **Kaynak:**
+`src/scryne_quant/live/kill.py`, `sq kill`, `tools/faz14_kill_tatbikati.py`,
+`runs/faz14/kill-tatbikati-1789656349736.json`
+
+### Karar — beş madde
+
+1. **Sıra sabit:** (a) SAFE_MODE işareti diske (`<koşu>.safemode`), (b) trader süreci
+   `TerminateProcess` ile sonlandırılır, (c) borsadaki açık emirler iptal edilir ve **yeniden
+   okunarak** doğrulanır. İşaret ilk: sonraki adımlar başarısız olsa bile yeniden başlatma
+   kilitli açılır. Süreç emirlerden önce: tersi iptal ile ölüm arasına yeni emir sokabilirdi.
+2. **İşbirliği yok:** süreç `<koşu>.pid` dosyasından bulunur (kilit dosyası Windows'ta tutulurken
+   okunamıyor); askıya alınmış süreç de sonlandırılır. İşaret veritabanında değil ayrı dosyada:
+   donmuş süreç SQLite yazma kilidini tutuyor olabilir.
+3. **Yeniden başlatma SAFE_MODE'da:** `baslat.kur` işareti görürse risk motorunu toparlanmadan
+   **sonra** kilitler (önce kilitlemek toparlanmanın yeniden ürettiği kararları ayrıştırırdı).
+4. **Çıkış yalnızca elle:** `sq kill kaldir --not` (≥10 karakter, geçmiş dosyasına yazılır) +
+   risk motorunda `sq risk serbest` (K-008/4, K-050).
+5. **Başarı raporla ölçülür:** `<koşu>.kill.json`; süreç ölmediyse, iptal hata verdiyse ya da
+   doğrulamada açık emir kaldıysa kill **başarısız** (çıkış kodu 1).
+
+### Kanıt (gerçek testnet, 2026-09-17)
+
+İki GTC limit alım emri koymuş, sonra `NtSuspendProcess` ile dondurulmuş bir trader. `sq kill
+calistir --testnet` ayrı süreçten: 2,97 s, çıkış 0. Bağımsız okuma: önce 2 açık emir → sonra 0;
+süreç yaşıyor → ölü; aynı koşu yeniden kurulunca `safe_mode = True`, sebep "süreç dışı kill: …".
+Birim testleri sahte borsayla sırayı (iptal anında süreç ölü), başarısız iptalin raporunu ve
+işaretin gerekçesiz kaldırılamadığını koruyor.

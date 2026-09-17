@@ -25,6 +25,7 @@ import typer
 
 from scryne_quant.backtest.coklu_motor import CokluBacktest
 from scryne_quant.backtest.motor import Backtest
+from scryne_quant.cli.kill import kill_app
 from scryne_quant.cli.testnet import testnet_app
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.hash import git_durumu, ortam_kaydi
@@ -120,6 +121,7 @@ evren_app = typer.Typer(
 )
 app.add_typer(evren_app)
 app.add_typer(testnet_app)
+app.add_typer(kill_app)
 
 #: Koşu dosyalarının varsayılan yeri. Koşu başına **tek** dosya: durum, fill defteri,
 #: koşu günlüğü ve risk audit'i aynı SQLite dosyasında (K-034). Koşuyu yedeklemek tek bir
