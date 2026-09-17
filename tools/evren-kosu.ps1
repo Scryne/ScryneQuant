@@ -37,3 +37,6 @@ foreach ($p in $Parametre) { $PArg += @("-p", $p) }
 
 & $Python -m scryne_quant.cli.main paper evren-baslat $KosuAdi `
     --evren-tablo $Tablo --strateji $Strateji @PArg *>> $Gunluk
+
+# Cikis kodu gorev zamanlayicisina gecsin (cokmede yeniden baslatma icin).
+exit $LASTEXITCODE

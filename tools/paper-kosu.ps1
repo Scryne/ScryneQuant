@@ -52,3 +52,7 @@ $Gunluk = Join-Path $GunlukDizin ($KosuAdi + ".log")
 # ise beklenmeyen bir yigin izinin dusecegi yer. Ikisi farkli sorulara cevap veriyor.
 & $Python -m scryne_quant.cli.main paper baslat $KosuAdi `
     --strateji $Strateji --mod $Mod --port $Port @WebArg *>> $Gunluk
+
+# Cikis kodu gorev zamanlayicisina gecsin: yoksa cokme "basarili" biter ve
+# RestartCount/RestartInterval hic devreye girmez.
+exit $LASTEXITCODE
