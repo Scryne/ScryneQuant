@@ -70,3 +70,4 @@ apps/web/*.tsbuildinfo
 
 # Duzgun durdurma bayragi (live/durdurma.py) - kosunun yaninda yasar, kalici degil.
 *.dur
+data/turev/metrics/
