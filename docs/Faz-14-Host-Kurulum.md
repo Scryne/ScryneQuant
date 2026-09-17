@@ -92,6 +92,34 @@ ssh -i ~/.ssh/scrynequant_vps scryn@192.168.1.4 "cd %USERPROFILE%\Documents\Proj
 
 **Durum:** `sq paper evren-durum evren-kiyas`
 
+## 3c. Bütün görevler (2026-09-17 akşam)
+
+`tools\evren-gorev-kur.ps1` idempotent kurar. Saatler TR (UTC+3).
+
+| Görev | Ne | Zaman |
+| --- | --- | --- |
+| `ScryneQuant-Paper` | `host-1` tek sembollü gözlem (30 gün sayacı) + dashboard | açılışta |
+| `ScryneQuant-Evren` | `evren-kiyas`: kıyas, n=10, haftalık | açılışta |
+| `ScryneQuant-EvrenFB` | `evren-funding-basis`: #46, `--turev` | açılışta |
+| `ScryneQuant-EvrenNFCI` | `evren-makro-nfci`: #48, `--makro nfci` (FRED anahtarı `.env`) | açılışta |
+| `ScryneQuant-Izleme` | `sq izle kontrol --bildir` | 15 dk |
+| `ScryneQuant-Yedek` | `sq paper evren-yedek` | 05:30 |
+| `ScryneQuant-EvrenTablo` | evren tablosu yenileme (üç koşu) | 06:15 |
+| `ScryneQuant-EvrenSapma` | canlı-backtest sapması (üç koşu) | 06:45 |
+| `ScryneQuant-Ozet` | günlük özet bildirimi | 09:00 |
+
+**Geri yükleme tatbikatı (2026-09-17 20:05 TR):** üç koşunun yedeği alındı, her biri boş
+dizinde yeniden üretildi: kayıtla ve canlıyla bit düzeyinde aynı (`evren-kiyas` 772 adım, 8
+işlem, özkaynak 9997.863289282135; yeniden üretim 1,0-1,4 sn). Raporlar
+`runsaz14	atbikat-<kosu>.json`.
+
+**İlk simüle işlemler (20:00 TR):** `evren-kiyas` 10 hedef üretti, 8'i doldu; ZECUSDT ve
+NEARUSDT risk motorunun oynaklık limitine takıldı (saatlik ATR oranı %2,6 / %2,4, eşik %2,05).
+Ana makinedeki eş duman koşusu aynı özkaynağı bit düzeyinde üretti. **Not:** evrende RLUSDUSDT
+(bir stablecoin) var — evren kuralının stabil taban listesinde yok. Araştırma tablosu aynı kuralla
+kurulduğu için parite doğru; kuralın kendisi sonraki bir program kaydında düzeltilmeli, koşu
+ortasında değiştirilemez.
+
 ## 5. Açık kalemler
 
 1. ~~Yeniden başlatma tatbikatı~~ → **yapıldı**, §6.

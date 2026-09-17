@@ -64,6 +64,8 @@ def test_sapma_sebepli_sebepsiz_ve_bayat():
              "gec_bilinen_bar": 0, "eksikli_adim": 0, "uyelik_gecikmesi": 0,
              "son_ozkaynak_farki_bps": 0.1}
     assert _kodlar(_kosu(sapma=temel)) == ["SEBEPSIZ_SAPMA"]
+    assert _kodlar(_kosu(sapma={**temel, "makro_revizyon": 1})) == []
+    assert _kodlar(_kosu(sapma={**temel, "gec_bilinen_turev": 3})) == []
     sebepli = {**temel, "gec_bilinen_bar": 2, "son_ozkaynak_farki_bps": 80.0}
     assert _kodlar(_kosu(sapma=sebepli)) == ["SAPMA"]
     assert _kodlar(_kosu(sapma={**sebepli, "son_ozkaynak_farki_bps": 3.0})) == []

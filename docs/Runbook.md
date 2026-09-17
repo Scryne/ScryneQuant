@@ -10,6 +10,21 @@ Eşikler tek yerde: `izleme.ESIKLER`. Her kodun bu tabloda satırı olmak zorund
 Hosta bağlanmak: `ssh -i ~/.ssh/scrynequant_vps scryn@192.168.1.4`, kod dizini
 `%USERPROFILE%\Documents\Projeler\ScryneQuant`. Kayıtlar UTC; TR = UTC+3.
 
+**Bildirim (K-066):** açılan/kapanan alarm ve 09:00 TR günlük özet telefona ntfy.sh ile gelir
+(konu hostun `.env`inde, `SQ_NTFY_KONU`). **Özet gelmediyse** host, görev zamanlayıcı ya da ağ
+ayakta değildir: önce hostun açık ve ağa bağlı olduğunu kontrol et.
+
+**Panel:** host-1 koşusunun dashboard'u (`Genel` sayfasının üstünde İzleme bölümü) yalnız host
+içinden açılır. Ana makineden ağa açmadan görmek için SSH tüneli:
+`ssh -i ~/.ssh/scrynequant_vps -L 8787:127.0.0.1:8787 scryn@192.168.1.4` → tarayıcıda
+`http://127.0.0.1:8787`.
+
+**Yedek ve geri yükleme:** her gün 05:30 TR `runs\yedek\` (koşu başına son 7). Tatbikat /
+gerçek geri yükleme: `sq paper evren-tatbikat <kosu>` en son yedeği boş dizinde yeniden üretir
+ve canlıyla karşılaştırır. Gerçek kayıpta: koşuyu durdur, yedeği `runs\paper\<kosu>.sqlite`
+olarak kopyala, görevi başlat — açılışta bütün adımlar yeniden üretilir, aradaki saatler REST'ten
+tamamlanır.
+
 | Kod | Boyut | Seviye | Anlamı | İlk bakılacak | Müdahale |
 | --- | --- | --- | --- | --- | --- |
 | `SUREC_YOK` | sistem | kritik | Koşunun pid dosyası yok ya da süreç ölü | `Get-ScheduledTask ScryneQuant-*`; `runs\paper\<kosu>.log` sonu; `sq paper evren-durum <kosu>` olaylarında `hata` | Çökmede görev 1 dk'da yeniden başlatır; başlatmadıysa `Start-ScheduledTask`. Planlı durdurmadan sonra unutulduysa aynı (düzgün kapanan koşuyu görev yeniden başlatmaz). Aynı hata tekrar ediyorsa **başlatma**, sebebi bul (K-038: tahmin yok) |
@@ -25,5 +40,5 @@ Hosta bağlanmak: `ssh -i ~/.ssh/scrynequant_vps scryn@192.168.1.4`, kod dizini
 | `BRUT_ASIMI` | trading | uyarı | Brüt maruziyet hedefin 1,5 katını aştı | `evren-durum` pozisyonlar; fiyat hareketi | Yeniden dengelemeye kadar kayma normal olabilir; kalıcıysa kurma kodunda hata aranır |
 | `KOSU_HATASI` | trading | kritik | Son 24 saatte koşu `hata` olayı yazdı | Olay ayrıntısı; `EvrenToparlanmaAyrismasi` ise toparlanma kayıtla uyuşmadı | Ayrışmada koşu **durur, tahmin yürütülmez** (K-038): dosya ana makineye kopyalanıp yeniden üretilir, ayrışan adım incelenir |
 | `SAPMA` | model | uyarı | Canlı-referans özkaynak farkı >50 bps (sebebi kayıtlı) | `runs\paper\<kosu>.sapma.jsonl` son satır: geç bar / eksik adım / üyelik gecikmesi | Olaylarla açıklanıyorsa not düş; büyüyorsa bekleme süresi/akış incelenir |
-| `SEBEPSIZ_SAPMA` | model | kritik | Canlı referanstan ayrıştı ama geç bar, eksik adım, üyelik gecikmesi **yok** | Sapma raporu `ilk_ayrisan_utc`; o adımın girdileri | Tek kod yolu (K-001) bozulmuş olabilir: dosya ana makinede `sq paper evren-sapma` ile yeniden ölçülür, ayrışan adım bar bar karşılaştırılır. Bulunana kadar koşunun sonuçları kanıt sayılmaz |
+| `SEBEPSIZ_SAPMA` | model | kritik | Canlı referanstan ayrıştı ama geç bar, eksik adım, üyelik gecikmesi, geç türev girdisi, makro revizyonu **yok** | Sapma raporu `ilk_ayrisan_utc`; o adımın girdileri | Tek kod yolu (K-001) bozulmuş olabilir: dosya ana makinede `sq paper evren-sapma` ile yeniden ölçülür, ayrışan adım bar bar karşılaştırılır. Bulunana kadar koşunun sonuçları kanıt sayılmaz |
 | `SAPMA_OLCUMU_YOK` | model | uyarı | Son sapma ölçümü 36 saatten eski | `ScryneQuant-EvrenSapma` son çalışma; `runs\paper\<kosu>.sapma.log` | Elle: `tools\evren-sapma.ps1` |

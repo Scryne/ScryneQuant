@@ -3122,3 +3122,30 @@ calistir --testnet` ayrı süreçten: 2,97 s, çıkış 0. Bağımsız okuma: ö
 süreç yaşıyor → ölü; aynı koşu yeniden kurulunca `safe_mode = True`, sebep "süreç dışı kill: …".
 Birim testleri sahte borsayla sırayı (iptal anında süreç ölü), başarısız iptalin raporunu ve
 işaretin gerekçesiz kaldırılamadığını koruyor.
+
+## K-066 — Host sırları ve dış bildirim kanalı: FRED anahtarı hostta, alarmlar ntfy.sh ile
+
+**Durum:** kabul · **Tarih:** 2026-09-17 · **Onay:** Scryne ("tüm dediğin her şeyi
+onaylıyorum") · **Tamamlar:** K-062/5 (hostta borsa işlem anahtarı yok), K-050 · **Kaynak:**
+`src/scryne_quant/data/alfred.py`, `src/scryne_quant/cli/izle.py`, `docs/Runbook.md`
+
+### Karar
+
+1. **FRED API anahtarı hostun `.env` dosyasında** (kullanıcı profilinde; yalnız kullanıcı,
+   SYSTEM, yöneticiler okuyabilir). Yalnızca herkese açık makro veriyi okur; `evren_makro_nfci`
+   koşusunun canlı girdisi için gerekli. Hiçbir çıktıya, loga, kayda yazılmaz (aktarım çıktısız
+   yapıldı). **Borsa anahtarı hosta konmadı ve bu karar onu değiştirmez** (K-062/5).
+2. **Alarm ve günlük özet ntfy.sh üzerinden telefona.** Konu adı tahmin edilemez rastgele
+   dizge, hostun `.env`inde (`SQ_NTFY_KONU`). ntfy'da konuyu bilen herkes okuyabildiği için
+   mesajlarda sır, anahtar, gerçek hesap bilgisi **yok**: alarm kodu, koşu adı, gözlem
+   koşusunun sanal özkaynağı.
+3. **Sessizlik sinyaldir:** 09:00 TR günlük özet gelmediyse host/görev/ağ ayakta değildir.
+   Alarm sistemi kendi ölümünü haber veremez.
+4. **Bildirim yalnızca gözlem:** alarm koşuyu durdurmaz, limit değiştirmez (K-050).
+
+### Gerekçe
+
+Bildirimsiz alarm, kimsenin bakmadığı bir dosyaya yazılmış alarmdır. ntfy hesap/uygulama anahtarı
+istemeyen en basit kanal; bedeli konunun gizliliğe değil tahmin edilemezliğe dayanması — bu
+yüzden içerik sınırlandı.
+

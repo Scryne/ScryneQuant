@@ -233,8 +233,9 @@ def alarmlar(sistem: dict[str, Any], kosular: list[dict[str, Any]], simdi: int,
                 a.append(Alarm("SAPMA_OLCUMU_YOK", "model", "uyari", k,
                                f"son sapma ölçümü {yas:.0f} saat önce"))
             if sapma.get("ilk_ayrisan_adim") is not None:
-                sebep = (sapma.get("gec_bilinen_bar", 0) + sapma.get("eksikli_adim", 0)
-                         + sapma.get("uyelik_gecikmesi", 0))
+                sebep = sum(sapma.get(k, 0) for k in (
+                    "gec_bilinen_bar", "eksikli_adim", "uyelik_gecikmesi", "gec_bilinen_turev",
+                    "makro_revizyon"))
                 if sebep == 0:
                     a.append(Alarm("SEBEPSIZ_SAPMA", "model", "kritik", k,
                                    f"canlı referanstan {sapma['ilk_ayrisan_utc']}'de ayrıştı, "

@@ -40,6 +40,10 @@ class SapmaRaporu:
     uyelik_gecikmesi: int
     gec_bilinen_bar: int
     """Bilindiği adım, açılış zamanının adımından sonra olan bar sayısı (ısınma sonrası)."""
+    gec_bilinen_turev: int = 0
+    """Adımından sonra bilinen premium barı ya da funding ödemesi (ısınma sonrası)."""
+    makro_revizyon: int = 0
+    """Sonradan farklı değerle yeniden bilinen makro gün sayısı."""
 
     def sozluk(self) -> dict[str, Any]:
         return asdict(self)
@@ -63,13 +67,31 @@ def sapma_olc(depo: EvrenKosuDeposu, **kurulum: Any) -> SapmaRaporu:
         if (acilis_adimi is not None and acilis_adimi >= isinma_sayisi
                 and kb.bilindi_adim > acilis_adimi):
             gec_bilinen += 1
-    for sembol, t, aralik, oran, _ in depo.fundingler():
+    import bisect
+
+    zamanlar = [a.open_time for a in kayitli]
+    gec_turev = 0
+
+    def gorunur_adim(ms: int) -> int | None:
+        """`ms` anında gerçekleşen girdinin ilk görülebileceği adım (açılışı ≥ ms)."""
+        i = bisect.bisect_left(zamanlar, ms)
+        return i if i < len(zamanlar) else None
+
+    for sembol, t, aralik, oran, bilindi in depo.fundingler():
         motor.funding_ekle(sembol, t, aralik, oran, kaydet=False, bilindi_adim=0)
-    for sembol, t, close, _ in depo.premiumlar():
+        ilk = gorunur_adim(t)
+        if ilk is not None and ilk >= isinma_sayisi and bilindi > ilk:
+            gec_turev += 1
+    for sembol, t, close, bilindi in depo.premiumlar():
         motor.premium_ekle(sembol, t, close, kaydet=False, bilindi_adim=0)
+        ilk = adim_no.get(t)
+        if ilk is not None and ilk >= isinma_sayisi and bilindi > ilk:
+            gec_turev += 1
     # Referans günün **son** bilinen değerini kullanır (revizyon dahil).
+    makro_gunleri: dict[tuple[str, int], int] = {}
     for seri, gun, deger, _ in depo.makrolar():
         motor.makro_ekle(seri, gun, deger, kaydet=False, bilindi_adim=0)
+        makro_gunleri[(seri, gun)] = makro_gunleri.get((seri, gun), 0) + 1
     for ay, semboller, h, _ in depo.uyelikler():
         motor.uyelik_ekle(AyUyeligi(ay, semboller, h), kaydet=False, bilindi_adim=0)
 
@@ -102,6 +124,8 @@ def sapma_olc(depo: EvrenKosuDeposu, **kurulum: Any) -> SapmaRaporu:
         kopma=olaylar.count("kopma"),
         uyelik_gecikmesi=olaylar.count("uyelik_gecikmesi"),
         gec_bilinen_bar=gec_bilinen,
+        gec_bilinen_turev=gec_turev,
+        makro_revizyon=sum(1 for n in makro_gunleri.values() if n > 1),
     )
 
 
