@@ -95,6 +95,25 @@ Ay dönünce yeni ayın satırı bu dosyaya eklenmeli:
   `isinma_bar + 48` bar REST'ten doldurulur (`yeni_uye_gecmisi` olayı), şimdiki adımla
   kaydedilir: toparlanma aynısını üretir (testli). Abonelik sonraki adımda yeniden kurulur.
 
+## 6c. Canlı-backtest sapması ve izleme (2026-09-17)
+
+- `sq paper evren-sapma` (`live/evren_sapma.py`): referans **aynı motor**, tek fark her
+  girdinin 0. adımda bilinmesi. Canlıyla adım adım `repr` karşılaştırması; ilk ayrışan adım
+  ve özkaynak farkı, sebep sayaçlarıyla (geç bilinen bar, eksikli adım, üyelik gecikmesi)
+  birlikte `runs/paper/<kosu>.sapma.jsonl`e. Hostta günlük 06:45 TR. İlk ölçüm (771 adım):
+  fark 0,0, ayrışma yok.
+- `sq izle kontrol` (`live/izleme.py`): 15 alarm kodu, dört boyut; her kodun
+  `docs/Runbook.md` satırı testle zorunlu. Hostta 15 dakikada bir.
+
+**Ölçülen maliyet — açık kalem.** Bir adımın görünümü bütün geçmişten yeniden kuruluyor
+(bar doğrulama + hizalama + özellikler): 770 barda **0,32 s/adım** (ana makine), geçmişle
+doğrusal. Canlı adım için sorun değil; ama toparlanma ve sapma ölçümü her adımı yeniden
+oynattığı için O(N²): tahmin 30. günde ≈6 dk, 60. günde ≈15 dk (host daha yavaşsa ×2).
+Profil: sürenin %69'u `BarPenceresi` doğrulaması (`dogrulama.dogrula`). Çözüm adayı: sembol
+başına doğrulanmış dizilerin önbelleği — yalnızca doğrulama **nedensel** ise bit düzeyinde
+aynı sonucu verir; bu kanıtlanmadan uygulanmaz ("neredeyse doğru" yasak). 30. günden önce ele
+alınacak.
+
 ## 7. Aşamalar ve tahmin
 
 | Aşama | İş | Tahmin |
