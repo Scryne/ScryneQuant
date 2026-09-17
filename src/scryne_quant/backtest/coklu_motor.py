@@ -44,6 +44,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -126,144 +127,54 @@ class CokluBacktest:
             raise CokluBacktestHatasi(f"{tekil_sembol}: evren görünümünde yok")
 
         adim = timeframe_ms(gorunum.timeframe)
-        zamanlar = np.asarray(gorunum.zamanlar, dtype="int64")
-        acilis = {s: gorunum.gorunumler[s].barlar["open"] for s in semboller}
-        kapanis = {s: gorunum.gorunumler[s].barlar["close"] for s in semboller}
-        kalite = {s: gorunum.gorunumler[s].barlar["quality_status"] for s in semboller}
-
-        risk_atr = self._risk_atr(gorunum) if self.risk is not None else {}
-        # Kapasite ölçüsü (§16): fill notional'ının o enstrümanın ortalama günlük hacmine
-        # oranı. Raporlanır, kapı değildir (K-054) — eşiği ölçülmemiş bir sayı kapı olamaz.
-        adv = {
-            s: gunluk_hacim(gorunum.gorunumler[s].barlar["quote_volume"], adim)
-            for s in semboller
-        }
-        kapasite_oranlari: list[float] = []
-
-        self.strateji.hazirla()
-        portfoy = CokluPortfoy(nakit=self.baslangic_sermaye)
-
+        girdi = self.girdi_kur(gorunum)
+        adimci = CokluAdimci(self)
         ozkaynak = np.empty(n, dtype=np.float64)
         brut = np.empty(n, dtype=np.float64)
-        islemler: list[Islem] = []
-        acik: dict[str, Islem] = {}
-        bekleyen: dict[str, tuple[Sinyal, float]] | None = None
-        atlanan: list[AtlamaSebebi] = []
-        uretilen = 0
-        bayat_degerleme = 0
-
-        son_acilis: dict[str, float] = {}
-        son_kapanis: dict[str, float] = {}
-        son_bar: dict[str, int] = {}
-        sifira_yazilan = 0
-
         for i in range(n):
-            mevcut = {s: gorunum.mevcut(s, i) for s in semboller}
-            for s in semboller:
-                if mevcut[s]:
-                    son_acilis[s] = float(acilis[s][i])
-                    son_kapanis[s] = float(kapanis[s][i])
-                    son_bar[s] = i
-            silinen: frozenset[str] = frozenset()
-            if self.sifira_yaz_bar is not None:
-                silinen = frozenset(
-                    s
-                    for s in portfoy.sirali_semboller
-                    if not mevcut[s] and i - son_bar[s] >= self.sifira_yaz_bar
-                )
-
-            # 1) Fill — bekleyen hedefler bu barın açılışından dolar (K-004).
-            if bekleyen is not None:
-                uygun: dict[str, tuple[Sinyal, float]] = {}
-                for s in sorted(bekleyen):
-                    if not mevcut[s]:
-                        atlanan.append(AtlamaSebebi.ENSTRUMAN_BARI_YOK)
-                    elif str(kalite[s][i]) != KaliteDurumu.OK:
-                        atlanan.append(AtlamaSebebi.FILL_BARI_OK_DEGIL)
-                    else:
-                        uygun[s] = bekleyen[s]
-                if uygun:
-                    fiyatlar_a = self._fiyatlar(
-                        (*portfoy.sirali_semboller, *uygun), son_acilis, i, silinen
-                    )
-                    emirler, atlama = emirleri_hazirla(
-                        uygun, portfoy, fiyatlar_a, int(zamanlar[i]), self.maliyet
-                    )
-                    for s in sorted(atlama):
-                        atlanan.append(atlama[s])
-                    for emir in emirler:
-                        portfoy, _ = uygula_coklu(
-                            emir, portfoy, acik, islemler, risk=self.risk
-                        )
-                        gunluk = float(adv[emir.sembol][i])
-                        if gunluk > 0.0:
-                            kapasite_oranlari.append(emir.notional / gunluk)
-                bekleyen = None
-
-            fiyatlar_k = self._fiyatlar(portfoy.sirali_semboller, son_kapanis, i, silinen)
-            bayat_degerleme += sum(1 for s in portfoy.sirali_semboller if not mevcut[s])
-            sifira_yazilan += sum(1 for s in portfoy.sirali_semboller if s in silinen)
-            portfoy_ozkaynak = portfoy.ozkaynak(fiyatlar_k)
-
-            # 2) Risk durumunun bu barla güncellenmesi — **karardan önce.**
-            if self.risk is not None:
-                self.risk.bar_isle(int(zamanlar[i]), portfoy_ozkaynak)
-
-            # 3) Karar — evren `ctx`i `t`de kesiktir; `ok` olmayan bar görünmez (K-028).
-            pozisyonlar = {
-                s: portfoy.gorunum(s, fiyatlar_k) for s in portfoy.sirali_semboller
-            }
-            ctx = gorunum.baglam(
-                i,
-                pozisyonlar,
-                portfoy.nakit_agirligi(fiyatlar_k),
-                self.strateji.parametreler,
+            ozkaynak[i], brut[i] = adimci.adim(
+                girdi, i, isinma=i < olcum_baslangici, son_bar=i == n - 1
             )
-            hedef = self.strateji.on_bar(ctx)
-            if hedef is not None and hedef.sinyaller:
-                uretilen += len(hedef.sinyaller)
-                if i < olcum_baslangici:
-                    atlanan.extend([AtlamaSebebi.ISINMA_PENCERESI] * len(hedef.sinyaller))
-                elif i == n - 1:
-                    # Son barın hedefi dolacağı barı bulamaz (K-004).
-                    atlanan.extend([AtlamaSebebi.SONRAKI_BAR_YOK] * len(hedef.sinyaller))
-                else:
-                    onayli, red_sayisi = self._risk_onayi(
-                        hedef,
-                        portfoy,
-                        self._fiyatlar(
-                            (*portfoy.sirali_semboller, *hedef.semboller), son_kapanis, i,
-                            silinen,
-                        ),
-                        portfoy_ozkaynak,
-                        int(zamanlar[i]),
-                        risk_atr,
-                        i,
-                    )
-                    atlanan.extend([AtlamaSebebi.RISK_REDDETTI] * red_sayisi)
-                    bekleyen = onayli or None
-
-            # 4) Değerleme — bu barın kapanışlarıyla işaretle.
-            ozkaynak[i] = portfoy_ozkaynak
-            brut[i] = portfoy.brut_maruziyet(fiyatlar_k)
 
         return self._sonuc(
             gorunum=gorunum,
             adim=adim,
-            zamanlar=zamanlar,
-            kalite=kalite,
+            zamanlar=girdi.zamanlar,
+            kalite=girdi.kalite,
             ozkaynak=ozkaynak,
             brut=brut,
-            islemler=islemler,
-            atlanan=atlanan,
-            uretilen=uretilen,
-            bayat_degerleme=bayat_degerleme,
-            sifira_yazilan=sifira_yazilan,
-            kapasite_oranlari=kapasite_oranlari,
-            portfoy=portfoy,
+            islemler=adimci.islemler,
+            atlanan=adimci.atlanan,
+            uretilen=adimci.uretilen,
+            bayat_degerleme=adimci.bayat_degerleme,
+            sifira_yazilan=adimci.sifira_yazilan,
+            kapasite_oranlari=adimci.kapasite_oranlari,
+            portfoy=adimci.portfoy,
             olcum_baslangici=olcum_baslangici,
             veri_sha256=dict(veri_sha256 or {}),
             tekil_sembol=tekil_sembol,
+        )
+
+    def girdi_kur(self, gorunum: EvrenGorunumu) -> AdimGirdisi:
+        """Bir görünümün adım girdisi: bar dizilerine kısayollar + önceden hesaplananlar.
+
+        Backtest bunu koşu başına bir kez kurar; canlı motor her yeni pencerede yeniden.
+        """
+        semboller = gorunum.semboller
+        adim = timeframe_ms(gorunum.timeframe)
+        return AdimGirdisi(
+            gorunum=gorunum,
+            zamanlar=np.asarray(gorunum.zamanlar, dtype="int64"),
+            acilis={s: gorunum.gorunumler[s].barlar["open"] for s in semboller},
+            kapanis={s: gorunum.gorunumler[s].barlar["close"] for s in semboller},
+            kalite={s: gorunum.gorunumler[s].barlar["quality_status"] for s in semboller},
+            risk_atr=self._risk_atr(gorunum) if self.risk is not None else {},
+            # Kapasite ölçüsü (§16): fill notional'ının o enstrümanın ortalama günlük
+            # hacmine oranı. Raporlanır, kapı değildir (K-054).
+            adv={
+                s: gunluk_hacim(gorunum.gorunumler[s].barlar["quote_volume"], adim)
+                for s in semboller
+            },
         )
 
     # ------------------------------------------------------------------ yardımcılar
@@ -485,4 +396,148 @@ class CokluBacktest:
         return veri, evren
 
 
-__all__ = ["CokluBacktest", "CokluBacktestHatasi"]
+@dataclass(slots=True)
+class AdimGirdisi:
+    """Tek bir adımın okuduğu diziler. Görünüm değişmedikçe yeniden kurulmaz."""
+
+    gorunum: EvrenGorunumu
+    zamanlar: np.ndarray
+    acilis: dict[str, np.ndarray]
+    kapanis: dict[str, np.ndarray]
+    kalite: dict[str, np.ndarray]
+    risk_atr: dict[str, np.ndarray]
+    adv: dict[str, np.ndarray]
+
+
+class CokluAdimci:
+    """Döngü gövdesinin **tek** uygulaması: bir barın fill → değerleme → risk → karar sırası.
+
+    **Neden ayrı bir sınıf (Faz 14, K-001).** Backtest bütün barları bir döngüde bu adımdan
+    geçirir; canlı paper motoru her kapanmış ızgara barında bir kez çağırır. İki ayrı döngü
+    yazmak, aynı barın backtest'te ve canlıda farklı işlendiği bir sistemi üretirdi — tek
+    sembollü motorun çok enstrümanlının sarmalayıcısı olmasıyla (K-057) aynı ilke.
+
+    Durum (portföy, açık işlemler, bekleyen hedef, sayaçlar) burada yaşar ve adımlar arasında
+    taşınır. **Barlar arası mesafe indeksle değil adım sayacıyla** ölçülür (`sifira_yaz_bar`):
+    canlıda pencere kaydıkça indeks aynı barı göstermez, sayaç gösterir. Backtest'te ikisi
+    birebir aynıdır (her indeks bir kez, sırayla), dolayısıyla eski sonuçlar değişmez.
+    """
+
+    def __init__(self, motor: CokluBacktest) -> None:
+        self.motor = motor
+        motor.strateji.hazirla()
+        self.portfoy = CokluPortfoy(nakit=motor.baslangic_sermaye)
+        self.islemler: list[Islem] = []
+        self.acik: dict[str, Islem] = {}
+        self.bekleyen: dict[str, tuple[Sinyal, float]] | None = None
+        self.atlanan: list[AtlamaSebebi] = []
+        self.uretilen = 0
+        self.bayat_degerleme = 0
+        self.sifira_yazilan = 0
+        self.kapasite_oranlari: list[float] = []
+        self.son_acilis: dict[str, float] = {}
+        self.son_kapanis: dict[str, float] = {}
+        self.son_bar: dict[str, int] = {}
+        self.sayac = 0
+
+    def adim(
+        self, girdi: AdimGirdisi, i: int, *, isinma: bool, son_bar: bool
+    ) -> tuple[float, float]:
+        """`i`. barı işler; `(özkaynak, brüt maruziyet)` döner (bu barın kapanışıyla).
+
+        `isinma`: bu barın hedefi ölçüm dışında (atlanır). `son_bar`: hedef dolacağı barı
+        bulamaz (backtest'in son barı; canlıda hiçbir zaman).
+        """
+        motor = self.motor
+        gorunum = girdi.gorunum
+        semboller = gorunum.semboller
+        portfoy = self.portfoy
+        sayac = self.sayac
+        self.sayac += 1
+
+        mevcut = {s: gorunum.mevcut(s, i) for s in semboller}
+        for s in semboller:
+            if mevcut[s]:
+                self.son_acilis[s] = float(girdi.acilis[s][i])
+                self.son_kapanis[s] = float(girdi.kapanis[s][i])
+                self.son_bar[s] = sayac
+        silinen: frozenset[str] = frozenset()
+        if motor.sifira_yaz_bar is not None:
+            silinen = frozenset(
+                s
+                for s in portfoy.sirali_semboller
+                if not mevcut[s] and sayac - self.son_bar[s] >= motor.sifira_yaz_bar
+            )
+
+        # 1) Fill — bekleyen hedefler bu barın açılışından dolar (K-004).
+        if self.bekleyen is not None:
+            uygun: dict[str, tuple[Sinyal, float]] = {}
+            for s in sorted(self.bekleyen):
+                if not mevcut[s]:
+                    self.atlanan.append(AtlamaSebebi.ENSTRUMAN_BARI_YOK)
+                elif str(girdi.kalite[s][i]) != KaliteDurumu.OK:
+                    self.atlanan.append(AtlamaSebebi.FILL_BARI_OK_DEGIL)
+                else:
+                    uygun[s] = self.bekleyen[s]
+            if uygun:
+                fiyatlar_a = motor._fiyatlar(
+                    (*portfoy.sirali_semboller, *uygun), self.son_acilis, i, silinen
+                )
+                emirler, atlama = emirleri_hazirla(
+                    uygun, portfoy, fiyatlar_a, int(girdi.zamanlar[i]), motor.maliyet
+                )
+                for s in sorted(atlama):
+                    self.atlanan.append(atlama[s])
+                for emir in emirler:
+                    portfoy, _ = uygula_coklu(
+                        emir, portfoy, self.acik, self.islemler, risk=motor.risk
+                    )
+                    gunluk = float(girdi.adv[emir.sembol][i])
+                    if gunluk > 0.0:
+                        self.kapasite_oranlari.append(emir.notional / gunluk)
+            self.bekleyen = None
+
+        fiyatlar_k = motor._fiyatlar(portfoy.sirali_semboller, self.son_kapanis, i, silinen)
+        self.bayat_degerleme += sum(1 for s in portfoy.sirali_semboller if not mevcut[s])
+        self.sifira_yazilan += sum(1 for s in portfoy.sirali_semboller if s in silinen)
+        portfoy_ozkaynak = portfoy.ozkaynak(fiyatlar_k)
+
+        # 2) Risk durumunun bu barla güncellenmesi — **karardan önce.**
+        if motor.risk is not None:
+            motor.risk.bar_isle(int(girdi.zamanlar[i]), portfoy_ozkaynak)
+
+        # 3) Karar — evren `ctx`i `t`de kesiktir; `ok` olmayan bar görünmez (K-028).
+        pozisyonlar = {s: portfoy.gorunum(s, fiyatlar_k) for s in portfoy.sirali_semboller}
+        ctx = gorunum.baglam(
+            i, pozisyonlar, portfoy.nakit_agirligi(fiyatlar_k), motor.strateji.parametreler
+        )
+        hedef = motor.strateji.on_bar(ctx)
+        if hedef is not None and hedef.sinyaller:
+            self.uretilen += len(hedef.sinyaller)
+            if isinma:
+                self.atlanan.extend([AtlamaSebebi.ISINMA_PENCERESI] * len(hedef.sinyaller))
+            elif son_bar:
+                # Son barın hedefi dolacağı barı bulamaz (K-004).
+                self.atlanan.extend([AtlamaSebebi.SONRAKI_BAR_YOK] * len(hedef.sinyaller))
+            else:
+                onayli, red_sayisi = motor._risk_onayi(
+                    hedef,
+                    portfoy,
+                    motor._fiyatlar(
+                        (*portfoy.sirali_semboller, *hedef.semboller), self.son_kapanis, i,
+                        silinen,
+                    ),
+                    portfoy_ozkaynak,
+                    int(girdi.zamanlar[i]),
+                    girdi.risk_atr,
+                    i,
+                )
+                self.atlanan.extend([AtlamaSebebi.RISK_REDDETTI] * red_sayisi)
+                self.bekleyen = onayli or None
+
+        self.portfoy = portfoy
+        # 4) Değerleme — bu barın kapanışlarıyla işaretle.
+        return portfoy_ozkaynak, portfoy.brut_maruziyet(fiyatlar_k)
+
+
+__all__ = ["AdimGirdisi", "CokluAdimci", "CokluBacktest", "CokluBacktestHatasi"]
