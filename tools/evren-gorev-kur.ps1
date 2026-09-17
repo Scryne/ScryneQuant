@@ -79,4 +79,10 @@ $Tetik = New-ScheduledTaskTrigger -Once -At (Get-Date).Date `
 Register-ScheduledTask -TaskName "ScryneQuant-Izleme" -Action $Izleme -Principal $Principal `
     -Settings $AyarIzleme -Trigger $Tetik -Force | Out-Null
 
+$Ozet = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\izleme-ozet.ps1") + '"')
+$SaatOzet = [DateTime]::SpecifyKind([DateTime]::UtcNow.Date.AddHours(6), "Utc").ToLocalTime()
+Register-ScheduledTask -TaskName "ScryneQuant-Ozet" -Action $Ozet -Principal $Principal `
+    -Settings $AyarIzleme -Trigger (New-ScheduledTaskTrigger -Daily -At $SaatOzet) -Force | Out-Null
+
 Get-ScheduledTask ScryneQuant-* | Select-Object TaskName, State

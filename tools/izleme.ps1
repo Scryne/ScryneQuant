@@ -17,5 +17,5 @@ foreach ($e in ($Evren -split ",")) {
     if (Test-Path (Join-Path $Kok ("runs\paper\" + $e + ".sqlite"))) { $Arg += @("--evren", $e) }
 }
 foreach ($t in ($Tek -split ",")) { $Arg += @("--tek", $t) }
-& $Python -m scryne_quant.cli.main izle kontrol @Arg *>> $Gunluk
+& $Python -m scryne_quant.cli.main izle kontrol @Arg --bildir *>> $Gunluk
 exit $LASTEXITCODE
