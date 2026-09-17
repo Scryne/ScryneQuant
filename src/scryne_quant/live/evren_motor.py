@@ -100,6 +100,10 @@ class EvrenPaperMotoru:
                 tk.ekle(uyelik)
         return tk
 
+    def son_bar_zamanlari(self, semboller: Iterable[str]) -> dict[str, int]:
+        """Sembol başına bilinen son barın açılışı (akışın tekrar süzme sınırı)."""
+        return {s: max(self._g.barlar[s]) for s in semboller if self._g.barlar.get(s)}
+
     def beklenen_semboller(self, t_ms: int) -> tuple[str, ...]:
         """`t` barında beklenen semboller: o anki üyeler ∪ açık pozisyonlar."""
         uyeler = set(self.takvim().uyeler(t_ms)[0])

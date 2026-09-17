@@ -2367,6 +2367,119 @@ def paper_durdur(
     )
 
 
+@paper_app.command("evren-baslat")
+def paper_evren_baslat(
+    kosu_adi: Annotated[str, typer.Argument(help="Koşunun adı; dosya adı da bu olur.")],
+    evren_tablo: Annotated[
+        Path, typer.Option("--evren-tablo", help="PIT evren tablosu (.parquet, yanında .json).")
+    ],
+    strateji_adi: Annotated[
+        str, typer.Option("--strateji", "-s", help="Evren kıyası ya da evren ailesi adı.")
+    ] = "evren_esit_agirlik",
+    parametre: Annotated[
+        list[str] | None,
+        typer.Option("--parametre", "-p", help="ad=deger; birden çok kez verilebilir."),
+    ] = None,
+    sermaye: Annotated[float, typer.Option("--sermaye")] = 10_000.0,
+    sifira_yaz_bar: Annotated[int, typer.Option("--sifira-yaz-bar")] = 48,
+    bekleme_s: Annotated[
+        int, typer.Option("--bekleme-s", help="Izgara barı bekleme süresi.")
+    ] = 120,
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+) -> None:
+    """Çok enstrümanlı **gözlem** koşusu: evren stratejisi canlı birleşik akışla. (Faz 14)
+
+    Mod her zaman `gozlem` (K-035): promotion kanıtı üretmez, gerçek emir yok. Aynı ad ikinci
+    kez çalıştırılırsa depodaki girdilerden bütün adımlar yeniden üretilir (K-038) ve kapalı
+    kalınan saatler REST'ten tamamlanır. Konfigürasyon koşu kimliğidir; değişirse başlamaz.
+    """
+    from scryne_quant.exchange.coklu_akis import BinanceCokluBarAkisi
+    from scryne_quant.live import evren_kosturucu as ek_mod
+    from scryne_quant.strategy.kutuphane import EVREN_AILELER
+
+    kutuphane = {**EVREN_KIYAS, **EVREN_AILELER}
+    if strateji_adi not in kutuphane:
+        raise typer.BadParameter(
+            f"{strateji_adi!r} evren kütüphanesinde yok; kayıtlı: {', '.join(sorted(kutuphane))}"
+        )
+    kwargs = _parametreleri_coz(parametre)
+    strateji = kutuphane[strateji_adi](**kwargs)
+    maliyet = maliyet_mod.yukle()
+    limitler = limit_mod.yukle()
+    kok.mkdir(parents=True, exist_ok=True)
+    kosu_yolu = _paper_yolu(kosu_adi, kok)
+    tablo = ek_mod.EvrenTablosu.oku(evren_tablo)
+    risk = RiskMotoru(limitler, "1h", mod="gozlem", defter=SqliteDefter(kosu_yolu))
+    kimlik = {
+        "kosu_adi": kosu_adi,
+        "mod": "gozlem",
+        "timeframe": "1h",
+        "strateji": strateji.sozluk(),
+        "maliyet": maliyet.sozluk(),
+        "limit_kimligi": limitler.kimlik(),
+        "baslangic_sermaye": sermaye,
+        "sifira_yaz_bar": sifira_yaz_bar,
+        "evren_tablo_hash": tablo.tablo_hash,
+    }
+    rest = BinanceAdaptoru()
+    kosucu: ek_mod.EvrenKosucu
+
+    def akis(semboller, son_teslim):
+        return BinanceCokluBarAkisi(
+            semboller, "1h", adaptor=rest, son_teslim=son_teslim,
+            kopma_kancasi=lambda sebep: kosucu.depo.olay_yaz("kopma", ayrinti={"sebep": sebep}),
+            yeniden_baglanma_kancasi=lambda a: kosucu.depo.olay_yaz("yeniden_baglandi", ayrinti=a),
+        )
+
+    kosucu = ek_mod.EvrenKosucu(
+        kosu_yolu=kosu_yolu,
+        kimlik=kimlik,
+        kurulum={"strateji": strateji, "maliyet": maliyet, "baslangic_sermaye": sermaye,
+                 "risk": risk, "timeframe": "1h", "sifira_yaz_bar": sifira_yaz_bar},
+        tablo=tablo,
+        rest=rest,
+        akis_fabrikasi=akis,
+        bekleme_ms=bekleme_s * 1000,
+        gunluk=lambda satir: typer.echo(satir),
+    )
+    typer.echo(f"evren koşusu : {kosu_adi} (gozlem) · {strateji_adi} {kwargs or ''}")
+    typer.echo(f"evren tablosu: {evren_tablo} ({tablo.tablo_hash[:12]})")
+    try:
+        asyncio.run(ek_mod.kos(kosucu))
+    except KilitAlinamadi as hata:
+        raise typer.BadParameter(str(hata)) from hata
+    typer.echo("koşu durdu")
+
+
+@paper_app.command("evren-durum")
+def paper_evren_durum(
+    kosu_adi: Annotated[str, typer.Argument()],
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    son_olay: Annotated[int, typer.Option("--olay", help="Gösterilecek son olay sayısı.")] = 10,
+) -> None:
+    """Evren koşusunun son durumu ve olayları (koşu dosyasına dokunmadan)."""
+    from scryne_quant.live.evren_depo import EvrenKosuDeposu
+
+    kosu_yolu = _paper_yolu(kosu_adi, kok)
+    durum_yolu = kosu_yolu.with_suffix(kosu_yolu.suffix + ".durum.json")
+    if durum_yolu.exists():
+        for anahtar, deger in json.loads(durum_yolu.read_text(encoding="utf-8")).items():
+            typer.echo(f"{anahtar:<15}: {deger}")
+    else:
+        typer.echo("durum dosyası yok (koşu hiç başlamamış olabilir)")
+    if kosu_yolu.exists():
+        depo = EvrenKosuDeposu(kosu_yolu)
+        try:
+            olaylar = depo.olaylar()
+        finally:
+            depo.kapat()
+        kopma = sum(o["tur"] == "kopma" for o in olaylar)
+        gec = sum(o["tur"] == "gec_bar" for o in olaylar)
+        typer.echo(f"olay           : {len(olaylar)} (kopma {kopma}, geç bar {gec})")
+        for o in olaylar[-son_olay:]:
+            typer.echo(f"  {utc_str(o['zaman_ms'])}  {o['tur']:<18} {o['ayrinti']}")
+
+
 @paper_app.command("olaylar")
 def paper_olaylar(
     kosu_adi: Annotated[str, typer.Argument()],
