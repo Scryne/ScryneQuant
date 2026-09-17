@@ -188,3 +188,62 @@ def test_ay_donumunde_yeni_uye_gecmisle_eklenir(tmp_path):
     m2 = EvrenPaperMotoru.toparlan(depo, **k.kurulum)
     assert m2.son_sonuc.ozkaynak == m.son_sonuc.ozkaynak
     depo.kapat()
+
+
+class SahteTurev:
+    """8 saatte bir funding (CCC'nin perp'i yok), her saat premium; kapanmamış bar verilmez."""
+
+    def __init__(self):
+        self.cagri = 0
+
+    def araliklar(self):
+        return {"BBBUSDT": 4}
+
+    def funding(self, sembol, bas):
+        self.cagri += 1
+        if sembol == "CCCUSDT":
+            return []
+        adim = 4 if sembol == "BBBUSDT" else 8
+        t0 = (T0 // (adim * SAAT)) * adim * SAAT - 48 * SAAT
+        return [(t, 1e-4 * ((t // SAAT) % 7 - 3)) for t in range(t0, T0 + N * SAAT, adim * SAAT)
+                if t >= bas]
+
+    def premium(self, sembol, bas, bit, simdi):
+        return [(t, 1e-5 * ((t // SAAT) % 11 - 5)) for t in range(bas, bit, SAAT)
+                if T0 <= t < T0 + N * SAAT and t + SAAT <= simdi]
+
+
+def test_turev_girdileri_toplanir_ve_yeniden_uretilir(tmp_path):
+    from scryne_quant.live.evren_motor import EvrenPaperMotoru
+    from scryne_quant.live.evren_sapma import sapma_olc
+
+    yol = tmp_path / "turev.sqlite"
+    saat = Saat(T0 + 200 * SAAT + 30 * 60_000)
+    k = _kosucu(yol, saat, T0 + 200 * SAAT, T0 + 204 * SAAT, SahteRest())
+    k.kurulum["turev"] = True
+    k.turev = SahteTurev()
+
+    async def ilerleyen_uyku(_):
+        saat.ms += 10 * 60_000
+        await asyncio.sleep(0)
+
+    asyncio.run(kos(k, uyku=ilerleyen_uyku, azami_adim=4))
+    depo = EvrenKosuDeposu(yol)
+    f = depo.fundingler()
+    p = depo.premiumlar()
+    assert {s for s, *_ in f} == {"AAAUSDT", "BBBUSDT"}
+    assert {a for s, _, a, _, _ in f if s == "BBBUSDT"} == {4}
+    # Premium: ısınma başından son işlenen bara kadar her saat, sembol başına, boşluksuz.
+    son = k.motor.son_bar_ms
+    for s in SEMBOLLER:
+        zamanlar = sorted(t for s_, t, _, _ in p if s_ == s)
+        assert zamanlar[-1] == son and len(zamanlar) == (son - zamanlar[0]) // SAAT + 1
+    # Canlıda gelen premium, adımından önce biliniyordu: geç bilinen yok.
+    adim_no = {a.open_time: a.adim for a in depo.adimlar()}
+    assert all(b <= adim_no[t] for _, t, _, b in p if t in adim_no and not
+               depo.adimlar()[adim_no[t]].isinma)
+    m2 = EvrenPaperMotoru.toparlan(depo, **k.kurulum)
+    assert m2.son_sonuc.ozkaynak == k.motor.son_sonuc.ozkaynak
+    r = sapma_olc(depo, **k.kurulum)
+    assert r.ilk_ayrisan_adim is None
+    depo.kapat()

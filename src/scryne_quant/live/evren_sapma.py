@@ -63,6 +63,10 @@ def sapma_olc(depo: EvrenKosuDeposu, **kurulum: Any) -> SapmaRaporu:
         if (acilis_adimi is not None and acilis_adimi >= isinma_sayisi
                 and kb.bilindi_adim > acilis_adimi):
             gec_bilinen += 1
+    for sembol, t, aralik, oran, _ in depo.fundingler():
+        motor.funding_ekle(sembol, t, aralik, oran, kaydet=False, bilindi_adim=0)
+    for sembol, t, close, _ in depo.premiumlar():
+        motor.premium_ekle(sembol, t, close, kaydet=False, bilindi_adim=0)
     for ay, semboller, h, _ in depo.uyelikler():
         motor.uyelik_ekle(AyUyeligi(ay, semboller, h), kaydet=False, bilindi_adim=0)
 

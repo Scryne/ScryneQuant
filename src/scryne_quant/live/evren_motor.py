@@ -29,6 +29,7 @@ import pandas as pd
 from scryne_quant.backtest.coklu_motor import CokluAdimci, CokluBacktest
 from scryne_quant.common.maliyet import MaliyetModeli
 from scryne_quant.common.zaman import timeframe_ms, utc_str
+from scryne_quant.data import funding as funding_mod
 from scryne_quant.data.izgara import hizala, uyeligi_barlara_kis
 from scryne_quant.live.akis import Bar
 from scryne_quant.live.canli_evren import AyUyeligi, UyelikTakvimi
@@ -51,6 +52,10 @@ class EvrenToparlanmaAyrismasi(EvrenMotorHatasi):
 class _Girdiler:
     barlar: dict[str, dict[int, tuple[Bar, int]]] = field(default_factory=dict)
     uyelik: list[tuple[AyUyeligi, int]] = field(default_factory=list)
+    # sembol → calc_time → (aralık saat, oran, bilindi adım)
+    funding: dict[str, dict[int, tuple[int, float, int]]] = field(default_factory=dict)
+    # sembol → open_time → (basis close, bilindi adım)
+    premium: dict[str, dict[int, tuple[float, int]]] = field(default_factory=dict)
 
 
 class EvrenPaperMotoru:
@@ -64,8 +69,12 @@ class EvrenPaperMotoru:
         depo: EvrenKosuDeposu | None,
         timeframe: str = "1h",
         sifira_yaz_bar: int | None = 48,
+        turev: bool = False,
     ) -> None:
         self.timeframe = timeframe
+        self.turev = turev
+        """Funding + basis dizileri görünüme eklenir (Aşama F; `research/evren_kosu.veri_kur`
+        ile aynı fonksiyonlar: `funding_mod.evren_dizileri`, `evren_premium_dizisi`)."""
         self.backtest = CokluBacktest(
             strateji, maliyet, baslangic_sermaye=baslangic_sermaye, risk=risk,
             sifira_yaz_bar=sifira_yaz_bar,
@@ -127,6 +136,34 @@ class EvrenPaperMotoru:
             self.depo.bar_yaz(sembol, bar, adim)
         return True
 
+    def funding_ekle(self, sembol: str, calc_time: int, aralik_saat: int, oran: float, *,
+                     kaydet: bool = True, bilindi_adim: int | None = None) -> bool:
+        adim = self.adim_sayisi if bilindi_adim is None else bilindi_adim
+        seri = self._g.funding.setdefault(sembol, {})
+        if calc_time in seri:
+            return False
+        seri[calc_time] = (int(aralik_saat), float(oran), adim)
+        if kaydet and self.depo is not None:
+            self.depo.funding_yaz(sembol, calc_time, int(aralik_saat), float(oran), adim)
+        return True
+
+    def premium_ekle(self, sembol: str, open_time: int, close: float, *, kaydet: bool = True,
+                     bilindi_adim: int | None = None) -> bool:
+        adim = self.adim_sayisi if bilindi_adim is None else bilindi_adim
+        seri = self._g.premium.setdefault(sembol, {})
+        if open_time in seri:
+            return False
+        seri[open_time] = (float(close), adim)
+        if kaydet and self.depo is not None:
+            self.depo.premium_yaz(sembol, open_time, float(close), adim)
+        return True
+
+    def son_funding_zamanlari(self, semboller: Iterable[str]) -> dict[str, int]:
+        return {s: max(self._g.funding[s]) for s in semboller if self._g.funding.get(s)}
+
+    def son_premium_zamanlari(self, semboller: Iterable[str]) -> dict[str, int]:
+        return {s: max(self._g.premium[s]) for s in semboller if self._g.premium.get(s)}
+
     def uyelik_ekle(self, uyelik: AyUyeligi, *, kaydet: bool = True,
                     bilindi_adim: int | None = None) -> bool:
         adim = self.adim_sayisi if bilindi_adim is None else bilindi_adim
@@ -159,11 +196,28 @@ class EvrenPaperMotoru:
                 continue
             diziler[sembol] = hizala(pd.DataFrame(self._dogrulanmis_diziler(sembol, barlar)),
                                      izgara)
+            if self.turev:
+                diziler[sembol].update(self._turev_dizileri(sembol, k, izgara))
         if not diziler:
             raise EvrenMotorHatasi(f"{utc_str(t_ms)}: hiçbir sembolün barı yok")
         uyelik, _ = uyeligi_barlara_kis(self.takvim(k).dizileri(izgara, diziler), diziler)
         gorunum = evren_gorunum_kur(self.timeframe, diziler, uyelik, self.strateji)
         return self.backtest.girdi_kur(gorunum)
+
+    def _turev_dizileri(self, sembol: str, k: int, izgara: np.ndarray) -> dict[str, np.ndarray]:
+        """`k` adımından önce bilinen funding ve premium kayıtlarından, araştırmayla aynı yol."""
+        f = [(t, a, o) for t, (a, o, b) in self._g.funding.get(sembol, {}).items() if b <= k]
+        fdf = (pd.DataFrame(f, columns=["calc_time", "funding_interval_hours",
+                                        "last_funding_rate"]).astype(
+            {"calc_time": "int64", "funding_interval_hours": "int64",
+             "last_funding_rate": "float64"})
+               if f else pd.DataFrame())
+        cikti = funding_mod.evren_dizileri(izgara, fdf)
+        pr = sorted((t, c) for t, (c, b) in self._g.premium.get(sembol, {}).items() if b <= k)
+        pdf = (pd.DataFrame(pr, columns=["open_time", "close"]).astype(
+            {"open_time": "int64", "close": "float64"}) if pr else pd.DataFrame())
+        cikti["basis"] = funding_mod.evren_premium_dizisi(izgara, pdf)
+        return cikti
 
     def _dogrulanmis_diziler(self, sembol: str, barlar: list[Bar]) -> dict[str, np.ndarray]:
         """`BarPenceresi` doğrulaması, önceki adımın sonucu üzerine **artımlı**.
@@ -269,6 +323,12 @@ class EvrenPaperMotoru:
         barlar: dict[int, list[tuple[str, Bar]]] = {}
         for kb in depo.barlar():
             barlar.setdefault(kb.bilindi_adim, []).append((kb.sembol, kb.bar))
+        fundingler: dict[int, list[tuple[str, int, int, float]]] = {}
+        for sembol, t, a, o, bilindi in depo.fundingler():
+            fundingler.setdefault(bilindi, []).append((sembol, t, a, o))
+        premiumlar: dict[int, list[tuple[str, int, float]]] = {}
+        for sembol, t, c, bilindi in depo.premiumlar():
+            premiumlar.setdefault(bilindi, []).append((sembol, t, c))
         uyelikler: dict[int, list[AyUyeligi]] = {}
         for ay, semboller, h, bilindi in depo.uyelikler():
             uyelikler.setdefault(bilindi, []).append(AyUyeligi(ay, semboller, h))
@@ -278,6 +338,10 @@ class EvrenPaperMotoru:
                 motor.bar_ekle(sembol, bar, kaydet=False, bilindi_adim=adim)
             for u in uyelikler.get(adim, []):
                 motor.uyelik_ekle(u, kaydet=False, bilindi_adim=adim)
+            for sembol, t, a, o in fundingler.get(adim, []):
+                motor.funding_ekle(sembol, t, a, o, kaydet=False, bilindi_adim=adim)
+            for sembol, t, c in premiumlar.get(adim, []):
+                motor.premium_ekle(sembol, t, c, kaydet=False, bilindi_adim=adim)
 
         kayitli = depo.adimlar()
         isinma_sayisi = 0

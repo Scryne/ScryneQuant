@@ -12,6 +12,7 @@
 
 param(
     [string]$KosuAdi = "evren-kiyas",
+    [string]$FbKosuAdi = "evren-funding-basis",
     [string]$ArastirmaTablosu = "data\evren\_evren\27b7a16ed0ed"
 )
 
@@ -21,11 +22,13 @@ Set-Location $Kok
 
 $Dizin = Join-Path $Kok "runs\paper"
 New-Item -ItemType Directory -Force $Dizin | Out-Null
-$Hedef = Join-Path $Dizin ($KosuAdi + ".evren")
-if (-not (Test-Path ($Hedef + ".parquet"))) {
-    Copy-Item ($ArastirmaTablosu + ".parquet") ($Hedef + ".parquet")
-    Copy-Item ($ArastirmaTablosu + ".json") ($Hedef + ".json")
-    Write-Output ("tablo kopyalandi: " + $Hedef + ".parquet")
+foreach ($Kosu in @($KosuAdi, $FbKosuAdi)) {
+    $Hedef = Join-Path $Dizin ($Kosu + ".evren")
+    if (-not (Test-Path ($Hedef + ".parquet"))) {
+        Copy-Item ($ArastirmaTablosu + ".parquet") ($Hedef + ".parquet")
+        Copy-Item ($ArastirmaTablosu + ".json") ($Hedef + ".json")
+        Write-Output ("tablo kopyalandi: " + $Hedef + ".parquet")
+    }
 }
 
 $Kullanici = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -39,16 +42,22 @@ $Kosu = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok
 Register-ScheduledTask -TaskName "ScryneQuant-Evren" -Action $Kosu -Principal $Principal `
     -Settings $Ayar -Trigger (New-ScheduledTaskTrigger -AtStartup) -Force | Out-Null
 
+# Faz 12 #46'nin secilen noktasi (runsaz12	urev_funding_basis.json detay/secim/secilen).
+$Fb = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-kosu.ps1") + '" -KosuAdi ' + $FbKosuAdi + ' -Strateji evren_funding_basis -Turev -Parametre yeniden_dengele_bar=168,azami_enstruman=10,hedef_brut=0.2,dislama_orani=0.2,pencere=720')
+Register-ScheduledTask -TaskName "ScryneQuant-EvrenFB" -Action $Fb -Principal $Principal `
+    -Settings $Ayar -Trigger (New-ScheduledTaskTrigger -AtStartup) -Force | Out-Null
+
 $AyarTablo = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2) `
     -MultipleInstances IgnoreNew -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $Yenile = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
-    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-tablo-yenile.ps1") + '" -KosuAdi ' + $KosuAdi)
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-tablo-yenile.ps1") + '"')
 $Saat = [DateTime]::SpecifyKind([DateTime]::UtcNow.Date.AddHours(3).AddMinutes(15), "Utc").ToLocalTime()
 Register-ScheduledTask -TaskName "ScryneQuant-EvrenTablo" -Action $Yenile -Principal $Principal `
     -Settings $AyarTablo -Trigger (New-ScheduledTaskTrigger -Daily -At $Saat) -Force | Out-Null
 
 $Sapma = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
-    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-sapma.ps1") + '" -KosuAdi ' + $KosuAdi)
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-sapma.ps1") + '"')
 $SaatSapma = [DateTime]::SpecifyKind([DateTime]::UtcNow.Date.AddHours(3).AddMinutes(45), "Utc").ToLocalTime()
 Register-ScheduledTask -TaskName "ScryneQuant-EvrenSapma" -Action $Sapma -Principal $Principal `
     -Settings $AyarTablo -Trigger (New-ScheduledTaskTrigger -Daily -At $SaatSapma) -Force | Out-Null

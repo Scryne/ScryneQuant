@@ -5,7 +5,7 @@
 # degilse arsivden indirir, hala eksikse cikis 3 verir ve ertesi gun yeniden dener. Kosu
 # dosyanin degistigini kendisi gorur (`evren_tablosu_yenilendi` olayi).
 
-param([string]$KosuAdi = "evren-kiyas")
+param([string]$KosuAdi = "evren-kiyas,evren-funding-basis")
 
 $ErrorActionPreference = "Stop"
 $Kok = Split-Path -Parent $PSScriptRoot
@@ -14,8 +14,12 @@ $env:PYTHONIOENCODING = "utf-8"
 
 $Python = Join-Path $Kok ".venv\Scripts\python.exe"
 $Dizin = Join-Path $Kok "runs\paper"
-$Tablo = Join-Path $Dizin ($KosuAdi + ".evren.parquet")
-$Gunluk = Join-Path $Dizin ($KosuAdi + ".yenileme.log")
-
-& $Python -m scryne_quant.cli.main paper evren-tablo-yenile $Tablo --indir *>> $Gunluk
-exit $LASTEXITCODE
+$Cikis = 0
+foreach ($Kosu in ($KosuAdi -split ",")) {
+    $Tablo = Join-Path $Dizin ($Kosu + ".evren.parquet")
+    if (-not (Test-Path $Tablo)) { continue }
+    $Gunluk = Join-Path $Dizin ($Kosu + ".yenileme.log")
+    & $Python -m scryne_quant.cli.main paper evren-tablo-yenile $Tablo --indir *>> $Gunluk
+    if ($LASTEXITCODE -gt $Cikis) { $Cikis = $LASTEXITCODE }
+}
+exit $Cikis

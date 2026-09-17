@@ -121,6 +121,38 @@ giren geç barla önbellekli/önbelleksiz iki motor — bütün adımlar ve işl
 aynı. Ölçüm: **0,327 → 0,124 s/adım** (770 bar). Kalan süre hizalama + özellik hesabı; hâlâ
 O(N²), sabit ≈2,6 kat küçük (30. gün ≈2-3 dk).
 
+## 6d. Aşama F: funding/basis adayı canlıda (2026-09-17)
+
+**Aday ve dondurulmuş nokta:** #46 `evren_funding_basis`, Faz 12 seçimi
+(`runs/faz12/turev_funding_basis.json` → `detay/secim/secilen`): yeniden_dengele_bar=168,
+azami_enstruman=10, hedef_brut=0,2, dislama_orani=0,2, pencere=720. Yeni çekiliş değil,
+kayıtlı hipotezin ileriye dönük gözlemi (K-060).
+
+**Spike — REST arşivle aynı mı?** (`exchange/turev_rest.py` başlığı)
+- `fundingRate`: 14 sembol, 2026-08-01 sonrası bütün kayıtlar: zaman (0 ms) ve oran eşit.
+- `premiumIndexKlines` 1h: 5 sembol, 288 bar: eşit.
+- Ödeme aralığı REST kaydında yok. Ardışık farktan çıkarmak arşivle %99,954 tutuyor (556.202
+  kayıt), aralık değişim anlarında tutmuyor → reddedildi. Aralık kaydın alındığı anda
+  `fundingInfo`dan okunuyor.
+
+**Tasarım:** motor funding ve premium kayıtlarını da `bilindi_adim` ile saklar (depoda
+`funding`, `premium` tabloları, ekleme-yalnız). Görünümde dizileri araştırmanın **aynı**
+fonksiyonları kurar (`funding_mod.evren_dizileri`, `evren_premium_dizisi`). Koşucu her adımdan
+önce yeni ödemeleri ve kapanmış premium barlarını çeker; ağ iş parçacığında, motora ekleme
+döngü iş parçacığında ve sıralı (SQLite bağlantısı ve kayıt sırası deterministik).
+
+**Testler:** sentetik funding (8 s/4 s, arada aralık değişimi, perp'i olmayan sembol) ve
+eksik premium barlarıyla motor = araştırma yolundan kurulan backtest, bit düzeyinde; dışlama
+kıyastan farklı sonuç veriyor (test boş geçmiyor). Toparlanma ve sapma türev girdileriyle.
+
+**Canlı doğrulama (ana makine duman koşusu `duman-fb`):** ısınma 52 sn, 67 sembol. Toplanan
+girdiler arşivin örtüştüğü dönemde (5-31 Ağustos) satır satır karşılaştırıldı: **4.606
+funding satırı (aralık dahil) ve 21.830 premium satırı birebir aynı**, arşivde olup canlıda
+eksik ya da tersi sembol yok.
+
+**#48 `evren_makro_nfci`:** ALFRED vintage'ları FRED API anahtarı istiyor; hostta anahtar yok.
+Anahtarın hosta konması Scryne'ın kararı (sır yönetimi) — bekliyor.
+
 ## 7. Aşamalar ve tahmin
 
 | Aşama | İş | Tahmin |

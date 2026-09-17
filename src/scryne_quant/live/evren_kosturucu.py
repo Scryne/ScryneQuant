@@ -130,6 +130,9 @@ class EvrenKosucu:
     saat: Callable[[], int] = simdi_ms
     bekleme_ms: int = VARSAYILAN_BEKLEME_MS
     gunluk: Callable[[str], None] = print
+    turev: Any = None
+    """Funding/premium kaynağı (`exchange/turev_rest.BinanceTurevRest` arayüzü); yalnızca
+    `kurulum["turev"]` açıksa kullanılır."""
 
     def __post_init__(self) -> None:
         self.timeframe = str(self.kurulum.get("timeframe", "1h"))
@@ -185,6 +188,8 @@ class EvrenKosucu:
             for bar in _rest_barlar(self.rest, sembol, self.timeframe, baslangic,
                                     bit + self._adim):
                 dolan += motor.bar_ekle(sembol, bar)
+        self._turev_guncelle(motor, u.semboller, bit, funding_bas=bas - 24 * self._adim,
+                             premium_bas=bas)
         if dolan:
             motor.depo.olay_yaz("yeni_uye_gecmisi", bar_ms=bit, ayrinti={"ay": u.ay, "bar": dolan})
 
@@ -226,6 +231,8 @@ class EvrenKosucu:
             for sembol in semboller:
                 for bar in _rest_barlar(self.rest, sembol, self.timeframe, bas, son + self._adim):
                     motor.bar_ekle(sembol, bar)
+            self._turev_guncelle(motor, semboller, son, funding_bas=bas - 24 * self._adim,
+                                 premium_bas=bas)
             motor.isinma(range(bas, son + self._adim, self._adim))
             self.depo.olay_yaz("isinma", bar_ms=son,
                                ayrinti={"bar": isinma, "sembol": len(semboller)})
@@ -237,6 +244,58 @@ class EvrenKosucu:
         self.motor = motor
         self._durum_yaz(motor)
         return motor
+
+    def _turev_guncelle(self, motor: EvrenPaperMotoru, semboller: Sequence[str], t: int,
+                        *, funding_bas: int | None = None, premium_bas: int | None = None) -> None:
+        """`t` adımından önce: sembollerin yeni funding ödemeleri ve `t`ye kadar kapanmış
+        premium barları. Bilinen son kayıttan devam eder; ilk seferde verilen başlangıçtan.
+
+        Ağ çağrıları eşzamanlı (sembol başına iki istek), motora ekleme **sıralı** ve tek
+        iş parçacığında: ekleme sırası kayda girer, deterministik kalmalı.
+        """
+        if not self.kurulum.get("turev") or self.turev is None:
+            return
+        self._turev_uygula(motor, t, self._turev_cek(motor, semboller, t, funding_bas=funding_bas,
+                                                     premium_bas=premium_bas))
+
+    def _turev_cek(self, motor: EvrenPaperMotoru, semboller: Sequence[str], t: int, *,
+                   funding_bas: int | None = None, premium_bas: int | None = None) -> Any:
+        """Yalnızca ağ; motoru **değiştirmez** (canlı döngüde iş parçacığında koşar, SQLite
+        bağlantısı ve girdi sırası döngü iş parçacığında kalır)."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        araliklar = self.turev.araliklar()
+        son_f = motor.son_funding_zamanlari(semboller)
+        son_p = motor.son_premium_zamanlari(semboller)
+        simdi = self.saat()
+        f_bas = funding_bas if funding_bas is not None else t - 24 * self._adim
+        p_bas = premium_bas if premium_bas is not None else t
+
+        def cek(sembol: str) -> tuple[list[tuple[int, float]], list[tuple[int, float]]]:
+            fb = son_f[sembol] + 1 if sembol in son_f else f_bas
+            pb = son_p[sembol] + self._adim if sembol in son_p else p_bas
+            return (self.turev.funding(sembol, fb),
+                    self.turev.premium(sembol, pb, t + self._adim, simdi) if pb <= t else [])
+
+        sirali = sorted(semboller)
+        with ThreadPoolExecutor(8) as havuz:
+            sonuclar = list(havuz.map(cek, sirali))
+        return araliklar, son_p, sirali, sonuclar
+
+    def _turev_uygula(self, motor: EvrenPaperMotoru, t: int, cekilen: Any) -> None:
+        araliklar, son_p, sirali, sonuclar = cekilen
+        yeni_f = yeni_p = 0
+        for sembol, (fundingler, premiumlar) in zip(sirali, sonuclar, strict=True):
+            aralik = araliklar.get(sembol, 8)
+            for calc_time, oran in sorted(fundingler):
+                yeni_f += motor.funding_ekle(sembol, calc_time, aralik, oran)
+            for open_time, close in sorted(premiumlar):
+                yeni_p += motor.premium_ekle(sembol, open_time, close)
+        eksik_p = [s_ for s_ in sirali if motor.son_premium_zamanlari([s_]).get(s_, -1) < t
+                   and s_ in son_p]
+        if eksik_p:
+            motor.depo.olay_yaz("premium_eksik", bar_ms=t, ayrinti={"semboller": eksik_p[:20],
+                                                                   "sayi": len(eksik_p)})
 
     def bosluk_tamamla(self, motor: EvrenPaperMotoru) -> int:
         """Son işlenen bardan son kapanmış bara kadar eksik barları REST'ten ekler ve işler."""
@@ -250,6 +309,7 @@ class EvrenKosucu:
             for sembol in motor.beklenen_semboller(t):
                 for bar in _rest_barlar(self.rest, sembol, self.timeframe, t, t + self._adim):
                     motor.bar_ekle(sembol, bar)
+            self._turev_guncelle(motor, motor.beklenen_semboller(t), t)
             motor.adim(t)
             islenen += 1
             t += self._adim
@@ -292,6 +352,11 @@ class EvrenKosucu:
                         break
                     for ib in toplayici.hazir(self.saat()):
                         self._uyelikleri_isle(motor, ib.open_time, ib.open_time)
+                        if self.kurulum.get("turev") and self.turev is not None:
+                            cekilen = await asyncio.to_thread(
+                                self._turev_cek, motor,
+                                motor.beklenen_semboller(ib.open_time), ib.open_time)
+                            self._turev_uygula(motor, ib.open_time, cekilen)
                         sonuc = motor.adim(ib.open_time, eksik=ib.eksik)
                         self._durum_yaz(motor)
                         self.gunluk(f"{utc_str(ib.open_time)} özkaynak {sonuc.ozkaynak:,.2f} "

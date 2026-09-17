@@ -2389,6 +2389,9 @@ def paper_evren_baslat(
         int, typer.Option("--bekleme-s", help="Izgara barı bekleme süresi.")
     ] = 120,
     kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    turev: Annotated[
+        bool, typer.Option("--turev", help="Funding + basis girdileri (evren funding aileleri).")
+    ] = False,
 ) -> None:
     """Çok enstrümanlı **gözlem** koşusu: evren stratejisi canlı birleşik akışla. (Faz 14)
 
@@ -2397,6 +2400,7 @@ def paper_evren_baslat(
     kalınan saatler REST'ten tamamlanır. Konfigürasyon koşu kimliğidir; değişirse başlamaz.
     """
     from scryne_quant.exchange.coklu_akis import BinanceCokluBarAkisi
+    from scryne_quant.exchange.turev_rest import BinanceTurevRest
     from scryne_quant.live import evren_kosturucu as ek_mod
     from scryne_quant.strategy.kutuphane import EVREN_AILELER
 
@@ -2425,6 +2429,8 @@ def paper_evren_baslat(
         # Tablo hash'i değil kural: aylık yenileme tabloyu değiştirir, koşu kimliğini değil.
         # Her ayın listesi hash'iyle depoya ayrıca yazılır; geçmiş ay değişirse motor durur.
         "evren_kural_kimlik": tablo.kural_kimlik,
+        # Yalnızca açıksa: türevsiz koşuların kimliği değişmesin.
+        **({"turev": True} if turev else {}),
     }
     rest = BinanceAdaptoru()
     kosucu: ek_mod.EvrenKosucu
@@ -2440,12 +2446,14 @@ def paper_evren_baslat(
         kosu_yolu=kosu_yolu,
         kimlik=kimlik,
         kurulum={"strateji": strateji, "maliyet": maliyet, "baslangic_sermaye": sermaye,
-                 "risk": risk, "timeframe": "1h", "sifira_yaz_bar": sifira_yaz_bar},
+                 "risk": risk, "timeframe": "1h", "sifira_yaz_bar": sifira_yaz_bar,
+                 "turev": turev},
         tablo=tablo,
         rest=rest,
         akis_fabrikasi=akis,
         bekleme_ms=bekleme_s * 1000,
         gunluk=lambda satir: typer.echo(satir),
+        turev=BinanceTurevRest() if turev else None,
     )
     typer.echo(f"evren koşusu : {kosu_adi} (gozlem) · {strateji_adi} {kwargs or ''}")
     typer.echo(f"evren tablosu: {evren_tablo} ({tablo.tablo_hash[:12]})")
@@ -2551,6 +2559,7 @@ def paper_evren_sapma(
                 "risk": RiskMotoru(limitler, "1h", mod="gozlem"),
                 "timeframe": kimlik.get("timeframe", "1h"),
                 "sifira_yaz_bar": kimlik.get("sifira_yaz_bar"),
+                "turev": bool(kimlik.get("turev", False)),
             }
             t0 = time.perf_counter()
             sonuc = sapma_olc(depo, **kurulum).sozluk()

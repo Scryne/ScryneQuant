@@ -66,6 +66,25 @@ CREATE TABLE IF NOT EXISTS olay (
     bar_ms   INTEGER,
     ayrinti  TEXT    NOT NULL
 );
+CREATE TABLE IF NOT EXISTS funding (
+    sembol       TEXT    NOT NULL,
+    calc_time    INTEGER NOT NULL,
+    aralik_saat  INTEGER NOT NULL,
+    oran         REAL    NOT NULL,
+    bilindi_adim INTEGER NOT NULL,
+    PRIMARY KEY (sembol, calc_time)
+);
+CREATE TABLE IF NOT EXISTS premium (
+    sembol       TEXT    NOT NULL,
+    open_time    INTEGER NOT NULL,
+    close        REAL    NOT NULL,
+    bilindi_adim INTEGER NOT NULL,
+    PRIMARY KEY (sembol, open_time)
+);
+CREATE TRIGGER IF NOT EXISTS funding_degismez BEFORE UPDATE ON funding
+BEGIN SELECT RAISE(ABORT, 'funding kaydı değiştirilemez'); END;
+CREATE TRIGGER IF NOT EXISTS premium_degismez BEFORE UPDATE ON premium
+BEGIN SELECT RAISE(ABORT, 'premium kaydı değiştirilemez'); END;
 CREATE TRIGGER IF NOT EXISTS bar_degismez BEFORE UPDATE ON bar
 BEGIN SELECT RAISE(ABORT, 'bar kaydı değiştirilemez'); END;
 CREATE TRIGGER IF NOT EXISTS bar_silinmez BEFORE DELETE ON bar
@@ -172,6 +191,36 @@ class EvrenKosuDeposu:
     def uyelikler(self) -> list[tuple[str, tuple[str, ...], str, int]]:
         return [(r[0], tuple(json.loads(r[1])), r[2], r[3]) for r in self._baglanti.execute(
             "SELECT ay, semboller, tablo_hash, bilindi_adim FROM uyelik ORDER BY bilindi_adim, ay")]
+
+    # ------------------------------------------------------------------ türev girdileri
+
+    def funding_yaz(self, sembol: str, calc_time: int, aralik_saat: int, oran: float,
+                    bilindi_adim: int) -> bool:
+        """Funding ödemesi (Faz 14 Aşama F). İlk kayıt kalır, bar ile aynı kural."""
+        try:
+            self._baglanti.execute("INSERT INTO funding VALUES (?,?,?,?,?)",
+                                   (sembol, calc_time, aralik_saat, oran, bilindi_adim))
+        except sqlite3.IntegrityError:
+            return False
+        return True
+
+    def fundingler(self) -> list[tuple[str, int, int, float, int]]:
+        return list(self._baglanti.execute(
+            "SELECT sembol, calc_time, aralik_saat, oran, bilindi_adim FROM funding "
+            "ORDER BY bilindi_adim, sembol, calc_time"))
+
+    def premium_yaz(self, sembol: str, open_time: int, close: float, bilindi_adim: int) -> bool:
+        try:
+            self._baglanti.execute("INSERT INTO premium VALUES (?,?,?,?)",
+                                   (sembol, open_time, close, bilindi_adim))
+        except sqlite3.IntegrityError:
+            return False
+        return True
+
+    def premiumlar(self) -> list[tuple[str, int, float, int]]:
+        return list(self._baglanti.execute(
+            "SELECT sembol, open_time, close, bilindi_adim FROM premium "
+            "ORDER BY bilindi_adim, sembol, open_time"))
 
     # ------------------------------------------------------------------ adımlar
 

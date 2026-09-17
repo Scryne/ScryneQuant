@@ -3,7 +3,7 @@
 # Kosu dosyasina dokunmaz (SQLite yedegi uzerinde olcer). Her olcum bir JSON satiri olarak
 # runs\paper\<kosu>.sapma.jsonl dosyasina eklenir.
 
-param([string]$KosuAdi = "evren-kiyas")
+param([string]$KosuAdi = "evren-kiyas,evren-funding-basis")
 
 $ErrorActionPreference = "Stop"
 $Kok = Split-Path -Parent $PSScriptRoot
@@ -12,8 +12,12 @@ $env:PYTHONIOENCODING = "utf-8"
 
 $Python = Join-Path $Kok ".venv\Scripts\python.exe"
 $Dizin = Join-Path $Kok "runs\paper"
-$Rapor = Join-Path $Dizin ($KosuAdi + ".sapma.jsonl")
-$Gunluk = Join-Path $Dizin ($KosuAdi + ".sapma.log")
-
-& $Python -m scryne_quant.cli.main paper evren-sapma $KosuAdi --rapor $Rapor *>> $Gunluk
-exit $LASTEXITCODE
+$Cikis = 0
+foreach ($Kosu in ($KosuAdi -split ",")) {
+    if (-not (Test-Path (Join-Path $Dizin ($Kosu + ".sqlite")))) { continue }
+    $Rapor = Join-Path $Dizin ($Kosu + ".sapma.jsonl")
+    $Gunluk = Join-Path $Dizin ($Kosu + ".sapma.log")
+    & $Python -m scryne_quant.cli.main paper evren-sapma $Kosu --rapor $Rapor *>> $Gunluk
+    if ($LASTEXITCODE -gt $Cikis) { $Cikis = $LASTEXITCODE }
+}
+exit $Cikis

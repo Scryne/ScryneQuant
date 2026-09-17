@@ -15,7 +15,8 @@ param(
     [string]$KosuAdi  = "evren-kiyas",
     [string]$Strateji = "evren_esit_agirlik",
     [string[]]$Parametre = @("yeniden_dengele_bar=168", "azami_enstruman=10",
-                             "azami_agirlik=0.02", "hedef_brut=0.2")
+                             "azami_agirlik=0.02", "hedef_brut=0.2"),
+    [switch]$Turev
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,7 +34,8 @@ if (-not (Test-Path $Tablo)) { throw ("evren tablosu yok: " + $Tablo) }
 $Gunluk = Join-Path $Dizin ($KosuAdi + ".log")
 
 $PArg = @()
-foreach ($p in $Parametre) { $PArg += @("-p", $p) }
+foreach ($p in (($Parametre -join ",") -split ",")) { $PArg += @("-p", $p) }
+if ($Turev) { $PArg += @("--turev") }
 
 & $Python -m scryne_quant.cli.main paper evren-baslat $KosuAdi `
     --evren-tablo $Tablo --strateji $Strateji @PArg *>> $Gunluk

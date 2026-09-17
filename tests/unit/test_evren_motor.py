@@ -273,3 +273,146 @@ def test_dogrulama_onbellegi_bit_esit():
     assert [(repr(x.ozkaynak), repr(x.brut), x.islem) for x in acik[0]] == [
         (repr(x.ozkaynak), repr(x.brut), x.islem) for x in kapali[0]]
     assert acik[1] == kapali[1] and acik[1]
+
+
+def _turev_verisi(barlar):
+    """Sentetik funding (4 s ve 8 s aralık karışık, arada aralık değişimi) ve premium."""
+    rng = np.random.default_rng(7)
+    izgara = _izgara(barlar)
+    funding, premium = {}, {}
+    for i, s in enumerate(SEMBOLLER):
+        if s == "CCCUSDT":
+            continue  # perp'i yok: dizileri NaN kalmalı, dışlanmamalı
+        aralik = 4 if i % 2 else 8
+        satir, t = [], izgara[0] - 48 * SAAT
+        while t <= izgara[-1]:
+            if s == "AAAUSDT" and t > izgara[500]:
+                aralik = 4
+            satir.append((t, aralik, float(rng.normal(1e-4, 3e-4))))
+            t += aralik * SAAT
+        funding[s] = satir
+        premium[s] = [(b.open_time, float(rng.normal(0, 5e-4))) for b in barlar[s]
+                      if rng.random() > 0.02]  # arada eksik premium barı
+    return funding, premium
+
+
+def test_turev_motoru_arastirma_yoluyla_ayni():
+    from scryne_quant.data import funding as funding_mod
+    from scryne_quant.strategy.kutuphane import EVREN_AILELER
+
+    barlar = _barlar()
+    funding, premium = _turev_verisi(barlar)
+    izgara = np.asarray(_izgara(barlar), dtype="int64")
+
+    def strateji():
+        return EVREN_AILELER["evren_funding_basis"](
+            yeniden_dengele_bar=24, azami_enstruman=3, hedef_brut=0.2,
+            dislama_orani=0.34, pencere=48)
+
+    isinma = strateji().isinma_bar()
+    diziler = {}
+    for s, bs in barlar.items():
+        p = BarPenceresi(s, "1h", kapasite=len(bs))
+        p.doldur(bs)
+        diziler[s] = hizala(pd.DataFrame(p.diziler()), izgara)
+        fdf = (pd.DataFrame(funding[s], columns=["calc_time", "funding_interval_hours",
+                                                 "last_funding_rate"])
+               if s in funding else pd.DataFrame())
+        diziler[s].update(funding_mod.evren_dizileri(izgara, fdf))
+        pdf = (pd.DataFrame(premium[s], columns=["open_time", "close"])
+               if s in premium else pd.DataFrame())
+        diziler[s]["basis"] = funding_mod.evren_premium_dizisi(izgara, pdf)
+    tk = UyelikTakvimi()
+    for u in _takvim_uyumlu(barlar):
+        tk.ekle(u)
+    uyelik, _ = uyeligi_barlara_kis(tk.dizileri(izgara, diziler), diziler)
+    st = strateji()
+    beklenen = CokluBacktest(st, MALIYET, sifira_yaz_bar=48).calistir(
+        evren_gorunum_kur("1h", diziler, uyelik, st), olcum_baslangici=isinma)
+
+    motor = EvrenPaperMotoru(depo=None, turev=True, **{**_kurulum(), "strateji": strateji()})
+    for u in _takvim_uyumlu(barlar):
+        motor.uyelik_ekle(u)
+
+    def besle(bas, bit):
+        for s, bs in barlar.items():
+            for b in bs:
+                if bas <= b.open_time <= bit:
+                    motor.bar_ekle(s, b)
+        for s, satir in funding.items():
+            for t, a, o in satir:
+                if t <= bit:
+                    motor.funding_ekle(s, t, a, o)
+        for s, satir in premium.items():
+            for t, c in satir:
+                if bas <= t <= bit:
+                    motor.premium_ekle(s, t, c)
+
+    besle(int(izgara[0]), int(izgara[isinma - 1]))
+    ozkaynak = [a.ozkaynak for a in motor.isinma(izgara[:isinma])]
+    for t in izgara[isinma:]:
+        besle(int(t), int(t))
+        ozkaynak.append(motor.adim(int(t)).ozkaynak)
+    assert np.asarray(ozkaynak[isinma:]).tobytes() == beklenen.ozkaynak.tobytes()
+    assert [i.sozluk(sembol_yaz=True) for i in motor.adimci.islemler] == [
+        i.sozluk(sembol_yaz=True) for i in beklenen.islemler]
+    assert beklenen.islemler
+
+    # Dışlama gerçekten bir şey değiştiriyor mu (test boş geçmesin): kıyasla farklı olmalı.
+    kiyas = CokluBacktest(_strateji("kiyas").__class__(
+        yeniden_dengele_bar=24, azami_enstruman=3, azami_agirlik=0.2 / 3, hedef_brut=0.2),
+        MALIYET, sifira_yaz_bar=48).calistir(
+        evren_gorunum_kur("1h", diziler, uyelik, _strateji("kiyas")), olcum_baslangici=isinma)
+    assert kiyas.ozkaynak.tobytes() != beklenen.ozkaynak.tobytes()
+
+
+def test_turev_toparlanma_ve_sapma(tmp_path):
+    from scryne_quant.live.evren_sapma import sapma_olc
+    from scryne_quant.strategy.kutuphane import EVREN_AILELER
+
+    barlar = {s: bs[:820] for s, bs in _barlar().items()}
+    funding, premium = _turev_verisi(barlar)
+
+    def kurulum():
+        return {**_kurulum(), "turev": True, "strateji": EVREN_AILELER["evren_funding_basis"](
+            yeniden_dengele_bar=12, azami_enstruman=3, hedef_brut=0.2,
+            dislama_orani=0.34, pencere=24)}
+
+    isinma = kurulum()["strateji"].isinma_bar()
+    depo = EvrenKosuDeposu(tmp_path / "t.sqlite")
+    m = EvrenPaperMotoru(depo=depo, **kurulum())
+    izgara = _izgara(barlar)
+    for u in _takvim_uyumlu(barlar):
+        m.uyelik_ekle(u)
+    for s, bs in barlar.items():
+        for b in bs:
+            if b.open_time < izgara[isinma]:
+                m.bar_ekle(s, b)
+    for s, satir in funding.items():
+        for t, a, o in satir:
+            if t < izgara[isinma]:
+                m.funding_ekle(s, t, a, o)
+    m.isinma(izgara[:isinma])
+    for j, t in enumerate(izgara[isinma:isinma + 60], start=isinma):
+        for s, bs in barlar.items():
+            for b in bs:
+                if b.open_time == t:
+                    m.bar_ekle(s, b)
+        for s, satir in funding.items():
+            for ft, a, o in satir:
+                if ft == t:
+                    m.funding_ekle(s, ft, a, o)
+        for s, satir in premium.items():
+            for pt, c in satir:
+                # premium'un bir kısmı bir adım geç geliyor
+                if pt == t or (pt == t - SAAT and j % 5 == 0):
+                    m.premium_ekle(s, pt, c)
+        m.adim(t)
+    depo.kapat()
+    depo = EvrenKosuDeposu(tmp_path / "t.sqlite")
+    m2 = EvrenPaperMotoru.toparlan(depo, **kurulum())
+    assert m2.son_sonuc.ozkaynak == m.son_sonuc.ozkaynak
+    r = sapma_olc(depo, **kurulum())
+    assert r.canli_adim == 60
+    assert m.adimci.islemler
+    depo.kapat()
