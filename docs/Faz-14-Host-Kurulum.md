@@ -120,6 +120,27 @@ Ana makinedeki eş duman koşusu aynı özkaynağı bit düzeyinde üretti. **No
 kurulduğu için parite doğru; kuralın kendisi sonraki bir program kaydında düzeltilmeli, koşu
 ortasında değiştirilemez.
 
+## 4b. Anahtar ayrımı denetimi (2026-09-17 20:43 TR) — Faz 14 kriteri ✅
+
+`tools/faz14_anahtar_denetimi.py`, tek salt okunur imzalı çağrı
+(`GET /sapi/v1/account/apiRestrictions`). Anahtar ve sır yalnız ana makinenin `.env`inde
+(`BINANCE_API_KEY`, `BINANCE_API_SECRET`); hiçbir çıktıya yazılmadı, hosta **kopyalanmadı**
+(hostun ihtiyacı yok: gözlem koşuları herkese açık uçları kullanıyor). Rapor
+`runs/faz14/anahtar-denetimi-2026-09-17.json`, anahtar parmak izi `f5662f703f58`.
+
+| Yetki | Değer |
+| --- | --- |
+| Okuma | açık |
+| Spot/marjin işlem, vadeli, marjin, opsiyon, portföy marjin, FIX işlem | **kapalı** |
+| Çekim | **kapalı** |
+| İç transfer, evrensel transfer | **kapalı** |
+| IP kısıtı | yok |
+
+Sonuç: `cekim_kapali = true`, `salt_okunur_anahtar = true`. Okuma anahtarı ile işlem anahtarı
+ayrı: işlem yetkili anahtar bugün **yok**; Faz 8'de ayrı anahtar olarak, IP kısıtlı ve elle
+onayla gelir (K-050). **Öneri:** okuma anahtarına da IP kısıtı eklenmesi (ev IP'si sabitse);
+sızarsa bile yalnızca okuma yetkisi var.
+
 ## 5. Açık kalemler
 
 1. ~~Yeniden başlatma tatbikatı~~ → **yapıldı**, §6.

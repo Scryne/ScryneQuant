@@ -37,7 +37,7 @@ yanlış sonuç olarak geri döner.
 | 11 | Doğrulama v2 | ✅ Tamamlandı | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
 | 12 | Araştırma programları (cross-sectional, türev, makro) | ✅ Tamamlandı | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
 | 13 | Haber/olay zekâsı + ML (koşullu) | ⏳ Bekliyor | Açılma koşulu: veri bütçesi kararı + kaynak spike'ı. Açılırsa: LLM kesim tarihi kayıtlı, `leak_riski` uygulanıyor |
-| 14 | Üretim sertleştirme | 🔄 Devam | Kriterler: kill switch ✅ (K-065) · dört boyut dashboard'da + her alarmın runbook satırı ✅ · yedekten yeniden üretim tatbikatı ✅ · anahtar ayrımı çıktısı ⏳ (Scryne'ın hesabı) · ≥30 gün ⏳ (host-1 2026-09-17'de başladı; evren koşuları 3 adet) |
+| 14 | Üretim sertleştirme | 🔄 Devam | Kriterler: kill switch ✅ (K-065) · dört boyut dashboard'da + her alarmın runbook satırı ✅ · yedekten yeniden üretim tatbikatı ✅ · anahtar ayrımı ✅ (salt okunur anahtar, çekim/işlem kapalı) · ≥30 gün ⏳ (host-1 2026-09-17'de başladı; evren koşuları 3 adet) |
 | 15 | İkinci varlık sınıfı (US equities/ETF) | ⏳ Bekliyor | Açılma koşulu: broker/lisans spike'ı. Açılırsa: aynı kod yolu ikinci varlık sınıfında paper koşuyor |
 | 16 | Sürekli araştırma | ⏳ Bekliyor | Kapanmaz; her tur bir program kaydı ve bir rapor bırakır |
 
