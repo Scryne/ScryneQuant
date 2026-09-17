@@ -1,6 +1,7 @@
 import { isaretliYuzde, miktar, para, yas, yerelZaman, yuzde } from "../lib";
 import type { Ozet } from "../tipler";
 import { Kart, Liste, Olcum, Satir, Yon } from "../bilesenler/Ilkel";
+import { IzlemeBolumu } from "../bilesenler/Izleme";
 
 /** Overview (K-012). Ana bilgi hiyerarşisi §29'dan: Signal → Decision → Risk → Execution
  *  → Outcome. Ekran yukarıdan aşağı bu sırayı izliyor. */
@@ -13,6 +14,9 @@ export function Genel({ ozet }: { ozet: Ozet }) {
 
   return (
     <div className="flex flex-col gap-lg">
+      {/* Faz 14: host koşularının dört gözlem boyutu. Beşinci sayfa değil (K-012):
+          Overview "sürekli çalışan şeyi izlemek" sayfası ve izleme tam olarak o. */}
+      <IzlemeBolumu />
       <div className="grid gap-md sm:grid-cols-2 xl:grid-cols-4">
         <Olcum
           etiket="Portföy değeri"

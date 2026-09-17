@@ -97,6 +97,8 @@ def uygulama_kur(
     defter: Defter | None = None,
     web_kok: Path | None = None,
     yayinci: Yayinci | None = None,
+    izleme_kok: Path = Path("runs/izleme"),
+    paper_kok: Path = Path("runs/paper"),
 ) -> FastAPI:
     """Dashboard API'sini kurar. `web_kok` verilirse SPA build'ini de servis eder."""
     app = FastAPI(title="ScryneQuant", docs_url="/api/docs", openapi_url="/api/openapi.json")
@@ -158,6 +160,28 @@ def uygulama_kur(
             "filller": depo.filller(limit=limit),
             "fill_sayisi": depo.fill_sayisi(),
         }
+
+    # ---------------------------------------------------------- İzleme (Faz 14)
+
+    @app.get("/api/izleme")
+    async def izleme() -> dict[str, Any]:
+        """Dört gözlem boyutu (`sq izle kontrol`ün son yazdığı durum) + evren koşularının son
+        sapma ölçümü. Hesaplamaz, **okur**: izleme ayrı görevde koşar, bu süreç çökse bile
+        alarm üretilmeye devam etsin diye (dashboard bu koşunun içinde yaşıyor)."""
+        yol = izleme_kok / "durum.json"
+        if not yol.is_file():
+            return {"var": False, "simdi_ms": simdi_ms()}
+        durum = json.loads(yol.read_text(encoding="utf-8"))
+        durum["var"] = True
+        durum["simdi_ms"] = simdi_ms()
+        durum["yazildi_ms"] = int(yol.stat().st_mtime * 1000)
+        for kosu in durum.get("kosular", []):
+            sapma = paper_kok / f"{kosu['kosu']}.sapma.jsonl"
+            if sapma.is_file():
+                satirlar = sapma.read_text(encoding="utf-8").strip().splitlines()
+                if satirlar:
+                    kosu["sapma"] = json.loads(satirlar[-1])
+        return durum
 
     # ------------------------------------------------------------------ Logs
 

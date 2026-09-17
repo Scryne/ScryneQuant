@@ -182,3 +182,46 @@ export interface AuditGorunumu {
   kayitlar: AuditKaydi[];
   zincir_gecerli: boolean;
 }
+
+/* ------------------------------------------------------------ İzleme (Faz 14) */
+
+export type Boyut = "sistem" | "veri" | "trading" | "model";
+
+export interface Alarm {
+  kod: string;
+  boyut: Boyut;
+  seviye: "uyari" | "kritik";
+  kosu: string | null;
+  mesaj: string;
+}
+
+export interface Sapma {
+  olculdu: string;
+  canli_adim: number;
+  ilk_ayrisan_adim: number | null;
+  ilk_ayrisan_utc: string | null;
+  son_ozkaynak_farki_bps: number;
+  canli_islem: number;
+  referans_islem: number;
+}
+
+export interface IzlenenKosu {
+  kosu: string;
+  surec_yasiyor: boolean;
+  adim?: number;
+  son_bar_ms?: number;
+  ozkaynak?: number;
+  brut?: number;
+  safe_mode?: boolean;
+  sapma?: Sapma;
+}
+
+export interface Izleme {
+  var: boolean;
+  simdi_ms: number;
+  yazildi_ms?: number;
+  zaman?: string;
+  sistem?: { disk_bos_gb: number; bellek_bos_gb: number | null };
+  alarmlar?: Alarm[];
+  kosular?: IzlenenKosu[];
+}

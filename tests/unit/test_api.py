@@ -170,3 +170,25 @@ class TestSpaGeriDususu:
 
     def test_gercek_dosya_oldugu_gibi_servis_ediliyor(self, web_istemci) -> None:
         assert web_istemci.get("/favicon.svg").text == "<svg/>"
+
+
+class TestIzleme:
+    def test_izleme_durumu_ve_sapma(self, tmp_path) -> None:
+        import json
+
+        m = motor_kur({})
+        toparlan(m, [])
+        izleme_kok, paper_kok = tmp_path / "izleme", tmp_path / "paper"
+        with TestClient(uygulama_kur(m, izleme_kok=izleme_kok, paper_kok=paper_kok)) as c:
+            assert c.get("/api/izleme").json()["var"] is False
+            izleme_kok.mkdir()
+            paper_kok.mkdir()
+            (izleme_kok / "durum.json").write_text(json.dumps({
+                "zaman": "x", "sistem": {"disk_bos_gb": 50.0}, "alarmlar": [],
+                "kosular": [{"kosu": "evren-kiyas", "surec_yasiyor": True}]}))
+            (paper_kok / "evren-kiyas.sapma.jsonl").write_text(
+                json.dumps({"ilk_ayrisan_adim": None}) + "\n"
+                + json.dumps({"ilk_ayrisan_adim": 5}) + "\n")
+            g = c.get("/api/izleme").json()
+            assert g["var"] is True and g["yazildi_ms"] > 0
+            assert g["kosular"][0]["sapma"] == {"ilk_ayrisan_adim": 5}
