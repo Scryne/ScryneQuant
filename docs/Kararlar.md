@@ -3149,3 +3149,43 @@ Bildirimsiz alarm, kimsenin bakmadığı bir dosyaya yazılmış alarmdır. ntfy
 istemeyen en basit kanal; bedeli konunun gizliliğe değil tahmin edilemezliğe dayanması — bu
 yüzden içerik sınırlandı.
 
+## K-067 — Jev'in genişleyen rolü: eleme ve **ileriye dönük** sınıflandırma; sinyal üretimi yok
+
+**Durum:** kabul · **Tarih:** 2026-09-17 · **Onay:** Scryne ("bu jev modelini de aktif olarak
+kullanalım") · **Genişletir:** K-061 · **Tabi:** K-049 (AI yetkisi), K-039/K-051 (çekiliş
+sayımı) · **Kaynak:** `tools/faz16_duyuru_indir.py`, `research/gizli_tekrar.py`
+
+### Karar — Jev'in izinli üç rolü
+
+1. **Gizli tekrar dedektörü (K-061, yürürlükte).** Hipotez kaydından önce, aynı mekanizmanın
+   başka adla tekrar denenip denenmediğini metinden yakalar. Uyarır, engellemez, sayılmaz.
+2. **Program öncesi kaynak elemesi.** Yeni bir araştırma programı açılmadan önce, önerilen
+   bilgi kaynağının daha önce kapatılmış kaynakların yeniden ifadesi olup olmadığını
+   değerlendirir. **Tavsiyedir:** K-045'in istisna şartını Jev değil, sayısal kaynak ölçümü
+   karşılar (`tools/faz16_kaynak_olcumu.py`). Jev'in "farklı" demesi bir programı açmaz.
+3. **İleriye dönük metin sınıflandırması.** Kamuya açık duyuru/haber metinleri Jev'le tipli
+   alanlara çevrilir ve **görüldüğü an** (`available_time`) ile saklanır. Bu kayıt dondurulmuş
+   bir veri kaynağıdır (K-049/3): backtest içinde **hesaplanmaz**, yalnızca okunur.
+
+### Sınırlar — ihlali görevi yanlış yapar, kuralı değil
+
+- **Jev sinyal üretmez.** Hiçbir alım/satım niyeti, ağırlık ya da hedef Jev çıktısından
+  doğrudan türetilemez; strateji katmanı yalnızca dondurulmuş alanları okur (K-003, K-049/1).
+- **Geçmiş dönem için Jev türetimi kapıya giremez.** Modelin eğitim kesimi öncesine ait metni
+  bugün sınıflandırmak `leak_riski` taşır (K-049/4). Geçmiş için **kural tabanlı** ayrıştırma
+  kullanılır; Jev o kuralların kalitesini ölçmekte kullanılabilir (ölçüm, özellik değil).
+- **Sürüm ve soru donar.** Model sürümü ve soru metninin hash'i her kayda yazılır; soru
+  değişirse eşikler geçersizdir ve yeniden ölçülür (K-061/3 kalıbı).
+- **Çekiliş sayımı değişmez.** Jev'in önerdiği ya da elediği her hipotez, deftere normal
+  şekilde kaydedilir ve bütçeden düşer (K-039, K-051).
+- **Gecikme ve maliyet ölçülür.** Canlı yolda kullanılacaksa, koşunun bar bütçesine sığdığı
+  ölçülür; ölçülmeden canlı koşuya bağlanmaz.
+
+### Gerekçe
+
+Jev metin ve anlam üzerine tipli yargı verir; TypeSafe'in kendi dokümanı zaman serisi tahminini
+ve sayısal öngörüyü uygun olmayan kullanım sayıyor. Bu projede eksik olan da tahmin değil,
+**yapılandırılmamış bilginin sayıya çevrilmesi**: duyuru, kural değişikliği, erişim genişlemesi.
+Jev'i oraya koymak yeni bir bilgi kaynağı açar; sinyal üretimine koymak K-049'un yasakladığı
+şeydir ve ölçülemeyen bir kara kutu üretir.
+
