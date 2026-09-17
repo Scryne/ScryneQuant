@@ -54,9 +54,14 @@ SAAT_MS = 3_600_000
 ASGARI_GUN = 15
 ASGARI_UYE = 10
 BTC = "BTCUSDT"
+#: Okunamayan (indirme sürerken yarım) dosyalar; raporda görünür, sessizce yutulmaz.
+ATLANAN: list[str] = []
 #: Günün konumlanma gözlemi: 23:55 dilimi (gün kapanışında bilinen son değer).
 GUN_SONU_MS = 23 * SAAT_MS + 55 * 60_000
-ALANLAR = ("sum_open_interest_value", "count_toptrader_long_short_ratio",
+#: Açık pozisyon **sözleşme adedi** üzerinden ölçülür, USD değeri üzerinden değil: değer =
+#: adet × fiyat, yani değerin değişimi fiyat değişimini mekanik olarak içerir (ilk ölçümde
+#: getiriyle R² 0,62 çıktı ve bu bilgi değil, tanım gereğiydi).
+ALANLAR = ("sum_open_interest", "sum_open_interest_value", "count_toptrader_long_short_ratio",
            "sum_toptrader_long_short_ratio", "count_long_short_ratio",
            "sum_taker_long_short_vol_ratio")
 
@@ -107,7 +112,11 @@ def _gunluk_konumlanma(sembol: str) -> pd.DataFrame | None:
     yol = METRICS / f"{sembol}.parquet"
     if not yol.is_file():
         return None
-    df = pd.read_parquet(yol)
+    try:
+        df = pd.read_parquet(yol)
+    except Exception:  # indirme sürerken yarım yazılmış dosya: atlanır, sayılır
+        ATLANAN.append(sembol)
+        return None
     gun_ici = df["create_time"] % GUN_MS
     son = df[gun_ici == GUN_SONU_MS].copy()
     if son.empty:
@@ -168,7 +177,7 @@ def bagimsizlik(uyelik: pd.DataFrame, konum: dict[str, pd.DataFrame],
     `1 − R²` yüksekse: bu seri fiyat/funding'in yeniden ifadesi değil."""
     oi_getiri, oi_funding, tt_getiri, taker_getiri, oi_btc = [], [], [], [], []
     btc_oi = konum.get(BTC)
-    btc_doi = (np.log(btc_oi["sum_open_interest_value"]).diff()
+    btc_doi = (np.log(btc_oi["sum_open_interest"]).diff()
                if btc_oi is not None else pd.Series(dtype=float))
     for ay, grup in uyelik.groupby("ay"):
         bas, son = _ay_gunleri(str(ay))
@@ -179,7 +188,7 @@ def bagimsizlik(uyelik: pd.DataFrame, konum: dict[str, pd.DataFrame],
             k = k[(k.index >= bas) & (k.index < son)]
             if len(k) < ASGARI_GUN:
                 continue
-            doi = np.log(k["sum_open_interest_value"].replace(0, np.nan)).diff().dropna()
+            doi = np.log(k["sum_open_interest"].replace(0, np.nan)).diff().dropna()
             g = getiriler[s]
             ortak = doi.index.intersection(g.index)
             if len(ortak) >= ASGARI_GUN:
@@ -200,6 +209,7 @@ def bagimsizlik(uyelik: pd.DataFrame, konum: dict[str, pd.DataFrame],
                     oi_funding.append(1.0 - _r2(doi.loc[o3].to_numpy(), f.loc[o3].to_numpy()))
     return {
         "soru": "Konumlanma serileri aynı günün getirisi/funding'i ile açıklanıyor mu",
+        "birim": "açık pozisyon = sözleşme adedi (sum_open_interest)",
         "acik_pozisyon_degisimi_vs_getiri_1_eksi_r2": _yuzdelik(oi_getiri),
         "acik_pozisyon_degisimi_vs_funding_1_eksi_r2": _yuzdelik(oi_funding),
         "acik_pozisyon_degisimi_vs_btc_oi_1_eksi_r2": _yuzdelik(oi_btc),
@@ -220,7 +230,7 @@ def kesit(uyelik: pd.DataFrame, konum: dict[str, pd.DataFrame],
         uyeler = [s for s in grup["sembol"] if (s, ay) not in kirik and s in konum]
         if len(uyeler) < ASGARI_UYE:
             continue
-        doi = pd.DataFrame({s: np.log(konum[s]["sum_open_interest_value"].replace(0, np.nan)
+        doi = pd.DataFrame({s: np.log(konum[s]["sum_open_interest"].replace(0, np.nan)
                                       ).diff() for s in uyeler})
         doi = doi[(doi.index >= bas) & (doi.index < son)]
         tt = pd.DataFrame({s: konum[s]["sum_toptrader_long_short_ratio"] for s in uyeler})
@@ -278,6 +288,7 @@ def main() -> int:
         "kaynak": "data.binance.vision futures/um/daily/metrics",
         "evren_tablosu": str(TABLO),
         "sembol_sayisi": len(konum),
+        "okunamayan_dosya": sorted(ATLANAN),
         "funding_olan": len(fundingler),
         "kapsama": kapsama(uyelik, konum, kirik),
         "bagimsizlik": bagimsizlik(uyelik, konum, getiriler, fundingler, kirik),
