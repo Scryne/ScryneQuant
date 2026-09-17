@@ -85,4 +85,10 @@ $SaatOzet = [DateTime]::SpecifyKind([DateTime]::UtcNow.Date.AddHours(6), "Utc").
 Register-ScheduledTask -TaskName "ScryneQuant-Ozet" -Action $Ozet -Principal $Principal `
     -Settings $AyarIzleme -Trigger (New-ScheduledTaskTrigger -Daily -At $SaatOzet) -Force | Out-Null
 
+$Yedek = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $Kok `
+    -Argument ('-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $Kok "tools\evren-yedek.ps1") + '"')
+$SaatYedek = [DateTime]::SpecifyKind([DateTime]::UtcNow.Date.AddHours(2).AddMinutes(30), "Utc").ToLocalTime()
+Register-ScheduledTask -TaskName "ScryneQuant-Yedek" -Action $Yedek -Principal $Principal `
+    -Settings $AyarIzleme -Trigger (New-ScheduledTaskTrigger -Daily -At $SaatYedek) -Force | Out-Null
+
 Get-ScheduledTask ScryneQuant-* | Select-Object TaskName, State

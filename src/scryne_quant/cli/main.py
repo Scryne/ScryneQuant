@@ -2509,6 +2509,135 @@ def paper_evren_tablo_yenile(
         raise typer.Exit(code=3)
 
 
+def _sqlite_yedekle(kaynak: Path, hedef: Path) -> None:
+    """Çalışan koşunun dosyasına dokunmadan tutarlı kopya (SQLite online backup)."""
+    import sqlite3
+
+    hedef.parent.mkdir(parents=True, exist_ok=True)
+    k = sqlite3.connect(f"file:{kaynak.as_posix()}?mode=ro", uri=True)
+    h = sqlite3.connect(hedef)
+    try:
+        k.backup(h)
+    finally:
+        k.close()
+        h.close()
+
+
+def _evren_kurulum_kimlikten(kimlik: dict[str, Any]) -> dict[str, Any]:
+    """Evren koşusunun motor kurulumu, koşu kimliğinden; bugünkü konfigürasyonla bire bir
+    tutması doğrulanır (tutmazsa kurulmaz — yanlış konfigürasyonla yeniden üretim kanıt olmaz)."""
+    import inspect
+
+    from scryne_quant.strategy.kutuphane import EVREN_AILELER
+
+    st = kimlik.get("strateji", {})
+    kutuphane = {**EVREN_KIYAS, **EVREN_AILELER}
+    if st.get("ad") not in kutuphane:
+        raise typer.BadParameter(f"koşu kimliğinde bilinmeyen strateji: {st.get('ad')}")
+    sinif = kutuphane[st["ad"]]
+    imza = inspect.signature(sinif).parameters
+    strateji = sinif(**{k: v for k, v in st["parametreler"].items() if k in imza})
+    maliyet = maliyet_mod.yukle()
+    limitler = limit_mod.yukle()
+    uyusmayan = [ad for ad, beklenen, gercek in (
+        ("strateji", st, strateji.sozluk()),
+        ("maliyet", kimlik.get("maliyet"), maliyet.sozluk()),
+        ("limit_kimligi", kimlik.get("limit_kimligi"), limitler.kimlik()),
+    ) if json.loads(json.dumps(gercek)) != beklenen]
+    if uyusmayan:
+        raise typer.BadParameter(
+            f"bugünkü konfigürasyon koşu kimliğiyle uyuşmuyor: {', '.join(uyusmayan)}")
+    return {
+        "strateji": strateji, "maliyet": maliyet,
+        "baslangic_sermaye": float(kimlik["baslangic_sermaye"]),
+        "risk": RiskMotoru(limitler, "1h", mod="gozlem"),
+        "timeframe": kimlik.get("timeframe", "1h"),
+        "sifira_yaz_bar": kimlik.get("sifira_yaz_bar"),
+        "turev": bool(kimlik.get("turev", False)),
+        "makro": tuple(kimlik.get("makro", ())),
+    }
+
+
+@paper_app.command("evren-yedek")
+def paper_evren_yedek(
+    kosu_adi: Annotated[list[str], typer.Argument()],
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    yedek_kok: Annotated[Path, typer.Option("--yedek")] = Path("runs/yedek"),
+    sakla: Annotated[int, typer.Option("--sakla", help="Koşu başına tutulacak yedek.")] = 7,
+) -> None:
+    """Evren koşularının günlük yedeği (çalışırken, tutarlı kopya). Eskiler silinir."""
+    for ad in kosu_adi:
+        kaynak = _paper_yolu(ad, kok)
+        if not kaynak.exists():
+            typer.echo(f"{ad}: koşu yok, atlandı")
+            continue
+        hedef = yedek_kok / f"{ad}-{dt.datetime.now(dt.UTC):%Y%m%dT%H%M%SZ}.sqlite"
+        _sqlite_yedekle(kaynak, hedef)
+        eskiler = sorted(yedek_kok.glob(f"{ad}-*.sqlite"))[:-sakla]
+        for e in eskiler:
+            e.unlink()
+        boyut = hedef.stat().st_size / 1024**2
+        typer.echo(f"{ad}: {hedef} ({boyut:.1f} MB), silinen {len(eskiler)}")
+
+
+@paper_app.command("evren-tatbikat")
+def paper_evren_tatbikat(
+    kosu_adi: Annotated[str, typer.Argument()],
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    yedek_kok: Annotated[Path, typer.Option("--yedek")] = Path("runs/yedek"),
+    rapor: Annotated[Path | None, typer.Option("--rapor")] = None,
+) -> None:
+    """Geri yükleme tatbikatı (Faz 14 bitti kriteri): en son yedek boş bir dizine geri
+    getirilir, bütün adımlar girdilerden **yeniden üretilir** (K-038) ve kayıtla bit düzeyinde
+    karşılaştırılır; ayrıca yedekteki son adım canlı koşunun aynı adımıyla karşılaştırılır."""
+    import tempfile
+
+    from scryne_quant.live.evren_depo import EvrenKosuDeposu
+    from scryne_quant.live.evren_motor import EvrenPaperMotoru
+
+    yedekler = sorted(yedek_kok.glob(f"{kosu_adi}-*.sqlite"))
+    if not yedekler:
+        raise typer.BadParameter(f"{kosu_adi}: yedek yok ({yedek_kok})")
+    yedek = yedekler[-1]
+    govde: dict[str, Any] = {"kosu": kosu_adi, "yedek": str(yedek), "zaman": utc_str(simdi_ms())}
+    with tempfile.TemporaryDirectory() as gecici:
+        geri = Path(gecici) / f"{kosu_adi}.sqlite"
+        _sqlite_yedekle(yedek, geri)
+        depo = EvrenKosuDeposu(geri)
+        try:
+            kurulum = _evren_kurulum_kimlikten(depo.kimlik_oku() or {})
+            t0 = time.perf_counter()
+            motor = EvrenPaperMotoru.toparlan(depo, **kurulum)  # ayrışmada hata fırlatır
+            govde["yeniden_uretim_s"] = round(time.perf_counter() - t0, 1)
+            kayitli = depo.adimlar()
+        finally:
+            depo.kapat()
+    son = kayitli[-1]
+    govde.update(adim=len(kayitli), son_bar=utc_str(son.open_time), islem=son.islem,
+                 yeniden_uretilen_ozkaynak=motor.son_sonuc.ozkaynak, kayitli_ozkaynak=son.ozkaynak)
+    canli = _paper_yolu(kosu_adi, kok)
+    with tempfile.TemporaryDirectory() as gecici:
+        kopya = Path(gecici) / "canli.sqlite"
+        _sqlite_yedekle(canli, kopya)
+        d2 = EvrenKosuDeposu(kopya)
+        try:
+            canli_adim = {a.adim: a for a in d2.adimlar()}.get(son.adim)
+        finally:
+            d2.kapat()
+    govde["canliyla_ayni"] = canli_adim is not None and (
+        repr(canli_adim.ozkaynak), repr(canli_adim.brut), canli_adim.islem) == (
+        repr(motor.son_sonuc.ozkaynak), repr(motor.son_sonuc.brut), motor.son_sonuc.islem)
+    govde["gecti"] = bool(govde["canliyla_ayni"]
+                         and repr(motor.son_sonuc.ozkaynak) == repr(son.ozkaynak))
+    if rapor is not None:
+        rapor.parent.mkdir(parents=True, exist_ok=True)
+        rapor.write_text(json.dumps(govde, ensure_ascii=False, indent=2), encoding="utf-8")
+    for anahtar, deger in govde.items():
+        typer.echo(f"{anahtar:<26}: {deger}")
+    if not govde["gecti"]:
+        raise typer.Exit(code=1)
+
+
 @paper_app.command("evren-sapma")
 def paper_evren_sapma(
     kosu_adi: Annotated[str, typer.Argument()],
@@ -2522,53 +2651,20 @@ def paper_evren_sapma(
     Koşu dosyasına dokunmaz: SQLite yedeği geçici bir dosyaya alınır. Konfigürasyon koşu
     kimliğinden yeniden kurulur ve kimlikle bire bir tutması doğrulanır; tutmazsa ölçmez.
     """
-    import inspect
-    import sqlite3
     import tempfile
 
     from scryne_quant.live.evren_depo import EvrenKosuDeposu
     from scryne_quant.live.evren_sapma import sapma_olc
-    from scryne_quant.strategy.kutuphane import EVREN_AILELER
 
     kosu_yolu = _paper_yolu(kosu_adi, kok)
     if not kosu_yolu.exists():
         raise typer.BadParameter(f"koşu yok: {kosu_yolu}")
     with tempfile.TemporaryDirectory() as gecici:
         kopya = Path(gecici) / "kopya.sqlite"
-        kaynak = sqlite3.connect(f"file:{kosu_yolu.as_posix()}?mode=ro", uri=True)
-        hedef = sqlite3.connect(kopya)
-        kaynak.backup(hedef)
-        kaynak.close()
-        hedef.close()
+        _sqlite_yedekle(kosu_yolu, kopya)
         depo = EvrenKosuDeposu(kopya)
         try:
-            kimlik = depo.kimlik_oku() or {}
-            st = kimlik.get("strateji", {})
-            kutuphane = {**EVREN_KIYAS, **EVREN_AILELER}
-            if st.get("ad") not in kutuphane:
-                raise typer.BadParameter(f"koşu kimliğinde bilinmeyen strateji: {st.get('ad')}")
-            sinif = kutuphane[st["ad"]]
-            imza = inspect.signature(sinif).parameters
-            strateji = sinif(**{k: v for k, v in st["parametreler"].items() if k in imza})
-            maliyet = maliyet_mod.yukle()
-            limitler = limit_mod.yukle()
-            uyusmayan = [ad for ad, beklenen, gercek in (
-                ("strateji", st, strateji.sozluk()),
-                ("maliyet", kimlik.get("maliyet"), maliyet.sozluk()),
-                ("limit_kimligi", kimlik.get("limit_kimligi"), limitler.kimlik()),
-            ) if json.loads(json.dumps(gercek)) != beklenen]
-            if uyusmayan:
-                raise typer.BadParameter(
-                    f"bugünkü konfigürasyon koşu kimliğiyle uyuşmuyor: {', '.join(uyusmayan)}")
-            kurulum = {
-                "strateji": strateji, "maliyet": maliyet,
-                "baslangic_sermaye": float(kimlik["baslangic_sermaye"]),
-                "risk": RiskMotoru(limitler, "1h", mod="gozlem"),
-                "timeframe": kimlik.get("timeframe", "1h"),
-                "sifira_yaz_bar": kimlik.get("sifira_yaz_bar"),
-                "turev": bool(kimlik.get("turev", False)),
-                "makro": tuple(kimlik.get("makro", ())),
-            }
+            kurulum = _evren_kurulum_kimlikten(depo.kimlik_oku() or {})
             t0 = time.perf_counter()
             sonuc = sapma_olc(depo, **kurulum).sozluk()
         finally:
