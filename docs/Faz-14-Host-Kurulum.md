@@ -3,7 +3,7 @@ proje: ScryneQuant
 faz: 14
 tarih: 2026-09-17
 type: runbook
-durum: host ayakta, host-1 koşuyor
+durum: host ayakta, host-1 koşuyor, yeniden başlatma tatbikatı geçti
 ---
 # Faz 14 — Sürekli açık host kurulumu (K-063)
 
@@ -76,7 +76,23 @@ ssh -i ~/.ssh/scrynequant_vps scryn@192.168.1.4 "cd %USERPROFILE%\Documents\Proj
 
 ## 5. Açık kalemler
 
-1. **Yeniden başlatma tatbikatı:** host kapatılıp açıldığında görevin oturum açmadan başladığı
-   ve koşunun toparlandığı henüz **ölçülmedi**.
+1. ~~Yeniden başlatma tatbikatı~~ → **yapıldı**, §6.
 2. Süreç dışı kill switch, alarmlar/runbook, çok enstrümanlı paper motoru (Faz 14 bitti kriteri).
 3. Dashboard'a ana makineden erişim (ağa açmak ayrı bir karar: şu an yalnızca host içi).
+
+## 6. Yeniden başlatma tatbikatı (2026-09-17)
+
+Ana makineden SSH ile: planlı durdurma → kod güncellemesi (`8e51933`, hostta 1.562 test geçti)
+→ `shutdown /r`. Kimse oturum açmadı.
+
+| Zaman (UTC) | Olay |
+| --- | --- |
+| 15:00:10 | `host-1` ilk barını (14:00) işledi |
+| 15:00:55 | `durdu` — sebep "kod guncellemesi ve yeniden baslatma tatbikati", kesinti sayılmadı (K-043) |
+| 15:02:33 | yeniden başlatma komutu |
+| 15:03:03 | host açıldı (`LastBootUpTime`), oturum açan kullanıcı **yok** |
+| 15:03:20 | `ScryneQuant-Paper` görevi kendiliğinden başladı (S4U) |
+| 15:03:30 | `kod_degisti` olayı (a25b1fd → 8e51933) |
+| 15:03:32 | `basladi`, `toparlandi` (pencere 1.000 bar) |
+
+**Kesinti sayısı: 0.** Açılıştan koşunun toparlanmasına 29 saniye.
