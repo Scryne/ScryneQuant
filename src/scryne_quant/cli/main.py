@@ -551,28 +551,19 @@ def data_evren(
         )
 
     kural = evren_mod.EvrenKurali(ust_n=ust_n, asgari_quote_hacim=asgari_hacim)
-    depo = ParquetDepo(depo_kok)
-    ozetler: list[Any] = []
-    enstrumanlar: list[dict[str, Any]] = []
-    kirilma_kayit: list[dict[str, Any]] = []
-    veri: dict[str, str] = {}
-    for sembol in _depo_sembolleri(Path(depo_kok), timeframe):
-        df = depo.oku(sembol, timeframe)
-        veri[sembol] = depo.sha256(sembol, timeframe)
-        kir = kimlik_mod.kirilmalar(
-            df,
-            timeframe,
-            asgari_eksik_bar=kirilma_eksik_bar,
-            asgari_log_oran=kirilma_log_oran,
-            sembol=sembol,
-        )
-        kimlikler = kimlik_mod.kimlikleri_kur(df, timeframe, sembol, kir)
-        kirilma_kayit.extend(k.sozluk() for k in kir)
-        enstrumanlar.extend(e.sozluk() for e in kimlikler)
-        ozetler.append(evren_mod.aylik_ozet(df, kimlikler))
-
-    ozet = evren_mod.ozetleri_birlestir(ozetler)
-    tablo = evren_mod.evren_tablosu(ozet, kural, son_uye_ay=son_ay)
+    sonuc = evren_mod.tablo_kur(
+        ParquetDepo(depo_kok),
+        _depo_sembolleri(Path(depo_kok), timeframe),
+        kural,
+        son_uye_ay=son_ay,
+        timeframe=timeframe,
+        asgari_eksik_bar=kirilma_eksik_bar,
+        asgari_log_oran=kirilma_log_oran,
+    )
+    tablo = sonuc.tablo
+    enstrumanlar = sonuc.enstrumanlar
+    kirilma_kayit = sonuc.kirilmalar
+    veri = sonuc.veri_sha256
     tablo_hash = evren_mod.tablo_hash(tablo)
 
     cikti = Path(depo_kok) / "_evren"

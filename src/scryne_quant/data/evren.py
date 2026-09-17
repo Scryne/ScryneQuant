@@ -236,6 +236,68 @@ def ozetleri_birlestir(ozetler: list[pd.DataFrame]) -> pd.DataFrame:
     return pd.concat(dolu, ignore_index=True)
 
 
+@dataclass(frozen=True, slots=True)
+class TabloSonucu:
+    """`tablo_kur` çıktısı: tablo + kayda girecek her şey. Yazma çağıranın işi."""
+
+    tablo: pd.DataFrame
+    kural: EvrenKurali
+    son_uye_ay: str
+    timeframe: str
+    kirilma_esikleri: dict[str, Any]
+    kirilmalar: list[dict[str, Any]]
+    enstrumanlar: list[dict[str, Any]]
+    veri_sha256: dict[str, str]
+
+
+def tablo_kur(
+    depo: Any,
+    semboller: list[str],
+    kural: EvrenKurali,
+    *,
+    son_uye_ay: str,
+    timeframe: str = "1h",
+    asgari_eksik_bar: int,
+    asgari_log_oran: float,
+) -> TabloSonucu:
+    """Depodaki barlardan PIT evren tablosunu **hesaplar**, hiçbir şey yazmaz. (Faz 9, Faz 14)
+
+    `sq data evren` (araştırma, `data/evren/_evren/`) ve canlı evren (`live/canli_evren.py`,
+    koşunun kendi dizini) aynı fonksiyonu çağırır: iki ayrı hesap, canlı evren ile backtest
+    evreninin sessizce ayrıştığı bir sistem üretirdi (K-001). Yazmanın ayrılması da bilinçli:
+    canlı yenileme araştırma tablosunun **üstüne yazarsa** o tablonun hash'ini taşıyan her
+    hipotezin veri kimliği bozulur.
+    """
+    from scryne_quant.data import kimlik as kimlik_mod
+
+    ozetler: list[pd.DataFrame] = []
+    enstrumanlar: list[dict[str, Any]] = []
+    kirilma_kayit: list[dict[str, Any]] = []
+    veri: dict[str, str] = {}
+    for sembol in semboller:
+        df = depo.oku(sembol, timeframe)
+        veri[sembol] = depo.sha256(sembol, timeframe)
+        kir = kimlik_mod.kirilmalar(
+            df, timeframe, asgari_eksik_bar=asgari_eksik_bar,
+            asgari_log_oran=asgari_log_oran, sembol=sembol,
+        )
+        kimlikler = kimlik_mod.kimlikleri_kur(df, timeframe, sembol, kir)
+        kirilma_kayit.extend(k.sozluk() for k in kir)
+        enstrumanlar.extend(e.sozluk() for e in kimlikler)
+        ozetler.append(aylik_ozet(df, kimlikler))
+    ozet = ozetleri_birlestir(ozetler)
+    return TabloSonucu(
+        tablo=evren_tablosu(ozet, kural, son_uye_ay=son_uye_ay),
+        kural=kural,
+        son_uye_ay=son_uye_ay,
+        timeframe=timeframe,
+        kirilma_esikleri={"asgari_eksik_bar": asgari_eksik_bar, "asgari_log_oran": asgari_log_oran},
+        kirilmalar=kirilma_kayit,
+        enstrumanlar=enstrumanlar,
+        veri_sha256=dict(sorted(veri.items())),
+    )
+
+
 def tablo_hash(tablo: pd.DataFrame) -> str:
     """Evren tablosunun içerik hash'i — sütun sırası ve satır sırası dahil."""
     return nesne_hash(
