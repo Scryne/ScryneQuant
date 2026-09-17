@@ -366,7 +366,7 @@ class TestEsigiDefteBagla:
     def test_esik_defterdeki_olculebilir_cekilis_sayisina_bagli(self) -> None:
         from scryne_quant.research.kapilar import COKLU_TEST_CEKILIS_SAYISI
 
-        assert COKLU_TEST_CEKILIS_SAYISI == 31, (
+        assert COKLU_TEST_CEKILIS_SAYISI == 41, (
             "Ölçülebilir çekiliş sayısı değiştiyse COKLU_TEST_ESIGI bayattır: "
             "`sq lab coklu-test` yeniden koşturulup eşik güncellenmeli (K-044). "
             "Sabiti elle düzeltmek, ölçülmemiş bir sayıya ölçülmüş süsü vermektir."
@@ -391,3 +391,35 @@ class TestEsigiDefteBagla:
         gerekce = next(e for e in ESIKLER if e.ad == "oos_sharpe").gerekce
         assert "K-044" in gerekce
         assert "coklu-test" in gerekce
+
+
+class TestSizintiPayi:
+    """K-064: dairesel kaydırma sinyali öne almamalı. (Faz 12'de ölçülen sızıntı)"""
+
+    def _kaymalar(self, sizinti):
+        gorulen = []
+
+        def kosturucu(c, takvim):
+            gorulen.append(min(takvim))  # takvimin ilk sinyali 0'dı: k'nin kendisi
+            return 0.0, True
+
+        c = Cekilis(kimlik="a", strateji="t", timeframe="1h", secim="tepe", secilen={},
+                    veri_sha256="0" * 64, gercek_sharpe=0.0, isinma_bar=0, oos_bar=50,
+                    takvim_bar=100, takvim={0: ("BUY", 0.5)})
+        null_dagilimi([c], kosturucu, deneme=2_000, seed=5, sizinti_bar=sizinti)
+        return gorulen
+
+    def test_varsayilan_k044_formulu(self) -> None:
+        from scryne_quant.research import coklu_test_evren as cte
+
+        beklenen = [1 + int(o * 98) for o in cte.oranlar(2_000, 5)]
+        assert self._kaymalar(None) == beklenen
+
+    def test_kaydirma_sizinti_bolgesine_girmiyor(self) -> None:
+        k = self._kaymalar(lambda c: 30)
+        assert max(k) <= 100 - 2 - 30 and min(k) >= 1
+        assert max(k) >= 60  # bölge daraldı ama hâlâ kullanılıyor
+
+    def test_takvimi_tuketen_pay_hata(self) -> None:
+        with pytest.raises(CokluTestHatasi, match="sızıntı payı"):
+            self._kaymalar(lambda c: 98)

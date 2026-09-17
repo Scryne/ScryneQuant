@@ -3051,3 +3051,43 @@ K-060 plan kaydı · **Açar:** Faz 14
    `tools/paper-kosu.ps1` kalıbı).
 4. **Geri dönüş koşulu:** 30 günlük pencerede iki veya daha fazla kontrol dışı kesinti
    (elektrik/ağ/güncelleme) ölçülürse K-062 (VPS) yeniden açılır.
+
+## K-064 — Çoklu test null'ında sızıntı payı; `oos_sharpe` eşiği 41 çekilişle 1,04
+
+**Durum:** kabul · **Tarih:** 2026-09-17 · **Düzeltir:** K-044'ün kaydırma yöntemi ·
+**Kapatır:** Faz 12'nin "defter büyümesi sonrası eşik yeniden ölçülmüş" kriteri ·
+**Kaynak:** `research/coklu_test.py`, `research/coklu_test_evren.py`, `tools/faz12_coklu_test.py`,
+`runs/faz12/coklu-test-birlesik-500-0.json`, `runs/faz12/coklu-test-sizintisiz-500-0.json`
+
+### Bağlam
+
+K-044 her çekilişin OOS sinyal takvimini `k ∈ [1, L−2]` bar dairesel kaydırıyordu. Faz 12
+evren çekilişlerini aynı null'a kattı (sinyal özellikleri kaydırılarak) ve 41 çekiliş ×
+500 iterasyonda %5 eşik **1,154** çıktı. Uç değerler tek bir çekilişten geldi:
+`kesitsel_guc_haftalik`'in null Sharpe'ı 6,3'e kadar. Sebep: `k = L − m` sinyali `m` bar
+**öne** alır; `t`deki karar `t−m`de uygulanır ve strateji henüz gerçekleşmemiş barları
+görmüş olur. Kesitsel skorun penceresi 336 bar olduğu için sızıntı bölgesi iterasyonların
+%1,4'ü, tam uç değerlerin sıklığı. Aynı kusur K-044'ün tek sembollü null'ında da vardı
+(daha küçük ölçekte); yönü eşiği **yükseltmek**, yani tutucu.
+
+### Karar — dört madde
+
+1. **Sızıntı payı:** kaydırma `k ∈ [1, L−2−H]`. `H` tek sembolde stratejinin ısınması,
+   evren çekilişinde ısınma + yeniden dengeleme periyodu. Varsayılan `H = 0` K-044'ün
+   formülüyle aynı (eski kayıtlar yeniden üretilebilir, testle).
+2. **Ölçüm (sonradan dışlama, aynı 500 satır):**
+
+   | Küme | Sızıntılı p95 | Sızıntısız p95 | %90 GA |
+   | --- | ---: | ---: | --- |
+   | Tek sembollü (31) | 1,072 | 1,039 | 0,975-1,076 |
+   | Evren (10) | 0,613 | 0,529 | 0,507-0,545 |
+   | **Hepsi (41)** | 1,154 | **1,039** | 0,975-1,076 |
+
+   Evren çekilişleri maksimumu hiç taşımıyor (portföy stratejilerinin null Sharpe'ı dar).
+3. **`COKLU_TEST_ESIGI` = 1,04:** K-044'ün 1,021'i (4.000 iterasyon, sızıntılı) ile
+   1,039'dan (500 iterasyon, sızıntısız) tutucu olanın yukarı yuvarlanmışı (K-007).
+   `COKLU_TEST_CEKILIS_SAYISI` = 41. Hiçbir çekilişin kararı değişmiyor (en iyi OOS Sharpe
+   0,26 evren, 0,46 tek sembollü).
+4. **Açık kalem:** sızıntı paylı **yeni koşu** (`k` doğrudan daraltılmış aralıktan) ve daha
+   çok iterasyon (GA'yı K-044'ün genişliğine indirmek için ≈2.000+). Uzun iş: sürekli açık
+   hostta koşturulur (K-063).

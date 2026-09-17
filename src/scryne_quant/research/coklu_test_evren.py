@@ -148,9 +148,13 @@ def cekilis_null(
     oran_dizisi: Sequence[float],
     uygun_mu: Callable[[int, float], bool],
     *,
+    sizinti_bar: int = 0,
     ilerleme: Callable[[int], None] | None = None,
 ) -> EvrenCekilisi:
-    """Bir evren çekilişinin iterasyon satırlarını üretir. Önce kaydı yeniden üretir."""
+    """Bir evren çekilişinin iterasyon satırlarını üretir. Önce kaydı yeniden üretir.
+
+    `sizinti_bar` (K-064): kaydırma, sinyali bu kadar bar öne alacak bölgeye girmez;
+    `k ∈ [1, L−2−H]`. Önerilen değer stratejinin ısınması + yeniden dengeleme periyodu."""
     from scryne_quant.research import evren_degerlendirme as ed  # döngüsel import yok
 
     adlar = SINYAL_OZELLIKLERI.get(cekilis.strateji)
@@ -170,9 +174,12 @@ def cekilis_null(
             "sonuc_hash'ini üretmedi — null bu çekilişin null'ı olmaz, ölçüm durdu"
         )
     uzunluk = len(gorunum)
+    h = max(0, int(sizinti_bar))
+    if uzunluk - 2 - h < 1:
+        raise EvrenCokluTestHatasi(f"sızıntı payı ({h}) dilimi ({uzunluk}) tüketiyor")
     satirlar: list[tuple[float, bool]] = []
     for j, oran in enumerate(oran_dizisi):
-        k = 1 + int(oran * (uzunluk - 2))
+        k = 1 + int(oran * (uzunluk - 2 - h))
         s = kos(kaydirilmis_gorunum(gorunum, adlar, k))
         islem = len([i for i in s.islemler if i.kapali])
         uygun = bool(uygun_mu(islem, s.metrikler.max_drawdown))

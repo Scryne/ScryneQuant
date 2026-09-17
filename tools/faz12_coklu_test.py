@@ -67,7 +67,8 @@ def _hazir(kimlik: str, deneme: int, seed: int) -> list | None:
     if not yol.exists():
         return None
     d = json.loads(yol.read_text(encoding="utf-8"))
-    if d["deneme"] != deneme or d["seed"] != seed:
+    # K-064 öncesi (sızıntı paysız) satırlar yeniden kullanılmaz.
+    if d["deneme"] != deneme or d["seed"] != seed or "sizinti_bar" not in d:
         return None
     return d
 
@@ -89,7 +90,8 @@ def tek_sembollu(deneme: int, seed: int) -> None:
         a = ayar[c.kimlik]
         satirlar = []
         for oran in oranlar:
-            k = 1 + int(oran * (c.takvim_bar - 2))
+            # K-064: sinyali ısınma kadar öne alan kaydırma bölgesi dışarıda.
+            k = 1 + int(oran * (c.takvim_bar - 2 - c.isinma_bar))
             r = tarama_mod.kosu(
                 coklu_mod.BetikStrateji(coklu_mod.kaydir(c.takvim, k, c.takvim_bar),
                                         isinma=c.isinma_bar),
@@ -100,7 +102,7 @@ def tek_sembollu(deneme: int, seed: int) -> None:
             satirlar.append((float(r.metrikler.sharpe), uygun_mu(islem, r.metrikler.max_drawdown)))
         _yaz(c.kimlik, {"tur": "tek", "strateji": c.strateji, "timeframe": c.timeframe,
                         "gercek_sharpe": c.gercek_sharpe, "deneme": deneme, "seed": seed,
-                        "satirlar": satirlar})
+                        "sizinti_bar": c.isinma_bar, "satirlar": satirlar})
         print(f"tek   {c.strateji:<16} {c.timeframe:<3} tamam", flush=True)
     print(f"tek sembollü: ölçülebilir {len(cekilisler)}, atlanan {len(atlanan)}", flush=True)
 
@@ -148,10 +150,14 @@ def evren(deneme: int, seed: int) -> None:
                     print(f"  {ad}: {j + 1}/{deneme} ({time.perf_counter() - t0:.0f} s)",
                           flush=True)
 
-            c = cte.cekilis_null(c, EVREN_AILELER[strateji], veri, maliyet, oos, oranlar,
-                                 uygun_mu, ilerleme=ilerleme)
+            sinif = EVREN_AILELER[strateji]
+            sizinti = (sinif(**c.parametreler).isinma_bar()
+                       + int(c.parametreler["yeniden_dengele_bar"]))
+            c = cte.cekilis_null(c, sinif, veri, maliyet, oos, oranlar, uygun_mu,
+                                 sizinti_bar=sizinti, ilerleme=ilerleme)
             _yaz(c.kimlik, {"tur": "evren", "cekilis": ad, "strateji": strateji,
                             "gercek_sharpe": c.gercek_sharpe, "deneme": deneme, "seed": seed,
+                            "sizinti_bar": sizinti,
                             "satirlar": c.satirlar, "ozet": c.sozluk()})
             print(f"evren {ad:<24} tamam ({time.perf_counter() - t0:.0f} s)", flush=True)
         del veri
@@ -164,7 +170,7 @@ def birlestir(deneme: int, seed: int) -> int:
     satirlar, gercek, tur = {}, {}, {}
     for yol in sorted(CIKTI.glob("*.json")):
         d = json.loads(yol.read_text(encoding="utf-8"))
-        if d["deneme"] != deneme or d["seed"] != seed:
+        if d["deneme"] != deneme or d["seed"] != seed or "sizinti_bar" not in d:
             continue
         satirlar[yol.stem] = [tuple(x) for x in d["satirlar"]]
         gercek[yol.stem] = (d["strateji"], d["gercek_sharpe"])
@@ -197,13 +203,72 @@ def birlestir(deneme: int, seed: int) -> int:
     return 0
 
 
+def sonradan_sizintisiz(deneme: int, seed: int) -> int:
+    """K-064 öncesi (sızıntı paysız) satırlardan sızıntısız eşiği **dışlayarak** üretir.
+
+    İlk 500 iterasyonluk koşu `k ∈ [1, L−2]` ile yapıldı. Aynı oran dizisiyle her çekilişin
+    kaydırması yeniden hesaplanır; `k > L−2−H` (sinyal öne alınmış) olan satır o iterasyonda
+    uygun sayılmaz. Yeni koşunun (`k ∈ [1, L−2−H]`) tam karşılığı değil — dışlama, örneklemeyi
+    daraltmak yerine koşullar — ama aynı soruya aynı satırlardan cevap verir ve 10 saatlik
+    koşuyu tekrarlamadan sızıntının etkisini ölçer.
+    """
+    import numpy as np
+
+    cekilisler, _, _, _, _ = _coklu_test_cekilisleri(
+        KOK / "data" / "market", deney_mod.VARSAYILAN_KOK
+    )
+    lh = {c.kimlik: (c.takvim_bar, c.isinma_bar) for c in cekilisler}
+    oranlar = cte.oranlar(deneme, seed)
+    satirlar, gercek, tur = {}, {}, {}
+    for yol in sorted(CIKTI.glob("*.json")):
+        d = json.loads(yol.read_text(encoding="utf-8"))
+        if d["deneme"] != deneme or d["seed"] != seed or "sizinti_bar" in d:
+            continue
+        if d["tur"] == "evren":
+            kayit = json.loads((SONUCLAR / f"{d['cekilis']}.json").read_text(encoding="utf-8"))
+            p = kayit["sonuc"]["detay"]["secim"]["secilen"]
+            pen = kayit["sonuc"]["pencereler"]["out_of_sample"]
+            sinif = EVREN_AILELER[kayit["sonuc"]["strateji"]]
+            lh[yol.stem] = (pen["bitis"] - pen["isinma_baslangic"],
+                            sinif(**p).isinma_bar() + int(p["yeniden_dengele_bar"]))
+        uzunluk, h = lh[yol.stem]
+        satir = []
+        for oran, (sharpe, uygun) in zip(oranlar, d["satirlar"], strict=True):
+            k = 1 + int(oran * (uzunluk - 2))
+            satir.append((sharpe, bool(uygun) and k <= uzunluk - 2 - h))
+        satirlar[yol.stem] = satir
+        gercek[yol.stem] = (d.get("cekilis", d["strateji"]), d["gercek_sharpe"])
+        tur[yol.stem] = d["tur"]
+    govde: dict = {"deneme": deneme, "seed": seed, "yontem": "sonradan dışlama (K-064)"}
+    for ad, sec in (("tek", "tek"), ("evren", "evren"), ("hepsi", None)):
+        r = {k: v for k, v in satirlar.items() if sec is None or tur[k] == sec}
+        null = cte.birlesik_null(r, {k: gercek[k] for k in r}, seed=seed)
+        govde[ad] = {
+            "cekilis": len(r),
+            "uygun_iterasyon": int(null.azami.size),
+            "p95": null.duzeltilmis_esik(0.05),
+            "p95_ga90": list(null.esik_guven_araligi(0.05)),
+            "p90": null.duzeltilmis_esik(0.10),
+            "azami_p99": float(np.percentile(null.azami, 99)),
+        }
+    govde["git"] = git_durumu(KOK)
+    yol = SONUCLAR / f"coklu-test-sizintisiz-{deneme}-{seed}.json"
+    yol.write_text(json.dumps(govde, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(json.dumps(govde, ensure_ascii=False, indent=1))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--deneme", type=int, default=200)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--birlestir", action="store_true", help="Yalnızca birleştir.")
     ap.add_argument("--yalniz", choices=("tek", "evren"), default=None)
+    ap.add_argument("--sonradan-sizintisiz", action="store_true",
+                    help="K-064 öncesi satırlardan sızıntı bölgesini dışlayarak eşik.")
     a = ap.parse_args()
+    if a.sonradan_sizintisiz:
+        return sonradan_sizintisiz(a.deneme, a.seed)
     if not a.birlestir:
         if a.yalniz in (None, "tek"):
             tek_sembollu(a.deneme, a.seed)

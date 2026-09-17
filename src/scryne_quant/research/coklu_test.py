@@ -411,8 +411,16 @@ def null_dagilimi(
     *,
     deneme: int = 1_000,
     seed: int = 0,
+    sizinti_bar: Callable[[Cekilis], int] | None = None,
 ) -> NullSonucu:
     """Paylaşılan dairesel kaydırma ile "en iyi çekiliş"in null dağılımını çıkarır.
+
+    **`sizinti_bar` (K-064).** Dairesel kaydırmada `k = L − m` sinyali `m` bar **öne**
+    alır: `t`de verilen karar `t−m`de uygulanır ve strateji `t−m+1…t` arasındaki barları
+    görmüş olur. Faz 12'de ölçüldü: kesitsel bir çekilişte null Sharpe 6,3'e çıktı ve
+    41 çekilişlik %5 eşiğini 1,039'dan 1,154'e taşıdı. Verilirse `k`, çekilişin
+    `sizinti_bar(c)` barlık öne alma bölgesine girmez: `k ∈ [1, L−2−H]`. Verilmezse
+    `H = 0` ve formül K-044'ünkiyle aynıdır (eski kayıtlar yeniden üretilebilir).
 
     `kosturucu(cekilis, takvim) -> (oos_sharpe, uygun_mu)` döndürmeli. Çağıranın vermesi
     bilinçli: bu modülün veri deposu, Parquet dosyası veya `config/` bilgisi yok
@@ -449,7 +457,12 @@ def null_dagilimi(
         tur: list[float] = []
         uygunlar: list[float] = []
         for c in cekilisler:
-            k = 1 + int(oran * (c.takvim_bar - 2))
+            h = 0 if sizinti_bar is None else max(0, int(sizinti_bar(c)))
+            if c.takvim_bar - 2 - h < 1:
+                raise CokluTestHatasi(
+                    f"{c.strateji}: sızıntı payı ({h}) takvimi ({c.takvim_bar}) tüketiyor"
+                )
+            k = 1 + int(oran * (c.takvim_bar - 2 - h))
             sharpe, uygun = kosturucu(c, kaydir(c.takvim, k, c.takvim_bar))
             tur.append(sharpe)
             if uygun:

@@ -35,9 +35,9 @@ yanlış sonuç olarak geri döner.
 | 9 | Veri platformu v2 (PIT + evren + kimlik) | ✅ Tamamlandı | Delist dahil çoklu sembol indirilmiş; PIT evren tablosu üretiliyor; kimlik kırılması yakalanıyor; `available_time` kesmesi testli |
 | 10 | Çok enstrümanlı araştırma çekirdeği | ✅ Tamamlandı | Tek enstrüman özel hâlde bit düzeyinde aynı; çok enstrümanlı bağımsız referans tutuyor; evren look-ahead testi yeşil |
 | 11 | Doğrulama v2 | ✅ Tamamlandı | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
-| 12 | Araştırma programları (cross-sectional, türev, makro) | 🔄 Devam | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
+| 12 | Araştırma programları (cross-sectional, türev, makro) | ✅ Tamamlandı | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
 | 13 | Haber/olay zekâsı + ML (koşullu) | ⏳ Bekliyor | Açılma koşulu: veri bütçesi kararı + kaynak spike'ı. Açılırsa: LLM kesim tarihi kayıtlı, `leak_riski` uygulanıyor |
-| 14 | Üretim sertleştirme | ⏳ Bekliyor | Süreç dışı kill switch testnet'te kanıtlı; dört gözlem boyutu ayakta; her alarmın runbook'u var; toparlanma tatbikatı yapılmış |
+| 14 | Üretim sertleştirme | 🔄 Devam | Süreç dışı kill switch testnet'te kanıtlı; dört gözlem boyutu ayakta; her alarmın runbook'u var; toparlanma tatbikatı yapılmış |
 | 15 | İkinci varlık sınıfı (US equities/ETF) | ⏳ Bekliyor | Açılma koşulu: broker/lisans spike'ı. Açılırsa: aynı kod yolu ikinci varlık sınıfında paper koşuyor |
 | 16 | Sürekli araştırma | ⏳ Bekliyor | Kapanmaz; her tur bir program kaydı ve bir rapor bırakır |
 

@@ -120,3 +120,11 @@ def test_oranlar_ve_birlesik_null_tek_sembollu_null_ile_ayni():
     assert sonuc.azami.tobytes() == beklenen.azami.tobytes()
     assert sonuc.p_degeri == beklenen.p_degeri
     assert sonuc.uygun_oran == beklenen.uygun_oran
+
+
+def test_evren_sizinti_payi_dilimi_tuketirse_durur():
+    veri = _veri()
+    gercek = ed.kosu(KesitselGuc(**PARAM), MALIYET, veri, PENCERE, sifira_yaz_bar=48)
+    with pytest.raises(cte.EvrenCokluTestHatasi, match="sızıntı payı"):
+        cte.cekilis_null(_cekilis(gercek.sonuc_hash), KesitselGuc, veri, MALIYET, PENCERE,
+                         [0.5], _uygun, sizinti_bar=700)
