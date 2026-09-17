@@ -76,6 +76,9 @@ class EvrenPaperMotoru:
         self._izgara: list[int] = []
         self._adim = timeframe_ms(timeframe)
         self.son_sonuc: KayitliAdim | None = None
+        # Sembol başına doğrulanmış diziler: (görünen barların açılış zamanları, diziler).
+        self._dogrulanmis: dict[str, tuple[list[int], dict[str, np.ndarray]]] = {}
+        self.dogrulama_onbellegi = True
 
     # ------------------------------------------------------------------ ölçüm
 
@@ -154,14 +157,47 @@ class EvrenPaperMotoru:
             )
             if not barlar:
                 continue
-            pencere = BarPenceresi(sembol, self.timeframe, kapasite=max(2, len(barlar)))
-            pencere.doldur(barlar)
-            diziler[sembol] = hizala(pd.DataFrame(pencere.diziler()), izgara)
+            diziler[sembol] = hizala(pd.DataFrame(self._dogrulanmis_diziler(sembol, barlar)),
+                                     izgara)
         if not diziler:
             raise EvrenMotorHatasi(f"{utc_str(t_ms)}: hiçbir sembolün barı yok")
         uyelik, _ = uyeligi_barlara_kis(self.takvim(k).dizileri(izgara, diziler), diziler)
         gorunum = evren_gorunum_kur(self.timeframe, diziler, uyelik, self.strateji)
         return self.backtest.girdi_kur(gorunum)
+
+    def _dogrulanmis_diziler(self, sembol: str, barlar: list[Bar]) -> dict[str, np.ndarray]:
+        """`BarPenceresi` doğrulaması, önceki adımın sonucu üzerine **artımlı**.
+
+        Neden eşit: `dogrula`nın her bayrağı yalnızca barın kendisine ve sıradaki **bir
+        önceki** bara bakar (boşluk, aşırı hareket; tekrar yok çünkü motor aynı açılışı iki
+        kez almaz), `BACKFILL` düzeltmesi bar başınadır. Görünen barlar önceki listenin
+        **uzantısıysa** eski bayraklar değişmez; yeni barlar bir önceki bar bağlamıyla
+        doğrulanır. Liste uzantı değilse (geç bar ortaya girdi) tamamı yeniden doğrulanır.
+        Bit düzeyinde eşitlik testle korunur (`test_dogrulama_onbellegi_bit_esit`).
+        Olmasaydı her adım bütün geçmişi yeniden doğrulardı: toparlanma O(N²), ölçüldü
+        770 barda 0,32 s/adım, sürenin %69'u doğrulama.
+        """
+        zamanlar = [b.open_time for b in barlar]
+        onceki = self._dogrulanmis.get(sembol) if self.dogrulama_onbellegi else None
+        if onceki is not None and 0 < len(onceki[0]) <= len(zamanlar) and (
+            zamanlar[: len(onceki[0])] == onceki[0]
+        ):
+            n = len(onceki[0])
+            if n == len(zamanlar):
+                return onceki[1]
+            pencere = BarPenceresi(sembol, self.timeframe, kapasite=len(zamanlar) - n + 1)
+            pencere.doldur(barlar[n - 1:])
+            ek = pencere.diziler()
+            sonuc = {k: np.concatenate([onceki[1][k], ek[k][1:]]) for k in onceki[1]}
+            for dizi in sonuc.values():
+                dizi.flags.writeable = False
+        else:
+            pencere = BarPenceresi(sembol, self.timeframe, kapasite=max(2, len(barlar)))
+            pencere.doldur(barlar)
+            sonuc = pencere.diziler()
+        if self.dogrulama_onbellegi:
+            self._dogrulanmis[sembol] = (zamanlar, sonuc)
+        return sonuc
 
     def isinma(self, zamanlar: Iterable[int], *, kaydet: bool = True) -> list[KayitliAdim]:
         """Isınma barlarını **toplu** işler: tek görünüm, adımlar sırayla, hepsi `isinma`.

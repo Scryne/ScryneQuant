@@ -111,8 +111,15 @@ doğrusal. Canlı adım için sorun değil; ama toparlanma ve sapma ölçümü h
 oynattığı için O(N²): tahmin 30. günde ≈6 dk, 60. günde ≈15 dk (host daha yavaşsa ×2).
 Profil: sürenin %69'u `BarPenceresi` doğrulaması (`dogrulama.dogrula`). Çözüm adayı: sembol
 başına doğrulanmış dizilerin önbelleği — yalnızca doğrulama **nedensel** ise bit düzeyinde
-aynı sonucu verir; bu kanıtlanmadan uygulanmaz ("neredeyse doğru" yasak). 30. günden önce ele
-alınacak.
+aynı sonucu verir; bu kanıtlanmadan uygulanmaz ("neredeyse doğru" yasak).
+
+**Uygulandı (aynı gün):** `dogrula`nın her bayrağı yalnızca barın kendisine ve bir önceki bara
+bakıyor (tekrar yok: motor aynı açılışı iki kez almaz). Görünen barlar önceki listenin
+uzantısıysa yeni barlar bir önceki bar bağlamıyla doğrulanıp eklenir; geç bar ortaya girerse
+tamamı yeniden doğrulanır. Test: aşırı hareket, sıfır hacim, boşluk, `BACKFILL` ve ortaya
+giren geç barla önbellekli/önbelleksiz iki motor — bütün adımlar ve işlemler bit düzeyinde
+aynı. Ölçüm: **0,327 → 0,124 s/adım** (770 bar). Kalan süre hizalama + özellik hesabı; hâlâ
+O(N²), sabit ≈2,6 kat küçük (30. gün ≈2-3 dk).
 
 ## 7. Aşamalar ve tahmin
 

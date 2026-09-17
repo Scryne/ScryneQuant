@@ -228,3 +228,48 @@ def test_sapma_geciksiz_kosuda_sifir_gec_barda_sebebine_baglanir(tmp_path):
     assert r.gec_bilinen_bar == 1
     assert r.ilk_ayrisan_adim is None or r.ilk_ayrisan_adim >= 100
     depo.kapat()
+
+
+def test_dogrulama_onbellegi_bit_esit():
+    """Artımlı doğrulama = her adımda baştan doğrulama; bozuk, boşluklu, geç ve BACKFILL
+    barlarla. Karşılaştırma bütün adım sonuçları ve işlemler üzerinde, bit düzeyinde."""
+    from dataclasses import replace as dc_replace
+
+    from scryne_quant.live.akis import Kaynak
+
+    barlar = {s: bs[:300] for s, bs in _barlar().items()}
+    a = barlar["AAAUSDT"]
+    a[150] = dc_replace(a[150], close=a[150].close * 3, high=a[150].close * 3)  # aşırı hareket
+    a[151] = dc_replace(a[151], volume=0.0)                                     # sıfır hacim
+    barlar["BBBUSDT"] = [b for i, b in enumerate(barlar["BBBUSDT"]) if not 120 <= i < 124]
+    barlar["CCCUSDT"] = [dc_replace(b, kaynak=Kaynak.BACKFILL) if i % 7 == 0 else b
+                         for i, b in enumerate(barlar["CCCUSDT"])]
+    kayip = barlar["AAAUSDT"][200]
+    eksik = {s: [b for b in bs if b is not kayip] for s, bs in barlar.items()}
+
+    def kos(onbellek):
+        m = EvrenPaperMotoru(depo=None, **_kurulum())
+        m.dogrulama_onbellegi = onbellek
+        sonuc = []
+        izgara = _izgara(eksik)
+        for u in _takvim_uyumlu(eksik):
+            m.uyelik_ekle(u)
+        for s, bs in eksik.items():
+            for b in bs:
+                if b.open_time < izgara[ISINMA]:
+                    m.bar_ekle(s, b)
+        sonuc += m.isinma(izgara[:ISINMA])
+        for j, t in enumerate(izgara[ISINMA:280], start=ISINMA):
+            for s, bs in eksik.items():
+                for b in bs:
+                    if b.open_time == t:
+                        m.bar_ekle(s, b)
+            if j == 230:
+                m.bar_ekle("AAAUSDT", kayip)  # geç bar: ortaya girer, önbellek geçersiz
+            sonuc.append(m.adim(t))
+        return sonuc, [i.sozluk(sembol_yaz=True) for i in m.adimci.islemler]
+
+    acik, kapali = kos(True), kos(False)
+    assert [(repr(x.ozkaynak), repr(x.brut), x.islem) for x in acik[0]] == [
+        (repr(x.ozkaynak), repr(x.brut), x.islem) for x in kapali[0]]
+    assert acik[1] == kapali[1] and acik[1]
