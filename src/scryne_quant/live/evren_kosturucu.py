@@ -35,6 +35,7 @@ from scryne_quant.live.akis import Bar, Kaynak
 from scryne_quant.live.canli_evren import AyUyeligi, ay_metni
 from scryne_quant.live.evren_depo import EvrenKosuDeposu
 from scryne_quant.live.evren_motor import EvrenPaperMotoru
+from scryne_quant.live.evren_yenileme import ay_basi_ms
 from scryne_quant.live.izgara_toplayici import VARSAYILAN_BEKLEME_MS, IzgaraToplayici
 from scryne_quant.live.kilit import KosuKilidi
 from scryne_quant.risk.motor import RiskMotoru
@@ -61,12 +62,34 @@ class EvrenTablosu:
 
     tablo: pd.DataFrame
     tablo_hash: str
+    yol: Path | None = None
+    _mtime: float | None = None
+    kural_kimlik: str | None = None
 
     @classmethod
     def oku(cls, parquet: str | Path) -> EvrenTablosu:
         yol = Path(parquet)
         meta = json.loads(yol.with_suffix(".json").read_text(encoding="utf-8"))
-        return cls(pd.read_parquet(yol), str(meta["tablo_hash"]))
+        return cls(pd.read_parquet(yol), str(meta["tablo_hash"]), yol, yol.stat().st_mtime,
+                   meta.get("kural_kimlik"))
+
+    def yenile(self) -> bool:
+        """Dosya değiştiyse yeniden okur (aylık yenileme yeni ayı ekler). Değiştiyse `True`.
+
+        Önceki ayların listesi yeni dosyada **farklıysa** motor bunu reddeder
+        (`EvrenPaperMotoru.uyelik_ekle`): geçmiş ayın üyeliği sessizce değişemez.
+        """
+        if self.yol is None or not self.yol.exists():
+            return False
+        mtime = self.yol.stat().st_mtime
+        if mtime == self._mtime:
+            return False
+        yeni = EvrenTablosu.oku(self.yol)
+        if yeni.kural_kimlik != self.kural_kimlik:
+            raise ValueError(f"evren tablosunun kuralı değişmiş: {self.kural_kimlik} → "
+                             f"{yeni.kural_kimlik}; aylık yenileme aynı kuralla üretilmeli")
+        self.tablo, self.tablo_hash, self._mtime = yeni.tablo, yeni.tablo_hash, yeni._mtime
+        return True
 
     def aylar(self) -> list[str]:
         return sorted(set(self.tablo["ay"].astype(str)))
@@ -114,6 +137,7 @@ class EvrenKosucu:
         self._durdur = False
         self.motor: EvrenPaperMotoru | None = None
         self.depo: EvrenKosuDeposu | None = None
+        self._gecikme_bildirildi: set[str] = set()
 
     # ------------------------------------------------------------------ yardımcılar
 
@@ -122,12 +146,47 @@ class EvrenKosucu:
         return (self.saat() // self._adim) * self._adim - self._adim
 
     def _uyelikleri_isle(self, motor: EvrenPaperMotoru, bas: int, bit: int) -> None:
-        """`[bas, bit]` aralığına düşen ayların tabloda olan üye listelerini motora ekler."""
+        """`[bas, bit]` aralığına düşen ayların tabloda olan üye listelerini motora ekler.
+
+        Aralığın son ayı tabloda yoksa dosya yeniden okunur (aylık yenileme). Hâlâ yoksa motor
+        bilinen en son ayın listesiyle devam eder ve bu `uyelik_gecikmesi` olarak kaydedilir.
+        """
+        if ay_metni(bit) not in motor.takvim().aylar and ay_metni(bit) not in self.tablo.aylar():
+            if self.tablo.yenile():
+                motor.depo.olay_yaz("evren_tablosu_yenilendi",
+                                    ayrinti={"tablo_hash": self.tablo.tablo_hash})
+            elif ay_metni(bit) not in self._gecikme_bildirildi:
+                self._gecikme_bildirildi.add(ay_metni(bit))
+                motor.depo.olay_yaz("uyelik_gecikmesi", bar_ms=bit,
+                                    ayrinti={"ay": ay_metni(bit)})
         for ay in self.tablo.aylar():
             if ay_metni(bas)[:7] <= ay <= ay_metni(bit)[:7]:
                 u = self.tablo.uyelik(ay)
                 if u is not None and motor.uyelik_ekle(u):
                     motor.depo.olay_yaz("uyelik", ayrinti={"ay": ay, "sembol": len(u.semboller)})
+                    if motor.adim_sayisi:  # ısınmada `baslat` bütün sembolleri zaten çeker
+                        self._yeni_uyeleri_doldur(motor, u, bit)
+
+    def _yeni_uyeleri_doldur(self, motor: EvrenPaperMotoru, u: AyUyeligi, bit: int) -> None:
+        """Evrene yeni giren sembollerin geçmişini REST'ten tamamlar (`bit` dahil).
+
+        Backtest'te üye olmadan önceki barlar veride zaten var; canlıda sembol hiç izlenmediyse
+        yoktur. Doldurulmazsa strateji yeni üyeyi kısa geçmişle görür ve canlı backtest'ten
+        sessizce ayrışır. Barlar şimdiki adımla kaydedilir: toparlanma aynısını üretir.
+        """
+        isinma = motor.strateji.isinma_bar() + ISINMA_PAYI
+        bas = max(ay_basi_ms(u.ay), 0) - isinma * self._adim
+        son_bilinen = motor.son_bar_zamanlari(u.semboller)
+        dolan = 0
+        for sembol in u.semboller:
+            baslangic = max(bas, son_bilinen.get(sembol, bas - self._adim) + self._adim)
+            if baslangic > bit:
+                continue
+            for bar in _rest_barlar(self.rest, sembol, self.timeframe, baslangic,
+                                    bit + self._adim):
+                dolan += motor.bar_ekle(sembol, bar)
+        if dolan:
+            motor.depo.olay_yaz("yeni_uye_gecmisi", bar_ms=bit, ayrinti={"ay": u.ay, "bar": dolan})
 
     def _durum_yaz(self, motor: EvrenPaperMotoru) -> None:
         s = motor.son_sonuc

@@ -14,6 +14,7 @@ import asyncio
 import datetime as dt
 import hashlib
 import json
+import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -2419,7 +2420,9 @@ def paper_evren_baslat(
         "limit_kimligi": limitler.kimlik(),
         "baslangic_sermaye": sermaye,
         "sifira_yaz_bar": sifira_yaz_bar,
-        "evren_tablo_hash": tablo.tablo_hash,
+        # Tablo hash'i değil kural: aylık yenileme tabloyu değiştirir, koşu kimliğini değil.
+        # Her ayın listesi hash'iyle depoya ayrıca yazılır; geçmiş ay değişirse motor durur.
+        "evren_kural_kimlik": tablo.kural_kimlik,
     }
     rest = BinanceAdaptoru()
     kosucu: ek_mod.EvrenKosucu
@@ -2449,6 +2452,44 @@ def paper_evren_baslat(
     except KilitAlinamadi as hata:
         raise typer.BadParameter(str(hata)) from hata
     typer.echo("koşu durdu")
+
+
+@paper_app.command("evren-tablo-yenile")
+def paper_evren_tablo_yenile(
+    tablo: Annotated[Path, typer.Argument(help="Koşunun kendi evren tablosu (.parquet).")],
+    depo_kok: Depo = arsiv_mod.VARSAYILAN_EVREN_DEPO,
+    indir: Annotated[
+        bool, typer.Option("--indir", help="M−1 eksikse önce arşivden USDT sembollerini indir.")
+    ] = False,
+) -> None:
+    """Koşunun evren tablosunu içinde bulunulan aya uzatır; idempotent. (Faz 14)
+
+    Aynı kural ve `tablo_kur` ile üretilir, geçmiş ayların listesi değişirse yazmaz. Çıkış
+    kodu: 0 güncel/yazıldı, 3 M−1 verisi henüz tamam değil (sonra yeniden dene), 1 hata.
+    Zamanlanmış görevle her gün çalıştırılır; koşu dosyayı kendisi yeniden okur.
+    """
+    from scryne_quant.live import evren_yenileme as ey
+
+    def dene() -> ey.YenilemeSonucu:
+        return ey.yenile(tablo, ParquetDepo(depo_kok), _depo_sembolleri(Path(depo_kok), "1h"))
+
+    try:
+        sonuc = dene()
+        if sonuc.durum == "m1_eksik" and indir:
+            typer.echo(f"M−1 eksik ({sonuc.ayrinti}); arşivden indiriliyor")
+            subprocess.run(
+                [sys.executable, "-m", "scryne_quant.cli.main", "data", "arsiv-indir", "--usdt",
+                 "--depo", str(depo_kok)],
+                check=False,
+            )
+            sonuc = dene()
+    except ey.EvrenYenilemeHatasi as hata:
+        typer.echo(f"HATA: {hata}", err=True)
+        raise typer.Exit(code=1) from hata
+    typer.echo(f"{utc_str(simdi_ms())}  {sonuc.durum}  son ay {sonuc.son_uye_ay}  "
+               f"{(sonuc.tablo_hash or '')[:12]}  {sonuc.ayrinti}")
+    if sonuc.durum == "m1_eksik":
+        raise typer.Exit(code=3)
 
 
 @paper_app.command("evren-durum")

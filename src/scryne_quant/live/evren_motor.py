@@ -129,7 +129,7 @@ class EvrenPaperMotoru:
         adim = self.adim_sayisi if bilindi_adim is None else bilindi_adim
         for mevcut, _ in self._g.uyelik:
             if mevcut.ay == uyelik.ay:
-                if mevcut != uyelik:
+                if mevcut.semboller != uyelik.semboller:
                     raise EvrenMotorHatasi(f"{uyelik.ay} için farklı üye listesi zaten var")
                 return False
         self._g.uyelik.append((uyelik, adim))

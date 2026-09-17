@@ -71,6 +71,30 @@ borsa emri olmadığı için adımlar işaret + süreç.
    biri bir sebebe bağlanmalı (geç bar, kopma).
 3. 30 gün kesintisiz (K-055), dayanıklılık sayacı `host-1` ile zaten işliyor.
 
+## 6b. Ay dönümü: evren tablosunun yenilenmesi (2026-09-17)
+
+Koşu kendi tablosunu okur (`runs/paper/<kosu>.evren.parquet`, araştırma tablosunun kopyası).
+Ay dönünce yeni ayın satırı bu dosyaya eklenmeli:
+
+- `sq paper evren-tablo-yenile <tablo> --indir` (`live/evren_yenileme.py`) — **aynı kural**
+  (meta'daki `kural` yeniden kurulur, `kural_kimlik` tutmalı) ve **aynı `tablo_kur`** ile.
+  İdempotent; hostta günlük görev. **Ölçüldü:** Ağustos'ta biten bir kopyadan Eylül'e uzatılan
+  tablo, araştırma tablosunun hash'ini **bit düzeyinde** verdi (`b06857c0…`, 735 sembol, 18 sn).
+- **M−1 tamam mı:** `tablo_kur` yalnızca takvime bakıyor ve `ay_sonu_tolerans_saat=24` son
+  günün eksikliğini yutabilir. BTCUSDT'nin M−1 son saati depoda yoksa yazılmaz (çıkış 3).
+- **Geçmiş değişmez:** eski ayların sembol listesi yenide aynı değilse yazılmaz.
+- Koşu kimliği tablo hash'ini değil `evren_kural_kimlik`i taşır: yenileme hash'i değiştirir,
+  koşuyu değil. Her ayın listesi hash'iyle depoya ayrıca yazılır; aynı aya **farklı liste**
+  gelirse motor durur, aynı liste farklı hash'le gelirse ilk kayıt kalır.
+- Yeni ay tabloda yokken koşu bilinen son ayın listesiyle devam eder ve `uyelik_gecikmesi`
+  yazar. **Bilinen sapma:** arşivin son gün dosyası ertesi gün yayımlandığı için canlı üyelik
+  backtest'ten ≈1-2 gün geç döner; backtest aynı günlerde yeni listeyi kullanır. Sapma olay
+  kaydından günü gününe okunur.
+- **Yeni üyenin geçmişi:** backtest'te bir sembolün üye olmadan önceki barları veride var;
+  canlıda hiç izlenmemiş sembolün yok. Yeni liste eklenince bu semboller için
+  `isinma_bar + 48` bar REST'ten doldurulur (`yeni_uye_gecmisi` olayı), şimdiki adımla
+  kaydedilir: toparlanma aynısını üretir (testli). Abonelik sonraki adımda yeniden kurulur.
+
 ## 7. Aşamalar ve tahmin
 
 | Aşama | İş | Tahmin |

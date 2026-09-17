@@ -59,7 +59,10 @@ class UyelikTakvimi:
 
     def ekle(self, uyelik: AyUyeligi) -> None:
         onceki = self.aylar.get(uyelik.ay)
-        if onceki is not None and onceki != uyelik:
+        if onceki is not None and onceki.semboller == uyelik.semboller:
+            # Aylık yenileme tablo hash'ini değiştirir, geçmiş ayın listesini değil: ilki kalır.
+            return
+        if onceki is not None:
             raise CanliEvrenHatasi(
                 f"{uyelik.ay} için farklı bir üyelik zaten kayıtlı (tablo "
                 f"{onceki.tablo_hash[:12]} ≠ {uyelik.tablo_hash[:12]}): aynı ay iki listeyle "

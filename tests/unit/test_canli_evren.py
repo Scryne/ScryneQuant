@@ -58,6 +58,8 @@ def test_ayni_aya_farkli_liste_reddedilir():
     tk = UyelikTakvimi()
     tk.ekle(AyUyeligi("2026-09", ("A",), "h1"))
     tk.ekle(AyUyeligi("2026-09", ("A",), "h1"))  # aynısı sorun değil
+    tk.ekle(AyUyeligi("2026-09", ("A",), "h9"))  # yenilenmiş tablo, aynı liste: ilk kayıt kalır
+    assert tk.aylar["2026-09"].tablo_hash == "h1"
     with pytest.raises(CanliEvrenHatasi):
         tk.ekle(AyUyeligi("2026-09", ("B",), "h2"))
 

@@ -131,3 +131,60 @@ def test_uctan_uca_isinma_akis_toparlanma_bosluk(tmp_path):
     m3 = EvrenPaperMotoru.toparlan(depo3, **k2.kurulum)
     assert m3.adim_sayisi == isinma + 5
     depo3.kapat()
+
+
+def test_tablo_yenileme_ayni_kural_yeni_ay(tmp_path):
+    import json
+    import os
+
+    tablo = _tablo()
+    yol = tmp_path / "evren.parquet"
+    tablo.tablo.iloc[:3].to_parquet(yol)
+    yol.with_suffix(".json").write_text(json.dumps({"tablo_hash": "h1", "kural_kimlik": "k"}))
+    t = EvrenTablosu.oku(yol)
+    assert t.yenile() is False
+    tablo.tablo.to_parquet(yol)
+    yol.with_suffix(".json").write_text(json.dumps({"tablo_hash": "h2", "kural_kimlik": "k"}))
+    os.utime(yol, (1, t._mtime + 10))
+    assert t.yenile() is True
+    assert t.tablo_hash == "h2" and len(t.tablo) == len(tablo.tablo)
+    yol.with_suffix(".json").write_text(json.dumps({"tablo_hash": "h3", "kural_kimlik": "baska"}))
+    os.utime(yol, (1, t._mtime + 20))
+    import pytest
+
+    with pytest.raises(ValueError, match="kuralı"):
+        t.yenile()
+
+
+def test_ay_donumunde_yeni_uye_gecmisle_eklenir(tmp_path):
+    """Kasım: AAA, BBB. Aralık: + CCC. CCC canlıda hiç izlenmemişti; geçmişi REST'ten dolmalı."""
+    from scryne_quant.live.evren_motor import EvrenPaperMotoru
+
+    aralik = int(pd.Timestamp("2023-12-01", tz="UTC").timestamp() * 1000)
+    j = (aralik - T0) // SAAT
+    satirlar = [{"ay": "2023-11", "sira": i + 1, "kanonik_id": s, "sembol": s,
+                 "onceki_ay_quote_hacim": 1.0} for i, s in enumerate(SEMBOLLER[:2])]
+    satirlar += [{"ay": "2023-12", "sira": i + 1, "kanonik_id": s, "sembol": s,
+                  "onceki_ay_quote_hacim": 1.0} for i, s in enumerate(SEMBOLLER)]
+    yol = tmp_path / "evren-2.sqlite"
+    saat = Saat(T0 + (j - 3) * SAAT + 30 * 60_000)
+    k = _kosucu(yol, saat, T0 + (j - 3) * SAAT, T0 + (j + 3) * SAAT, SahteRest())
+    k.tablo = EvrenTablosu(pd.DataFrame(satirlar), "h")
+
+    async def ilerleyen_uyku(_):
+        saat.ms += 10 * 60_000
+        await asyncio.sleep(0)
+
+    asyncio.run(kos(k, uyku=ilerleyen_uyku, azami_adim=6))
+    m = k.motor
+    assert m.son_bar_ms == T0 + (j + 2) * SAAT
+    isinma = k.kurulum["strateji"].isinma_bar() + 48
+    ccc = sorted(m._g.barlar["CCCUSDT"])
+    assert ccc[0] == aralik - isinma * SAAT and ccc[-1] == T0 + (j + 2) * SAAT
+    assert len(ccc) == isinma + 3
+    depo = EvrenKosuDeposu(yol)
+    turler = [o["tur"] for o in depo.olaylar()]
+    assert {"yeni_uye_gecmisi", "abonelik_degisti"} <= set(turler)
+    m2 = EvrenPaperMotoru.toparlan(depo, **k.kurulum)
+    assert m2.son_sonuc.ozkaynak == m.son_sonuc.ozkaynak
+    depo.kapat()
