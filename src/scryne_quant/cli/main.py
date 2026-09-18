@@ -2511,52 +2511,59 @@ def paper_evren_tablo_yenile(
 
 
 def _sqlite_yedekle(kaynak: Path, hedef: Path) -> None:
-    """Çalışan koşunun dosyasına dokunmadan tutarlı kopya (SQLite online backup)."""
-    import sqlite3
+    """Çalışan koşunun dosyasına dokunmadan tutarlı kopya (SQLite online backup).
 
-    hedef.parent.mkdir(parents=True, exist_ok=True)
-    k = sqlite3.connect(f"file:{kaynak.as_posix()}?mode=ro", uri=True)
-    h = sqlite3.connect(hedef)
-    try:
-        k.backup(h)
-    finally:
-        k.close()
-        h.close()
+    Gövde `live/evren_kurulum.anlik_kopya`da: salt okunur pano da aynı kopyayı alıyor.
+    """
+    from scryne_quant.live.evren_kurulum import anlik_kopya
+
+    anlik_kopya(kaynak, hedef)
 
 
 def _evren_kurulum_kimlikten(kimlik: dict[str, Any]) -> dict[str, Any]:
     """Evren koşusunun motor kurulumu, koşu kimliğinden; bugünkü konfigürasyonla bire bir
-    tutması doğrulanır (tutmazsa kurulmaz — yanlış konfigürasyonla yeniden üretim kanıt olmaz)."""
-    import inspect
+    tutması doğrulanır (tutmazsa kurulmaz — yanlış konfigürasyonla yeniden üretim kanıt olmaz).
 
-    from scryne_quant.strategy.kutuphane import EVREN_AILELER
+    Gövde `live/evren_kurulum.py`de: salt okunur pano da **aynı** kurulumu kuruyor ve iki
+    kopya sessizce ayrışabilirdi. Burada kalan tek şey CLI'ya özgü hata tipi.
+    """
+    from scryne_quant.live.evren_kurulum import (
+        KurulumUyusmazligi,
+        evren_kurulum_kimlikten,
+    )
 
-    st = kimlik.get("strateji", {})
-    kutuphane = {**EVREN_KIYAS, **EVREN_AILELER}
-    if st.get("ad") not in kutuphane:
-        raise typer.BadParameter(f"koşu kimliğinde bilinmeyen strateji: {st.get('ad')}")
-    sinif = kutuphane[st["ad"]]
-    imza = inspect.signature(sinif).parameters
-    strateji = sinif(**{k: v for k, v in st["parametreler"].items() if k in imza})
-    maliyet = maliyet_mod.yukle()
-    limitler = limit_mod.yukle()
-    uyusmayan = [ad for ad, beklenen, gercek in (
-        ("strateji", st, strateji.sozluk()),
-        ("maliyet", kimlik.get("maliyet"), maliyet.sozluk()),
-        ("limit_kimligi", kimlik.get("limit_kimligi"), limitler.kimlik()),
-    ) if json.loads(json.dumps(gercek)) != beklenen]
-    if uyusmayan:
-        raise typer.BadParameter(
-            f"bugünkü konfigürasyon koşu kimliğiyle uyuşmuyor: {', '.join(uyusmayan)}")
-    return {
-        "strateji": strateji, "maliyet": maliyet,
-        "baslangic_sermaye": float(kimlik["baslangic_sermaye"]),
-        "risk": RiskMotoru(limitler, "1h", mod="gozlem"),
-        "timeframe": kimlik.get("timeframe", "1h"),
-        "sifira_yaz_bar": kimlik.get("sifira_yaz_bar"),
-        "turev": bool(kimlik.get("turev", False)),
-        "makro": tuple(kimlik.get("makro", ())),
-    }
+    try:
+        return evren_kurulum_kimlikten(kimlik)
+    except KurulumUyusmazligi as e:
+        raise typer.BadParameter(str(e)) from e
+
+
+@paper_app.command("pano")
+def paper_pano(
+    port: Annotated[int, typer.Option("--port", help="Dinlenecek port.")] = 8788,
+    host: Annotated[str, typer.Option("--host", help="Dinlenecek arayüz.")] = "127.0.0.1",
+    web: Annotated[
+        Path | None, typer.Option("--web", help="SPA build dizini (apps/web/dist).")
+    ] = None,
+    kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_PAPER_KOKU,
+    izleme_kok: Annotated[Path, typer.Option("--izleme")] = Path("runs/izleme"),
+) -> None:
+    """Bütün koşuları gösteren **salt okunur** gözlem panosu. (Faz 14)
+
+    Koşuların kendi süreçlerine dokunmaz: her okuma anlık kopyadan yapılır, hiçbir uç
+    durum değiştirmez. Bu yüzden dayanıklılık penceresi açıkken de çalıştırılabilir —
+    koşuyu yeniden başlatmak gerekmez.
+    """
+    import uvicorn
+
+    from scryne_quant.live.evren_pano import PanoKaynagi, pano_kur
+
+    kaynak = PanoKaynagi(kok, izleme_kok)
+    app = pano_kur(kaynak, web_kok=web.resolve() if web is not None else None)
+    bulunan = [y.name[: -len(".sqlite")] for y in kaynak.kosu_yollari()]
+    typer.echo(f"pano    : http://{host}:{port}  (salt okunur)")
+    typer.echo(f"koşular : {', '.join(bulunan) if bulunan else 'yok'}")
+    uvicorn.run(app, host=host, port=port, log_level="warning", access_log=False)
 
 
 @paper_app.command("evren-yedek")
