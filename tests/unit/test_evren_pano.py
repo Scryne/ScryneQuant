@@ -124,6 +124,58 @@ def test_durum_json_varsa_o_kazaniyor(tmp_path):
     assert satir["pozisyon_sayisi"] == 1
 
 
+def test_izleme_yazildi_ms_dosya_mtimeindan_geliyor(tmp_path):
+    """`durum.json` bu alanı **taşımıyor**; türetilmezse arayüz "izleme bayat" der.
+
+    Bu, kontrol dakikası dakikasına koşarken kırmızı şerit basan sahte bir alarmdı —
+    ve sahte alarm, alarmsızlıktan kötüdür: bakanı kırmızıyı yok saymaya alıştırır.
+    """
+    izleme_kok = tmp_path / "izleme"
+    izleme_kok.mkdir()
+    (izleme_kok / "durum.json").write_text(
+        json.dumps({"zaman": "2026-09-18 18:00:00 UTC", "alarmlar": [], "kosular": []}),
+        encoding="utf-8",
+    )
+    kaynak = PanoKaynagi(tmp_path / "paper", izleme_kok, onbellek_s=0.0)
+
+    govde = kaynak.izleme()
+
+    assert govde["var"] is True
+    assert isinstance(govde["yazildi_ms"], int)
+    assert govde["yazildi_ms"] > 0
+    # Liste ucu da aynı alanı taşımalı: arayüzün bayatlık kararı buradan okunuyor.
+    assert isinstance(kaynak.kosular()["izleme"]["yazildi_ms"], int)
+
+
+def test_izleme_yoksa_bayat_degil_yok_diyor(tmp_path):
+    kaynak = PanoKaynagi(tmp_path / "paper", tmp_path / "izleme", onbellek_s=0.0)
+    govde = kaynak.izleme()
+    assert govde["var"] is False
+    assert "simdi_ms" in govde
+
+
+def test_izleme_kosularina_son_sapma_ekleniyor(tmp_path):
+    """Model boyutu (canlı-backtest sapması) panoda da görünebilsin diye."""
+    paper = tmp_path / "paper"
+    paper.mkdir()
+    izleme_kok = tmp_path / "izleme"
+    izleme_kok.mkdir()
+    (izleme_kok / "durum.json").write_text(
+        json.dumps({"alarmlar": [], "kosular": [{"kosu": "evren-x", "surec_yasiyor": True}]}),
+        encoding="utf-8",
+    )
+    (paper / "evren-x.sapma.jsonl").write_text(
+        json.dumps({"adim": 5, "son_ozkaynak_farki_bps": 0.0}) + "\n"
+        + json.dumps({"adim": 9, "son_ozkaynak_farki_bps": 0.0}) + "\n",
+        encoding="utf-8",
+    )
+    kaynak = PanoKaynagi(paper, izleme_kok, onbellek_s=0.0)
+
+    kosu = kaynak.izleme()["kosular"][0]
+
+    assert kosu["sapma"]["adim"] == 9  # **son** ölçüm
+
+
 # ------------------------------------------------------------- salt okunurluk
 
 

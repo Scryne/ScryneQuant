@@ -31,6 +31,7 @@ import sqlite3
 import tempfile
 import threading
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -126,16 +127,37 @@ class PanoKaynagi:
             return None
 
     def izleme(self) -> dict[str, Any]:
-        """`sq izle kontrol`ün son yazdığı durum; süreç canlılığı buradan gelir."""
+        """`sq izle kontrol`ün son yazdığı durum; süreç canlılığı buradan gelir.
+
+        **`yazildi_ms` dosyanın kendisinde yok**, mtime'ından türetiliyor — `live/api.py`
+        ile aynı kaynak, aynı anlam. Türetmeyi atlayan ilk sürüm alanı `None` bırakıyordu
+        ve arayüz bunu "izleme bayat" diye okuyup kırmızı şerit basıyordu: kontrol
+        dakikası dakikasına çalışırken. **Sahte alarm, alarmsızlıktan kötüdür** — bakanı
+        kırmızıyı yok saymaya alıştırır.
+        """
         yol = self.izleme_kok / "durum.json"
         if not yol.is_file():
-            return {"var": False}
+            return {"var": False, "simdi_ms": self.saat()}
         try:
             govde = json.loads(yol.read_text(encoding="utf-8"))
+            yazildi_ms = int(yol.stat().st_mtime * 1000)
         except (OSError, ValueError):
-            return {"var": False}
+            return {"var": False, "simdi_ms": self.saat()}
         govde["var"] = True
         govde["simdi_ms"] = self.saat()
+        govde["yazildi_ms"] = yazildi_ms
+        for kosu in govde.get("kosular", []):
+            if not isinstance(kosu, dict):
+                continue
+            sapma = self.paper_kok / f"{kosu.get('kosu')}.sapma.jsonl"
+            if sapma.is_file():
+                try:
+                    satirlar = sapma.read_text(encoding="utf-8").strip().splitlines()
+                except OSError:
+                    continue
+                if satirlar:
+                    with suppress(ValueError):
+                        kosu["sapma"] = json.loads(satirlar[-1])
         return govde
 
     # ------------------------------------------------------- anlık kopya okuma
