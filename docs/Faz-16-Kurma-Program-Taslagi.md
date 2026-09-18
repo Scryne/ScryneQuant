@@ -46,15 +46,17 @@ Aynı şekilde: kıyasın OOS'ta 108 işlemi var ve komisyon+slippage toplamı 1
 ## 4. Çekilişler (bütçe 4)
 
 Hepsi kıyasla **aynı evreni, aynı seçimi, aynı dengeleme takvimini** kullanır; değişen tek
-şey `KurmaAyarlari`. Değişken sıfır/kapalı konumdayken sonuç kıyasla **bit düzeyinde aynı**
-olmalı (testle zorlanır — funding ailesinde aynı disiplin uygulandı).
+şey `KurmaAyarlari`. Değişken kapalı konumdayken sonuç kıyasa dönmeli (testle zorlanır —
+funding ailesinde aynı disiplin uygulandı). `turnover_bandi = 0`da kod yolu kıyasınkiyle
+aynı olduğu için **bit düzeyinde**; `azami_agirlik_carpani = 1`de kod yolu farklı olduğu
+için iddia **ağırlık eşitliği** (ayrıntı `strategy/kutuphane/evren_kurma.py`).
 
 | # | Ad | Değişen | Soru | Kod durumu |
 | --- | --- | --- | --- | --- |
-| 1 | `evren_oynaklik_agirlik` | `esit_agirlik=False` | Oynaklık ayarlı boyut, eşit ağırlığı geçer mi | **Hazır** (`EvrenEsitAgirlik(esit_agirlik=...)`) |
-| 2 | `evren_turnover_bandi` | `turnover_bandi` | Gidiş-dönüş maliyetinden küçük dengelemeleri elemek | Parametre stratejiye açılacak |
-| 3 | `evren_korelasyon_budama` | `korelasyon_tavani` | Aynı riski iki kez almamak Sharpe'ı artırır mı | Parametre + korelasyon penceresi açılacak |
-| 4 | `evren_konsantrasyon` | `azami_enstruman`, `azami_agirlik` | Kaç isim taşımak ve tek isim tavanı | **Hazır** |
+| 1 | `evren_oynaklik_agirlik` | `esit_agirlik=False` + oransal tavan | Oynaklık ayarlı boyut, eşit ağırlığı geçer mi | **Kodlandı** |
+| 2 | `evren_turnover_bandi` | `turnover_bandi` | Sürüklemeden doğan küçük dengelemeleri elemek | **Kodlandı** |
+| 3 | `evren_korelasyon_budama` | `korelasyon_tavani` | Aynı riski iki kez almamak Sharpe'ı artırır mı | Kodlanmadı (durma kuralına bağlı) |
+| 4 | `evren_konsantrasyon` | `azami_enstruman`, `azami_agirlik` | Kaç isim taşımak ve tek isim tavanı | Kodlanmadı (durma kuralına bağlı) |
 
 **Izgaralar — uygulama sırasında düzeltildi** (her çekiliş 12 nokta, türev/konumlanma
 programlarıyla aynı biçim; K-058'in `pbo` eşiği o biçimde kalibre edildi):
@@ -89,9 +91,9 @@ matrisi beslemeyi gerektiriyor — henüz kimsenin hesaplamadığı bir şey. Ge
 kıyasın Sharpe'ını geçmezse 3 ve 4 **harcanmaz**, program kapanır. Izgara, pencere kümesi
 ya da eşikler sonuçlara bakarak genişletilmez.
 
-Ek durma kuralı (bu programa özel): bir çekilişte değişken sıfır/kapalı konumdayken kıyasla
-bit düzeyinde eşitlik **bozulursa**, koşu durur ve sebep bulunmadan devam edilmez (K-038
-kalıbı). Kurma katmanındaki sessiz bir fark, bütün sonuçları karşılaştırılamaz yapar.
+Ek durma kuralı (bu programa özel): bir çekilişte kapalı konumun kıyasa dönme testi
+**kırılırsa**, koşu durur ve sebep bulunmadan devam edilmez (K-038 kalıbı). Kurma
+katmanındaki sessiz bir fark, bütün sonuçları karşılaştırılamaz yapar.
 
 ## 6. Eşik ve sayım
 
