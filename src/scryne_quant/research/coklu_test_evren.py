@@ -16,9 +16,24 @@ gerçek motordan geçirilir. Kaydırma bütün sembollerde **aynı** `k`: kesitt
 her serinin kendi otokorelasyonu korunur, yok edilen tek şey sinyalin gelecekteki getiriyle
 hizası.
 
-Kaydırılmayanlar: barlar, PIT üyelik, likidite sıralaması (`kote_hacim`), oynaklık (`atr`),
-yeniden dengeleme takvimi, maliyet ve K-059 değerleme politikası. Yani null, **aynı
-iskeletin** beceri olmadan çalışan hâli: kıyasın yapısı ve maliyeti, sinyalin bilgisi yok.
+**Kural:** kaydırılan şey, çekilişin **iddiasını taşıyan** özelliktir; iskelet kaydırılmaz.
+Barlar, PIT üyelik, yeniden dengeleme takvimi, maliyet ve K-059 değerleme politikası her
+zaman yerinde kalır. Yani null, **aynı iskeletin** beceri olmadan çalışan hâli.
+
+Hangi özelliğin iskelet, hangisinin iddia olduğu **çekilişe göre değişir** ve bu yüzden
+`SINYAL_OZELLIKLERI` strateji başına yazılır:
+
+- Kesitsel/türev/makro/konumlanma çekilişlerinde iddia, kıyasın üstüne konan skordur;
+  `kote_hacim` (sıralama) ve `atr` (boyut) iskeletin parçasıdır ve kaydırılmaz.
+- `kurma_evren` çekilişlerinde (Faz 16) iddia tam olarak kurma katmanındadır:
+  `evren_oynaklik_agirlik`in iddiası `atr`'nin boyutlandırmada işe yaradığıdır, dolayısıyla
+  orada kaydırılan `atr`'dir. Aynı özelliğin bir çekilişte iskelet, ötekinde iddia olması
+  çelişki değil; sabit bir liste tutmak çelişki olurdu.
+- `evren_turnover_bandi`in **hiçbir tahmini yok** — bant bir şey öngörmez, ağırlık
+  değişimini bastırır. Kaydırılacak doğal bir sinyal olmadığı için sıralama ölçüsü
+  kaydırılıyor ve **bu bir yaklaşımdır**: null'da bant da çalıştığı için null dağılımı
+  sıfır çevresinde değil, kaydırılmış kıyasın Sharpe'ı çevresinde toplanır. O çekiliş için
+  ölçülen düzeltme muhafazakâr değildir; sınır raporda açık kalem olarak durur.
 
 ## Paylaşılan oran
 
@@ -78,6 +93,16 @@ SINYAL_OZELLIKLERI: Final[dict[str, tuple[str, ...]]] = {
     "evren_taker_baski": ("funding_skor",),
     "evren_buyuk_hesap": ("funding_skor",),
     "evren_oi_taker": ("funding_skor", "taker_skor"),
+    # Kurma ailesi (Faz 16): iddia seçimde değil **boyutlandırmada**. Oynaklık ayarlı
+    # çekilişte kaydırılan şey `atr` — "1/σ ağırlıklandırma gelecekteki getiriyle hizalı
+    # mı" sorusunun null'ı budur.
+    "evren_oynaklik_agirlik": ("atr",),
+    # Turnover bandının **hiçbir tahmini yok**: bant, ağırlık değişimini bastırır, bir şey
+    # öngörmez. Kaydırılacak doğal bir "sinyal" olmadığı için sıralama ölçüsü (`kote_hacim`)
+    # kaydırılıyor: null, aynı bandın rastgele zamanlanmış bir seçim üzerinde ne yaptığı.
+    # **Bu bir yaklaşımdır ve sınırı yazılı:** bandın kendi etkisi null'da da yaşıyor,
+    # dolayısıyla ölçülen düzeltme bu çekiliş için muhafazakâr değil (raporda açık kalem).
+    "evren_turnover_bandi": ("kote_hacim",),
 }
 
 

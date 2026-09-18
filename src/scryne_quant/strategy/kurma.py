@@ -216,15 +216,22 @@ def agirliklar(secilen: Sequence[Aday], ayarlar: KurmaAyarlari) -> dict[str, flo
 
     w = pay * ayarlar.hedef_brut
     tavan = ayarlar.azami_agirlik
-    # Tavanı aşanları kırp, artanı kırpılmayanlara payları oranında dağıt. Sabit nokta:
-    # her turda en az bir enstrüman tavana oturur, yani en fazla len(secilen) tur.
+    # Tavanı aşanları kırp, artanı **kırpılmamış** olanlara payları oranında dağıt. Bir kez
+    # tavana oturan enstrüman `kilitli`ye girer ve bir daha pay almaz. Kilit olmadan bu
+    # döngü yakınsamıyordu: kırpılan enstrüman `w == tavan` olduğu için sonraki turda
+    # `w > tavan` testine takılmıyor, "serbest" sayılıyor ve yeniden pay alıp tavanı
+    # aşıyordu — yani tavan bir tavan değil, salınan bir sayı oluyordu (3 adaylı bir vakada
+    # tavanın iki katına çıktığı ölçüldü). Kilitle sabit nokta garanti: her tur en az bir
+    # enstrüman kilitlenir, yani en fazla len(secilen) tur.
+    kilitli = np.zeros(len(secilen), dtype=bool)
     for _ in range(len(secilen)):
-        asan = w > tavan
+        asan = (w > tavan) & ~kilitli
         if not asan.any():
             break
         artan = float((w[asan] - tavan).sum())
         w = np.where(asan, tavan, w)
-        serbest = ~asan & (w > 0.0)
+        kilitli |= asan
+        serbest = ~kilitli & (w > 0.0)
         if not serbest.any():
             break
         w = np.where(serbest, w + artan * (w / w[serbest].sum()), w)

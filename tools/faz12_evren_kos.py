@@ -62,6 +62,9 @@ AZAMI_SEMBOL = 600
 #: kıyas **seçilen** yoğunlukla koşulur: filtre kıyasın üstüne tek bir dışlama, fark yalnız
 #: ondan gelmeli.
 KIYAS_YOGUNLUK = 10
+#: `kurma_evren` programının portföy kodu. `TUREV_PORTFOY` ("EVREN_ESIT") olamaz: o kod
+#: "kıyasın kurma yöntemi" demek ve bu programın çekilişlerinde tam olarak o değişiyor.
+KURMA_PORTFOY = "EVREN_KURMA"
 #: Program → (funding yüklenir mi, portföy kodu, kıyas yoğunluğu seçilenden mi)
 PROGRAM_AYARI = {
     "kesitsel_fiyat": (False, ed.KESITSEL_PORTFOY, False),
@@ -70,6 +73,10 @@ PROGRAM_AYARI = {
     # Faz 16: konumlanma dışlaması. Funding yüklenmez (skor konumlanmadan gelir), portföy ve
     # kıyas yoğunluğu türev programıyla aynı.
     "konumlanma_evren": (False, ed.TUREV_PORTFOY, True),
+    # Faz 16: aynı seçim, farklı kurma. Ek veri yok. Portföy kodu ayrı (`EVREN_KURMA`):
+    # bu programda değişen şey **portföy yöntemi**, ve K-051 yöntemi hipotez kimliğinin
+    # parçası sayıyor. Kıyas seçilen yoğunlukla koşulur — fark yalnızca kurmadan gelmeli.
+    "kurma_evren": (False, KURMA_PORTFOY, True),
 }
 #: Ölçüm (24 GB makine): veri yüklü süreç ≈4,5 GB; tek koşunun tepesi in-sample +0,6 GB,
 #: tam pencere +0,9 GB. Ana süreç + 3 işçi in-sample'da ≈20 GB; tam pencere 2 işçiyle.

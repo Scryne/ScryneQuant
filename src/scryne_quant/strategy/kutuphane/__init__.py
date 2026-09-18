@@ -31,6 +31,10 @@ from scryne_quant.strategy.kutuphane.evren_konumlanma import (
     EvrenOiTaker,
     EvrenTakerBaski,
 )
+from scryne_quant.strategy.kutuphane.evren_kurma import (
+    EvrenOynaklikAgirlik,
+    EvrenTurnoverBandi,
+)
 from scryne_quant.strategy.kutuphane.evren_makro import EvrenMakroNfci, EvrenMakroVix
 from scryne_quant.strategy.kutuphane.funding_egilim import FundingEgilim
 from scryne_quant.strategy.kutuphane.funding_filtre import FundingFiltre
@@ -96,6 +100,10 @@ EVREN_AILELER: Final[dict[str, type[PortfoyStratejisi]]] = {
     EvrenTakerBaski.ad: EvrenTakerBaski,
     EvrenBuyukHesap.ad: EvrenBuyukHesap,
     EvrenOiTaker.ad: EvrenOiTaker,
+    # `kurma_evren` programı: aynı seçim, farklı kurma (Faz 16). Dışlaması yok; kıyastan
+    # farkı yalnızca `KurmaAyarlari`.
+    EvrenOynaklikAgirlik.ad: EvrenOynaklikAgirlik,
+    EvrenTurnoverBandi.ad: EvrenTurnoverBandi,
 }
 
 #: Aile → o ailenin stratejileri. Roadmap "5 aile de aynı veri ve aynı maliyet
@@ -157,7 +165,9 @@ __all__ = [
     "EvrenMakroVix",
     "EvrenOiBirikim",
     "EvrenOiTaker",
+    "EvrenOynaklikAgirlik",
     "EvrenTakerBaski",
+    "EvrenTurnoverBandi",
     "FundingEgilim",
     "FundingFiltre",
     "FundingTers",

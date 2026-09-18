@@ -3284,3 +3284,41 @@ değil.
 
 8 günlük pencerede bir kesinti olur ve sebebi giderilemezse, kriter sebebin ölçülmesini
 gerektiren süreye uzar. Süre kısaltıldığı için değil, **sebep bilinmediği için** uzar.
+
+## K-070 — `agirliklar()` tavanı bir tavan değildi; kırpılan pozisyon kilitleniyor
+
+**Durum:** kabul · **Tarih:** 2026-09-18 · **Faz:** 16 · **İlgili:** K-057, K-051/4 ·
+**Kaynak:** `src/scryne_quant/strategy/kurma.py`, `tests/unit/test_evren_kurma.py`
+
+**Bulgu.** `strategy/kurma.py:agirliklar()` tavanı aşan ağırlıkları kırpıp artan bütçeyi
+kalanlara dağıtıyor. Kırpılan enstrüman **kilitlenmiyordu**: kırpıldıktan sonra `w == tavan`
+olduğu için bir sonraki turda `w > tavan` testine takılmıyor, "serbest" sayılıyor ve yeniden
+pay alıyordu. Sonuç, tavanın aşılması ve döngünün yakınsamaması.
+
+Ölçülen (`hedef_brut = 0,2`, `azami_agirlik = 0,05`, oynaklıklar 0,01/0,02/0,03):
+
+| Aday sayısı | Eski çıktı | Tavan aşıldı mı |
+| ---: | --- | --- |
+| 3 | A 0,05 · B 0,05 · **C 0,10** | evet, **iki katı** |
+| 4 | A 0,0520 · B 0,05 · C 0,0520 · D 0,0460 | evet |
+
+Fonksiyonun kendi docstring'i *"Sabit nokta: her turda en az bir enstrüman tavana oturur,
+yani en fazla `len(secilen)` tur"* diyordu. Cümle doğruydu, kod onu uygulamıyordu: oturan
+enstrüman bir sonraki turda kalkıyordu. Döngü `len(secilen)` turda kesiliyor, dolayısıyla
+çıktı salınımın nerede kesildiğine bağlı.
+
+**Düzeltme.** Kırpılan enstrüman `kilitli` maskesine giriyor ve bir daha pay almıyor. Her tur
+en az bir enstrüman kilitlendiği için sabit nokta artık garanti.
+
+**Hiçbir kayıtlı sonuç değişmedi ve bu tesadüf değil.** Bugüne kadarki bütün evren koşuları
+`esit_agirlik=True` ile yapıldı; orada bütün ağırlıklar eşit ve tavan `hedef_brut /
+azami_enstruman`, yani ya hiçbiri tavanı aşar ya da hepsi birden aşar. İkinci durumda hepsi
+tavana kırpılır ve dağıtılacak "serbest" enstrüman kalmaz — eski kod da yeni kod da aynı
+şeyi verir. Karışık durum (bazıları üstte, bazıları altta) yalnızca oynaklık ayarlı
+dağıtımda doğuyor ve o yol hiçbir çekilişte koşmamıştı. 1.617 testin tamamı yeşil, referans
+fixture'ları ve determinizm testleri dahil.
+
+**Ders, bu projede daha önce iki kez yazıldı ve üçüncü kez doğrulandı:** hata, o kod yolunu
+ilk kez gerçekten çalıştıran test yazıldığında çıktı. `esit_agirlik=False` Faz 10'dan beri
+kodda duruyordu, docstring'i vardı, tip kontrolünden geçiyordu ve **hiç koşmamıştı**.
+Koşmayan kod, çalıştığı varsayılan koddur.

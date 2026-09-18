@@ -219,19 +219,58 @@ KONUMLANMA_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] =
     "konumlanma_oi_taker": ("evren_oi_taker", _KONUMLANMA),
 }
 
+#: `kurma_evren` programının çekilişleri (Faz 16, K-051/4). Dışlama yok: kıyasla aynı evren,
+#: aynı sıralama, aynı dengeleme takvimi; değişen tek şey `KurmaAyarlari`.
+#:
+#: Izgaralar 12 noktalı — türev/konumlanma programlarıyla aynı biçim, K-058'in `pbo` eşiği
+#: o biçimde kalibre edildi. `yeniden_dengele_bar` ve `hedef_brut` tek değerli olmak
+#: **zorunda**: koşucu kıyası bu iki alandan kuruyor (`tools/faz12_evren_kos.py`, `tek`).
+#:
+#: **"Kapalı" konum ızgarada yok.** `azami_agirlik_carpani = 1` ve `turnover_bandi = 0`
+#: kıyasın kendisidir (testle: bit düzeyinde aynı). Izgaraya konsaydı tarama en iyi nokta
+#: olarak kıyası seçebilir, çekiliş de kendi kıyasını geçip geçmediğini soramaz olurdu.
+#:
+#: Sıra durma kuralının sırası: bu iki çekiliş kıyası geçmezse korelasyon budaması ve
+#: tavan çekilişleri harcanmaz.
+KURMA_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    # Çarpan = en büyük pozisyonun eşit paya oranı. 10,0 fiilen tavansız (1/σ payları
+    # crypto kesitinde eşit payın ~2-3 katını geçmiyor); 1,25 sıkı bir kırpma.
+    "kurma_oynaklik": ("evren_oynaklik_agirlik", {
+        "azami_agirlik_carpani": (1.25, 1.5, 2.0, 10.0),
+        "azami_enstruman": _YOGUNLUK,
+        "yeniden_dengele_bar": (HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }),
+    # Bant ağırlık birimindedir. 10 isimde eşit pay 0,02; 0,02'lik bant dengelemeyi fiilen
+    # yalnızca giriş-çıkışlara indirger, 0,0025 eşit payın sekizde biri.
+    "kurma_turnover": ("evren_turnover_bandi", {
+        "turnover_bandi": (0.0025, 0.005, 0.01, 0.02),
+        "azami_enstruman": _YOGUNLUK,
+        "yeniden_dengele_bar": (HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }),
+}
+
 #: Program → çekilişleri. Koşucu çekilişin programını buradan bulur.
 PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "kesitsel_fiyat": tuple(EVREN_CEKILISLERI),
     "turev_evren": tuple(TUREV_CEKILISLERI),
     "makro_rejim": tuple(MAKRO_CEKILISLERI),
     "konumlanma_evren": tuple(KONUMLANMA_CEKILISLERI),
+    "kurma_evren": tuple(KURMA_CEKILISLERI),
 }
+
+
+def _TUM_CEKILISLER() -> dict[str, tuple[str, dict[str, Sequence[Any]]]]:
+    """Bütün evren çekilişleri tek sözlükte. Yeni bir program eklenince **tek yer**
+    değişsin diye ayrı: iki ayrı birleştirme listesi sessizce ayrışabilirdi."""
+    return {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
+            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI}
 
 
 def evren_cekilisi(ad: str) -> tuple[str, Mapping[str, Sequence[Any]]]:
     """Bir evren çekilişinin `(strateji adı, ızgara)` çifti."""
-    hepsi = {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
-             **KONUMLANMA_CEKILISLERI}
+    hepsi = _TUM_CEKILISLER()
     try:
         return hepsi[ad]
     except KeyError:
@@ -259,8 +298,7 @@ def strateji_izgarasi(strateji_adi: str) -> Mapping[str, Sequence[Any]]:
         return izgara(strateji_adi)
     except IzgaraYok:
         pass
-    hepsi = {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
-             **KONUMLANMA_CEKILISLERI}
+    hepsi = _TUM_CEKILISLER()
     for _, (ad, g) in hepsi.items():
         if ad == strateji_adi:
             return g
