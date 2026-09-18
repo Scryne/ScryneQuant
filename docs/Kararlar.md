@@ -3189,3 +3189,41 @@ ve sayısal öngörüyü uygun olmayan kullanım sayıyor. Bu projede eksik olan
 Jev'i oraya koymak yeni bir bilgi kaynağı açar; sinyal üretimine koymak K-049'un yasakladığı
 şeydir ve ölçülemeyen bir kara kutu üretir.
 
+
+## K-068 — Kıyas-üstü tek dışlama katmanı ailesi kapanıyor; sıradaki program iskeleti değiştirir
+
+**Durum:** kabul · **Tarih:** 2026-09-18 · **Faz:** 16 · **Kapatır:** evren kıyasının üstüne
+tek dışlama katmanı ekleyen çekiliş ailesi · **İlgili:** K-042, K-045, K-051, K-054, K-067 ·
+**Kanıt:** `docs/Faz-12-Turev-Evren-Raporu.md`, `docs/Faz-12-Makro-Rejim-Raporu.md`,
+`docs/Faz-16-Konumlanma-Raporu.md`
+
+**Bağlam.** Faz 12 ve Faz 16'da üç program, sekiz çekiliş, tek bir iskelet: `evren_esit_agirlik`
+kıyası (n=10, haftalık, hedef brüt 0,2) + kesitte bir dilimi dışlayan tek katman. Dışlama
+ölçütü her seferinde bilerek farklı bir bilgi kaynağından alındı ve her seferinde K-045'in
+istisna şartı sayısal olarak karşılandı:
+
+| Program | Çekiliş | Dışlama ölçütü | En iyi OOS Sharpe | Kıyas |
+| --- | ---: | --- | ---: | ---: |
+| `turev_evren` | 4 | funding birikimi, basis primi, ikisinin kesit sırası | 0,256 | 0,333 / 0,167 |
+| `makro_rejim` | 2 | VIX, NFCI stres engeli | 0,216 | 0,167 |
+| `konumlanma_evren` | 2 | açık pozisyon birikimi, taker baskısı | 0,087 | 0,167 |
+
+Sekiz çekilişin hiçbiri 11 kapıyı geçmedi (en iyi 6/11). İkisi OOS'ta kıyasın üstüne çıktı
+(h44, h46) ama ikisi de kıyasın kendi IS/WF bandının içinde kaldı; hiçbiri ayrışmadı.
+
+**Karar.** Bu iskelete dokuzuncu bir seri bağlanmaz. Yeni bir kaynağın "farklı" olduğunu
+gösteren kaynak ölçümü, K-045 istisnasını **artık tek başına karşılamaz**: sekiz ölçüm
+bağımsızlığın sıralama gücü anlamına gelmediğini gösterdi. Bundan sonra kıyas-üstü dışlama
+öneren bir program kaydı açılabilmesi için, kaynak farkına **ek olarak** önerilen ölçütün
+kesitte ileriye dönük getiri sırasıyla ölçülmüş ve sıfırdan ayrışan bir ilişkisi gerekir —
+yani kaynak ölçümü fiyata bağımsızlığı değil, sıralama gücünü de raporlar.
+
+**Sıradaki program ne yapmalı.** Kaynağı değil **iskeleti** değiştirmeli: kıyasın seçimini
+süzmek yerine, kıyasın yapısı gereği göremediği bir olayı ölçmeli. Yürürlükteki aday, evren
+kuralının aylık ızgarasının arasında kalan erişim değişiklikleridir (listeleme, marjin/vadeli
+ekleme, delist — `data/duyuru/olaylar.parquet`, K-067/3). Bu bir açılış değil, bir yön; program
+K-051'e tabidir ve kendi ön kaydı, bütçesi ve durma kuralıyla açılır.
+
+**Geri dönüş koşulu.** Karar, ölçülmüş bir şeye dayanıyor ve ölçümle geri alınabilir: yukarıdaki
+ek şartı (kesitte sıfırdan ayrışan ileriye dönük sıralama gücü) sağlayan bir ölçüt bulunursa,
+aile yeniden açılır ve o ölçüt normal bir program kaydıyla denenir.

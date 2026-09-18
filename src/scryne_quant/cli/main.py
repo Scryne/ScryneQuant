@@ -68,6 +68,7 @@ from scryne_quant.research import program as program_mod
 from scryne_quant.research import tarama as tarama_mod
 from scryne_quant.research import walkforward as wf_mod
 from scryne_quant.research.izgaralar import izgara as varsayilan_izgara
+from scryne_quant.research.izgaralar import strateji_izgarasi
 from scryne_quant.risk import durum as risk_durum_mod
 from scryne_quant.risk import kalibrasyon as risk_kalibrasyon
 from scryne_quant.risk import limitler as limit_mod
@@ -2913,7 +2914,7 @@ def lab_tekrar_kontrol(
             "timeframe": timeframe,
             "secim": secim,
             "portfoy": portfoy,
-            "izgara": {a: list(d) for a, d in varsayilan_izgara(strateji_adi).items()},
+            "izgara": {a: list(d) for a, d in strateji_izgarasi(strateji_adi).items()},
             "gerekce": gerekce,
         }
         onceki = defter

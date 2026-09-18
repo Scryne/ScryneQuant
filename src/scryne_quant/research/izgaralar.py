@@ -246,3 +246,24 @@ def cekilis_programi(ad: str) -> str:
         if ad in adlar:
             return program
     raise IzgaraYok(f"{ad!r} hiçbir programın çekilişi değil")
+
+
+def strateji_izgarasi(strateji_adi: str) -> Mapping[str, Sequence[Any]]:
+    """Tek sembollü ya da **evren** stratejisinin ızgarası.
+
+    `izgara` yalnızca tek sembollü defteri biliyor; evren çekilişlerinin ızgarası çekiliş
+    adına bağlı (`EVREN_CEKILISLERI` ve kardeşleri). Gizli tekrar kontrolü (K-061) hipotez
+    kaydından **önce** koştuğu için ızgarayı strateji adından bulabilmeli.
+    """
+    try:
+        return izgara(strateji_adi)
+    except IzgaraYok:
+        pass
+    hepsi = {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
+             **KONUMLANMA_CEKILISLERI}
+    for _, (ad, g) in hepsi.items():
+        if ad == strateji_adi:
+            return g
+    raise IzgaraYok(
+        f"{strateji_adi!r} için ızgara tanımlı değil (tek sembollü ve evren defterlerinde yok)"
+    )

@@ -47,9 +47,11 @@ SONUCLAR = KOK / "runs" / "faz12"
 PREMIUM = frozenset({"turev_basis", "turev_funding_basis"})
 
 
-def _aile(cekilis: str) -> tuple[bool, bool, bool]:
+def _aile(cekilis: str) -> tuple[bool, bool, bool, bool]:
+    """Çekilişin gerektirdiği ek veri: (funding, premium, makro, konumlanma)."""
     program = cekilis_programi(cekilis)
-    return (program == "turev_evren", cekilis in PREMIUM, program == "makro_rejim")
+    return (program == "turev_evren", cekilis in PREMIUM, program == "makro_rejim",
+            program == "konumlanma_evren")
 
 
 def _uygunluk():
@@ -112,7 +114,7 @@ def evren(deneme: int, seed: int) -> None:
     uygun_mu = _uygunluk()
     oranlar = cte.oranlar(deneme, seed)
     maliyet = maliyet_mod.yukle()
-    isler: dict[tuple[bool, bool, bool], list[tuple[str, dict]]] = {}
+    isler: dict[tuple[bool, bool, bool, bool], list[tuple[str, dict]]] = {}
     for adlar in PROGRAM_CEKILISLERI.values():
         for ad in adlar:
             yol = SONUCLAR / f"{ad}.json"
@@ -124,13 +126,14 @@ def evren(deneme: int, seed: int) -> None:
             if _hazir(kayit["hipotez"]["kimlik"], deneme, seed):
                 continue
             isler.setdefault(_aile(ad), []).append((ad, kayit))
-    for (funding, premium, makro), liste in isler.items():
+    for (funding, premium, makro, konumlanma), liste in isler.items():
         basladi = time.perf_counter()
         veri = evren_kosu.veri_kur(
             TABLO, depo_kok=KOK / "data" / "evren", azami_sembol=600,
             funding_depo=KOK / "data" / "turev" / "funding" if funding else None,
             premium_depo=KOK / "data" / "turev" / "premium" if premium else None,
             makro_depo=KOK / "data" / "makro" if makro else None,
+            konumlanma_depo=KOK / "data" / "turev" / "metrics" if konumlanma else None,
         )
         _, oos, _, _ = ed.pencereler(veri)
         for ad, kayit in liste:

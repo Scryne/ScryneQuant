@@ -62,6 +62,13 @@ PARITE = re.compile(r"\b([A-Z0-9]{2,15})/([A-Z0-9]{2,10})\b")
 ZAMAN = re.compile(r"(\d{4}-\d{2}-\d{2})[ ,]*(?:at )?(\d{2}:\d{2})?\s*\(UTC\)")
 #: Gövdede geçen ama parite olmayan kısaltmalar (yanlış pozitifleri kes).
 HARIC_KOTE = {"UTC", "USD", "APY", "API", "FAQ", "KYC", "P2P", "NFT", "VIP"}
+#: `XEMUSDT` biçimindeki **bitişik** pariteler: vadeli duyuruları böyle yazıyor. Jev
+#: doğrulaması (K-067) kuralın kaçırdığı duyuruların çoğunun bu biçim olduğunu gösterdi.
+KOTELER = ("USDT", "USDC", "FDUSD", "BUSD", "TUSD", "BTC", "ETH", "BNB", "TRY", "EUR", "DAI")
+BITISIK = re.compile(r"\b([A-Z0-9]{2,15}?)(" + "|".join(KOTELER) + r")\b")
+#: `Fusionist (ACE)` biçiminde parantezli token: pariteyi yazmayan duyurular (Launchpool,
+#: listeleme ertelemesi). Kote **bilinmiyor** ve boş bırakılır, uydurulmaz.
+PARANTEZLI = re.compile(r"\(([A-Z][A-Z0-9]{1,11})\)")
 
 
 def _olay(baslik: str, metin: str) -> tuple[str, str] | None:
@@ -72,20 +79,38 @@ def _olay(baslik: str, metin: str) -> tuple[str, str] | None:
     return None
 
 
-def _zamanli_pariteler(metin: str) -> list[tuple[str, str, int | None]]:
-    """Metindeki pariteler, kendinden önce gelen en yakın (UTC) zamanla."""
+def _zamanli_pariteler(metin: str, baslik: str = "") -> list[tuple[str, str, int | None]]:
+    """Metindeki pariteler, kendinden önce gelen en yakın (UTC) zamanla.
+
+    Üç biçim: `QNT/USDC`, bitişik `XEMUSDT` ve parantezli `(ACE)`. Parantezliye yalnızca
+    diğer ikisi hiçbir şey bulamadığında bakılır ve kote boş kalır: hangi varlığın
+    etkilendiği yazıyor, hangi paritede işlem göreceği yazmıyor.
+    """
     zamanlar = [(m.start(), m.group(1), m.group(2)) for m in ZAMAN.finditer(metin)]
     cikti: list[tuple[str, str, int | None]] = []
-    for m in PARITE.finditer(metin):
+
+    def _etkili(konum: int) -> int | None:
+        onceki = [z for z in zamanlar if z[0] < konum]
+        if not onceki:
+            return None
+        _, gun, saat = onceki[-1]
+        return int(pd.Timestamp(f"{gun} {saat or '00:00'}", tz="UTC").value // 10**6)
+
+    for m in [*PARITE.finditer(metin), *BITISIK.finditer(metin)]:
         taban, kote = m.group(1), m.group(2)
-        if kote in HARIC_KOTE or taban in HARIC_KOTE:
+        if not taban or kote in HARIC_KOTE or taban in HARIC_KOTE:
             continue
-        onceki = [z for z in zamanlar if z[0] < m.start()]
-        etkili = None
-        if onceki:
-            _, gun, saat = onceki[-1]
-            etkili = int(pd.Timestamp(f"{gun} {saat or '00:00'}", tz="UTC").value // 10**6)
-        cikti.append((taban, kote, etkili))
+        cikti.append((taban, kote, _etkili(m.start())))
+    if cikti:
+        return cikti
+    ilk_zaman = _etkili(len(metin))
+    gorulen: set[str] = set()
+    for m in PARANTEZLI.finditer(f"{baslik} {metin[:600]}"):
+        taban = m.group(1)
+        if taban in HARIC_KOTE or taban in KOTELER or taban in gorulen:
+            continue
+        gorulen.add(taban)
+        cikti.append((taban, "", ilk_zaman))
     return cikti
 
 
@@ -100,7 +125,7 @@ def main() -> int:
             olaysiz += 1
             continue
         olay, yon = bulunan
-        pariteler = _zamanli_pariteler(str(r.metin))
+        pariteler = _zamanli_pariteler(str(r.metin), str(r.baslik))
         if not pariteler:
             paritesiz += 1
             continue

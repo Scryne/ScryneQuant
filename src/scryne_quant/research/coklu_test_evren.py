@@ -71,6 +71,13 @@ SINYAL_OZELLIKLERI: Final[dict[str, tuple[str, ...]]] = {
     "evren_funding_basis": ("funding_skor", "basis_skor"),
     "evren_makro_vix": ("makro_persentil",),
     "evren_makro_nfci": ("makro_persentil",),
+    # Konumlanma ailesi (Faz 16) funding iskeletini miras alıyor, dolayısıyla skorun özellik
+    # adı da `funding_skor` — ölçülen seri farklı, taşıyıcı alan aynı. `evren_oi_taker` iki
+    # skor taşır (`evren_funding_basis` kalıbı).
+    "evren_oi_birikim": ("funding_skor",),
+    "evren_taker_baski": ("funding_skor",),
+    "evren_buyuk_hesap": ("funding_skor",),
+    "evren_oi_taker": ("funding_skor", "taker_skor"),
 }
 
 
