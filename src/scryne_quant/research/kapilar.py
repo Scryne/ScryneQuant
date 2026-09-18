@@ -71,7 +71,9 @@ COKLU_TEST_ESIGI: Final = 1.04
 
 #: Düzeltmenin ölçüldüğü defter durumu. Defter bundan farklıysa `COKLU_TEST_ESIGI`
 #: **bayattır**: daha çok çekiliş, daha yüksek bir eşik demek (K-039, K-044).
-COKLU_TEST_CEKILIS_SAYISI: Final = 41
+#: 2026-09-18'de 43'e çıktı (K-071): 31 tek sembollü + 12 evren, hepsi sızıntı paylı
+#: yöntemle **yeniden koşuldu** — K-064'ün "sonradan dışlama" yaklaşımı değil.
+COKLU_TEST_CEKILIS_SAYISI: Final = 43
 
 #: K-019'un eşikleri. Her biri Faz 4'ün ölçümüne dayanıyor; gerekçeler
 #: `docs/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı. `oos_sharpe` ayrıca K-044'ün
@@ -94,7 +96,13 @@ ESIKLER: Final[tuple[Esik, ...]] = (
             "çekilişle (10 evren dahil) sızıntısız kaydırmayla yeniden ölçüldü: 1,039 "
             f"(%90 GA 0,975-1,076; K-064); sabit tutucu olan, {COKLU_TEST_ESIGI}. Bağımsız "
             "çapraz kontrol (Deflated Sharpe) 0,92 veriyor, Bonferroni ise 1,30 — "
-            "bağımsızlık varsaydığı için fazla düzeltiyor. Eşik **defterin bugünkü hâline "
+            "bağımsızlık varsaydığı için fazla düzeltiyor. "
+            "**2026-09-18 yeniden ölçümü (K-071):** 43 çekiliş, hepsi sızıntı paylı "
+            "yöntemle yeniden koşuldu (K-064'ün sonradan dışlaması bir yaklaşımdı). "
+            "Ölçülen %5 sınırı 0,926 (%90 GA 0,838-0,967) ve bu sabitin gerçek "
+            "yanlış-pozitif oranı %2,6 — yani kapı tasarım hedefinden (%5) **daha sıkı**. "
+            "Sabit indirilmedi: 1,04'ü 0,93'e çekmek bir kapıyı gevşetmektir ve gerekçesi "
+            "yalnızca 'tam %5 olsun' olurdu (K-007, K-050). Eşik **defterin bugünkü hâline "
             "bağlı**: çekiliş sayısı değişirse yeniden ölçülmeli (`sq lab coklu-test` tek "
             "sembollü, `tools/faz12_coklu_test.py` evren dahil)."
         ),

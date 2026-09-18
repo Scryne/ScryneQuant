@@ -3322,3 +3322,64 @@ fixture'ları ve determinizm testleri dahil.
 ilk kez gerçekten çalıştıran test yazıldığında çıktı. `esit_agirlik=False` Faz 10'dan beri
 kodda duruyordu, docstring'i vardı, tip kontrolünden geçiyordu ve **hiç koşmamıştı**.
 Koşmayan kod, çalıştığı varsayılan koddur.
+
+## K-071 — Çoklu test eşiği 43 çekilişle yeniden ölçüldü; sabit 1,04'te kalıyor
+
+**Durum:** kabul · **Tarih:** 2026-09-18 · **Faz:** 16 · **Kapatır:** K-064/4'ün açık kalemi
+(sızıntı paylı **yeni koşu**) · **İlgili:** K-007, K-039, K-044, K-050 · **Kaynak:**
+`runs/faz12/coklu-test-birlesik-500-0.json`, `research/kapilar.py`
+
+### Ölçüm
+
+Defterdeki 43 ölçülebilir çekilişin (31 tek sembollü + 12 evren) tamamı, K-064'ün sızıntı
+paylı kaydırmasıyla (`k ∈ [1, L−2−H]`) **yeniden koşuldu** — sonradan dışlama yaklaşımıyla
+değil. 500 iterasyon, seed 0.
+
+| Yanlış pozitif hedefi | Ölçülen eşik | %90 GA |
+| --- | ---: | --- |
+| %20 | 0,592 | 0,571-0,643 |
+| %10 | 0,745 | 0,697-0,785 |
+| **%5** | **0,926** | 0,838-0,967 |
+| %1 | 1,178 | 1,099-1,306 |
+
+**Yürürlükteki 1,04'ün gerçek yanlış-pozitif oranı: %2,6.**
+
+### Karar — sabit indirilmiyor
+
+Ölçülen %5 sınırı (0,926) yürürlükteki sabitin altında, yani 1,04 tasarım hedefinden **daha
+sıkı** bir kapı. 1,04'ü 0,93'e çekmenin tek gerekçesi "oran tam %5 olsun" olurdu; bu bir
+promotion kapısını, sonucu gördükten sonra, stratejilerin geçmesini kolaylaştıran yönde
+gevşetmektir (K-007'nin yuvarlama yönü, K-050'nin asimetrisi). Sabit **1,04**'te kalıyor,
+`COKLU_TEST_CEKILIS_SAYISI` 41 → **43**.
+
+Eşiğin düşmesi defterin küçülmesinden değil **yöntemin düzelmesinden** geliyor: K-064'ün
+sonradan dışlaması aynı 500 satırı koşullayarak sızıntıyı ayıklıyordu, yeni koşu sızıntıyı
+hiç üretmiyor ve null daha dar çıkıyor. Defter 41'den 43'e çıktı, yani karşıt yönde bir
+etki de var; ikisinin bileşkesi 1,0388 → 0,926.
+
+### Beklenmeyen bulgu: ölçüm aracı defterin yarısını sessizce düşürüyordu
+
+Bu yeniden ölçüm plansızdı. `tools/faz12_coklu_test.py --birlestir` ilk koşturulduğunda
+eşiği **0,51** olarak raporladı — kapıya yazılsaydı çıta yarıya inerdi. Sebep: K-064 satır
+şemasına `sizinti_bar` alanını ekledi ve iki birleştirme yolu birbirinin tümleyeni oldu:
+
+| Yol | Aldığı satır | O anki sonuç |
+| --- | --- | --- |
+| `--birlestir` | yalnız `sizinti_bar` **olan** | 12 evren → 0,51 |
+| `--sonradan-sizintisiz` | yalnız `sizinti_bar` **olmayan** | 0 satır → çöktü |
+
+Arada, önceki oturumun çöken koşusu (`sinyal özellikleri tanımlı değil`, K-070 commit'inde
+düzeltildi) 10 evren satırını yeni şemaya taşımıştı. Sonuç: evren tarafı yeni şemada, tek
+sembollü taraf eskisinde ve **hiçbir komut ikisini birleştiremiyor.**
+
+Çıktı hata vermedi: `"defter_sayisi": 50` ve `"olculebilir": 12` yan yana yazdı, aradaki
+uçurum hakkında tek kelime etmedi. Bu projenin uyarısının tam olarak tarif ettiği durum —
+"neredeyse doğru" bir sayı, fark edilmeden bir kapıya yazılabilirdi.
+
+**Düzeltme:** 31 tek sembollü satır da yeni yöntemle koşuldu; 43 satırın tamamı artık aynı
+şemada ve `--birlestir` kümenin tamamını görüyor. `--sonradan-sizintisiz` yolu artık
+işlevsiz (besleyeceği eski satır kalmadı); tarihsel kayıt olarak duruyor.
+
+**Açık kalem (K-064/4'ten devralındı):** iterasyon sayısı hâlâ 500; %5 eşiğinin %90 güven
+aralığı 0,13 genişliğinde. Daraltmak ≈2.000+ iterasyon ister, o da ≈8 saatlik bir koşu.
+Sabit 1,04, aralığın **üstünde** olduğu için bu kalem bugünkü kararı değiştirmiyor.
