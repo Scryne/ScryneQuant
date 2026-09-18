@@ -107,6 +107,28 @@ ssh -i ~/.ssh/scrynequant_vps scryn@192.168.1.4 "cd %USERPROFILE%\Documents\Proj
 | `ScryneQuant-EvrenTablo` | evren tablosu yenileme (üç koşu) | 06:15 |
 | `ScryneQuant-EvrenSapma` | canlı-backtest sapması (üç koşu) | 06:45 |
 | `ScryneQuant-Ozet` | günlük özet bildirimi | 09:00 |
+| `ScryneQuant-Pano` | salt okunur gözlem panosu, port 8788 (`tools\pano.py`) | açılışta |
+
+## 3d. Gözlem panosu (2026-09-18, port 8788)
+
+**Neden ayrı bir süreç:** 8787'yi `host-1`in **kendi süreci** servis ediyor ve yalnızca o
+koşuyu tanıyor — tek sembol, 1 fill. İşlemlerin tamamı üç evren koşusunda ve onların arayüzü
+yoktu. Panoyu koşunun içine eklemek onu yeniden başlatmayı gerektirirdi; K-069 penceresi
+açıkken bu ölçümü silerdi.
+
+**Salt okunur** (`live/evren_pano.py`): her okuma anlık kopyadan (`anlik_kopya`, günlük
+yedeğin kullandığı SQLite online backup yolu), yalnızca `GET` uçları, gölge yeniden üretim
+audit defterine yazmıyor. Testler `tests/unit/test_evren_pano.py`.
+
+**Pencere ortasında nasıl kuruldu — ve neye dokunulmadı.** Hosta **yalnızca yeni dosyalar**
+kopyalandı: `src/scryne_quant/live/evren_pano.py`, `.../evren_kurulum.py`, `tools/pano.py`,
+`apps/web/dist/pano.html` ve yeni asset'ler. Çalışan görevlerin içe aktardığı tek bir dosya
+(`cli/main.py` dahil) değişmedi — `tools/pano.py` tam olarak bunun için var, `sq paper pano`
+ile aynı işi CLI'ya dokunmadan yapıyor. Eski `dist/index.html` ve asset'leri yerinde duruyor,
+8787 etkilenmedi. **Host bu yüzden master'ın 17 commit gerisinde bırakıldı** (K-073 "Yan
+doğrulama": canlı yolu etkileyen tek değişiklik K-070 ve `esit_agirlik=True` altında 1.000
+vakada 0 fark ölçüldü). Senkronlama pencere kapandıktan sonra, K-043'ün planlı durdurma
+yordamıyla yapılır.
 
 **Geri yükleme tatbikatı (2026-09-17 20:05 TR):** üç koşunun yedeği alındı, her biri boş
 dizinde yeniden üretildi: kayıtla ve canlıyla bit düzeyinde aynı (`evren-kiyas` 772 adım, 8

@@ -14,10 +14,23 @@ Hosta bağlanmak: `ssh -i ~/.ssh/scrynequant_vps scryn@192.168.1.4`, kod dizini
 (konu hostun `.env`inde, `SQ_NTFY_KONU`). **Özet gelmediyse** host, görev zamanlayıcı ya da ağ
 ayakta değildir: önce hostun açık ve ağa bağlı olduğunu kontrol et.
 
-**Panel:** host-1 koşusunun dashboard'u (`Genel` sayfasının üstünde İzleme bölümü) yalnız host
-içinden açılır. Ana makineden ağa açmadan görmek için SSH tüneli:
-`ssh -i ~/.ssh/scrynequant_vps -L 8787:127.0.0.1:8787 scryn@192.168.1.4` → tarayıcıda
-`http://127.0.0.1:8787`.
+**İki panel var, ikisi de yalnız host içinden açılır.** Ana makineden ağa açmadan görmek için
+SSH tüneli (`-f -N` arka plana alır):
+
+| Port | Ne gösterir | Servis eden | Tünel |
+| ---: | --- | --- | --- |
+| 8787 | **Yalnız `host-1`** (tek sembollü koşu): portföy, fill, risk, İzleme bölümü | koşunun **kendi süreci** (`ScryneQuant-Paper`) | `ssh -f -N -i ~/.ssh/scrynequant_vps -L 8787:127.0.0.1:8787 scryn@192.168.1.4` |
+| 8788 | **Bütün koşular**: liste, özkaynak eğrisi, açık pozisyonlar, **işlem defteri**, olaylar, evren üyeliği | ayrı salt okunur süreç (`ScryneQuant-Pano`) | `ssh -f -N -i ~/.ssh/scrynequant_vps -L 8788:127.0.0.1:8788 scryn@192.168.1.4` |
+
+İşlemleri görmek için **8788**'e bakılır: evren koşularının işlemleri 8787'de görünmez, o pano
+kendi koşusundan başkasını tanımaz.
+
+**Pano (8788) salt okunurdur** (`live/evren_pano.py`, `tools/pano.py`): koşu dosyalarını anlık
+kopyadan okur, yalnızca `GET` uçları vardır ve hiçbir koşuyu değiştiremez — bu yüzden ölçüm
+penceresi açıkken de çalıştırılabilir. Pozisyon ve işlem defteri koşunun kaydından **yeniden
+üretilir**; iş arka planda koşar, ekranda "Hesaplanıyor" görünür. Süre adım sayısıyla O(N²)
+büyüyor (797 adımda ≈8 sn). Pano ölürse koşular etkilenmez: `Start-ScheduledTask ScryneQuant-Pano`.
+Kaldırmak: `Unregister-ScheduledTask -TaskName ScryneQuant-Pano -Confirm:$false`.
 
 **Yedek ve geri yükleme:** her gün 05:30 TR `runs\yedek\` (koşu başına son 7). Tatbikat /
 gerçek geri yükleme: `sq paper evren-tatbikat <kosu>` en son yedeği boş dizinde yeniden üretir
