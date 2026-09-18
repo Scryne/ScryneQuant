@@ -3235,3 +3235,52 @@ görülmüş olur — K-039'un yasakladığı şeyin ta kendisi, üstelik bir ka
 yine çekiliş sayılmaz (strateji koşmaz, parametre seçilmez), ama artık "bu araç ileriye
 dönük hiçbir getiriye bakmaz" cümlesi yeni kaynak ölçümleri için geçerli değildir; yerine
 geçen kural: **ileriye dönük getiriye yalnızca in-sample'da bakılır.**
+
+## K-069 — Faz 14'ün dayanıklılık kriteri 30 günden 8 güne indi; promotion kapısı değişmedi
+
+**Durum:** kabul · **Tarih:** 2026-09-18 · **Onay:** Scryne ("bu 30 gün çok fazla. 1 hafta
+yeterli olucaktır", 30 günlük Faz 8 ön koşulu için "tamamen kalksın") · **Değiştirir:** K-055 ·
+**İlgili:** K-010, K-018, K-050, K-062, K-063
+
+### Karar
+
+1. **Faz 14'ün bitti kriteri:** "sürekli açık host üzerinde ≥30 gün kesintisiz koşu" →
+   **≥8 gün** (host-1: 2026-09-17 → **2026-09-25**). Kesinti olduysa sebebi kayıtlı ve
+   giderilmiş şartı **aynen duruyor**.
+2. **Faz 8'in 5. ön koşulundaki "30 günlük kesintisiz koşu" kaldırıldı.** "Sürekli açık bir
+   host" şartı ve "açık pozisyonla gerçek bir toparlanma en az bir kez görülmüş olmalı"
+   şartı duruyor.
+3. **`risk/promotion.py:ASGARI_PAPER_GUN = 30.0` DEĞİŞMEDİ** ve bu kararın kapsamı dışıdır.
+   Bir stratejinin promotion zincirini geçmesi için hâlâ 30 paper günü gerekir (K-018/3).
+
+### Neden 8, neden 5 değil
+
+Sekiz gün keyfî değil, **bir tam yeniden dengeleme turunu** içine alacak en kısa süre:
+evren koşularının periyodu 168 bar (7 gün), ilk dengeleme **2026-09-24**. Salı (22 Eylül,
+5 gün) biten bir koşu ana döngünün periyodik işini — hedef portföy kurma, emir üretme,
+mutabakat — **bir kez bile çalıştırmamış** olurdu. Ayakta kalmayı ölçen ama çalışmayı
+ölçmeyen bir dayanıklılık kriteri, geçen ama boş bir testtir (Faz 2'nin dersi).
+
+### Bu karar canlıya giden yolu açmıyor — nedeni yazılı olsun
+
+Faz 8 ön koşulundan 30 gün kalksa bile, canlıya geçmek için önce promotion gerekir ve
+promotion `paper_gun ≥ 30` ister. O 30 paper günü zaten sürekli açık host üzerinde koşar.
+Yani **30 günlük kesintisiz host operasyonu, kaldırılan ön koşuldan bağımsız olarak
+promotion kapısının içinden geri geliyor.** Kaldırılan şey, aynı şartın ikinci ve ayrı bir
+kopyasıydı; K-050'nin "izni artıran karar sayısal kapı ister" kuralını delen bir gevşetme
+değil.
+
+### Ne kaybediyoruz, açıkça
+
+- **Ay sınırı kod yolu ölçülmemiş kalıyor.** Evren tablosu ve PIT üyelik ayda bir yenileniyor;
+  8 günlük pencere 1 Ekim geçişini içermiyor. Ay başı yolu ilk kez promotion'un 30 paper
+  gününde koşacak — yani yine koşacak, ama Faz 14'ün gözetimi altında değil.
+- **Uzun vadeli bellek davranışı ölçülmemiş kalıyor.** Süreç başına ≈4,5 GB ölçüldü; yavaş
+  bir sızıntı 8 günde görünmeyebilir.
+- Bunlar **kayıtlı risktir, kapı değil.** Bir kapıya dönüşmeleri gerekirse K-050/3'ün kademeli
+  sermaye tablosunda yazılır.
+
+### Geri dönüş koşulu
+
+8 günlük pencerede bir kesinti olur ve sebebi giderilemezse, kriter sebebin ölçülmesini
+gerektiren süreye uzar. Süre kısaltıldığı için değil, **sebep bilinmediği için** uzar.

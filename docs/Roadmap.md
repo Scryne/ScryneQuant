@@ -37,7 +37,7 @@ yanlış sonuç olarak geri döner.
 | 11 | Doğrulama v2 | ✅ Tamamlandı | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
 | 12 | Araştırma programları (cross-sectional, türev, makro) | ✅ Tamamlandı | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
 | 13 | Haber/olay zekâsı + ML (koşullu) | ⏳ Bekliyor | Açılma koşulu: veri bütçesi kararı + kaynak spike'ı. Açılırsa: LLM kesim tarihi kayıtlı, `leak_riski` uygulanıyor |
-| 14 | Üretim sertleştirme | 🔄 Devam | Kriterler: kill switch ✅ (K-065) · dört boyut dashboard'da + her alarmın runbook satırı ✅ · yedekten yeniden üretim tatbikatı ✅ · anahtar ayrımı ✅ (salt okunur anahtar, çekim/işlem kapalı) · ≥30 gün ⏳ (host-1 2026-09-17'de başladı; evren koşuları 3 adet) |
+| 14 | Üretim sertleştirme | 🔄 Devam | Kriterler: kill switch ✅ (K-065) · dört boyut dashboard'da + her alarmın runbook satırı ✅ · yedekten yeniden üretim tatbikatı ✅ · anahtar ayrımı ✅ (salt okunur anahtar, çekim/işlem kapalı) · **≥8 gün** ⏳ (K-069; host-1 2026-09-17 → 2026-09-25, ilk yeniden dengeleme 24 Eylül; evren koşuları 3 adet) |
 | 15 | İkinci varlık sınıfı (US equities/ETF) | ⏳ Bekliyor | Açılma koşulu: broker/lisans spike'ı. Açılırsa: aynı kod yolu ikinci varlık sınıfında paper koşuyor |
 | 16 | Sürekli araştırma | 🔄 Devam Ediyor | Kapanmaz; her tur bir program kaydı ve bir rapor bırakır |
 
@@ -688,9 +688,11 @@ live arasındaki gerçek operasyon farkı.
    ölçtü (451 yok), hukuki erişimi ölçmedi. SPK'nın 2025 düzenlemesi sonrası kullanılan
    borsanın Türkiye yerleşiğine hizmet statüsü kaynaklı olarak kaydedilir. Proje K-014
    içinde kaldığı sürece hizmet sağlayıcı değildir; doğrulanan şey venue'nun durumu.
-5. **Sürekli açık bir host ve üzerinde 30 günlük kesintisiz koşu** (K-055, Faz 6'dan
-   taşındı). Canlı koşu her gün kapatılan bir masaüstünde yaşayamaz. Promotion'un `paper`
-   aşaması (`ASGARI_PAPER_GUN = 30`) zaten bu host üzerinde koşulur; kesinti olursa sebebi
+5. **Sürekli açık bir host** (K-055, Faz 6'dan taşındı). Canlı koşu her gün kapatılan bir
+   masaüstünde yaşayamaz. **K-069 (2026-09-18): bu ön koşuldaki "30 günlük kesintisiz koşu"
+   şartı kaldırıldı.** Kaldırılması canlıya giden yolu kısaltmıyor: promotion'un `paper`
+   aşaması (`ASGARI_PAPER_GUN = 30`, değişmedi) zaten bu host üzerinde 30 gün koşmayı
+   gerektiriyor, yani şart promotion kapısının içinden geri geliyor. Kesinti olursa sebebi
    koşu günlüğünde kayıtlı ve giderilmiş olmalı. Açık pozisyonla gerçek bir toparlanma en az
    bir kez bu koşuda görülmüş olmalı (Faz 6'da 0 fill ile sınanamadı).
 
@@ -898,7 +900,10 @@ tanınmıyordu.
     karşılaştırma temiz.
   - Anahtar ayrımı ve çekim yetkisinin kapalı olduğu ekran görüntüsü/çıktıyla kayıtlı.
   - **Uzun süreli dayanıklılık** (K-055; Faz 6'nın 30 günü + Faz 7'nin açık kalemi): sürekli
-    açık host üzerinde ≥30 gün kesintisiz koşu, kesinti olduysa sebebi kayıtlı ve giderilmiş.
+    açık host üzerinde **≥8 gün** kesintisiz koşu, kesinti olduysa sebebi kayıtlı ve giderilmiş.
+    **K-069 (2026-09-18):** süre 30 günden 8 güne indi — 8 gün, evren koşularının ilk tam
+    yeniden dengeleme turunu (2026-09-24) içine alan en kısa süre. Ay sınırı kod yolu ve uzun
+    vadeli bellek davranışı bu pencerede ölçülmemiş kalıyor; kayıtlı risk, kapı değil.
 
 ### Faz 15: İkinci varlık sınıfı (US equities / ETF) — **koşullu**
 
