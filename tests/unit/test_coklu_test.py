@@ -363,13 +363,44 @@ class TestEsigiDefteBagla:
     delmek) düzeltmenin **kendi içinden** geri gelir.
     """
 
+    #: Son ölçümün kapsadığı çekiliş sayısı. **Bu sayıyı değiştirmek, ölçümü yeniden
+    #: koşturmadan serbest bırakılmış bir işlem değildir:** sayı ancak
+    #: `tools/faz12_coklu_test.py --deneme 500 --seed 0` koşulup `COKLU_TEST_ESIGI`
+    #: o ölçüme göre karara bağlandıktan sonra güncellenir. Geçmişi: 31 (K-044) →
+    #: 41 (K-064) → 43 (K-071).
+    OLCULEN_CEKILIS = 43
+
     def test_esik_defterdeki_olculebilir_cekilis_sayisina_bagli(self) -> None:
         from scryne_quant.research.kapilar import COKLU_TEST_CEKILIS_SAYISI
 
-        assert COKLU_TEST_CEKILIS_SAYISI == 41, (
+        assert COKLU_TEST_CEKILIS_SAYISI == self.OLCULEN_CEKILIS, (
             "Ölçülebilir çekiliş sayısı değiştiyse COKLU_TEST_ESIGI bayattır: "
-            "`sq lab coklu-test` yeniden koşturulup eşik güncellenmeli (K-044). "
-            "Sabiti elle düzeltmek, ölçülmemiş bir sayıya ölçülmüş süsü vermektir."
+            "`tools/faz12_coklu_test.py --deneme 500 --seed 0` yeniden koşturulup eşik "
+            "karara bağlanmalı (K-044, K-071). Sabiti elle düzeltmek, ölçülmemiş bir "
+            "sayıya ölçülmüş süsü vermektir."
+        )
+
+    def test_defter_olculen_cekilis_sayisini_gecmedi(self) -> None:
+        """Asıl tehlike burada: defter büyür, eşik yerinde kalır, kapı gevşer.
+
+        `COKLU_TEST_CEKILIS_SAYISI` ölçümün fotoğrafı; defterdeki **ölçülebilir** çekiliş
+        sayısı ondan büyükse eşik bayattır. Ölçülemeyen kayıtlar (değerlendirme kaydı
+        olmayan hipotezler) sayılmaz, o yüzden karşılaştırma defterin ham sayısıyla değil
+        ölçüm çıktısındaki `olculebilir` ile yapılır.
+        """
+        import json
+        from pathlib import Path
+
+        from scryne_quant.research.kapilar import COKLU_TEST_CEKILIS_SAYISI
+
+        yol = (Path(__file__).resolve().parents[2] / "runs" / "faz12"
+               / "coklu-test-birlesik-500-0.json")
+        if not yol.exists():  # ölçüm çıktısı gitignore'da; yoksa bu test sessiz geçer
+            return
+        olculebilir = json.loads(yol.read_text(encoding="utf-8"))["olculebilir"]
+        assert olculebilir <= COKLU_TEST_CEKILIS_SAYISI, (
+            f"Ölçüm çıktısı {olculebilir} çekiliş görüyor, sabit "
+            f"{COKLU_TEST_CEKILIS_SAYISI}: eşik bayat."
         )
 
     def test_kapi_olculen_degeri_tasiyor(self) -> None:
