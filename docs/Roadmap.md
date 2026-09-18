@@ -930,7 +930,8 @@ tanınmıyordu.
 | # | Program | Bütçe | Harcanan | Sonuç | Rapor |
 | ---: | --- | ---: | ---: | --- | --- |
 | 1 | `konumlanma_evren` | 4 | 2 | Durma kuralı işledi; ikisi de kıyası geçemedi (OOS 0,087 / 0,056 vs 0,167), 0/11 kapı. **K-068:** kıyas-üstü tek dışlama katmanı ailesi kapandı | `docs/Faz-16-Konumlanma-Raporu.md` |
-| 2 | `kurma_evren` | 4 | 2 | Aynı seçim, farklı kurma. h51 (1/σ ağırlık) kıyası **iki katından fazla** geçti (OOS 0,363 vs 0,167, MaxDD %13,8 vs %20,0), 6/11 kapı; h52 (turnover bandı) kıyasın altında kaldı ama 7/11. **Kurma katmanı, seçim katmanının geçemediği genelleşme kapılarını geçiyor** — ama Sharpe kapısına üç kat uzak. Kalan bütçe harcanmadı | `docs/Faz-16-Kurma-Raporu.md` |
+| 2 | `kurma_evren` | 4 | 2 | Aynı seçim, farklı kurma. h51 (1/σ ağırlık) kendi kıyasını iki katından fazla geçti (OOS 0,363 vs 0,167, MaxDD %13,8 vs %20,0), 6/11 kapı; h52 (turnover bandı) kıyasın altında kaldı ama 7/11. **Kurma katmanı, seçim katmanının geçemediği genelleşme kapılarını geçiyor** — ama Sharpe kapısına üç kat uzak. Kalan bütçe harcanmadı | `docs/Faz-16-Kurma-Raporu.md` |
+| — | **kıyas ölçümü** (çekiliş değil) | — | — | Kıyasın kendi parametre uzayı: OOS Sharpe +0,333 ile −0,507 arasında geziniyor. **Kıyas ayarlanamaz** — IS'te en iyi olan (n=39/720) OOS'ta 15 adayın 10.'su ve Sharpe'ı −0,357. Parametresiz kıyas bugünkü sözleşmede kurulamıyor (eşit pay 0,004 < asgari taban 0,005). **K-072:** sıfır noktası kuralla sabit; promotion iddiası ızgaranın geriye dönük en iyisini (0,333) geçmek zorunda | `docs/Faz-16-Kiyas-Olcumu.md` |
 
 **İkinci hat — duyuru/olay: ölçüldü, program açılmadı.** `data/duyuru/olaylar.parquet`
 (10.380 duyuru, 8.276 olay satırı, 2017-08 → 2026-09). Kaynak ölçümü

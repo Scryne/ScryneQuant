@@ -3383,3 +3383,60 @@ işlevsiz (besleyeceği eski satır kalmadı); tarihsel kayıt olarak duruyor.
 **Açık kalem (K-064/4'ten devralındı):** iterasyon sayısı hâlâ 500; %5 eşiğinin %90 güven
 aralığı 0,13 genişliğinde. Daraltmak ≈2.000+ iterasyon ister, o da ≈8 saatlik bir koşu.
 Sabit 1,04, aralığın **üstünde** olduğu için bu kalem bugünkü kararı değiştirmiyor.
+
+## K-072 — Kıyas ayarlanmaz: sıfır noktası kuralla sabit, promotion iddiası ikinci çizgiye tabi
+
+**Durum:** kabul · **Tarih:** 2026-09-18 · **Onay:** Scryne · **Faz:** 16 ·
+**Denetler:** K-030 · **İlgili:** K-007, K-010, K-018, K-039, K-051 · **Kanıt:**
+`docs/Faz-16-Kiyas-Olcumu.md`, `runs/faz16/kiyas-olcumu.json`
+
+### Bağlam
+
+Faz 12-16'nın on çekilişinin tamamı `evren_esit_agirlik` kıyasına karşı değerlendirildi ve
+o kıyasın iki parametresi (`azami_enstruman = 10`, `yeniden_dengele_bar = 168`) **ölçülerek
+değil varsayılan olarak** seçilmişti. Ölçüldüğünde kıyasın kendi OOS Sharpe'ının ızgara
+boyunca **+0,333 ile −0,507** arasında gezindiği çıktı.
+
+### Karar — üç madde
+
+1. **Kıyas ayarlanmaz.** Parametresi IS'te (ya da herhangi bir pencerede) optimize edilip
+   sabitlenemez. Ölçüm bunu bir tercih değil, bir **imkânsızlık** olarak gösterdi: IS'te en
+   iyi olan kıyas (n=39/720, IS Sharpe +0,492) OOS'ta 15 adayın 10.'su ve Sharpe'ı
+   **−0,357**. Kıyası IS'te seçmek, stratejileri IS'te seçmekle aynı hata; kıyas sıfır
+   noktası olduğu için maliyeti daha büyük.
+2. **Kayıtlı kıyas, çekilişin seçtiği yoğunlukta koşulmaya devam eder.** Bu apples-to-apples
+   karşılaştırmadır (aynı evren, aynı yoğunluk, aynı takvim; fark yalnızca çekilişin
+   değiştirdiği şeyde) ve **durma kuralının ölçütü budur**. Değişiklik yok.
+3. **Promotion iddiası ikinci ve daha sıkı bir çizgiye tabidir.** Bir strateji için "bu,
+   hiçbir şey yapmamaktan iyidir" denebilmesi için, kendi kıyasını geçmesi **yetmez**;
+   ilan edilmiş kıyas ızgarasının **geriye dönük en iyisini** de geçmelidir. Bugünkü değer:
+   **OOS Sharpe 0,333** (n=5, periyot 168). Bu çizgi bir kapı değil, promotion kanıtının
+   parçasıdır ve raporlarda ayrı satır olarak görünür.
+
+### Neden 3. madde adil — ve neden tersi adil olmazdı
+
+Geriye dönük en iyi kıyas, önceden bilinemezdi; onu çıta yapmak stratejiye haksızlık gibi
+görünür. Ama karar şudur: **gerçek parayı riske atmanın alternatifi, en basit şeyi
+yapmaktır** ve o basit şeyin geriye dönük en iyi hâli, "keşke hiçbir şey yapmasaydım"
+sorusunun cevabıdır. Çıtayı yükseltmek yanlış pozitif üretemez (K-007'nin yönü, K-050'nin
+asimetrisi). Tersi — geçilmesi kolay bir kıyas parametresi seçmek — doğrudan K-018'i deler.
+
+### Ne değişmiyor
+
+Geçmiş on çekilişin sonuçları **yeniden koşulmuyor ve değişmiyor**; yalnızca okunuşuna bir
+satır ekleniyor. Hiçbiri 11 kapıyı geçmemişti, dolayısıyla 3. madde hiçbir kararı
+çevirmiyor.
+
+### Ölçülmüş yan kısıt: parametresiz kıyas kurulamıyor
+
+Evren kuralının `ust_n`'i 50, `hedef_brut` 0,2; "herkesi eşit taşı" dendiğinde pay 0,004 ve
+kurma katmanının asgari ağırlık tabanı 0,005. **Parametresiz kıyas bugünkü sözleşmede var
+olamıyor** — ifade edilebilir azami yoğunluk 39. Tabanı indirmek ya da brütü büyütmek ayrı
+birer karardır ve **sonuca bakılarak verilemez**; ikisi de risk iştahının parçası (K-033).
+
+### `kurma_evren`e etkisi, açıkça
+
+h51'in OOS Sharpe'ı 0,363; kendi kıyasını (n=10, 0,167) iki katından fazla geçiyor ve bu
+doğru. Ama 3. maddenin çizgisi 0,333, yani üstünlük **%9**. Rapordaki "kıyası iki kat
+geçti" okunuşu, seçilen kıyas yüzünden olduğundan büyük görünüyordu; düzeltme
+`docs/Faz-16-Kiyas-Olcumu.md` §5'te.

@@ -10,8 +10,14 @@ durum: kapandı — 2/4, kalan bütçe harcanmadı
 
 **Sonuç:** Program 4 çekilişlik bütçenin 2'siyle kapandı. Hiçbir çekiliş 11 kapıyı geçmedi,
 ama **ikisi de projede bugüne kadar hiçbir çekilişin geçemediği iki kapıyı geçti** ve
-birincisi kıyasın OOS Sharpe'ını iki katından fazla aştı. Kalan iki çekiliş §4'teki
-gerekçeyle harcanmadı.
+birincisi kendi kayıtlı kıyasının OOS Sharpe'ını iki katından fazla aştı. Kalan iki çekiliş
+§4'teki gerekçeyle harcanmadı.
+
+> **Sonradan gelen düzeltme (K-072, §5.5).** "Kıyası iki kat geçti" cümlesi, *seçilen*
+> kıyas yüzünden olduğundan büyük görünüyor. Kıyasın kendisi ızgara boyunca +0,333 ile
+> −0,507 arasında geziniyor; hiçbir ayar içermeyen en iyi kıyas OOS'ta **0,333** ve h51'in
+> 0,363'ü ona göre **%9** üstünde. Aynı yoğunlukta ağırlıklandırmanın kattığı +0,196 duruyor
+> ama başlık cümlesi bu satırla birlikte okunmalı.
 
 Program kaydı `docs/Arastirma-Programlari.jsonl` (kimlik `ccaa63c6fe6dbdf3`), hipotezler
 51-52 `docs/Hipotez-Defteri.jsonl`, taslak `docs/Faz-16-Kurma-Program-Taslagi.md`. Ham
@@ -175,12 +181,29 @@ kapatılıyor. Sonraki program kayıtlarında durma kuralı bu belirsizliği ta�
    artanın dağıtımı — son bitler tutmuyor). İlk taslak ikisi için de bit eşitliği iddia
    ediyordu; iddia ölçülene göre düzeltildi.
 
+## 5.5 Sonradan gelen düzeltme (K-072)
+
+Bu rapor yazıldıktan sonra kıyasın kendi parametre uzayı ölçüldü
+(`docs/Faz-16-Kiyas-Olcumu.md`) ve §3.3'ün okunuşu düzeltilmesi gerekti.
+
+h51'in kendi kıyasını (n=10, 0,167) iki katından fazla geçmesi doğru ve apples-to-apples.
+Ama kıyasın kendisi, tek bir keyfî parametreyle **+0,333 ile −0,507** arasında geziniyor;
+hiçbir ayar içermeyen n=5/haftalık kıyas OOS'ta **0,333**. h51'in 0,363'ü ona göre **%9**
+üstünde, %118 değil — ve o bandın içinde.
+
+Bulgu geçersiz olmuyor: aynı yoğunlukta ağırlıklandırmanın kattığı +0,196 duruyor ve
+genelleşme kapılarını geçmesi hâlâ projede bir ilk. Ama başlık cümlesi, seçilen kıyas
+yüzünden olduğundan büyük görünüyordu. K-072/3 bundan sonrası için ikinci ve daha sıkı bir
+çizgi tanımlıyor.
+
 ## 6. Bu program ne bıraktı
 
 - **Kurma katmanı, seçim katmanının geçemediği genelleşme kapılarını geçiyor.** Bu, K-068
   sonrası "iskeleti değiştir" yönergesinin ilk olumlu sinyali — ama Sharpe kapısına üç kat
   uzak.
 - **Kıyasın yoğunluğu ölçülmemiş bir kaldıraçtı** ve n=5, n=10'un iki katı Sharpe veriyor.
-  Bütün geçmiş karşılaştırmaların sıfır noktası bu yüzden tartışmaya açık.
+  Bu gözlem ölçüldü ve K-072'ye bağlandı: kıyas **ayarlanamaz** (IS'te en iyi olan OOS'ta
+  15 adayın 10.'su ve negatif), sıfır noktası kuralla sabit kalır, promotion iddiası ise
+  ızgaranın geriye dönük en iyisini (OOS 0,333) geçmek zorundadır.
 - Defter 50 → **52**. Sonraki programın açılışında `oos_sharpe` eşiği yeniden ölçülmeli
   (K-044): `tools/faz12_coklu_test.py --deneme 500 --seed 0`.
