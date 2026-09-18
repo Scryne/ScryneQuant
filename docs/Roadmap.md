@@ -919,3 +919,18 @@ tanınmıyordu.
   kaynağı) bu turların tetikleyicisidir.
 - **Kural:** Tur açmak K-051'e tabidir. "Sadece bakıyorum" diye koşturulan bir strateji de bir
   çekiliştir.
+
+#### Turlar
+
+| # | Program | Bütçe | Harcanan | Sonuç | Rapor |
+| ---: | --- | ---: | ---: | --- | --- |
+| 1 | `konumlanma_evren` | 4 | 2 | Durma kuralı işledi; ikisi de kıyası geçemedi (OOS 0,087 / 0,056 vs 0,167), 0/11 kapı. **K-068:** kıyas-üstü tek dışlama katmanı ailesi kapandı | `docs/Faz-16-Konumlanma-Raporu.md` |
+
+**İkinci hat — duyuru/olay: ölçüldü, program açılmadı.** `data/duyuru/olaylar.parquet`
+(10.380 duyuru, 8.276 olay satırı, 2017-08 → 2026-09). Kaynak ölçümü
+`docs/Faz-16-Duyuru-Kaynak-Olcumu.md`: kıyasın kör penceresi gerçek (medyan 32,6 gün) ama
+içindeki +%7,9'luk getiri bir uç-nokta yanlılığı — aynı duyurular sabit 30 günlük ufukta
+−%8,6. Gerçek etki (vadeli listeleme → bir ay −%17,6, p=2,3·10⁻⁴) evren **dışındaki**
+sembollerde ve **aşağı** yönde; portföy modeli açığa satış tanımadığı için işlem yapılamaz.
+Dört çekilişlik bütçe harcanmadan kapandı. **Bu ölçüm çekiliş değildir** (strateji koşmadı,
+defter büyümedi).

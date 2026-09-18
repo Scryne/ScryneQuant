@@ -3227,3 +3227,11 @@ K-051'e tabidir ve kendi ön kaydı, bütçesi ve durma kuralıyla açılır.
 **Geri dönüş koşulu.** Karar, ölçülmüş bir şeye dayanıyor ve ölçümle geri alınabilir: yukarıdaki
 ek şartı (kesitte sıfırdan ayrışan ileriye dönük sıralama gücü) sağlayan bir ölçüt bulunursa,
 aile yeniden açılır ve o ölçüt normal bir program kaydıyla denenir.
+
+**Ek şartın sınırı** (aynı gün eklendi, 2026-09-18): yukarıdaki "ileriye dönük sıralama
+gücü" ölçümü **yalnızca in-sample penceresinde** (bar 0-55.594, `27b7a16ed0ed` evreninde)
+yapılır ve rapor bunu açıkça yazar. Tam örneklemde ölçülürse, program daha açılmadan OOS
+görülmüş olur — K-039'un yasakladığı şeyin ta kendisi, üstelik bir kapı kılığında. Ölçüm
+yine çekiliş sayılmaz (strateji koşmaz, parametre seçilmez), ama artık "bu araç ileriye
+dönük hiçbir getiriye bakmaz" cümlesi yeni kaynak ölçümleri için geçerli değildir; yerine
+geçen kural: **ileriye dönük getiriye yalnızca in-sample'da bakılır.**
