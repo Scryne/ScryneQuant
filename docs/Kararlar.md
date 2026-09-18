@@ -3440,3 +3440,191 @@ h51'in OOS Sharpe'ı 0,363; kendi kıyasını (n=10, 0,167) iki katından fazla 
 doğru. Ama 3. maddenin çizgisi 0,333, yani üstünlük **%9**. Rapordaki "kıyası iki kat
 geçti" okunuşu, seçilen kıyas yüzünden olduğundan büyük görünüyordu; düzeltme
 `docs/Faz-16-Kiyas-Olcumu.md` §5'te.
+
+## K-073 — Araştırma/canlı risk motoru ve evren kalibrasyonu: karşılaştırılabilirlik uyuşmazlığı
+
+**Durum:** kabul · **Tarih:** 2026-09-18 · **Onay:** Scryne · **Faz:** 14 · **İlgili:**
+K-001, K-019, K-021, K-030, K-033, K-035, K-050, K-051, K-057, K-060, K-069, K-072 ·
+**Kanıt:** bu kararın "Ölçülenler" bölümü — hepsi 2026-09-18'de, koşu dosyalarının salt
+okunur kopyalarından yeniden üretilerek ölçüldü; canlı koşulara dokunulmadı.
+
+### Bulgu
+
+**Araştırma backtest'i risk motorsuz koşuyor, canlı gözlem yolu risk motorunu zorunlu
+uyguluyor.** Üç araştırma kurulum noktasının üçü de `CokluBacktest`i `risk=` argümanı
+vermeden kuruyor, yani `risk=None`:
+
+| Yol | Kurulum noktası | Risk motoru |
+| --- | --- | --- |
+| Araştırma — evren backtest'i | `cli/main.py:3281` (`sq evren backtest`) | **yok** (`risk=None`) |
+| Araştırma — çekiliş/ızgara | `research/evren_degerlendirme.py:260` | **yok** |
+| Araştırma — çoklu test null'ı | `research/coklu_test_evren.py:198` | **yok** |
+| Canlı — paper/gözlem | `cli/main.py:2554` → `live/evren_motor.py:84` | **`RiskMotoru(limitler, "1h", mod="gozlem")`** |
+
+`backtest/coklu_motor.py:230` bunu açıkça söylüyor: *"Risk devre dışıysa bu fonksiyon
+kimliktir… Faz 1-4'ün risksiz ölçümleri bu yüzden bit düzeyinde korunuyor."* Yani
+`risk=None` bir unutma değil, bilinçli bir sözleşme. Kaydedilmemiş olan şey bu sözleşmenin
+**sonucu**: dondurulmuş bir hipotez ileriye dönük izlendiğinde (K-060), izlenen şey
+hipotezin kendisi değil, onun risk motorlu hâlidir.
+
+**İkinci yarısı: eşik BTC'den kalibre, evren altcoin.** `volatilite_esigi = 0,020466`,
+ATR(14)/fiyat dağılımının p99'u; ölçüm **45.562 barlık tek sembollü** seride yapıldı
+(2026-09-10, `config/risk.json` → `gerekceler.volatilite_esigi`, `veri_sha256`
+`e3adb02c…`, `risk/kalibrasyon.py` `VOLATILITE_PERSENTILI = 99`). Faz 5'te bu doğru
+ölçülmüş bir sayıydı — o zaman evren tek semboldü. 50 üyeli altcoin evreninde aynı eşiğin
+p99'a denk gelip gelmediği **ölçülmedi**. Guard'ın gerekçesi "olağandışı çalkantıda işlem
+yapma" ve "olağandışı"nın tanımı veriden gelmeli (K-021/K-033 kalıbı); eşiğin türetildiği
+veri ile uygulandığı veri artık aynı değil.
+
+### Bu bir kod hatası değildir
+
+Her iki kod yolu da kendi sözleşmesine uyuyor, testler yeşil, canlı koşu kendi referansıyla
+bit düzeyinde tutuyor (sapma 0,0 bps). Bu bir **kalibrasyon ve karşılaştırılabilirlik
+uyuşmazlığıdır**: iki ölçüm aynı adı taşıyor ama aynı aday kümesini taşımıyor. K-070 tipi
+bir hata (kodun kendi docstring'ini uygulamaması) burada **yok**; o ayrı bir karardır ve bu
+pencereyi etkilemediği aşağıda ölçüldü.
+
+### Ölçülenler (2026-09-18)
+
+1. **Risk katmanının elediği.** `evren-kiyas` koşusu salt okunur kopyadan yeniden üretildi
+   (kayıtla bit düzeyinde aynı). Koşunun bugüne kadarki **tek** yeniden dengeleme kararında
+   risk motoruna 10 hedef sunuldu, **2'si reddedildi**:
+
+   | Sembol | `atr_oran` | Eşik | Sebep |
+   | --- | ---: | ---: | --- |
+   | NEARUSDT | 0,023765 | 0,020466 | `volatilite` |
+   | ZECUSDT | 0,025989 | 0,020466 | `volatilite` |
+
+   Sonuç: dondurulmuş 10 enstrümanlık hedef kümesi ileriye dönük gözlemde **8 enstrümana**
+   düştü; brüt maruziyet hedef 0,20 yerine **0,1676**.
+
+2. **Strateji katmanının elediği — ayrı mekanizma, karıştırılmamalı.**
+   `evren-funding-basis` koşusunun `_aday_uyeler` çağrısı yeniden üretimde kayda alındı:
+   50 üye → **41 aday**, 9 sembol dışlandı: BABYUSDT, ENAUSDT, MMTUSDT, PENGUUSDT,
+   PLUMEUSDT, REUSDT, UNIUSDT, XLMUSDT, XPLUSDT. Bu, kayıtlı hipotezin **kendi tasarımıdır**
+   (`dislama_orani = 0,2`) ve doğru çalışıyor; risk motorunun elemesiyle ilgisi yoktur. İki
+   eleme aynı cümlede anılırsa hipotezin kendi filtresi bir kusur gibi okunur.
+
+### Karar
+
+1. **Mevcut gözlem penceresinde (2026-09-17 → 2026-09-25, K-069) hiçbir değişiklik
+   yapılmaz.** Risk eşiği, aday evren, `hedef_brut`, `azami_agirlik`,
+   `yeniden_dengele_bar`, evren üyeliği ve sembol listesi pencere kapanana kadar **olduğu
+   gibi kalır**. Koşular durdurulmaz, host master'a senkronlanmaz, parametre değiştirilmez.
+   Gerekçe: pencere bir dayanıklılık ölçümüdür; ortasında değişen bir parametre ölçümü ölçüm
+   olmaktan çıkarır. (K-043'ün "planlı durdurma kesinti sayılmaz" istisnası bir kod
+   güncellemesi içindir, bir deney ayarı için değil.)
+2. **Pencerenin okunuşuna bir sınır cümlesi eklenir.** Bu pencere, dondurulmuş adayın değil,
+   **adayın risk motorlu hâlinin** ileriye dönük gözlemidir. K-035 zaten gözlem modunun
+   promotion kanıtı üretmediğini söylüyor; buraya eklenen, kıyaslanabilirlik sınırının da
+   yazılı olması: pencere sonuçları Faz 12'nin kayıtlı ızgara sonuçlarıyla **doğrudan**
+   karşılaştırılamaz.
+3. **Kalibrasyon sorusu pencere sonrasına, ayrı bir ölçüm olarak bırakılır** (aşağıdaki
+   bölüm). Bu ölçüm bir strateji çekilişi **değildir** — strateji koşulmaz, parametre
+   seçilmez, ileriye dönük getiriye bakılmaz; yalnızca oynaklık dağılımı ölçülür —
+   dolayısıyla Hipotez Defteri'ne çekiliş olarak yazılmaz. Ama eşiği **gevşetmek** (izin
+   artıran yön) K-050'ye tabidir: sayısal kapı + elle onay ister ve sonuca bakılarak
+   verilemez (K-033). Eşiği **sıkmak** aynı asimetride serbesttir.
+
+### Pencere sonrası araştırma — soru ve ölçülecekler
+
+> **Soru:** `RiskMotoru` volatilite eşiği, araştırma ve canlı gözlem arasında aynı aday
+> kümesini koruyacak şekilde evren-geneli nasıl kalibre edilmelidir?
+
+Ölçülecekler (bu kararla **tanımlandı**, uygulanmadı):
+
+1. **Evrenin oynaklık dağılımı.** 50 üyeli gerçek araştırma evreninde ATR(14)/fiyat
+   dağılımı; sembol başına ve havuzlanmış, `risk/kalibrasyon.py`nin `PERSENTILLER`
+   ızgarasıyla (p50, p75, p90, p95, p99, p99.5, p99.9). Pencere ve evren kural kimliği
+   (`27b7a16ed0ed`) rapora yazılır.
+2. **BTC eşiğinin evrendeki karşılığı.** `0,020466` bu havuzlanmış dağılımın hangi
+   persentiline denk geliyor? Tek sayı yeterli değil: sembol başına persentil de
+   raporlanır, çünkü eşik kesitte **sembolleri birbirine karşı** eliyor.
+3. **Aday eşiklerin eleme profili.** Evren-geneli p95, p99, p99.5 ve sembol-bazlı (her
+   sembolün kendi p99'u) seçenekleri için: her birinin hangi sembolleri, kaç barda, hangi
+   aylarda elediği. Sayı değil liste — "kaç tanesini eledi", bir eşiğin zararsız göründüğü
+   ama hangi tarafı elediğini gizleyen ölçüdür.
+4. **Risk filtresi öncesi/sonrası aday kümesi.** Aynı çekiliş `risk=None` ve
+   `risk=RiskMotoru(...)` ile koşulur; her yeniden dengeleme barında hedef kümesi, onaylanan
+   küme ve red sebepleri karşılaştırılır. Çıktı: kesişim oranı ve enstrüman bazında fark.
+5. **Karar zincirinin aynılaştırılabilirliği.** Araştırma yolunun da risk motorlu koşması
+   mümkün mü, mümkünse maliyeti ne: (a) Faz 1-4'ün risksiz referanslarının ve
+   `sonuc_hash`lerinin bit düzeyinde korunması şart (K-057); (b) çekiliş sayısına ve ızgara
+   koşu süresine etkisi; (c) `kapilar_v2` eşiklerinin yeniden kalibrasyonunu gerektirip
+   gerektirmediği — eşikler ızgara şekline bağlı. Cevap "hayır" çıkarsa nedeni ölçüyle
+   yazılır ve ikinci en iyi yol (gözlem sonuçlarının risksiz referansla birlikte
+   raporlanması) tanımlanır.
+6. **Kalibrasyon seçeneklerinin etkisi.** Her aday eşik için turnover, ortalama ve azami
+   brüt maruziyet, eşzamanlı enstrüman sayısı dağılımı ve 11 kapının metrikleri. Bu ölçüm
+   bir **seçim yapmaz**: eşik seçimi ayrı bir karardır (K-033 + K-050) ve sonuçlara
+   bakılarak verilemez.
+
+**Ölçüm önce, karar sonra.** Bu bölüm bir uygulama planı değil, bir ölçüm planıdır; K-073
+kapsamında hiçbir eşik, ağırlık ya da maruziyet değeri değiştirilmemiştir.
+
+### Açık kalem 1 — `hedef_brut = 0,2` ölçülmemiş bir varsayılandır
+
+Pencerede ölçülen (2026-09-18, ilk 24 saat): başlangıç özkaynak 10.000, `evren-kiyas`
+özkaynağı ≈10.088,81, nominal getiri ≈%0,89, brüt maruziyet ≈0,1676. Bu sayılar **bir
+performans değerlendirmesi değildir** ve öyle yorumlanmaz: 24 saat, tek yeniden dengeleme,
+gözlem modu.
+
+Kaydedilen tek şey şu: nominal getirinin küçüklüğü stratejinin ölçülmüş bir zayıflığı değil,
+`hedef_brut = 0,2` ayarının doğrudan sonucudur — sermayenin ≈%83'ü nakitte duruyor. Ve
+`hedef_brut = 0,2` **ölçülmüş bir optimum değildir**; Faz 12 ızgarasından dondurulmuş bir
+varsayılandır. K-072 aynı sayıya başka bir yönden değmişti ("brütü büyütmek ayrı bir
+karardır ve sonuca bakılarak verilemez"); burada eklenen, sayının **hiç ölçülmemiş**
+olduğunun açıkça deftere geçmesi. Ölçülmesi K-033'ün kalıbına tabidir (dağılım + gözden
+geçirme koşulu) ve K-050'nin asimetrisine: brütü büyütmek izin artıran yöndür.
+
+**Bu pencerede `hedef_brut` değiştirilmez.** Yatırılan sermaye üzerinden normalize edilmiş
+getiri (≈%5,3/gün) yalnızca sermaye kullanımını açıklayan yardımcı bir sayıdır; stratejinin
+performansı olarak raporlanmaz ve hiçbir kapıda kullanılmaz.
+
+### Açık kalem 2 — bu pencerede ayırt edici kanıt oluşmadı
+
+2026-09-18 15:00 UTC adımında `evren-funding-basis` ve `evren-makro-nfci` özkaynakları **bit
+düzeyinde aynı**: `10088.42804712792`; pozisyonları da aynı. Ölçülen sebepler: (a)
+funding/basis dışlaması 9 sembolü eliyor ama hiçbiri kote hacme göre ilk 10'da değil, yani
+seçimi değiştirmiyor; (b) NFCI değeri −0,56, stres engeli tetiklenmiyor. `evren-kiyas`ın
+küçük farkı ise stratejiden değil, bir saat önce başlamış olmasından (farklı giriş barı).
+
+Bu **"strateji başarısız" demek değildir** ve öyle kaydedilmez. Kaydedilen: *mevcut gözlem
+penceresinde bu iki koşu kıyastan ayırt edici kanıt üretmemiştir.* 25 Eylül'de pencere
+kapanırken "adayı bir hafta ileriye dönük izledik" cümlesinin yanında bu satır da bulunmalı.
+
+### Açık kalem 3 — RLUSDUSDT
+
+Evren kuralının ürettiği listede bir stablecoin (RLUSDUSDT) var ve mevcut koşuda brüt
+maruziyetin ≈1/8'ini tutuyor; yapısı gereği ≈sıfır getiri üretir. Evren kuralının stabil
+taban listesinde olmadığı için bu bir **kural kusurudur**, bir piyasa gözlemi değil.
+Araştırma tablosu aynı kuralla kurulduğu için **parite doğrudur**: canlı ile backtest aynı
+listeyi görüyor.
+
+**Pencere sırasında çıkarılmaz, sembolü değiştirilmez, ağırlığı elle düzeltilmez.** Kuralın
+düzeltilmesi pencere sonrası bir program kaydının konusudur; koşu ortasında evreni
+değiştirmek, K-052'nin "evren de geleceği göremez" kuralını bugünkü bilgiyle delmek olurdu.
+
+### Yan doğrulama — host 17 commit geride, canlı yol etkilenmiyor (ölçüldü)
+
+Host `3a74ebf`, master `06282e8`: **17 commit**. `src/` altında değişen 14 dosyadan canlı
+yolu etkileyebilecek tek aday `strategy/kurma.py` (K-070). Diğer 13'ü eklemeli:
+`features/indikator.py` (yeni `log_degisim`), `features/motor.py` (yeni konumlanma DEFTER
+kayıtları), `cli/main.py` (yalnızca `lab tekrar-kontrol`), kalanı araştırma modülleri ve
+koşan hiçbir konfigürasyonun kullanmadığı iki yeni strateji dosyası. `config/` ve
+`migrations/` altında değişiklik **yok**.
+
+K-070'in etkisizliği okunarak değil **ölçülerek** doğrulandı: eski (`3a74ebf`) ve yeni
+`agirliklar()` fonksiyonları, koşuların gerçek ayarlarıyla (`hedef_brut = 0,2`,
+`azami_agirlik = 0,02`, `esit_agirlik = True`) yan yana koşuldu.
+
+| Vaka | Sonuç |
+| --- | --- |
+| `esit_agirlik=True`, n = 1…50, her n için 20 rastgele oynaklık dizisi (1.000 vaka) | **0 fark** |
+| Koşunun fiili hâli: n = 8 ve n = 10 | aynı; brüt 0,160 / 0,200, azami ağırlık 0,020 = tavan |
+| Kontrol: `esit_agirlik=False`, n = 3, tavan 0,05 (K-070'in vakası) | **fark var** — eski: 0,05 / 0,05 / **0,10** (tavanın iki katı), yeni: 0,05 / 0,05 / 0,05 |
+
+Kontrol vakası hatanın gerçekten var olduğunu ve karşılaştırmanın boş geçmediğini
+gösteriyor; canlı ayarda 1.000 vakada tek fark yok. **Karar: host güncellenmez, koşular
+yeniden başlatılmaz, canlı pencereye dokunulmaz.** Güncelleme pencere kapandıktan sonra,
+K-043'ün planlı durdurma yordamıyla yapılır.
