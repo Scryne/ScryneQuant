@@ -147,8 +147,13 @@ def tekrar(
     finally:
         if istemci is not None and hasattr(istemci, "close"):
             istemci.close()
-    sonuc["leak_riski"] = True if ayarlar.egitim_kesim_ms is None else "kesime göre"
-    sonuc["not"] = "replay isabet kanıtı değildir (K-074/3)"
+    sonuc["leak_riski"] = (
+        "kesime göre" if ayarlar.egitim_kesim_ms is not None
+        else "yayın tarihine göre: karar barı yayından sonra açılıyorsa yok (K-075)"
+        if ayarlar.yayin_ms is not None
+        else True
+    )
+    sonuc["not"] = "replay kanıtı yalnız leak_riski=false satırlarda (K-074/3, K-075)"
     _yaz(sonuc)
 
 

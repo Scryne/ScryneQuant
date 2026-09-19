@@ -270,12 +270,28 @@ def yanit_dogrula(yanit: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _leak_riski(*, ileriye_donuk: bool, karar_ms: int, egitim_kesim_ms: int | None) -> bool:
+def _leak_riski(
+    *,
+    ileriye_donuk: bool,
+    karar_ms: int,
+    egitim_kesim_ms: int | None,
+    yayin_ms: int | None = None,
+) -> bool:
+    """Model, karar anından sonraki fiyatı eğitiminde görmüş olabilir mi?
+
+    İleriye dönük karar: hayır. Geriye dönük (replay) karar: kesim biliniyorsa `karar_ms <
+    kesim`; bilinmiyorsa **yayın tarihi alt sınır olarak kullanılır** (K-075): bir model
+    yayından önce eğitilmiştir, yani `kesim ≤ yayın` (ayarlar bunu zorluyor); karar barı yayından
+    sonra açılıyorsa `karar_ms ≥ yayın ≥ kesim` ve hangi kesim olursa olsun t sonrası veri eğitimde
+    olamaz. Yayından **önceki** bar için yayın tarihi hiçbir şey temizlemez (K-074/3 aynen).
+    """
     if ileriye_donuk:
         return False
-    if egitim_kesim_ms is None:
-        return True
-    return karar_ms < egitim_kesim_ms
+    if egitim_kesim_ms is not None:
+        return karar_ms < egitim_kesim_ms
+    if yayin_ms is not None:
+        return karar_ms < yayin_ms
+    return True
 
 
 def karar_kur(
@@ -294,6 +310,7 @@ def karar_kur(
     hata: str | None = None,
     gecikme_ms: int | None = None,
     geriye_donuk: bool = False,
+    yayin_ms: int | None = None,
 ) -> JevKarari:
     """Kanonik durum + (varsa) yanıt → `JevKarari`. Şema hatası burada `SEMA_HATASI`na döner.
 
@@ -316,7 +333,10 @@ def karar_kur(
         "uretim_ms": uretim_ms,
         "ileriye_donuk": ileriye_donuk,
         "leak_riski": _leak_riski(
-            ileriye_donuk=ileriye_donuk, karar_ms=karar_ms, egitim_kesim_ms=egitim_kesim_ms
+            ileriye_donuk=ileriye_donuk,
+            karar_ms=karar_ms,
+            egitim_kesim_ms=egitim_kesim_ms,
+            yayin_ms=yayin_ms,
         ),
         "durum_surumu": int(durum["surum"]),
         "durum_hash": durum_hash,

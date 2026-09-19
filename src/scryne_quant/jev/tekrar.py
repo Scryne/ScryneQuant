@@ -151,6 +151,7 @@ def tekrar_kos(
                 bayat_ms=ayarlar.bayat_ms,
                 yon_marji=ayarlar.yon_marji,
                 egitim_kesim_ms=ayarlar.egitim_kesim_ms,
+                yayin_ms=ayarlar.yayin_ms,
                 yanit=None,
                 durum_kodu=KararDurumu.EKSIK_VERI,
                 hata="kuru mod: Jev'e sorulmadı",
@@ -169,6 +170,7 @@ def tekrar_kos(
                 bayat_ms=ayarlar.bayat_ms,
                 yon_marji=ayarlar.yon_marji,
                 egitim_kesim_ms=ayarlar.egitim_kesim_ms,
+                yayin_ms=ayarlar.yayin_ms,
                 yanit=sonuc.yanit,
                 durum_kodu=sonuc.durum,
                 hata=sonuc.hata,
@@ -268,11 +270,15 @@ def dondur(
         "sayim": defter.sayim(),
         "leak_riski": leak,
         "leak_riski_gerekcesi": (
-            "eğitim kesimi bilinmiyor; geriye dönük türetim kapıya giremez (K-074/3)"
-            if ayarlar.egitim_kesim_ms is None
-            else "kapsam kesimden önce başlıyor (K-049/4)"
-            if leak
+            "kapsam kesimden önce başlıyor (K-049/4)"
+            if leak and ayarlar.egitim_kesim_ms is not None
             else "kapsam kesimden sonra"
+            if ayarlar.egitim_kesim_ms is not None
+            else "eğitim kesimi bilinmiyor ve kapsam yayın tarihinden önce başlıyor; "
+            "geriye dönük türetim kapıya giremez (K-074/3)"
+            if leak
+            else "eğitim kesimi bilinmiyor; kapsamın tamamı yayın tarihinden sonra, "
+            "kesim ≤ yayın olduğundan t sonrası veri eğitimde olamaz (K-075)"
         ),
         "ileriye_donuk": False,
         "girdi_sha256": dict(girdi_sha256 or {}),

@@ -202,7 +202,8 @@ def degerlendir(bagli: pd.DataFrame, *, ayarlar: JevAyarlari) -> dict[str, Any]:
             "leak_riski=true satır var: bu rapor boru hattı doğrulamasıdır, isabet kanıtı değil "
             "(K-074/3)"
             if len(gecerli) and bool(gecerli.get("leak_riski", pd.Series(dtype=bool)).any())
-            else "yalnızca ileriye dönük kararlar; yine de örneklem büyüklüğüne bak (K-074/7)"
+            else "her satır leak_riski=false (ileriye dönük ya da yayın sonrası, K-075); "
+            "yine de örneklem büyüklüğüne bak (K-074/7)"
         ),
         "birincil_ufuk_bar": h,
         "toplam_kayit": toplam,

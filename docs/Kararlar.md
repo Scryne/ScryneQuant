@@ -3720,3 +3720,44 @@ kesimi yayınlanmıyor (spec'in tarihsel isabet kanıtı). Bu karar üçünü de
 - Gölge raporu K-045'in istisna şartını sayısal olarak karşılarsa (Jev yönünün fiyat
   özelliklerinden bağımsızlığı **ve** in-sample'da ileriye dönük sıralama gücü, K-068) D
   deneyi için program kaydı açılabilir — yine bu kararın değil, yeni bir kararın konusu.
+
+## K-075 — Yayın tarihi kesimin üst sınırıdır: yayından sonra açılan bar için replay kesimden bağımsızdır
+
+**Durum:** kabul · **Tarih:** 2026-09-19 · **Onay:** Scryne ("beklemek istemiyorum, başka bir
+çözüm bul") · **Tabi:** K-074/3 (kesim UNKNOWN, uydurulmaz — **aynen yürürlükte**), K-049/4,
+K-067 (Jev sinyal üretmez — aynen) · **Kaynak:** `docs/spikes/07-jev-durum.md` (c),
+`config/jev.json::yayin_utc`, `runs/jev/tekrar-yayin-sonrasi-1.sqlite`
+
+**Bağlam.** K-074/3 doğru olarak "yayın tarihi kesim yerine geçmez; yayından önceki hiçbir
+pencereyi temizlemez" dedi ve ileriye dönük gölgeyi tek kanıt yolu bıraktı. Bu, kanıtın
+yalnız takvim hızında (24 karar/gün) birikmesi demekti. Gözden kaçan şey: aynı önerme
+(**kesim ≤ yayın**, `ayarlar.py` bunu zaten zorluyor) yayından **sonraki** barlar için
+kesimin ne olduğunu bilmeyi gereksiz kılar. Karar barı `karar_ms ≥ yayın_ms` ise
+`karar_ms ≥ yayın ≥ kesim`; hangi kesim olursa olsun t sonrası fiyat eğitimde olamaz.
+Bu bir tahmin değil, eşitsizlik.
+
+### Karar
+
+1. `_leak_riski`: kesim bilinmiyorsa `leak_riski = karar_ms < yayın_ms`. Yayından önceki
+   bar için hiçbir şey değişmedi (`true`). Kesim biliniyorsa yayın yok sayılır (K-074/3
+   aynen). Test: `TestLeakRiski::test_kesim_bilinmiyorsa_yayin_alt_sinirdir`.
+2. Yayın sonrası replay (`jev-1.13.0` → 2026-09-10T18:38Z) ileriye dönük gölgeyle **aynı
+   kanıt sınıfındadır**; `degerlendir` `kanit: true` verir. Ölçüm tanımları K-074/7'deki
+   gibi, değişmedi. Marj 0,20 değişmedi.
+3. **İlk ölçüm (aynı gün):** `tekrar-yayin-sonrasi-1`, BTCUSDT 1h, 219 bar
+   (2026-09-10 19:00 → 2026-09-19 21:00 UTC), 219/219 geçerli, zincir geçerli, 1 dk 7 s.
+   Çekimserlik **%96,3** (211 flat, 4 long, 4 short); sonucu bilinen yönlü 7, isabet **3/7**
+   (CI %95 0,16–0,75); al-tut aynı barlarda 126/215. Yönlü net getiri 4 bar: −%0,30
+   (maliyet sonrası negatif). Betimleyici (kapı değil): marj 0'a inse bile argmax yalnız
+   32/219 yönlü — çekimserlik marjın değil, Jev'in kendi olasılık dağılımının sonucu
+   (P_flat medyan 0,71).
+4. **Ne değişmiyor:** Jev hâlâ sinyal üretmez; bu ölçüm bir strateji değil, K-045
+   istisnasının sayısal ön koşulu. n=7 ile hiçbir şey söylenemez; bu kaydın değeri sonuçta
+   değil, **kanıt hızında**: 9 günlük pencere takvimde 9 gün, replay'de 1 dakika.
+
+### Sonraki adım (bu karar açmıyor, yalnız işaret ediyor)
+
+Aynı pencere evrendeki diğer sembollere uygulanırsa yönlü örneklem takvim beklemeden
+büyür (K-074 "çoklu sembol kapsam dışı" dediği için ayrı K-kaydı ister; saatler arası
+kesitsel korelasyon nedeniyle etkin n sembol sayısıyla doğrusal büyümez — rapor bunu
+ölçmek zorunda).
