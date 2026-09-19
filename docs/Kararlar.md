@@ -3761,3 +3761,27 @@ Aynı pencere evrendeki diğer sembollere uygulanırsa yönlü örneklem takvim 
 büyür (K-074 "çoklu sembol kapsam dışı" dediği için ayrı K-kaydı ister; saatler arası
 kesitsel korelasyon nedeniyle etkin n sembol sayısıyla doğrusal büyümez — rapor bunu
 ölçmek zorunda).
+
+## K-076 — Jev yön ekseni kapandı: 50 sembol, yayın sonrası pencere, isabet %49,0
+
+**Durum:** kabul · **Tarih:** 2026-09-19 · **Onay:** Scryne ("evet aç ve koştur") · **Tabi:**
+K-067, K-074 (aynen), K-075 · **Kaynak:** `docs/Faz-16-Jev-Evren-Replay-Raporu.md`,
+`runs/jev/evren/`
+
+**Bağlam.** K-074 çoklu sembolü gölge kapsamı dışında bırakmıştı; K-075 yayın sonrası
+replay'i gölgeyle aynı kanıt sınıfına aldı. İkisi birleşince BTC'nin 7 yönlü kararı yerine
+aynı gün 1.099 yönlü karar ölçülebildi. Bu karar o kapsamı **tek seferlik ölçüm** olarak
+açtı; strateji, program ya da çekiliş değil (Jev sinyal üretmiyor, parametre seçilmiyor).
+
+### Karar
+
+1. Ölçüm: PIT 2026-09 ilk 50 sembol × 197 bar, K-074 soru seti/marj/durum **değişmeden**.
+   `sq jev tekrar --sembol` eklendi (config'i ezer, başka hiçbir şey değişmez).
+2. Sonuç: isabet 539/1.099 = %49,0 (CI 0,46–0,52), net −%0,38/işlem (t ≈ −6,9), brüt
+   negatif, kalibrasyon yok, saat-küme etkin n 183'te de %51. **K-045 istisnasının sayısal
+   koşulu karşılanmadı. Jev'in yönü bilgi kaynağı değildir.**
+3. Sonuçlar: Jev filtre/onay/only deneyleri (spec B/C/D) açılmaz; K-074'ün "geri dönüş
+   koşulu" tetiklenmedi. Gölge `golge-1` açık kalır (ileriye dönük doğrulama, bedelsiz).
+   Sembol seçimi yapılmadı (en iyi 5 sembol yazı-tura kuyruğunun içinde, rapor §2).
+4. Değişmeyen: soru setini, durumu ya da timeframe'i değiştirip yeniden sormak yeni
+   çekiliştir; deftere satır ve K-051 programı ister. Bu rapora bakarak yapılmaz.

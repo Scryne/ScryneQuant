@@ -84,8 +84,14 @@ def tekrar(
     kok: Annotated[Path, typer.Option("--kok")] = VARSAYILAN_KOK,
     depo: Annotated[Path, typer.Option("--depo")] = VARSAYILAN_DEPO,
     funding_depo: Annotated[Path, typer.Option("--funding-depo")] = VARSAYILAN_FUNDING,
+    sembol: Annotated[
+        str | None,
+        typer.Option("--sembol", help="config/jev.json'daki sembol yerine (K-076: çoklu sembol replay)."),
+    ] = None,
 ) -> None:
-    """Tarihsel replay: durum → Jev → defter. **Backtest değil**; her kayıt `leak_riski` taşır."""
+    """Tarihsel replay: durum → Jev → defter. **Backtest değil**; kanıt yalnız `leak_riski=false` satırlarda."""
+    from dataclasses import replace
+
     from scryne_quant.common.hash import dosya_hash
     from scryne_quant.data.depo import ParquetDepo
     from scryne_quant.features.barlar import bar_dizileri
@@ -95,6 +101,8 @@ def tekrar(
     from scryne_quant.jev.tekrar import TekrarHatasi, tekrar_kos
 
     ayarlar = _ayarlar()
+    if sembol is not None:
+        ayarlar = replace(ayarlar, sembol=sembol.upper())
     barlar, funding = _barlar_ve_funding(ayarlar, depo, funding_depo)
     diziler = bar_dizileri(barlar)
     n = len(barlar)
