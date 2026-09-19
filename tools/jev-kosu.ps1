@@ -24,5 +24,7 @@ $Dizin = Join-Path $Kok "runs\jev"
 New-Item -ItemType Directory -Force $Dizin | Out-Null
 $Gunluk = Join-Path $Dizin ($KosuAdi + ".log")
 
-& $Python -m scryne_quant.cli.main jev golge --kosu $KosuAdi *>> $Gunluk
+# `cli.jev` dogrudan cagrilir (`cli.main` degil): Jev alt komutu `main.py`ye kayitli olmayan
+# bir hostta da calissin; ayni Typer uygulamasi, ayni komut.
+& $Python -m scryne_quant.cli.jev golge --kosu $KosuAdi *>> $Gunluk
 exit $LASTEXITCODE

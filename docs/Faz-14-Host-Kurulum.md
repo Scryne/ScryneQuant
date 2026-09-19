@@ -197,3 +197,23 @@ Pano (8788) Jev'i `/api/jev`, `/api/jev/<kosu>`, sağlık şeridini `/api/servis
 
 Hosta kurulum sırası: bundle → `uv sync --frozen` → testler → `setx TYPESAFE_API_KEY ...`
 (yeni oturum) → `servisler.ps1 kur` → `servisler.ps1 baslat` → `servisler.ps1 durum`.
+
+**Pencere içinde nasıl kuruldu (2026-09-19 21:55 UTC).** K-069 penceresi (→ 2026-09-25) açık
+olduğu için bundle senkronu **yapılmadı**; 3d'deki kalıp tekrarlandı: hosta yalnızca **yeni**
+dosyalar gitti (`src/scryne_quant/jev/`, `src/scryne_quant/cli/jev.py`, `config/jev.json`,
+`tools/jev-kosu.ps1`). `jev-kosu.ps1` bu yüzden `cli.main jev` yerine doğrudan
+`python -m scryne_quant.cli.jev golge` çağırıyor — hosttaki `cli/main.py` (3a74ebf) Jev alt
+komutunu tanımıyor ve çalışan görevlerin içe aktardığı hiçbir dosya değişmedi. Jev'in
+`features.indikator`dan kullandığı 7 fonksiyon (atr, bollinger, ema, en_dusuk, en_yuksek, roc,
+rsi) 3a74ebf'te de var; master'daki ekler (`log_degisim`) gerekmedi. `typesafe-sdk 0.6.0`
+hostta zaten kuruluydu (K-061). Anahtar `setx` ile kullanıcı ortamına yazıldı, hiçbir dosyaya
+ve loga girmedi. `ScryneQuant-Jev` görevi tek başına kaydedildi (`servisler.ps1 kur` diğer
+görevlere dokunacağı için çağrılmadı); `--kuru` doğrulaması: pencere 1.248 bar, boşluk 0,
+funding 360. Koşu **`golge-1`**, `runs\jev\golge-1.sqlite`. Ana makinedeki `golge-3` de
+koşmaya devam ediyor: aynı barda iki bağımsız süreç aynı `durum_hash`i vermeli — makineler
+arası determinizm kontrolü, bedava.
+
+**Neden şimdi:** gölge kanıtı ileriye dönük bardan başka hiçbir yerden gelmiyor (K-074/3,
+replay `leak_riski=true`). Her kapalı gün bir günlük örneklem kaybı; masaüstü her gün
+kapanıyor (`gozlem-2`yi kesen şey). Kanıtın birikmesinin tek yolu bu koşunun hostta kesintisiz
+durmasıydı.
