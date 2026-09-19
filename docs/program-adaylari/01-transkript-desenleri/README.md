@@ -54,7 +54,10 @@ klasörden etkilenmez.
   09-h3) bu pencerede yıllarca yeterli olay üretmeyebilir — bu, program kaydında bütçe ve
   durma kuralı yazılırken bilinmesi gereken bir sınır, sonradan gevşetilecek bir kural değil.
 
-## 4. Gerekçe ölçüsü taslağı — M-1 "NY saati çapası" (koşturulmadı)
+## 4. Gerekçe ölçüsü taslağı — M-1 "NY saati çapası" — **ölçüldü 2026-09-19: geçemedi**
+
+> Sonuç `docs/Faz-16-M1-NY-Saati-Olcumu.md`: p = 0,385 (sıra 37/96). Lunch ailesi çekiliş
+> harcanmadan kapandı; aşağıdaki tanım tarihsel kayıt.
 
 Grup A'daki Lunch ailesi (KAANERMI-LUNCH-01-h1, LUNCH-02-h1, LUNCH-11-h1) şu iddiaya dayanır:
 BTC'de ABD seans saatine **(ET saati)** bağlı bir yapı var. Bu, fiyat geçmişinden bağımsız
