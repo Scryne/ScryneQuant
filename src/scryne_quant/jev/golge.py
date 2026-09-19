@@ -345,6 +345,12 @@ class GolgeKosturucu:
             yoklama.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await yoklama
+            # Akışın aiohttp oturumu kapatılmazsa "Unclosed client session" bırakır
+            # (`live/kosturucu.py` ile aynı kapanış).
+            temizle = getattr(self.akis, "temizle", None)
+            if temizle is not None:
+                with contextlib.suppress(Exception):
+                    await temizle()
             self.motor.defter.olay_yaz(
                 OlayTuru.DURDU,
                 {"islenen_bar": self.islenen_bar, "hata": hata, **(self.durdurma_sebebi or {})},
