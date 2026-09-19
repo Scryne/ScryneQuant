@@ -352,3 +352,22 @@ def test_kanonik_durum_numpy_disi_tip_icermiyor(ayar, saat, df):
         return not isinstance(x, np.generic | np.ndarray)
 
     assert _tara(durum)
+
+
+def test_durum_json_her_barda_yaziliyor(ayar, saat, df, tmp_path):
+    """Pano bu dosyayı okur; `jev` import etmez. Alanlar sözleşme (K-074)."""
+    import json
+
+    yol = tmp_path / "golge-x.sqlite"
+    m = _motor(ayar, saat, defter=JevDefteri(yol))
+    m.isinma(_barlar(Kaynak.BACKFILL, df.iloc[:ISINMA]))
+    durum_yolu = tmp_path / "golge-x.sqlite.durum.json"
+    d0 = json.loads(durum_yolu.read_text(encoding="utf-8"))
+    assert d0["toplam"] == 0 and d0["son_karar"] is None and d0["kanit"] is False
+    s = _canli_bar_isle(m, _barlar(Kaynak.AKIS, df.iloc[ISINMA : ISINMA + 1])[0], saat)
+    d1 = json.loads(durum_yolu.read_text(encoding="utf-8"))
+    assert d1["toplam"] == 1 and d1["gecerli"] == 1 and d1["zincir_gecerli"] is True
+    assert d1["son_karar"]["yon"] == "long" and d1["son_karar"]["karar_ms"] == s.bar_ms
+    assert d1["yon_dagilimi"] == {"long": 1} and d1["cekimserlik_orani"] == 0.0
+    assert d1["mod"] == "golge" and d1["yazildi_ms"] == saat.an
+    assert not (tmp_path / "golge-x.sqlite.durum.json.tmp").exists()

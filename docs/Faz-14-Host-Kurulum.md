@@ -185,3 +185,15 @@ Ana makineden SSH ile: planlı durdurma → kod güncellemesi (`8e51933`, hostta
 | 15:03:32 | `basladi`, `toparlandi` (pencere 1.000 bar) |
 
 **Kesinti sayısı: 0.** Açılıştan koşunun toparlanmasına 29 saniye.
+
+## 3e. Tek komut ve Jev gölgesi (2026-09-20, K-074)
+
+`tools\servisler.ps1 kur|baslat|durum|durdur` bütün görevleri tek noktadan yönetir
+(`docs/Runbook.md` "Tek komut"). Yeni görev: **`ScryneQuant-Jev`** → `tools\jev-kosu.ps1
+-KosuAdi golge-1` → `sq jev golge`. Ayrı süreç, ayrı defter (`runs\jev\golge-1.sqlite`), emir
+yok; `TYPESAFE_API_KEY` hostta **kullanıcı ortam değişkeni** olarak durur (`.env`de değil).
+Pano (8788) Jev'i `/api/jev`, `/api/jev/<kosu>`, sağlık şeridini `/api/servisler` ile okur;
+`apps\web\dist` ana makinede `npm run build` ile üretilip kopyalanır.
+
+Hosta kurulum sırası: bundle → `uv sync --frozen` → testler → `setx TYPESAFE_API_KEY ...`
+(yeni oturum) → `servisler.ps1 kur` → `servisler.ps1 baslat` → `servisler.ps1 durum`.

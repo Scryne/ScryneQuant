@@ -217,6 +217,7 @@ def golge(
         isinma_barlari,
     )
     from scryne_quant.live import durdurma as durdurma_mod
+    from scryne_quant.live import kill as kill_mod
     from scryne_quant.live.kilit import KilitAlinamadi, KosuKilidi
 
     ayarlar = _ayarlar()
@@ -228,6 +229,8 @@ def golge(
         typer.echo(f"koşu zaten açık: {e}", err=True)
         raise typer.Exit(2) from e
     durdurma_mod.temizle(yol)
+    # Süreç kimliği: izleme/pano "süreç yaşıyor mu" sorusunu buradan cevaplar (K-065 kalıbı).
+    kill_mod.pid_yaz(yol)
 
     adaptor = BinanceAdaptoru()
     turev = BinanceTurevRest()

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Kosular } from "./Kosular";
 import { Kosu } from "./Kosu";
+import { Jev } from "./Jev";
 
 /** Gözlem panosu: **bütün** koşuları gösteren salt okunur konsol.
  *
@@ -20,7 +21,7 @@ export function Pano() {
             ScryneQuant <span className="text-tertiary">· gözlem panosu</span>
           </span>
           <span className="text-label text-tertiary">
-            Salt okunur — bu ekran hiçbir koşuyu değiştiremez
+            Salt okunur — bu ekran hiçbir koşuyu değiştiremez · gerçek emir yok
           </span>
         </div>
       </header>
@@ -28,6 +29,7 @@ export function Pano() {
         <Routes>
           <Route path="/" element={<Kosular />} />
           <Route path="/kosu/:ad" element={<Kosu />} />
+          <Route path="/jev/:ad" element={<Jev />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

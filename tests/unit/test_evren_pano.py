@@ -165,8 +165,10 @@ def test_izleme_kosularina_son_sapma_ekleniyor(tmp_path):
         encoding="utf-8",
     )
     (paper / "evren-x.sapma.jsonl").write_text(
-        json.dumps({"adim": 5, "son_ozkaynak_farki_bps": 0.0}) + "\n"
-        + json.dumps({"adim": 9, "son_ozkaynak_farki_bps": 0.0}) + "\n",
+        json.dumps({"adim": 5, "son_ozkaynak_farki_bps": 0.0})
+        + "\n"
+        + json.dumps({"adim": 9, "son_ozkaynak_farki_bps": 0.0})
+        + "\n",
         encoding="utf-8",
     )
     kaynak = PanoKaynagi(paper, izleme_kok, onbellek_s=0.0)
@@ -202,9 +204,7 @@ def test_yalnizca_get_uclari_var(tmp_path):
     _evren_kosu(kok)
     app = pano_kur(PanoKaynagi(kok, tmp_path / "izleme"))
     yollar = [
-        (r.path, sorted(r.methods - {"HEAD"}))
-        for r in app.routes
-        if getattr(r, "methods", None)
+        (r.path, sorted(r.methods - {"HEAD"})) for r in app.routes if getattr(r, "methods", None)
     ]
     assert all(m == ["GET"] for _, m in yollar), yollar
 
@@ -258,10 +258,18 @@ def test_acik_islem_iki_kez_sayilmiyor():
     İkisini birleştiren ilk sürüm 8 işlemi 16 gösteriyordu — sayıyı iki katına çıkaran bir
     ekran, işlem defteri olarak okunamaz.
     """
-    kapali = Islem(acilis_ms=T0, kapanis_ms=T0 + SAAT, sembol="AAAUSDT", net_pnl=5.0,
-                   giris_notional=100.0, giris_miktar=1.0, fill_sayisi=2)
-    acik = Islem(acilis_ms=T0 + SAAT, sembol="BBBUSDT", giris_notional=200.0,
-                 giris_miktar=2.0, fill_sayisi=1)
+    kapali = Islem(
+        acilis_ms=T0,
+        kapanis_ms=T0 + SAAT,
+        sembol="AAAUSDT",
+        net_pnl=5.0,
+        giris_notional=100.0,
+        giris_miktar=1.0,
+        fill_sayisi=2,
+    )
+    acik = Islem(
+        acilis_ms=T0 + SAAT, sembol="BBBUSDT", giris_notional=200.0, giris_miktar=2.0, fill_sayisi=1
+    )
     motor = _motor_taklidi([kapali, acik], {}, {})
 
     uretim = PanoKaynagi._portfoyden(motor)
@@ -321,8 +329,12 @@ def test_kimlik_uyusmazliginda_uretim_hata_veriyor_kosu_durmuyor(tmp_path):
     kok = tmp_path / "paper"
     kok.mkdir()
     depo = EvrenKosuDeposu(kok / "bozuk.sqlite")
-    depo.kimlik_yaz({"strateji": {"ad": "boyle-bir-strateji-yok", "parametreler": {}},
-                     "baslangic_sermaye": 10_000.0})
+    depo.kimlik_yaz(
+        {
+            "strateji": {"ad": "boyle-bir-strateji-yok", "parametreler": {}},
+            "baslangic_sermaye": 10_000.0,
+        }
+    )
     depo.kapat()
 
     kaynak = PanoKaynagi(kok, tmp_path / "izleme", onbellek_s=0.0)
@@ -349,3 +361,179 @@ def test_anlik_kopya_kaynagi_kilitlemiyor(tmp_path):
         yazar.commit()
     finally:
         yazar.close()
+
+
+# ------------------------------------------------------------------ Jev gölge (K-074)
+
+
+def _jev_kosu(kok, ad="golge-t", karar=3, durum_json=True):
+    """Gerçek bir Jev defteri: `jev` paketiyle yazılır; pano onu **import etmeden** okur."""
+    from scryne_quant.features.barlar import bar_dizileri
+    from scryne_quant.jev import ayarlar as ayar_mod
+    from scryne_quant.jev.defter import JevDefteri, OlayTuru, kosu_kimligi_kur
+    from scryne_quant.jev.durum import durum_hash, kanonik_durum
+    from scryne_quant.jev.karar import KararDurumu, karar_kur
+    from scryne_quant.jev.sorular import soru_sha256
+    from tests.conftest import bar_uret
+
+    ayar = ayar_mod.yukle()
+    d = bar_dizileri(bar_uret(n=300, tohum=5))
+    yol = kok / f"{ad}.sqlite"
+    with JevDefteri(yol) as df:
+        df.kosu_yaz(kosu_kimligi_kur(ad, "golge", ayar, soru_sha256(ayar.model)))
+        df.olay_yaz(OlayTuru.BASLADI, {"isinma_bar": 250})
+        for i in range(250, 250 + karar):
+            durum = kanonik_durum(d, i, sembol="BTCUSDT")
+            gecerli = i != 251
+            yanit = (
+                None
+                if not gecerli
+                else {
+                    "model": ayar.model,
+                    "usage": {"input_tokens": 1, "output_tokens": 1},
+                    "answers": {
+                        "yon": {
+                            "choice": "flat",
+                            "confidence": 0.5,
+                            "probabilities": {"long": 0.2, "short": 0.1, "flat": 0.7},
+                        },
+                        "rejim": {
+                            "choice": "aralik",
+                            "confidence": 0.5,
+                            "probabilities": {
+                                "trend_yukari": 0.2,
+                                "trend_asagi": 0.1,
+                                "aralik": 0.5,
+                                "yuksek_volatilite": 0.1,
+                                "belirsiz": 0.1,
+                            },
+                        },
+                        "kurulum": {"score": 1.0, "confidence": 0.4},
+                        "cekimser": {"noul": 0.3},
+                    },
+                }
+            )
+            k = karar_kur(
+                kosu=ad,
+                durum=durum,
+                durum_hash=durum_hash(durum),
+                soru_sha256=soru_sha256(ayar.model),
+                model_istenen=ayar.model,
+                uretim_ms=durum["veri_kesimi_ms"] + 1_000,
+                bayat_ms=ayar.bayat_ms,
+                yon_marji=ayar.yon_marji,
+                egitim_kesim_ms=None,
+                yanit=yanit,
+                durum_kodu=KararDurumu.GECERLI if gecerli else KararDurumu.TIMEOUT,
+                hata=None if gecerli else "sahte timeout",
+                gecikme_ms=300,
+            )
+            df.karar_yaz(k, durum, yanit)
+    if durum_json:
+        (kok / f"{ad}.sqlite.durum.json").write_text(
+            json.dumps(
+                {
+                    "kosu": ad,
+                    "mod": "golge",
+                    "model": ayar.model,
+                    "sembol": "BTCUSDT",
+                    "toplam": karar,
+                    "gecerli": karar - 1,
+                    "hata": 1,
+                    "sayim": {"gecerli": karar - 1, "timeout": 1},
+                    "cekimserlik_orani": 1.0,
+                    "yon_dagilimi": {"flat": karar - 1},
+                    "gecikme_ms": {"p50": 300, "p95": 300},
+                    "son_karar": {"yon": "flat", "durum": "gecerli"},
+                    "son_bar_ms": int(d["open_time"][250 + karar - 1]),
+                    "zincir_gecerli": True,
+                    "kanit": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+    return yol
+
+
+def test_jev_kosulari_durum_jsondan_okunuyor(tmp_path):
+    (tmp_path / "paper").mkdir()
+    (tmp_path / "jev").mkdir()
+    _jev_kosu(tmp_path / "jev")
+    kaynak = PanoKaynagi(tmp_path / "paper", tmp_path / "izleme", jev_kok=tmp_path / "jev")
+    g = kaynak.jev_kosular()
+    assert len(g["kosular"]) == 1
+    k = g["kosular"][0]
+    assert k["ad"] == "golge-t" and k["gecerli"] == 2 and k["hata"] == 1
+    assert k["cekimserlik_orani"] == 1.0 and k["kanit"] is False and k["surec_yasiyor"] is None
+    assert "emir yok" in g["not"]
+
+
+def test_jev_durum_json_yoksa_sqlden_ozet(tmp_path):
+    (tmp_path / "paper").mkdir()
+    (tmp_path / "jev").mkdir()
+    _jev_kosu(tmp_path / "jev", ad="tekrar-t", durum_json=False)
+    kaynak = PanoKaynagi(tmp_path / "paper", tmp_path / "izleme", jev_kok=tmp_path / "jev")
+    k = kaynak.jev_kosular()["kosular"][0]
+    assert k["mod"] == "golge" and k["toplam"] == 3 and k["gecerli"] == 2
+    assert k["sayim"] == {"gecerli": 2, "timeout": 1} and k["model"] == "jev-1.13.0"
+
+
+def test_jev_detay_son_kararlar_ve_olaylar(tmp_path):
+    (tmp_path / "paper").mkdir()
+    (tmp_path / "jev").mkdir()
+    _jev_kosu(tmp_path / "jev")
+    kaynak = PanoKaynagi(tmp_path / "paper", tmp_path / "izleme", jev_kok=tmp_path / "jev")
+    d = kaynak.jev_detay("golge-t")
+    assert [k["durum"] for k in d["kararlar"]] == ["gecerli", "timeout", "gecerli"]
+    assert d["kararlar"][0]["yon"] == "flat" and d["kararlar"][1]["yon"] is None
+    assert d["kararlar"][1]["hata"] == "sahte timeout"
+    assert d["kimlik"]["mod"] == "golge" and d["olaylar"][0]["tur"] == "basladi"
+    assert d["kanit"] is False and d["durum"]["zincir_gecerli"] is True
+
+
+def test_jev_uclari_ve_servisler(tmp_path):
+    (tmp_path / "paper").mkdir()
+    (tmp_path / "jev").mkdir()
+    _evren_kosu(tmp_path / "paper")
+    _jev_kosu(tmp_path / "jev")
+    app = pano_kur(PanoKaynagi(tmp_path / "paper", tmp_path / "izleme", jev_kok=tmp_path / "jev"))
+    c = TestClient(app)
+    assert c.get("/api/jev").status_code == 200
+    assert c.get("/api/jev/golge-t").json()["ad"] == "golge-t"
+    assert c.get("/api/jev/yok").status_code == 404
+    s = c.get("/api/servisler").json()
+    turler = [x["tur"] for x in s["servisler"]]
+    assert turler == ["paper", "jev", "izleme", "pano"]
+    assert s["gercek_emir"] is False and s["ozet"]["toplam"] == 4
+    assert s["servisler"][2]["yasiyor"] is None  # izleme dosyası yok: bilinmiyor, bayat değil
+    assert s["servisler"][3]["yasiyor"] is True
+    # Yalnızca GET: yeni uçlar da durum değiştirmez
+    for uc in ("/api/jev", "/api/jev/golge-t", "/api/servisler"):
+        assert c.post(uc).status_code == 405
+
+
+def test_jev_okuma_defteri_degistirmiyor(tmp_path):
+    (tmp_path / "paper").mkdir()
+    (tmp_path / "jev").mkdir()
+    yol = _jev_kosu(tmp_path / "jev")
+    once = hashlib.sha256(yol.read_bytes()).hexdigest()
+    kaynak = PanoKaynagi(tmp_path / "paper", tmp_path / "izleme", jev_kok=tmp_path / "jev")
+    kaynak.jev_kosular()
+    kaynak.jev_detay("golge-t")
+    assert hashlib.sha256(yol.read_bytes()).hexdigest() == once
+
+
+def test_pano_jev_paketini_import_etmiyor():
+    """Bağımlılık yönü: live → jev yok (K-074/2). Pano dosyayı okur, kodu değil."""
+    import ast
+    from pathlib import Path
+
+    import scryne_quant.live.evren_pano as m
+
+    for dugum in ast.walk(ast.parse(Path(m.__file__).read_text(encoding="utf-8"))):
+        adlar = []
+        if isinstance(dugum, ast.Import):
+            adlar = [a.name for a in dugum.names]
+        elif isinstance(dugum, ast.ImportFrom):
+            adlar = [dugum.module or ""]
+        assert not any("scryne_quant.jev" in a for a in adlar)

@@ -138,3 +138,99 @@ export interface KosuDetayi {
   isinma_adim?: number;
   hata?: string;
 }
+
+// ------------------------------------------------------------------ Jev gölge (K-074)
+//
+// Bu tiplerin taşıdığı hiçbir sayı isabet ya da kâr iddiası değildir; `kanit: false`
+// sunucudan gelir ve arayüz bunu bir şerit olarak gösterir.
+
+export interface JevSonKarar {
+  karar_ms?: number;
+  karar_utc?: string;
+  durum: string;
+  yon: "long" | "short" | "flat" | null;
+  yon_olasiliklari?: Record<string, number> | null;
+  yon_guven?: number | null;
+  rejim?: string | null;
+  kurulum_skor?: number | null;
+  cekimser?: number | null;
+  gecikme_ms?: number | null;
+  ileriye_donuk?: boolean | null;
+  hata?: string | null;
+}
+
+export interface JevKosuSatiri {
+  ad: string;
+  mod: string | null;
+  model: string | null;
+  sembol: string | null;
+  pid: number | null;
+  surec_yasiyor: boolean | null;
+  toplam: number | null;
+  gecerli: number | null;
+  hata: number | null;
+  sayim: Record<string, number>;
+  cekimserlik_orani: number | null;
+  yon_dagilimi: Record<string, number>;
+  gecikme_ms: { p50: number | null; p95: number | null };
+  son_karar: JevSonKarar | null;
+  son_bar_ms: number | null;
+  zincir_gecerli: boolean | null;
+  yazildi_ms: number | null;
+  kanit: false;
+}
+
+export interface JevListesi {
+  zaman_ms: number;
+  kosular: JevKosuSatiri[];
+  not: string;
+}
+
+export interface JevKarar extends JevSonKarar {
+  karar_ms: number;
+  karar_utc: string;
+  uretim_ms: number;
+  leak_riski: boolean | null;
+  durum_hash: string | null;
+}
+
+export interface JevOlay {
+  tur: string;
+  zaman_ms: number;
+  zaman_utc: string;
+  ayrinti: Record<string, unknown>;
+}
+
+export interface JevDetayi {
+  ad: string;
+  zaman_ms: number;
+  pid: number | null;
+  surec_yasiyor: boolean | null;
+  durum: (Record<string, unknown> & { zincir_gecerli?: boolean; pencere?: { bar_sayisi: number } }) | null;
+  kanit: false;
+  kimlik: Record<string, unknown> & {
+    ayarlar?: Record<string, unknown>;
+    git?: { commit: string | null; dirty: boolean | null };
+    baslangic_utc?: string;
+    soru_sha256?: string;
+  };
+  kararlar: JevKarar[];
+  olaylar: JevOlay[];
+}
+
+export interface Servis {
+  ad: string;
+  tur: "paper" | "jev" | "izleme" | "pano";
+  aciklama: string;
+  yasiyor: boolean | null;
+  son_ms: number | null;
+  son_utc: string | null;
+  ayrinti: Record<string, unknown>;
+}
+
+export interface Servisler {
+  zaman_ms: number;
+  servisler: Servis[];
+  ozet: { toplam: number; yasayan: number; duran: number; bilinmeyen: number };
+  gercek_emir: false;
+}

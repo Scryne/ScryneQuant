@@ -96,11 +96,13 @@ class PanoKaynagi:
         paper_kok: Path = Path("runs/paper"),
         izleme_kok: Path = Path("runs/izleme"),
         *,
+        jev_kok: Path = Path("runs/jev"),
         onbellek_s: float = ONBELLEK_S,
         saat: Any = simdi_ms,
     ) -> None:
         self.paper_kok = Path(paper_kok)
         self.izleme_kok = Path(izleme_kok)
+        self.jev_kok = Path(jev_kok)
         self.onbellek_s = onbellek_s
         self.saat = saat
         self._onbellek: dict[str, tuple[float, Any]] = {}
@@ -187,9 +189,7 @@ class PanoKaynagi:
 
     @staticmethod
     def _tablolar(baglanti: sqlite3.Connection) -> set[str]:
-        return {
-            a for (a,) in baglanti.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        }
+        return {a for (a,) in baglanti.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 
     # ------------------------------------------------------------------ liste
 
@@ -285,11 +285,7 @@ class PanoKaynagi:
         durum = self.durum_ozeti(ad)
         sermaye = kimlik.get("baslangic_sermaye")
         ozkaynak = None if durum is None else durum.get("ozkaynak")
-        getiri = (
-            None
-            if ozkaynak is None or not sermaye
-            else ozkaynak / float(sermaye) - 1.0
-        )
+        getiri = None if ozkaynak is None or not sermaye else ozkaynak / float(sermaye) - 1.0
         uretim = self._uretimler.get(ad)
         return {
             "ad": ad,
@@ -306,9 +302,7 @@ class PanoKaynagi:
             "getiri": getiri,
             "brut": None if durum is None else durum.get("brut_maruziyet"),
             "islem": None if durum is None else durum.get("islem"),
-            "pozisyon_sayisi": None
-            if durum is None
-            else len(durum.get("pozisyonlar") or []),
+            "pozisyon_sayisi": None if durum is None else len(durum.get("pozisyonlar") or []),
             "pozisyonlar": None if durum is None else durum.get("pozisyonlar"),
             "safe_mode": None if durum is None else durum.get("safe_mode"),
             "ozkaynak_kaynagi": None if durum is None else durum.get("ozkaynak_kaynagi"),
@@ -412,9 +406,7 @@ class PanoKaynagi:
                 {"ay": ay, "sembol_sayisi": len(json.loads(s) or [])}
                 for ay, s in b.execute("SELECT ay, semboller FROM uyelik ORDER BY ay")
             ]
-            isinma_sayisi = b.execute(
-                "SELECT COUNT(*) FROM adim WHERE isinma = 1"
-            ).fetchone()[0]
+            isinma_sayisi = b.execute("SELECT COUNT(*) FROM adim WHERE isinma = 1").fetchone()[0]
             return {
                 "seri": _seyrelt(seri, AZAMI_NOKTA),
                 "seri_nokta": len(seri),
@@ -450,9 +442,7 @@ class PanoKaynagi:
                     "ozkaynak_sonra, gerceklesen_pnl FROM fill ORDER BY id"
                 )
             ]
-            seri = [
-                {"ms": f["zaman_ms"], "ozkaynak": f["ozkaynak_sonra"]} for f in filller
-            ]
+            seri = [{"ms": f["zaman_ms"], "ozkaynak": f["ozkaynak_sonra"]} for f in filller]
             olaylar = [
                 {
                     "tur": t,
@@ -465,8 +455,7 @@ class PanoKaynagi:
                     "SELECT tur, zaman_ms, bar_ms, ayrinti FROM olay ORDER BY id"
                 )
             ]
-            return {"seri": seri, "seri_nokta": len(seri), "filller": filller,
-                    "olaylar": olaylar}
+            return {"seri": seri, "seri_nokta": len(seri), "filller": filller, "olaylar": olaylar}
 
         try:
             return self._kopyadan(ad, oku)
@@ -566,13 +555,9 @@ class PanoKaynagi:
                     "son_fiyat": son,
                     "deger": deger,
                     "maliyet": maliyet,
-                    "agirlik": None
-                    if deger is None or not ozkaynak
-                    else deger / ozkaynak,
+                    "agirlik": None if deger is None or not ozkaynak else deger / ozkaynak,
                     "gerceklesmemis_pnl": None if deger is None else deger - maliyet,
-                    "getiri": None
-                    if deger is None or maliyet <= 0.0
-                    else deger / maliyet - 1.0,
+                    "getiri": None if deger is None or maliyet <= 0.0 else deger / maliyet - 1.0,
                     "giris_ms": p.giris_ms,
                     "giris_utc": None if p.giris_ms is None else utc_str(p.giris_ms),
                 }
@@ -600,6 +585,265 @@ class PanoKaynagi:
             islemler=islemler,
         )
 
+    # ------------------------------------------------------------ Jev gölge (K-074)
+    #
+    # Pano `scryne_quant.jev`i **import etmez** (bağımlılık yönü tek, `test_jev_izolasyon.py`).
+    # Okuduğu şey Jev sürecinin her barda yazdığı `<kosu>.sqlite.durum.json` ve defterin
+    # salt okunur SQL'i. Bu ekranda görünen hiçbir sayı isabet ya da kâr iddiası değildir;
+    # `kanit: false` alanı ve arayüzdeki şerit bunu söyler.
+
+    def jev_yollari(self) -> list[Path]:
+        if not self.jev_kok.is_dir():
+            return []
+        return sorted(p for p in self.jev_kok.glob("*.sqlite") if p.is_file())
+
+    def _jev_durum_json(self, ad: str) -> dict[str, Any] | None:
+        yol = self.jev_kok / f"{ad}.sqlite.durum.json"
+        if not yol.is_file():
+            return None
+        try:
+            govde = json.loads(yol.read_text(encoding="utf-8"))
+            govde["dosya_yazildi_ms"] = int(yol.stat().st_mtime * 1000)
+            return govde
+        except (OSError, ValueError):
+            return None
+
+    def _jev_surec(self, ad: str) -> tuple[int | None, bool | None]:
+        from scryne_quant.live import kill as kill_mod
+
+        pid = kill_mod.pid_oku(self.jev_kok / f"{ad}.sqlite")
+        if pid is None:
+            return None, None
+        return pid, bool(kill_mod.surec_yasiyor_mu(pid))
+
+    def _jev_db(self, ad: str, oku: Any) -> Any:
+        """Jev defterini salt okunur açar (WAL; yazan süreç engellenmez)."""
+        yol = self.jev_kok / f"{ad}.sqlite"
+        baglanti = sqlite3.connect(f"file:{yol.as_posix()}?mode=ro", uri=True)
+        baglanti.row_factory = sqlite3.Row
+        try:
+            return oku(baglanti)
+        finally:
+            baglanti.close()
+
+    def jev_kosular(self) -> dict[str, Any]:
+        """Bütün Jev gölge koşularının tek satırlık özeti."""
+        satirlar = []
+        for yol in self.jev_yollari():
+            ad = yol.name[: -len(".sqlite")]
+            d = self._jev_durum_json(ad) or {}
+            pid, yasiyor = self._jev_surec(ad)
+            if not d:
+                # durum.json yoksa (ör. yalnızca replay defteri) kimlik ve sayım SQL'den
+                d = self._onbellekli(f"jev-ozet:{ad}", lambda ad=ad: self._jev_ozet_db(ad))
+            satirlar.append(
+                {
+                    "ad": ad,
+                    "mod": d.get("mod"),
+                    "model": d.get("model"),
+                    "sembol": d.get("sembol"),
+                    "pid": pid,
+                    "surec_yasiyor": yasiyor,
+                    "toplam": d.get("toplam"),
+                    "gecerli": d.get("gecerli"),
+                    "hata": d.get("hata"),
+                    "sayim": d.get("sayim") or {},
+                    "cekimserlik_orani": d.get("cekimserlik_orani"),
+                    "yon_dagilimi": d.get("yon_dagilimi") or {},
+                    "gecikme_ms": d.get("gecikme_ms") or {"p50": None, "p95": None},
+                    "son_karar": d.get("son_karar"),
+                    "son_bar_ms": d.get("son_bar_ms"),
+                    "zincir_gecerli": d.get("zincir_gecerli"),
+                    "yazildi_ms": d.get("dosya_yazildi_ms"),
+                    "kanit": False,
+                }
+            )
+        return {
+            "zaman_ms": self.saat(),
+            "kosular": satirlar,
+            "not": "Gölge ölçümü: sinyal, risk, emir yok. İsabet/kâr iddiası değildir (K-074).",
+        }
+
+    def _jev_ozet_db(self, ad: str) -> dict[str, Any]:
+        def oku(b: sqlite3.Connection) -> dict[str, Any]:
+            tablolar = self._tablolar(b)
+            if "kosu" not in tablolar or "karar" not in tablolar:
+                return {}
+            kosu = b.execute("SELECT govde FROM kosu WHERE tek = 1").fetchone()
+            kimlik = json.loads(kosu["govde"]) if kosu else {}
+            sayim = {
+                str(r["durum_kodu"]): int(r["n"])
+                for r in b.execute(
+                    "SELECT durum_kodu, COUNT(*) AS n FROM karar GROUP BY durum_kodu"
+                )
+            }
+            son = b.execute("SELECT karar_ms FROM karar ORDER BY id DESC LIMIT 1").fetchone()
+            toplam = sum(sayim.values())
+            yon: dict[str, int] = {}
+            for r in b.execute("SELECT karar_json FROM karar WHERE durum_kodu = 'gecerli'"):
+                y = json.loads(r["karar_json"]).get("yon")
+                if y is not None:
+                    yon[str(y)] = yon.get(str(y), 0) + 1
+            gecerli = sayim.get("gecerli", 0)
+            return {
+                "yon_dagilimi": dict(sorted(yon.items())),
+                "cekimserlik_orani": None if not gecerli else yon.get("flat", 0) / gecerli,
+                "mod": kimlik.get("mod"),
+                "model": (kimlik.get("ayarlar") or {}).get("model"),
+                "sembol": kimlik.get("sembol"),
+                "toplam": toplam,
+                "gecerli": sayim.get("gecerli", 0),
+                "hata": toplam - sayim.get("gecerli", 0),
+                "sayim": sayim,
+                "son_bar_ms": None if son is None else int(son["karar_ms"]),
+            }
+
+        try:
+            return self._jev_db(ad, oku)
+        except sqlite3.Error:
+            return {}
+
+    def jev_detay(self, ad: str, *, son: int = 200) -> dict[str, Any]:
+        """Tek gölge koşusu: kimlik, son kararlar, olaylar. Salt okunur SQL."""
+        durum = self._jev_durum_json(ad)
+        pid, yasiyor = self._jev_surec(ad)
+
+        def oku(b: sqlite3.Connection) -> dict[str, Any]:
+            tablolar = self._tablolar(b)
+            kosu = (
+                b.execute("SELECT govde FROM kosu WHERE tek = 1").fetchone()
+                if "kosu" in tablolar
+                else None
+            )
+            kararlar = []
+            if "karar" in tablolar:
+                for r in b.execute(
+                    "SELECT karar_ms, uretim_ms, durum_kodu, karar_json FROM karar "
+                    "ORDER BY id DESC LIMIT ?",
+                    (son,),
+                ):
+                    k = json.loads(r["karar_json"])
+                    kararlar.append(
+                        {
+                            "karar_ms": int(r["karar_ms"]),
+                            "karar_utc": utc_str(int(r["karar_ms"])),
+                            "uretim_ms": int(r["uretim_ms"]),
+                            "durum": str(r["durum_kodu"]),
+                            "yon": k.get("yon"),
+                            "yon_olasiliklari": k.get("yon_olasiliklari"),
+                            "yon_guven": k.get("yon_guven"),
+                            "rejim": k.get("rejim"),
+                            "kurulum_skor": k.get("kurulum_skor"),
+                            "cekimser": k.get("cekimser"),
+                            "gecikme_ms": k.get("gecikme_ms"),
+                            "ileriye_donuk": k.get("ileriye_donuk"),
+                            "leak_riski": k.get("leak_riski"),
+                            "durum_hash": k.get("durum_hash"),
+                            "hata": k.get("hata"),
+                        }
+                    )
+            olaylar = []
+            if "olay" in tablolar:
+                for r in b.execute(
+                    "SELECT tur, zaman_ms, ayrinti FROM olay ORDER BY id DESC LIMIT 50"
+                ):
+                    olaylar.append(
+                        {
+                            "tur": str(r["tur"]),
+                            "zaman_ms": int(r["zaman_ms"]),
+                            "zaman_utc": utc_str(int(r["zaman_ms"])),
+                            "ayrinti": json.loads(r["ayrinti"]),
+                        }
+                    )
+            return {
+                "kimlik": json.loads(kosu["govde"]) if kosu else {},
+                "kararlar": list(reversed(kararlar)),
+                "olaylar": list(reversed(olaylar)),
+            }
+
+        govde = self._jev_db(ad, oku)
+        return {
+            "ad": ad,
+            "zaman_ms": self.saat(),
+            "pid": pid,
+            "surec_yasiyor": yasiyor,
+            "durum": durum,
+            "kanit": False,
+            **govde,
+        }
+
+    # ------------------------------------------------------------ servis sağlığı
+
+    def servisler(self) -> dict[str, Any]:
+        """Tek ekranın üst şeridi: hangi süreç yaşıyor, izleme taze mi, pano ayakta mı."""
+        kosular = self.kosular()
+        jev = self.jev_kosular()
+        izleme = kosular["izleme"]
+        simdi = self.saat()
+        satirlar: list[dict[str, Any]] = []
+        for k in kosular["kosular"]:
+            strateji = k.get("strateji") or "—"
+            satirlar.append(
+                {
+                    "ad": k["ad"],
+                    "tur": "paper",
+                    "aciklama": f"{strateji} · {k.get('mod') or 'gozlem'} · gerçek emir yok",
+                    "yasiyor": k.get("surec_yasiyor"),
+                    "son_ms": None,
+                    "son_utc": k.get("son_bar_utc"),
+                    "ayrinti": {"safe_mode": k.get("safe_mode"), "adim": k.get("adim")},
+                }
+            )
+        for j in jev["kosular"]:
+            son_ms = j.get("son_bar_ms")
+            satirlar.append(
+                {
+                    "ad": j["ad"],
+                    "tur": "jev",
+                    "aciklama": f"Jev gölge · {j.get('model') or '—'} · ölçüm, emir yok",
+                    "yasiyor": j.get("surec_yasiyor"),
+                    "son_ms": son_ms,
+                    "son_utc": None if son_ms is None else utc_str(int(son_ms)),
+                    "ayrinti": {"gecerli": j.get("gecerli"), "hata": j.get("hata")},
+                }
+            )
+        yazildi = izleme.get("yazildi_ms")
+        satirlar.append(
+            {
+                "ad": "izleme",
+                "tur": "izleme",
+                "aciklama": "sq izle kontrol · 15 dk · alarm + runbook",
+                "yasiyor": None
+                if not izleme.get("var") or yazildi is None
+                else (simdi - int(yazildi)) <= 35 * 60_000,
+                "son_ms": yazildi,
+                "son_utc": None if yazildi is None else utc_str(int(yazildi)),
+                "ayrinti": {"alarm_sayisi": izleme.get("alarm_sayisi", 0)},
+            }
+        )
+        satirlar.append(
+            {
+                "ad": "pano",
+                "tur": "pano",
+                "aciklama": "salt okunur gözlem panosu (bu süreç)",
+                "yasiyor": True,
+                "son_ms": simdi,
+                "son_utc": utc_str(simdi),
+                "ayrinti": {},
+            }
+        )
+        return {
+            "zaman_ms": simdi,
+            "servisler": satirlar,
+            "ozet": {
+                "toplam": len(satirlar),
+                "yasayan": sum(1 for x in satirlar if x["yasiyor"] is True),
+                "duran": sum(1 for x in satirlar if x["yasiyor"] is False),
+                "bilinmeyen": sum(1 for x in satirlar if x["yasiyor"] is None),
+            },
+            "gercek_emir": False,
+        }
+
 
 def _seyrelt(seri: list[dict[str, Any]], azami: int) -> list[dict[str, Any]]:
     """Eşit aralıklı seyreltme; **son nokta her zaman korunur.**
@@ -622,12 +866,13 @@ def pano_kur(
     indeks: str = "pano.html",
     paper_kok: Path = Path("runs/paper"),
     izleme_kok: Path = Path("runs/izleme"),
+    jev_kok: Path = Path("runs/jev"),
 ) -> Any:
     """Salt okunur pano uygulaması. Yalnızca `GET` uçları tanımlıdır."""
     from fastapi import FastAPI, HTTPException
     from fastapi.responses import FileResponse
 
-    kay = kaynak if kaynak is not None else PanoKaynagi(paper_kok, izleme_kok)
+    kay = kaynak if kaynak is not None else PanoKaynagi(paper_kok, izleme_kok, jev_kok=jev_kok)
     app = FastAPI(
         title="ScryneQuant — Gözlem panosu",
         docs_url="/api/docs",
@@ -658,6 +903,23 @@ def pano_kur(
     async def izleme() -> dict[str, Any]:
         """`sq izle kontrol`ün son durumu: dört boyut, alarmlar, sistem."""
         return kay.izleme()
+
+    @app.get("/api/servisler")
+    async def servisler() -> dict[str, Any]:
+        """Tek ekran sağlık şeridi: paper koşuları, Jev gölgesi, izleme, pano."""
+        return kay.servisler()
+
+    @app.get("/api/jev")
+    async def jev_kosular() -> dict[str, Any]:
+        """Jev gölge koşuları (K-074): ölçüm; sinyal, risk, emir yok."""
+        return kay.jev_kosular()
+
+    @app.get("/api/jev/{ad}")
+    async def jev_kosu(ad: str) -> dict[str, Any]:
+        """Tek gölge koşusu: son kararlar ve olaylar."""
+        if not (kay.jev_kok / f"{ad}.sqlite").is_file():
+            raise HTTPException(status_code=404, detail=f"gölge koşusu yok: {ad}")
+        return kay.jev_detay(ad)
 
     if web_kok is not None:
         kok = web_kok.resolve()

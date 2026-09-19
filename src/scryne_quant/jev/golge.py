@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -134,6 +135,76 @@ class GolgeMotoru:
             "sayim": self.defter.sayim(),
         }
 
+    def durum(self) -> dict[str, Any]:
+        """Panonun okuduğu özet: sayım, son karar, gecikme, dağılımlar, zincir. (K-074)
+
+        `live/evren_kosturucu`nun `durum.json` kalıbı: Jev süreci her barda yazar, pano
+        yalnızca okur; pano `jev` paketini **import etmez** (bağımlılık yönü tek). Buradaki
+        sayılar ürünün çalıştığını gösterir; hiçbiri isabet ya da kâr iddiası değildir —
+        pano bunu yazar.
+        """
+        kararlar = self.defter.kararlar()
+        gecerli = [k["karar"] for k in kararlar if k["durum_kodu"] == "gecerli"]
+        gecikmeler = sorted(
+            int(k["karar"]["gecikme_ms"]) for k in kararlar if k["karar"].get("gecikme_ms")
+        )
+
+        def yuzdelik(q: float) -> int | None:
+            if not gecikmeler:
+                return None
+            return gecikmeler[min(len(gecikmeler) - 1, int(q * len(gecikmeler)))]
+
+        yon: dict[str, int] = {}
+        rejim: dict[str, int] = {}
+        for k in gecerli:
+            yon[str(k["yon"])] = yon.get(str(k["yon"]), 0) + 1
+            rejim[str(k["rejim"])] = rejim.get(str(k["rejim"]), 0) + 1
+        son = kararlar[-1] if kararlar else None
+        return {
+            **self.ozet(),
+            "mod": "golge",
+            "yazildi_ms": self.saat(),
+            "toplam": len(kararlar),
+            "gecerli": len(gecerli),
+            "hata": len(kararlar) - len(gecerli),
+            "cekimserlik_orani": None if not gecerli else yon.get("flat", 0) / len(gecerli),
+            "yon_dagilimi": dict(sorted(yon.items())),
+            "rejim_dagilimi": dict(sorted(rejim.items())),
+            "gecikme_ms": {"p50": yuzdelik(0.5), "p95": yuzdelik(0.95)},
+            "son_karar": None
+            if son is None
+            else {
+                "karar_ms": son["karar_ms"],
+                "karar_utc": son["karar_utc"],
+                "durum": son["durum_kodu"],
+                "yon": son["karar"].get("yon"),
+                "yon_olasiliklari": son["karar"].get("yon_olasiliklari"),
+                "yon_guven": son["karar"].get("yon_guven"),
+                "rejim": son["karar"].get("rejim"),
+                "kurulum_skor": son["karar"].get("kurulum_skor"),
+                "cekimser": son["karar"].get("cekimser"),
+                "gecikme_ms": son["karar"].get("gecikme_ms"),
+                "ileriye_donuk": son["karar"].get("ileriye_donuk"),
+                "hata": son["karar"].get("hata"),
+            },
+            "zincir_gecerli": self.defter.dogrula(),
+            "kanit": False,
+            "kanit_notu": "Gölge ölçümü: sinyal, risk, emir yok; isabet raporu ayrı (K-074).",
+        }
+
+    def durum_yaz(self) -> Path | None:
+        """`<defter>.durum.json` — bellekte defter varsa (test) yazmaz."""
+        if self.defter.yol is None:
+            return None
+        yol = self.defter.yol.with_name(self.defter.yol.name + ".durum.json")
+        gecici = yol.with_suffix(".json.tmp")
+        gecici.write_text(
+            json.dumps(self.durum(), ensure_ascii=False, indent=1, default=str),
+            encoding="utf-8",
+        )
+        gecici.replace(yol)
+        return yol
+
     # ------------------------------------------------------------------ ısınma
 
     def isinma(self, barlar: Iterable[Bar]) -> int:
@@ -148,6 +219,7 @@ class GolgeMotoru:
             {"isinma_bar": n, "pencere": self.pencere.sozluk(), "pencere_bar": PENCERE_BAR},
             zaman_ms=self.saat(),
         )
+        self.durum_yaz()
         return n
 
     def funding_yukle(self, kayitlar: Iterable[tuple[int, float]]) -> int:
@@ -179,6 +251,12 @@ class GolgeMotoru:
 
     def bar_isle(self, bar: Bar) -> BarSonucu:
         """Kapanmış bir barı işler. Hiçbir durumda fırlatmaz; sebep kayda gider."""
+        try:
+            return self._bar_isle(bar)
+        finally:
+            self.durum_yaz()
+
+    def _bar_isle(self, bar: Bar) -> BarSonucu:
         t = bar.open_time
         yeni = self.pencere.ekle(bar)
         if not yeni and self._son_bar_ms is not None and t <= self._son_bar_ms:

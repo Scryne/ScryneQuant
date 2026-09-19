@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { cn, kisaZaman, para, useApi, yas } from "../lib";
 import { Bos, Hata, Hucre, Kart, Nokta, Rozet, Tablo, Yon, Yukleniyor } from "../bilesenler/Ilkel";
 import type { KosuListesi, KosuSatiri } from "./tipler";
+import { ServisSeridi } from "./Servisler";
+import { JevOzet } from "./JevOzet";
 
 /** `sq izle kontrol` 15 dakikada bir yazıyor; bundan eskisi **bayat**. */
 const BAYAT_MS = 35 * 60_000;
@@ -26,6 +28,7 @@ export function Kosular() {
       <h1 className="text-display font-semibold tracking-tight text-primary">
         Koşular
       </h1>
+      <ServisSeridi />
       <DurumSeridi
         bayat={bayat}
         alarmSayisi={alarmlar.length}
@@ -58,7 +61,7 @@ export function Kosular() {
 
       <Kart
         baslik="Koşular"
-        aciklama={`${kosular.length} koşu · gözlem modu, gerçek emir yok · ${kisaZaman(veri.zaman_ms)}`}
+        aciklama={`${kosular.length} koşu · gözlem modu, gerçek emir yok · promotion geçmiş strateji yok · ${kisaZaman(veri.zaman_ms)}`}
       >
         {kosular.length === 0 ? (
           <Bos baslik="Bu dizinde koşu dosyası yok." komut="sq paper pano --kok runs/paper" />
@@ -84,6 +87,8 @@ export function Kosular() {
           </Tablo>
         )}
       </Kart>
+
+      <JevOzet />
 
       {veri.izleme.sistem && (
         <p className="rakam text-numeric-sm text-tertiary">

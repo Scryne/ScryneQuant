@@ -81,3 +81,26 @@ ise TypeSafe sürümü değişmiştir: koşu **yeni koşu** olarak açılır, es
 
 Anahtar yalnızca ortam değişkeninde; defterde, logda, durumda sır aranır ve bulunursa istek
 gönderilmez (`istemci.sir_var_mi`).
+
+## Tek komut: servisler (2026-09-20)
+
+`tools\servisler.ps1` bütün zamanlanmış görevleri tek noktadan yönetir; yeni bir mekanizma
+değil, var olan görevlerin (`evren-gorev-kur.ps1`, paper, pano, izleme, yedek) üstüne
+`ScryneQuant-Jev`i ekleyen ince bir kabuk.
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\servisler.ps1 kur      # görevleri yaz (idempotent)
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\servisler.ps1 baslat   # açılış görevlerini başlat
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\servisler.ps1 durum    # tek tablo: görev, süreç, son bar
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\servisler.ps1 durdur   # bayrakla düzgün durdur (K-043)
+```
+
+`durdur` kesinti saymaz ve görevleri Disable eder; `baslat` Enable + Start. Pano ve izleme
+salt okunur olduğu için Stop-ScheduledTask ile durur. Hiçbir görev gerçek emir göndermez.
+Jev görevi `TYPESAFE_API_KEY` kullanıcı ortam değişkeni yoksa **başlamaz** (fail-closed).
+
+**Panoda (8788) artık görünenler:** üstte servis şeridi (paper koşuları, Jev gölgesi, izleme,
+pano — yaşıyor/durmuş/bilinmiyor, "GERÇEK EMİR YOK"), koşu tablosu, alarmlar, **Jev gölge**
+tablosu (süreç, model, karar/hata sayısı, çekimserlik, yön dağılımı, son karar olasılıkları,
+gecikme, defter zinciri) ve `/jev/<kosu>` sayfası (son 200 karar, kimlik, olaylar). Jev
+bölümü "KANIT DEĞİL" rozetiyle işaretli: ürünün çalıştığını gösterir, isabet iddiası taşımaz.

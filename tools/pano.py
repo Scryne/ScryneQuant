@@ -31,15 +31,18 @@ def main() -> int:
     ayristirici.add_argument("--host", default="127.0.0.1")
     ayristirici.add_argument("--kok", type=Path, default=KOK / "runs/paper")
     ayristirici.add_argument("--izleme", type=Path, default=KOK / "runs/izleme")
+    ayristirici.add_argument("--jev", type=Path, default=KOK / "runs/jev")
     ayristirici.add_argument("--web", type=Path, default=KOK / "apps/web/dist")
     a = ayristirici.parse_args()
 
-    kaynak = PanoKaynagi(a.kok, a.izleme)
+    kaynak = PanoKaynagi(a.kok, a.izleme, jev_kok=a.jev)
     web = a.web.resolve() if a.web is not None and a.web.is_dir() else None
     app = pano_kur(kaynak, web_kok=web)
     bulunan = [y.name[: -len(".sqlite")] for y in kaynak.kosu_yollari()]
     print(f"pano    : http://{a.host}:{a.port}  (salt okunur)", flush=True)
     print(f"koşular : {', '.join(bulunan) if bulunan else 'yok'}", flush=True)
+    jev = [y.name[: -len(".sqlite")] for y in kaynak.jev_yollari()]
+    print(f"jev     : {', '.join(jev) if jev else 'yok'}", flush=True)
     print(f"web     : {web or 'yok (yalnızca /api)'}", flush=True)
     uvicorn.run(app, host=a.host, port=a.port, log_level="warning", access_log=False)
     return 0
