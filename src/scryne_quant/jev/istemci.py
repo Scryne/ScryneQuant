@@ -80,10 +80,37 @@ def sir_var_mi(nesne: Any) -> bool:
     return any(s in metin for s in _sirlar())
 
 
-def typesafe_istemci(ayarlar: JevAyarlari) -> Any:
+_ipv4_zorlandi = False
+
+
+def ipv4_zorla() -> None:
+    """Ad çözümlemesini IPv4'e sabitler. Ölçüldü (2026-09-20, bu makine): `getaddrinfo`
+    aile belirtilmeden 12,06 s (IPv6 zaman aşımı), `AF_INET` ile 0,01 s. Bağlantı saatte bir
+    (bar başına) yeniden kurulduğu için gölge **her** kararda 13 s ödüyordu; 20 s'lik zaman
+    aşımına tehlikeli yakın. `exchange/binance.ipv4_zorla` aynı sorunu urllib3 için çözüyor;
+    SDK'nın httpx'i `socket.getaddrinfo`yu doğrudan kullandığı için burada o patch'leniyor.
+    Süreç geneline etkir (Binance WS de IPv4 olur); idempotent.
+    """
+    global _ipv4_zorlandi
+    if _ipv4_zorlandi:
+        return
+    import socket
+
+    orijinal = socket.getaddrinfo
+
+    def yalniz_ipv4(host, port, family=0, type=0, proto=0, flags=0):  # noqa: A002
+        return orijinal(host, port, socket.AF_INET, type, proto, flags)
+
+    socket.getaddrinfo = yalniz_ipv4  # type: ignore[assignment]
+    _ipv4_zorlandi = True
+
+
+def typesafe_istemci(ayarlar: JevAyarlari, *, ipv4: bool = True) -> Any:
     """Uzun ömürlü gerçek istemci. Anahtar SDK tarafından ortamdan okunur; kod dokunmaz."""
     from typesafe_sdk import RetryPolicy, TypeSafeClient
 
+    if ipv4:
+        ipv4_zorla()
     return TypeSafeClient(
         timeout=ayarlar.timeout_s,
         retry=RetryPolicy(max_retries=max(0, ayarlar.azami_deneme - 1)),
@@ -159,6 +186,7 @@ __all__ = [
     "SIR_DEGISKENLERI",
     "Istemci",
     "SorguSonucu",
+    "ipv4_zorla",
     "sir_temizle",
     "sir_var_mi",
     "sor",
