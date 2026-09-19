@@ -3785,3 +3785,41 @@ açtı; strateji, program ya da çekiliş değil (Jev sinyal üretmiyor, paramet
    Sembol seçimi yapılmadı (en iyi 5 sembol yazı-tura kuyruğunun içinde, rapor §2).
 4. Değişmeyen: soru setini, durumu ya da timeframe'i değiştirip yeniden sormak yeni
    çekiliştir; deftere satır ve K-051 programı ister. Bu rapora bakarak yapılmaz.
+
+## K-077 — Rejim-koşullu oracle tavanı yetersiz: Jev B/C/D/E açılmaz; selector/filter için headroom yok
+
+**Durum:** kabul · **Tarih:** 2026-09-20 · **Onay:** Scryne (Faz 0 sonucu kabul) · **Tabi:**
+K-045 (tavan), K-054 (kapılar), K-067/K-074/K-076 (Jev, aynen), K-068 (seçim/kurma) ·
+**Kaynak:** `docs/Faz-16-Rejim-Tavan-Olcumu.md`, `tools/faz16_rejim_tavan.py`,
+`runs/faz16/rejim_tavan.json`, Jev Strategy Discovery denetimi (audit + design, 2026-09-19)
+
+**Bağlam.** Jev Strategy Discovery Engine denetimi "NOT READY" dedi ve tek ön koşul koydu:
+Jev'e sorulmadan, deterministik olarak, rejim × aile oracle tavanının kapıyı geçtiği
+gösterilsin. Ölçüldü.
+
+### Karar
+
+1. **Tavan yetersiz.** Her rejimde OOS'ta en iyi aileyi hindsight'la seçen, geçiş maliyeti
+   ödemeyen oracle: birleşik OOS Sharpe en iyi grupta 0,60 (eşik 1,04); en kötü rejim
+   Sharpe'ı en iyi grupta 0,52 (eşik 0,685); no-trade serbestliğiyle 0,59. Gözlenen en yüksek
+   tekil rejim Sharpe'ı 0,87 — yaklaşımdan bağımsız üst sınır, eşik altı.
+2. **Oracle promotion kanıtı değildir** ve öyle kullanılmayacak: seçim sonucu görerek
+   yapıldı (in-sample), rejimler arası geçiş bedava sayıldı, sermaye tek. Bir tavan, kapıyı
+   geçseydi bile yalnız "araştırmaya değer" derdi; geçmediği için hiçbir şey demez.
+3. **Jev B/C/D/E açılmaz.** Kusursuz seçici bile kapı altındaysa kusurlu (K-076: yön %49)
+   seçicinin yakalayacağı alan sıfırdır. Kayıt dili: **"Jev başarısız" değil, "mevcut alpha
+   evreni üzerinde selector/filter için yeterli headroom yok."** K-067, K-074 aynen; gölge
+   yalnız ileriye dönük doğrulama.
+4. **K-045 ile aynı duvar, farklı açı.** K-045 maliyeti sıfırladı, geçen yok; bu ölçüm
+   seçimi hindsight'a verdi, geçen yok. BTC 1h düşen rejimde 17 aileden sıfırı pozitif —
+   seçim katmanının teorik azami katkısı (≈ +0,2 Sharpe) kapı boşluğunun (0,44) yarısından
+   az. K-068 ("seçim genelleşmiyor, kurma genelleşiyor") tavan tarafından da doğrulandı.
+5. **Yapılmayan:** backtest, Jev çağrısı, yeni rejim tanımı, çekiliş — defter 52'de, eşik
+   değişmedi. Kalan dokuz kapı oracle serisi için hesaplanmadı (bar düzeyi getiri yok);
+   belirleyici ikisi düştüğü için gerekmedi.
+
+### Sonraki soru
+
+Seçici değil, kaynak: "gate seviyesine ulaşabilecek yeni alpha edge nereden üretilebilir?"
+Önce araştırma uzayı haritalanır (`docs/Alpha-Discovery-Gap-Audit.md`), sonra program
+açılır (K-051). Bu karar hiçbir programı açmıyor.
