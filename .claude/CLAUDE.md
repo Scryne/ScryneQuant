@@ -175,6 +175,24 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor
   (`npm run tokens`), elle yazılmıyor.
+- `src/scryne_quant/jev/` — **Jev karar katmanı, yalnızca gölge/ölçüm (K-074).** `durum.py`
+  kanonik durum (betimleyici, `PENCERE_BAR`=1.200, 4h 1h'den kapanmış kovalarla; byte-identical
+  sızıntı testi), `sorular.py` donmuş soru seti (`SORU_SHA256` testli), `istemci.py` tek SDK
+  girişi + sır taraması, `karar.py` `JevKarari` (`extra=forbid`; olasılık + marj; fail-closed),
+  `defter.py` append-only zincir hash'li SQLite (`runs/jev/<kosu>.sqlite`), `golge.py` gölge
+  motoru/koşturucu (ayrı süreç, emir yok), `tekrar.py` replay → dondurma
+  (`data/semantik/jev/<turetim_id>/`, her kayıt `leak_riski`), `sonuc.py` ileri sonuç +
+  kalibrasyon. Bağımlılık yönü tek ve AST testli (`test_jev_izolasyon.py`): `jev` risk/
+  execution/oms'a ulaşamaz; işlem katmanı `jev`/`typesafe` import edemez. **Jev'den `Sinyal`
+  üreten fonksiyon yoktur** (K-067 aynen). CLI: `sq jev golge|durdur|durum|degerlendir|tekrar|dondur`.
+- `config/jev.json` — model pini, **kesim tarihi `null` (UNKNOWN, K-074/3)**, timeout/retry,
+  `yon_marji` 0,20, `bayat_ms`, **sonuç tanımları** (giriş `open[t+1]`, ufuk 1/4/24, MAE/MFE,
+  maliyet, isabet, kovalar) — koşudan önce sabit; değiştirmek yeni çekiliş (K-049/2).
+- `docs/Jev-Denetim.md` — spec ↔ repo denetimi (Existing/Partial/Missing/Conflicts) ve beş
+  bağlayıcı karar. `docs/Jev-Integration-Spec.md` — Scryne'ın spec'i (kaynak, değiştirilmez).
+  `docs/spikes/07-jev-durum.md` — 4h eşitliği, Jev tutarlılığı, kesim tarihi araştırması.
+- `.github/workflows/test.yml` — minimal CI (K-074/8): `uv run pytest -m "not network"` +
+  Jev sızıntı testleri adıyla.
 - `DESIGN.md` — arayüz kimliği. Token'lar Faz 6'da dolduruldu ve **normatif**: kesin
   değerler yalnızca frontmatter'da, gerekçe Markdown gövdesinde. Doğrulama:
   `npx --package @google/design.md -c "designmd lint DESIGN.md"`.

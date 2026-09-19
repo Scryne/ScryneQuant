@@ -941,3 +941,13 @@ içindeki +%7,9'luk getiri bir uç-nokta yanlılığı — aynı duyurular sabit
 sembollerde ve **aşağı** yönde; portföy modeli açığa satış tanımadığı için işlem yapılamaz.
 Dört çekilişlik bütçe harcanmadan kapandı. **Bu ölçüm çekiliş değildir** (strateji koşmadı,
 defter büyümedi).
+
+**Üçüncü hat — Jev gölge ölçümü (K-074, 2026-09-19): kuruldu, ölçüm başladı.** Jev karar
+katmanı `src/scryne_quant/jev/` altında, yalnızca gölgede: kapanmış her 1h barda betimleyici
+kanonik durum → Jev (`yon`/`rejim`/`kurulum`/`cekimser`) → `runs/jev/<kosu>.sqlite`. Sinyal,
+risk, emir **yok**; K-067 aynen. Kesim tarihi UNKNOWN → replay `leak_riski`, kanıt değil;
+ölçüm penceresi ileriye dönük gölge (≥ 8 gün, ≈190 karar), ölçütler önceden
+`config/jev.json::sonuc`ta ve `docs/Jev-Golge-Raporu.md` §3'te. 48 barlık replay örnekleminde
+marj kuralıyla 48/48 `flat` — gölgede de böyle çıkarsa "yön isabeti" `n=0` kalır ve öyle
+yazılır. **Çekiliş değildir** (strateji koşmuyor, parametre seçilmiyor); B/C/D deneyleri
+program kaydı + yeni K-kaydı ister.

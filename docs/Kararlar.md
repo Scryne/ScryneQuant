@@ -3628,3 +3628,95 @@ Kontrol vakası hatanın gerçekten var olduğunu ve karşılaştırmanın boş 
 gösteriyor; canlı ayarda 1.000 vakada tek fark yok. **Karar: host güncellenmez, koşular
 yeniden başlatılmaz, canlı pencereye dokunulmaz.** Güncelleme pencere kapandıktan sonra,
 K-043'ün planlı durdurma yordamıyla yapılır.
+
+## K-074 — Jev karar katmanı yalnızca gölgede ölçülür; K-067 değişmez; kesim tarihi bilinmiyor
+
+**Durum:** kabul · **Tarih:** 2026-09-19 · **Onay:** Scryne (beş bağlayıcı karar, Jev denetimi
+sonrası) · **Tabi:** K-067 (Jev sinyal üretmez — **aynen yürürlükte**), K-049 (AI yetkisi,
+kesim, dondurma), K-039/K-051 (çekiliş sayımı, program bütçesi), K-045 (tek sembollü yönlü
+arama kapalı), K-037 (izin veren katman risk dışında olamaz) · **Kaynak:** `docs/Jev-Denetim.md`
+(repository ↔ `docs/Jev-Integration-Spec.md` denetimi), `docs/spikes/07-jev-durum.md`,
+`config/jev.json`
+
+**Bağlam.** Spec bir "Jev-style LLM decision layer" istiyor: yön, güven, rejim, kurulum
+kalitesi üretsin; risk ve execution'a karışmasın; önce gölgede ölçülsün. Denetim, spec'in
+bu projede üç kararla çarpıştığını buldu: K-067 Jev'den sinyal türetmeyi yasaklıyor
+(spec'in "Jev only" / "Baseline + Jev" deneyleri); K-049/5 backtest içinde LLM çağrısını
+yasaklıyor (spec'in replay'i); K-049/4 kesim öncesi türetimi kapıdan düşürüyor ve Jev'in
+kesimi yayınlanmıyor (spec'in tarihsel isabet kanıtı). Bu karar üçünü de spec'i değil
+**kararları** koruyarak çözüyor.
+
+### Karar — sekiz madde
+
+1. **Jev'in yönü bir ölçümdür, bir sinyal değil.** İlk ve tek kapsam **gölge**: kapanmış her
+   `ok` 1h barda kanonik durum kurulur, Jev'e sorulur, cevap deftere yazılır, **başka hiçbir
+   şey olmaz.** Jev çıktısı `Sinyal` üretmez, `Strateji`ye girmez, `PaperMotoru`/
+   `EvrenPaperMotoru`'na girmez, `RiskMotoru`'na girmez, execution'a girmez, emir
+   oluşturmaz. K-067'nin "ölçüm, özellik değil" istisnası kullanılıyor; K-067'nin kendisi
+   **değişmiyor.** Spec'in B (Jev only), C (baseline + Jev onayı) ve D (Jev filtre)
+   deneyleri **bu fazın dışındadır**; herhangi birini açmak yeni bir K-kaydı, K-051 program
+   kaydı ve K-045 istisnasının sayısal gerekçesini ister.
+2. **Yer ve yön.** Kod `src/scryne_quant/jev/` altında yaşar. Bağımlılık yönü tek:
+   `data → features → live/pencere → jev`. `strategy`, `backtest`, `features`, `risk`,
+   `execution`, `live` paketleri `jev`i ya da `typesafe`i import etmez
+   (`test_islem_katmani_dedektoru_import_etmez` zaten zorluyor); `jev` paketi `risk`,
+   `execution`, `oms`u import etmez (yeni AST testi). `JevKarari` `extra="forbid"`:
+   miktar, fiyat, kaldıraç, stop, borsa eylemi alanı **yok** — `Sinyal`in tip düzeyi
+   yasağının ikizi.
+3. **Kesim tarihi UNKNOWN.** Spike 7(c): `/v1/models` yalnızca yayın tarihi veriyor
+   (`jev-latest` → 2026-09-10T18:38:01Z); hiçbir doküman eğitim kesimi söylemiyor. Yayın
+   tarihi kesim yerine **geçmez** (model yayından önce eğitilmiştir). Kural: kesim
+   bilinmediği sürece geriye dönük **her** türetim `leak_riski=true` taşır ve hiçbir kapıya
+   giremez; dondurulmuş tarihsel replay yalnızca boru hattı / şema / gecikme doğrulamasıdır.
+   **İleriye dönük** gölge kararı — bar kapanışından sonra, `bayat_ms` (2 bar) içinde
+   üretilen — kesimden bağımsızdır: model o anda gelecekteki fiyatı bilemez. Kayıt bunu
+   `ileriye_donuk=true` ve `uretim_ms` ile taşır. TypeSafe'e resmi beyan sorulur; gelene
+   kadar `config/jev.json::egitim_kesim_utc = null`, **uydurulmaz.**
+4. **Kanonik durum betimleyicidir, hesap kodda.** Spike 7(b): Jev sayısal eşik kıyasında
+   yanılıyor (zirveye %1,02 uzakken "%1'den yakın" → 0,86). Bu yüzden Jev'e dizi ya da
+   eşik sorusu gitmez; indikatörler, yapı etiketleri, persentiller ve tazelik kodda
+   hesaplanır ve etiket olarak gider. 4h bağlam 1h'den yalnızca **kapanmış** kovalarla
+   toplanır (Spike 7(a): OHLC + trades Binance 4h ile bit düzeyinde aynı, hacim 1 ulp);
+   ikinci akış yok; eksik kova `eksik`, uydurulmaz (K-024). Durum `durum_surumu`,
+   `karar_ms` (bar açılışı), `veri_kesimi_ms` (bar kapanışı; funding için kendi
+   `funding_time`), `durum_hash` (`nesne_hash`) taşır; aynı girdi aynı hash'i verir ve
+   `t` sonrası veri **bozulunca ve silinince** JSON byte düzeyinde değişmez (test; negatif
+   kontrol dahil).
+5. **Fail-closed, ayrı süreç.** Gölge `sq jev golge` ile **ayrı süreçte** koşar; kendi
+   deposu (`runs/jev/<kosu>.sqlite`, zincir hash), kendi timeout/retry'ı, kendi hata
+   günlüğü. Timeout, API/kimlik hatası, şema hatası, çözülen model ≠ istenen, bayat durum,
+   eksik kritik veri → **karar yok**: kayıt `GECERSIZ` + sebep, **önceki karar yeniden
+   kullanılmaz**, ana yola (paper/live) hiçbir yan etki. Jev sürecinin ölmesi trading
+   sürecini etkilemez; tersi de.
+6. **Yeniden üretilebilirlik.** Model pinli (`jev-1.13.0`; çözülen ≠ istenen → GECERSIZ),
+   soru seti `SORU_SHA256` ile donmuş ve testli (K-061 kalıbı), istek/yanıt hash'li. Karar
+   `choice` değil **olasılık vektörü + kodda marj** ile etiketlenir (Spike 7(b): eşit
+   olasılıkta argmax koşular arasında değişti); marj `config/jev.json`'da ve koşudan önce
+   sabit. Her 24 kararda aynı durum ikinci kez sorulup sapma yazılır — izleme, kanıt değil.
+7. **Sonuç tanımları önceden sabit** (`config/jev.json::sonuc`): giriş `open[t+1]` (K-004),
+   ufuklar 1/4/24 bar, birincil 4; getiri, MAE, MFE, gidiş-dönüş maliyet; yön isabeti
+   yalnız long/short kararlarda, flat çekimserliktir; güven kovaları yazılı. Gölge ölçümü
+   **çekiliş değildir** (strateji koşmuyor, parametre seçilmiyor — K-068'in notu); soru
+   setini, marjı ya da durum alanlarını **sonuca bakıp** değiştirmek yeni bir çekiliştir ve
+   hipotez defterine satır ister (K-049/2). Başarısız sonuç silinmez, rapor edilir.
+   "8 gün geçti" bir başarı ölçütü değildir; ölçüt bu tanımlardır.
+8. **CI minimal.** `.github/workflows/test.yml`: `uv sync` + `uv run pytest` — mevcut takım
+   ve Jev testleri (kanonik snapshot, byte-identical sızıntı, negatif sızıntı, şema/
+   fail-closed) tek işte. Koruduğu invariant tek cümle: *aynı karar zamanı ve aynı PIT
+   koşullarında kanonik durum gelecekten etkilenmez.*
+
+### Neyi vaat etmiyor
+
+- Jev'in isabetli olduğunu değil, isabetinin **ölçülebilir** olduğunu kuruyor.
+- Gölge penceresi bittiğinde "Jev çalışıyor/çalışmıyor" ilanı yapılmaz; rapor yalnızca 7.
+  maddedeki tanımlarla, örneklem büyüklüğü ve güven aralığıyla yazılır.
+- OI, çoklu sembol, haber, makro kapsam dışı (K-051: yeni veri = yeni program).
+
+### Geri dönüş koşulları
+
+- TypeSafe kesim tarihini beyan ederse 3. madde ölçülebilir pencereye çevrilir; beyan
+  `config/jev.json`'a kaynağıyla yazılır, önceki `leak_riski=true` kayıtları **yeniden
+  etiketlenmez** (üretildikleri günkü bilgiyle kalır).
+- Gölge raporu K-045'in istisna şartını sayısal olarak karşılarsa (Jev yönünün fiyat
+  özelliklerinden bağımsızlığı **ve** in-sample'da ileriye dönük sıralama gücü, K-068) D
+  deneyi için program kaydı açılabilir — yine bu kararın değil, yeni bir kararın konusu.

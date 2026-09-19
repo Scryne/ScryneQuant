@@ -55,3 +55,29 @@ tamamlanır.
 | `SAPMA` | model | uyarı | Canlı-referans özkaynak farkı >50 bps (sebebi kayıtlı) | `runs\paper\<kosu>.sapma.jsonl` son satır: geç bar / eksik adım / üyelik gecikmesi | Olaylarla açıklanıyorsa not düş; büyüyorsa bekleme süresi/akış incelenir |
 | `SEBEPSIZ_SAPMA` | model | kritik | Canlı referanstan ayrıştı ama geç bar, eksik adım, üyelik gecikmesi, geç türev girdisi, makro revizyonu **yok** | Sapma raporu `ilk_ayrisan_utc`; o adımın girdileri | Tek kod yolu (K-001) bozulmuş olabilir: dosya ana makinede `sq paper evren-sapma` ile yeniden ölçülür, ayrışan adım bar bar karşılaştırılır. Bulunana kadar koşunun sonuçları kanıt sayılmaz |
 | `SAPMA_OLCUMU_YOK` | model | uyarı | Son sapma ölçümü 36 saatten eski | `ScryneQuant-EvrenSapma` son çalışma; `runs\paper\<kosu>.sapma.log` | Elle: `tools\evren-sapma.ps1` |
+
+## Jev gölge koşusu (K-074) — ayrı süreç, emir yok
+
+`sq jev golge --kosu golge-<tarih>` kapanmış her `ok` 1h barda kanonik durum kurar, Jev'e sorar,
+`runs\jev\<kosu>.sqlite`'a yazar (zincir hash'li, append-only). Paper/live süreçlerine
+dokunmaz; ölürse onlar etkilenmez, tersi de. Kilit dosyası aynı koşuya ikinci süreci engeller.
+
+| İş | Komut |
+| --- | --- |
+| Kurulumu ağa çıkarak doğrula, koşma | `sq jev golge --kosu <kosu> --kuru` |
+| Başlat (arka plan) | `Start-Process uv -ArgumentList "run sq jev golge --kosu <kosu>" -RedirectStandardOutput runs\jev\<kosu>.log` |
+| Düzgün durdur (≤30 s içinde durur) | `sq jev durdur --kosu <kosu> --sebep "..."` |
+| Durum: sayım, zincir, son kararlar/olaylar | `sq jev durum --kosu <kosu>` |
+| Değerlendirme (ileri sonuç, isabet, kalibrasyon) | `sq jev degerlendir --kosu <kosu> --rest` |
+| Tarihsel replay (kanıt değil, `leak_riski`) | `sq jev tekrar --kosu tekrar-<ad> --son-n-bar N [--kuru]` |
+| Dondur (Parquet + manifest) | `sq jev dondur --kosu <kosu>` |
+
+**Hata = karar yok.** Timeout, API/kimlik hatası, şema hatası, model uyuşmazlığı, bayat üretim
+defterde `durum_kodu ≠ gecerli` satırı olarak görünür; yön alanı boştur, önceki karar
+taşınmaz. `sq jev durum` çıktısındaki `sayim`de `gecerli` dışı bir kod artıyorsa: önce
+`TYPESAFE_API_KEY` ortamda mı (`kimlik_hatasi`), sonra `runs\jev\<kosu>.log`. `model_uyumsuz`
+ise TypeSafe sürümü değişmiştir: koşu **yeni koşu** olarak açılır, eski defter kapanır
+(K-074/6). `zincir_gecerli: false` ise dosya kurcalanmıştır; koşu durdurulur, dosya incelenir.
+
+Anahtar yalnızca ortam değişkeninde; defterde, logda, durumda sır aranır ve bulunursa istek
+gönderilmez (`istemci.sir_var_mi`).
