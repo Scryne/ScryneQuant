@@ -166,3 +166,49 @@ def dogrula(kayit: Mapping[str, Any], yeniden_cikti: Mapping[str, Any]) -> tuple
     if bulunan == beklenen:
         return True, f"aynı ({bulunan[:16]})"
     return False, f"uyuşmuyor: kayıt {beklenen[:16]}, yeniden üretim {bulunan[:16]}"
+
+
+#: `farklar()` sınıfları. Karar bu ayrıma göre veriliyor (K-080, R1(b)):
+#: - `yalniz_sonuc_hash`: ekonomik alanlar birebir, yalnız `sonuc_hash` alanları farklı —
+#:   K-057/6'nın atlama sayacı değişimi; kayıt bugünkü hash algoritmasıyla **yenilenebilir**.
+#: - `semantik`: metrik/parametre/alan düzeyinde fark — kod o günden beri değişmiş; kayıt
+#:   tarihsel kalır, "bugünkü kodla yeniden üretilemez" etiketi alır.
+YALNIZ_SONUC_HASH: Final = "yalniz_sonuc_hash"
+SEMANTIK: Final = "semantik"
+
+
+def farklar(kayit_cikti: Mapping[str, Any], yeni_cikti: Mapping[str, Any]) -> list[str]:
+    """İki çıktı arasındaki farklı alan yolları (`/a/b[3]/c`). Boş liste = birebir aynı.
+
+    `dogrula()` hash üzerinden karar verir ve öyle kalır; bu fonksiyon **neden** sorusuna
+    cevap: fark yalnız `sonuc_hash` alanlarındaysa (K-057/6) ekonomik sonuç aynıdır.
+    """
+    out: list[str] = []
+
+    def gez(a: Any, b: Any, yol: str) -> None:
+        if isinstance(a, Mapping) and isinstance(b, Mapping):
+            for k in sorted(set(a) | set(b)):
+                if k not in a or k not in b:
+                    out.append(f"{yol}/{k} (yalnız {'kayıtta' if k in a else 'yenide'})")
+                else:
+                    gez(a[k], b[k], f"{yol}/{k}")
+        elif isinstance(a, list) and isinstance(b, list):
+            if len(a) != len(b):
+                out.append(f"{yol} (uzunluk {len(a)} vs {len(b)})")
+            else:
+                for i, (x, y) in enumerate(zip(a, b, strict=True)):
+                    gez(x, y, f"{yol}[{i}]")
+        elif a != b:
+            out.append(yol)
+
+    gez(kayit_cikti, yeni_cikti, "")
+    return out
+
+
+def fark_sinifi(farklar_listesi: list[str]) -> str | None:
+    """`None` = fark yok; aksi hâlde `YALNIZ_SONUC_HASH` ya da `SEMANTIK`."""
+    if not farklar_listesi:
+        return None
+    if all(f.endswith("/sonuc_hash") for f in farklar_listesi):
+        return YALNIZ_SONUC_HASH
+    return SEMANTIK

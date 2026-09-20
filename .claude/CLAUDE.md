@@ -155,6 +155,12 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   geri getirir). Deney ve defter kayıtları `veri_son_ms` taşır (kimliğe girmez). Kanıt:
   `tests/unit/test_geri_sarim.py`. Gerçek depo: 2026-09-09 10:00 UTC sınırı `e3adb02c…`yi
   bayt düzeyinde geri veriyor; kalan uyuşmazlık K-057/6 hash algoritması (R1(b)).
+- **Kayıt yenileme (R1(b)).** `sq lab dogrula` uyuşmazlığı sınıflandırır: `yalniz_sonuc_hash`
+  (ekonomik alanlar birebir, K-057/6) ya da `semantik` (kod değişmiş, kayıt tarihsel).
+  `sq lab yenile <kayıt>` yalnız birinci sınıfı aynı girdiyle yeni kayda çevirir (etiket eski
+  kimlik + sebep; eski kayıt silinmez); semantik/aynı kaydı reddeder. Toplu durum:
+  `tools/r1b_kayit_durumu.py` → `runs/deneyler/tekrar-durumu.json` (ana depoya dokunmaz,
+  geçici kopyada geri sarar); rapor `docs/research/records/2026-09-20-R1b-kayit-durumu.md`.
 - `data/evren/` — arşivden inen çoklu sembol deposu (`.gitignore`'da). Sembol başına
   `1h.parquet` + `1h.kaynak.json` (indirilen her arşiv dosyasının SHA-256'sı); `_evren/`
   altında PIT evren tablosu ve kimlik kataloğu. `data/market/` REST verisiyle **karıştırılmaz**

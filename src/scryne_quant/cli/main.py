@@ -1481,41 +1481,13 @@ def lab_deneyler(
         typer.echo(f"{k['tip']:<15}{k['strateji']:<24}{k['zaman']}  {y.name}")
 
 
-@lab_app.command("dogrula")
-def lab_dogrula(
-    kayit_yolu: Annotated[Path, typer.Argument(help="Deney kaydı (.json).")],
-    depo: Depo = VARSAYILAN_DEPO,
-    geri_sar: Annotated[
-        bool,
-        typer.Option(
-            "--geri-sar",
-            help=(
-                "Veri hash'i uyuşmazsa depoyu kaydın veri sonuna kırpıp yeniden dene "
-                "(K-080). Depodaki sonraki barlar ATILIR; `sq data indir` geri getirir."
-            ),
-        ),
-    ] = False,
-    veri_sonu: Annotated[
-        str | None,
-        typer.Option(
-            "--veri-sonu",
-            help=(
-                "Eski kayıtlar için geri sarma adresi: son barın açılışı, "
-                "'YYYY-MM-DD HH:MM' UTC. `--geri-sar` ister."
-            ),
-        ),
-    ] = None,
-    json_cikti: JsonCikti = False,
-) -> None:
-    """Bir deneyi kaydından yeniden koşturur ve çıktı hash'ini doğrular. (Faz 4)
+def _tekrar_kos(
+    kayit_yolu: Path, depo: Path, geri_sar: bool, veri_sonu: str | None
+) -> dict[str, Any]:
+    """`dogrula` ve `yenile`nin ortak gövdesi: kaydı yeniden koşturur, sınıflandırır.
 
-    Faz 4'ün bitti kriteri "rastgele seçilen bir deney yeniden çalıştırılıp hash'i
-    doğrulanır" diyor; bu komut o kanıtın kendisi. Çıkış kodu 0 ise aynı, 1 ise değil —
-    yani bir betikten de çağrılabilir.
-
-    **Geri sarma (K-080):** veri hash'i uyuşmuyorsa ve `--geri-sar` verildiyse depo kaydın
-    `veri_son_ms`ine (ya da `--veri-sonu`ya) kırpılır ve hash **yeniden** karşılaştırılır.
-    Geri sarım hash'i geri getirmediyse red aynen kalır — kırpma bir tahmin değil, ölçüm.
+    Döner: kayit, diziler, yeniden (çıktı), ayni, aciklama, geri_sarildi, farklar, sinif,
+    veri_hash, veri_son_ms (depodaki son bar). Çıkışlar `typer.Exit` ile.
     """
     kayit = deney_mod.oku(kayit_yolu)
     if kayit["tip"] not in tekrar.TEKRAR_EDILEBILIR:
@@ -1558,6 +1530,63 @@ def lab_dogrula(
 
     yeniden = tekrar.tekrar_uret(kayit, diziler, veri_hash)
     ayni, aciklama = deney_mod.dogrula(kayit, yeniden)
+    # Uyuşmazlığın **sınıfı** (R1(b)): yalnız `sonuc_hash` mi (K-057/6, ekonomik sonuç aynı),
+    # yoksa alan düzeyinde fark mı (kod o günden beri değişmiş). Karar hash'ten çıkar,
+    # sınıf yalnızca açıklar.
+    fark_listesi = [] if ayni else deney_mod.farklar(kayit["cikti"], yeniden)
+    return {
+        "kayit": kayit,
+        "diziler": diziler,
+        "yeniden": yeniden,
+        "ayni": ayni,
+        "aciklama": aciklama,
+        "geri_sarildi": geri_sarildi,
+        "farklar": fark_listesi,
+        "sinif": deney_mod.fark_sinifi(fark_listesi),
+        "veri_hash": veri_hash,
+        "veri_son_ms": _veri_sonu(diziler),
+    }
+
+
+@lab_app.command("dogrula")
+def lab_dogrula(
+    kayit_yolu: Annotated[Path, typer.Argument(help="Deney kaydı (.json).")],
+    depo: Depo = VARSAYILAN_DEPO,
+    geri_sar: Annotated[
+        bool,
+        typer.Option(
+            "--geri-sar",
+            help=(
+                "Veri hash'i uyuşmazsa depoyu kaydın veri sonuna kırpıp yeniden dene "
+                "(K-080). Depodaki sonraki barlar ATILIR; `sq data indir` geri getirir."
+            ),
+        ),
+    ] = False,
+    veri_sonu: Annotated[
+        str | None,
+        typer.Option(
+            "--veri-sonu",
+            help=(
+                "Eski kayıtlar için geri sarma adresi: son barın açılışı, "
+                "'YYYY-MM-DD HH:MM' UTC. `--geri-sar` ister."
+            ),
+        ),
+    ] = None,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Bir deneyi kaydından yeniden koşturur ve çıktı hash'ini doğrular. (Faz 4)
+
+    Faz 4'ün bitti kriteri "rastgele seçilen bir deney yeniden çalıştırılıp hash'i
+    doğrulanır" diyor; bu komut o kanıtın kendisi. Çıkış kodu 0 ise aynı, 1 ise değil —
+    yani bir betikten de çağrılabilir.
+
+    **Geri sarma (K-080):** veri hash'i uyuşmuyorsa ve `--geri-sar` verildiyse depo kaydın
+    `veri_son_ms`ine (ya da `--veri-sonu`ya) kırpılır ve hash **yeniden** karşılaştırılır.
+    Geri sarım hash'i geri getirmediyse red aynen kalır — kırpma bir tahmin değil, ölçüm.
+    """
+    t = _tekrar_kos(kayit_yolu, depo, geri_sar, veri_sonu)
+    kayit, ayni, aciklama = t["kayit"], t["ayni"], t["aciklama"]
+    geri_sarildi, fark_listesi, sinif = t["geri_sarildi"], t["farklar"], t["sinif"]
 
     if json_cikti:
         _yaz_json(
@@ -1567,6 +1596,9 @@ def lab_dogrula(
                 "ayni": ayni,
                 "aciklama": aciklama,
                 "geri_sarildi": geri_sarildi,
+                "fark_sinifi": sinif,
+                "fark_sayisi": len(fark_listesi),
+                "farklar": fark_listesi[:20],
             }
         )
         raise typer.Exit(0 if ayni else 1)
@@ -1586,7 +1618,87 @@ def lab_dogrula(
         typer.secho(f"  yeniden üretildi: {aciklama}", fg=typer.colors.GREEN)
     else:
         typer.secho(f"  YENİDEN ÜRETİLEMEDİ: {aciklama}", fg=typer.colors.RED)
+        if sinif == deney_mod.YALNIZ_SONUC_HASH:
+            typer.secho(
+                f"  sınıf: yalnız sonuc_hash ({len(fark_listesi)} alan) — ekonomik sonuç "
+                "birebir aynı; K-057/6 hash algoritması değişimi, kayıt yenilenebilir",
+                fg=typer.colors.YELLOW,
+            )
+        else:
+            ornek = ", ".join(fark_listesi[:4])
+            typer.secho(
+                f"  sınıf: semantik ({len(fark_listesi)} alan; ör. {ornek}) — kod kayıt "
+                "tarihinden beri değişmiş; kayıt tarihsel, bugünkü kodla yeniden üretilemez",
+                fg=typer.colors.YELLOW,
+            )
         raise typer.Exit(1)
+
+
+@lab_app.command("yenile")
+def lab_yenile(
+    kayit_yolu: Annotated[Path, typer.Argument(help="Deney kaydı (.json).")],
+    depo: Depo = VARSAYILAN_DEPO,
+    deney_kok: KayitKok = deney_mod.VARSAYILAN_KOK,
+    geri_sar: Annotated[bool, typer.Option("--geri-sar", help="`dogrula` ile aynı.")] = False,
+    veri_sonu: Annotated[
+        str | None, typer.Option("--veri-sonu", help="`dogrula` ile aynı.")
+    ] = None,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Yalnız `sonuc_hash` alanları eskimiş bir kaydı bugünkü hash algoritmasıyla **yeniler**.
+
+    R1(b), K-057/6: `sonuc_hash` eskiden sıfır atlama sayaçlarını da içeriyordu; enum
+    büyüyünce eski kayıtların hash'i ekonomik sonuç değişmeden kaydı. Bu komut kaydı
+    **aynı girdiyle** yeniden koşturur ve fark yalnız `sonuc_hash` alanlarındaysa yeni bir kayıt
+    yazar (`etiket`: eski kimlik + sebep; `kimlik.veri_son_ms` dolu). Eski kayıt silinmez.
+
+    **Semantik fark varsa yenilemez** ve hata verir: ekonomik sonucu değişmiş bir kaydı
+    "yenilemek", farklı bir deneyi eskisinin yerine koymak olurdu. Aynı şekilde zaten aynı
+    olan kaydı da yenilemez (gereksiz kopya).
+    """
+    t = _tekrar_kos(kayit_yolu, depo, geri_sar, veri_sonu)
+    kayit = t["kayit"]
+    if t["ayni"]:
+        typer.secho(f"{kayit_yolu.name}: zaten yeniden üretiliyor, yenileme gereksiz.", fg="green")
+        raise typer.Exit(0)
+    if t["sinif"] != deney_mod.YALNIZ_SONUC_HASH:
+        typer.secho(
+            f"{kayit_yolu.name}: yenilenemez — fark semantik ({len(t['farklar'])} alan; "
+            f"ör. {', '.join(t['farklar'][:3])}). Kayıt tarihsel kalır.",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(1)
+
+    eski_kimlik = f"{kayit['kimlik']['girdi_hash'][:12]}-{kayit['kimlik']['cikti_hash'][:12]}"
+    yeni = deney_mod.Deney(
+        tip=kayit["tip"],
+        strateji=kayit["strateji"],
+        girdi=kayit["girdi"],
+        cikti=t["yeniden"],
+        veri_sha256=t["veri_hash"],
+        seed=int(kayit["kimlik"].get("seed", 0)),
+        etiket=(
+            f"yenileme: {eski_kimlik} ({kayit.get('zaman', '')[:10]}); yalnız sonuc_hash "
+            f"farklıydı ({len(t['farklar'])} alan) — K-057/6 hash algoritması; R1(b)"
+        ),
+        veri_son_ms=t["veri_son_ms"],
+    )
+    yol = yeni.yaz(deney_kok)
+    govde = {
+        "eski": str(kayit_yolu),
+        "eski_kimlik": eski_kimlik,
+        "yeni": str(yol),
+        "yeni_kimlik": yeni.kimlik,
+        "fark_sayisi": len(t["farklar"]),
+        "geri_sarildi": t["geri_sarildi"],
+    }
+    if json_cikti:
+        _yaz_json(govde)
+        return
+    typer.echo(f"{kayit_yolu.name} · {kayit['tip']} · {kayit['strateji']}")
+    typer.secho(
+        f"  yenilendi → {yol} (yalnız sonuc_hash: {len(t['farklar'])} alan)", fg="green"
+    )
 
 
 @lab_app.command("kapilar")

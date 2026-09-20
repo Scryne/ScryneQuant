@@ -409,3 +409,127 @@ class TestHipotezKimligi:
         assert eski.kimlik == yeni.kimlik
         assert eski.sozluk()["veri_son_ms"] is None
         assert yeni.sozluk()["veri_son_ms"] == BASLANGIC + 99 * SAAT_MS
+
+
+# ------------------------------------------------------------------ 6. uyuşmazlık sınıfı (R1(b))
+
+
+def _sonuc_hashlerini_boz(nesne):
+    if isinstance(nesne, dict):
+        return {
+            k: ("f" * 40 if k == "sonuc_hash" else _sonuc_hashlerini_boz(v))
+            for k, v in nesne.items()
+        }
+    if isinstance(nesne, list):
+        return [_sonuc_hashlerini_boz(x) for x in nesne]
+    return nesne
+
+
+class TestFarkSinifi:
+    def test_yardimcilar(self):
+        from scryne_quant.research import deney
+
+        a = {"en_iyi": {"sharpe": 1.0, "sonuc_hash": "a"}, "adaylar": [{"sonuc_hash": "b"}]}
+        b = {"en_iyi": {"sharpe": 1.0, "sonuc_hash": "x"}, "adaylar": [{"sonuc_hash": "y"}]}
+        c = {"en_iyi": {"sharpe": 2.0, "sonuc_hash": "x"}, "adaylar": [{"sonuc_hash": "y"}]}
+        assert deney.farklar(a, a) == [] and deney.fark_sinifi([]) is None
+        assert deney.fark_sinifi(deney.farklar(a, b)) == deney.YALNIZ_SONUC_HASH
+        assert deney.fark_sinifi(deney.farklar(a, c)) == deney.SEMANTIK
+        assert "/en_iyi/sharpe" in deney.farklar(a, c)
+
+    def test_dogrula_yalniz_sonuc_hash_sinifini_adlandiriyor(self, lab_ortami, tmp_path):
+        """K-057/6 dönemi kaydı taklidi: aynı ekonomik sonuç, farklı `sonuc_hash` alanları."""
+        from scryne_quant.common.hash import nesne_hash
+
+        kayit_yolu = TestDogrulaGeriSar()._tara(lab_ortami, tmp_path)
+        kayit = json.loads(kayit_yolu.read_text(encoding="utf-8"))
+        kayit["cikti"] = _sonuc_hashlerini_boz(kayit["cikti"])
+        kayit["kimlik"]["cikti_hash"] = nesne_hash(kayit["cikti"])
+        kayit_yolu.write_text(json.dumps(kayit, ensure_ascii=False), encoding="utf-8")
+
+        sonuc = runner.invoke(cli.app, [
+            "lab", "dogrula", str(kayit_yolu), "--depo", str(lab_ortami), "--json",
+        ])
+        assert sonuc.exit_code == 1
+        govde = json.loads(sonuc.stdout)
+        assert govde["fark_sinifi"] == "yalniz_sonuc_hash"
+        assert govde["fark_sayisi"] > 0
+        assert all(f.endswith("/sonuc_hash") for f in govde["farklar"])
+
+    def test_dogrula_semantik_sinifini_adlandiriyor(self, lab_ortami, tmp_path):
+        from scryne_quant.common.hash import nesne_hash
+
+        kayit_yolu = TestDogrulaGeriSar()._tara(lab_ortami, tmp_path)
+        kayit = json.loads(kayit_yolu.read_text(encoding="utf-8"))
+        kayit["cikti"]["adaylar"][0]["sharpe"] = 999.0
+        kayit["kimlik"]["cikti_hash"] = nesne_hash(kayit["cikti"])
+        kayit_yolu.write_text(json.dumps(kayit, ensure_ascii=False), encoding="utf-8")
+
+        sonuc = runner.invoke(cli.app, [
+            "lab", "dogrula", str(kayit_yolu), "--depo", str(lab_ortami), "--json",
+        ])
+        assert sonuc.exit_code == 1
+        govde = json.loads(sonuc.stdout)
+        assert govde["fark_sinifi"] == "semantik"
+        assert "/adaylar[0]/sharpe" in govde["farklar"]
+
+
+# ------------------------------------------------------------------ 7. yenileme (R1(b))
+
+
+class TestYenile:
+    def test_yalniz_sonuc_hash_kaydi_yenileniyor_ve_yeni_kayit_dogrulaniyor(
+        self, lab_ortami, tmp_path
+    ):
+        from scryne_quant.common.hash import nesne_hash
+
+        kayit_yolu = TestDogrulaGeriSar()._tara(lab_ortami, tmp_path)
+        kayit = json.loads(kayit_yolu.read_text(encoding="utf-8"))
+        kayit["cikti"] = _sonuc_hashlerini_boz(kayit["cikti"])
+        kayit["kimlik"]["cikti_hash"] = nesne_hash(kayit["cikti"])
+        kayit_yolu.write_text(json.dumps(kayit, ensure_ascii=False), encoding="utf-8")
+
+        sonuc = runner.invoke(cli.app, [
+            "lab", "yenile", str(kayit_yolu), "--depo", str(lab_ortami),
+            "--deney-kok", str(tmp_path / "deneyler"), "--json",
+        ])
+        assert sonuc.exit_code == 0, _metin(sonuc)
+        govde = json.loads(sonuc.stdout)
+        yeni = json.loads(cli.Path(govde["yeni"]).read_text(encoding="utf-8"))
+        assert yeni["girdi"] == kayit["girdi"] and yeni["strateji"] == kayit["strateji"]
+        assert yeni["kimlik"]["veri_sha256"] == kayit["kimlik"]["veri_sha256"]
+        assert yeni["kimlik"]["veri_son_ms"] == BASLANGIC + 399 * SAAT_MS
+        assert govde["eski_kimlik"] in yeni["etiket"] and "K-057/6" in yeni["etiket"]
+        assert kayit_yolu.exists()  # eski kayıt silinmez
+
+        dogrula = runner.invoke(cli.app, [
+            "lab", "dogrula", govde["yeni"], "--depo", str(lab_ortami),
+        ])
+        assert dogrula.exit_code == 0, _metin(dogrula)
+
+    def test_semantik_kayit_yenilenmiyor(self, lab_ortami, tmp_path):
+        from scryne_quant.common.hash import nesne_hash
+
+        kayit_yolu = TestDogrulaGeriSar()._tara(lab_ortami, tmp_path)
+        kayit = json.loads(kayit_yolu.read_text(encoding="utf-8"))
+        kayit["cikti"]["adaylar"][0]["sharpe"] = 999.0
+        kayit["kimlik"]["cikti_hash"] = nesne_hash(kayit["cikti"])
+        kayit_yolu.write_text(json.dumps(kayit, ensure_ascii=False), encoding="utf-8")
+        once = len(list((tmp_path / "deneyler" / "tarama").glob("*.json")))
+
+        sonuc = runner.invoke(cli.app, [
+            "lab", "yenile", str(kayit_yolu), "--depo", str(lab_ortami),
+            "--deney-kok", str(tmp_path / "deneyler"),
+        ])
+        assert sonuc.exit_code == 1 and "semantik" in _metin(sonuc)
+        assert len(list((tmp_path / "deneyler" / "tarama").glob("*.json"))) == once
+
+    def test_ayni_kayit_yenilenmiyor(self, lab_ortami, tmp_path):
+        kayit_yolu = TestDogrulaGeriSar()._tara(lab_ortami, tmp_path)
+        once = len(list((tmp_path / "deneyler" / "tarama").glob("*.json")))
+        sonuc = runner.invoke(cli.app, [
+            "lab", "yenile", str(kayit_yolu), "--depo", str(lab_ortami),
+            "--deney-kok", str(tmp_path / "deneyler"),
+        ])
+        assert sonuc.exit_code == 0 and "gereksiz" in _metin(sonuc)
+        assert len(list((tmp_path / "deneyler" / "tarama").glob("*.json"))) == once
