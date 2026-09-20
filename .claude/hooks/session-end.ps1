@@ -55,6 +55,14 @@ $sessionId = "$($payload.session_id)"
 $transcriptPath = "$($payload.transcript_path)"
 if ([string]::IsNullOrWhiteSpace($transcriptPath) -or -not (Test-Path -LiteralPath $transcriptPath -PathType Leaf)) { exit 0 }
 
+# Oturumu ikinci beyne dusur (2026-09-21): vault'un flush.py'i bu oturumu daily/'ye proje
+# etiketiyle yazar, derleyici gece toplar. Bundan once proje oturumlari beyne hic girmiyordu.
+# Ayrik surec; asla bekletmez, hata verirse sessizce gecer.
+$projeFlush = Join-Path 'C:\Users\scryn\Documents\ScryneOS' '.claude\hooks\proje-flush.ps1'
+if (Test-Path -LiteralPath $projeFlush -PathType Leaf) {
+    try { & $projeFlush -RawPayload $raw -Proje 'ScryneQuant' } catch { }
+}
+
 # Aynı oturum için 60 saniye içinde tekrar tetiklenirse (SessionEnd + PreCompact
 # gibi) ikinci kez işleme -- claude -p'yi boşuna çağırmayalım.
 if (-not [string]::IsNullOrWhiteSpace($sessionId) -and (Test-Path -LiteralPath $lockPath -PathType Leaf)) {
