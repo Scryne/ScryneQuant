@@ -73,7 +73,11 @@ COKLU_TEST_ESIGI: Final = 1.04
 #: **bayattır**: daha çok çekiliş, daha yüksek bir eşik demek (K-039, K-044).
 #: 2026-09-18'de 43'e çıktı (K-071): 31 tek sembollü + 12 evren, hepsi sızıntı paylı
 #: yöntemle **yeniden koşuldu** — K-064'ün "sonradan dışlama" yaklaşımı değil.
-COKLU_TEST_CEKILIS_SAYISI: Final = 43
+#: 2026-09-20'de 45 (K-081, R1(c)): h51/h52 (kurma_evren) eklendi, 31 tek sembollü + 14 evren,
+#: 500 deneme, seed 0; %5 sınırı 1,004 (%90 GA 0,982–1,064); sabit
+#: değişmedi. Bu sayı bir **eşik değil**, eşiğin ölçüldüğü defter fotoğrafıdır ve git'teki
+#: `docs/research/coklu-test-olcum.json` ile eşit olmak zorundadır (`coklu_test_fotograf`).
+COKLU_TEST_CEKILIS_SAYISI: Final = 45
 
 #: K-019'un eşikleri. Her biri Faz 4'ün ölçümüne dayanıyor; gerekçeler
 #: `docs/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı. `oos_sharpe` ayrıca K-044'ün
@@ -104,7 +108,13 @@ ESIKLER: Final[tuple[Esik, ...]] = (
             "Sabit indirilmedi: 1,04'ü 0,93'e çekmek bir kapıyı gevşetmektir ve gerekçesi "
             "yalnızca 'tam %5 olsun' olurdu (K-007, K-050). Eşik **defterin bugünkü hâline "
             "bağlı**: çekiliş sayısı değişirse yeniden ölçülmeli (`sq lab coklu-test` tek "
-            "sembollü, `tools/faz12_coklu_test.py` evren dahil)."
+            "sembollü, `tools/faz12_coklu_test.py` evren dahil). "
+            "**2026-09-20 yeniden ölçümü (K-081, R1(c)):** 45 çekiliş (h51/h52 eklendi), "
+            "500 deneme, seed 0, veri sonu 2026-09-14 23:00 UTC. Ölçülen %5 sınırı 1,004 "
+            "(%90 GA 0,982-1,064) — aralık 1,04'ü kapsıyor; sabitin gerçek yanlış-pozitifi "
+            "%4,2 (hedef %5); 52 çekilişin hiçbiri iki sayıyı da aşmıyor. Mevcut politika "
+            "eşiği **korundu**; 1,004 bir ölçüm değeridir, eşik yapılmadı. Bekçi artık "
+            "git'teki fotoğrafı (`docs/research/coklu-test-olcum.json`) ve defteri sayıyor."
         ),
     ),
     Esik(

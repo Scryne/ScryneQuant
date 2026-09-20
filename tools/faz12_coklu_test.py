@@ -31,6 +31,7 @@ from scryne_quant.common.hash import git_durumu
 from scryne_quant.common.zaman import simdi_ms, utc_str
 from scryne_quant.research import coklu_test as coklu_mod
 from scryne_quant.research import coklu_test_evren as cte
+from scryne_quant.research import coklu_test_fotograf as fotograf_mod
 from scryne_quant.research import deney as deney_mod
 from scryne_quant.research import evren_degerlendirme as ed
 from scryne_quant.research import evren_kosu
@@ -197,6 +198,17 @@ def birlestir(deneme: int, seed: int) -> int:
     }
     yol = SONUCLAR / f"coklu-test-birlesik-{deneme}-{seed}.json"
     yol.write_text(json.dumps(govde, ensure_ascii=False, indent=1), encoding="utf-8")
+    # Git'e giren fotoğraf (R1(d) D3): bekçi testleri bunu okur, gitignore'daki dosyayı değil.
+    defter_nesnesi = hipotez_mod.HipotezDefteri()
+    foto = fotograf_mod.kur(
+        govde,
+        cekilis_kimlikleri=list(satirlar),
+        defter_kimlikleri=[h["kimlik"] for h in defter_nesnesi.tumu()],
+        defter_yolu=defter_nesnesi.yol,
+        kaynak=str(yol.relative_to(KOK)).replace("\\", "/"),
+    )
+    foto_yolu = fotograf_mod.yaz(foto, KOK / fotograf_mod.VARSAYILAN_YOL)
+    print(f"fotoğraf: {foto_yolu}")
     print(json.dumps({k: govde[k] for k in ("defter_sayisi", "olculebilir", "tek_sembollu",
                                             "evren", "mevcut_esik", "duzeltilmis_esikler",
                                             "esik_guven_araliklari",

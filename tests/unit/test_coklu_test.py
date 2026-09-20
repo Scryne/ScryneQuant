@@ -16,6 +16,8 @@ uydurulmuş bir sayıyla kapanırdı.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -30,6 +32,8 @@ from scryne_quant.research.coklu_test import (
 )
 from scryne_quant.strategy.sinyal import Sinyal, Yon
 from scryne_quant.strategy.temel import Strateji
+
+KOK = Path(__file__).resolve().parents[2]
 
 
 def cekilis(kimlik: str = "a", *, sharpe: float = 0.0, bar: int = 100, sinyal: int = 10) -> Cekilis:
@@ -355,53 +359,93 @@ class TestGuvenAraligi:
 
 
 class TestEsigiDefteBagla:
-    """Düzeltilmiş eşik bir sabit değil, **defterin bir fotoğrafı**. (K-044)
+    """Düzeltilmiş eşik bir sabit değil, **defterin bir fotoğrafı**. (K-044, K-081 D3)
 
     Tehlike somut: defter büyüdükçe gerçek eşik yükselir, ama `COKLU_TEST_ESIGI` sabiti
     yerinde kalır. O anda kapı, olduğundan gevşek bir kapıya dönüşür — ve bunu hiçbir
     test yakalamazsa, K-039'un engellemeye çalıştığı şey (yeterince çok deneyerek kapıyı
     delmek) düzeltmenin **kendi içinden** geri gelir.
+
+    **Kaynak gerçeklik** (R1(d) D3): `docs/research/coklu-test-olcum.json` — ölçüm aracının
+    git'e yazdığı fotoğraf (kaç çekiliş, hangi kimlikler, defter sayısı ve SHA-256'sı, %5
+    sınırı) — ve `docs/Hipotez-Defteri.jsonl`in kendisi. İkisi de git'te; yani bu sınıf CI'da
+    da koşar. Eski bekçi gitignore'daki `runs/faz12/coklu-test-birlesik-*.json`u okuyor ve
+    dosya yokken **sessizce geçiyordu**; defter büyüyünce de görmüyordu (W6 T2). Burada test
+    içinde elle tutulan ikinci bir fotoğraf (`OLCULEN_CEKILIS`) da yok: sabit fotoğrafla,
+    fotoğraf defterle karşılaştırılır. Ölçüm geçmişi: 31 (K-044) → 41 (K-064) → 43 (K-071)
+    → 45 (K-081).
     """
 
-    #: Son ölçümün kapsadığı çekiliş sayısı. **Bu sayıyı değiştirmek, ölçümü yeniden
-    #: koşturmadan serbest bırakılmış bir işlem değildir:** sayı ancak
-    #: `tools/faz12_coklu_test.py --deneme 500 --seed 0` koşulup `COKLU_TEST_ESIGI`
-    #: o ölçüme göre karara bağlandıktan sonra güncellenir. Geçmişi: 31 (K-044) →
-    #: 41 (K-064) → 43 (K-071).
-    OLCULEN_CEKILIS = 43
+    @pytest.fixture(scope="class")
+    def foto(self) -> dict:
+        from scryne_quant.research import coklu_test_fotograf
 
-    def test_esik_defterdeki_olculebilir_cekilis_sayisina_bagli(self) -> None:
+        return coklu_test_fotograf.oku(KOK / coklu_test_fotograf.VARSAYILAN_YOL)
+
+    @pytest.fixture(scope="class")
+    def defter(self) -> list[dict]:
+        from scryne_quant.research.hipotez import HipotezDefteri
+
+        return HipotezDefteri(KOK / "docs" / "Hipotez-Defteri.jsonl").tumu()
+
+    def test_sabit_olcum_fotografiyla_ayni(self, foto) -> None:
+        """`COKLU_TEST_CEKILIS_SAYISI` eşik değil, fotoğraf: ölçümle eşit olmak zorunda."""
         from scryne_quant.research.kapilar import COKLU_TEST_CEKILIS_SAYISI
 
-        assert COKLU_TEST_CEKILIS_SAYISI == self.OLCULEN_CEKILIS, (
-            "Ölçülebilir çekiliş sayısı değiştiyse COKLU_TEST_ESIGI bayattır: "
-            "`tools/faz12_coklu_test.py --deneme 500 --seed 0` yeniden koşturulup eşik "
-            "karara bağlanmalı (K-044, K-071). Sabiti elle düzeltmek, ölçülmemiş bir "
-            "sayıya ölçülmüş süsü vermektir."
+        assert foto["olculebilir"] == COKLU_TEST_CEKILIS_SAYISI, (
+            f"sabit {COKLU_TEST_CEKILIS_SAYISI}, ölçüm fotoğrafı {foto['olculebilir']}: "
+            "ikisi ayrıştı — ölçüm haklıdır; sabit yalnız karar kaydıyla güncellenir (K-081)"
         )
 
-    def test_defter_olculen_cekilis_sayisini_gecmedi(self) -> None:
-        """Asıl tehlike burada: defter büyür, eşik yerinde kalır, kapı gevşer.
+    def test_defter_olcumden_beri_buyumedi(self, foto, defter) -> None:
+        """Asıl bekçi: defter bir satır bile büyüdüyse eşik bayattır — yeniden ölç."""
+        assert len(defter) == foto["defter_sayisi"], (
+            f"defter {len(defter)} satır, ölçüm {foto['defter_sayisi']} satırla yapıldı: "
+            "`tools/faz12_coklu_test.py --deneme 500 --seed 0` yeniden koşulup eşik karara "
+            "bağlanmalı (K-044, K-071, K-081). Sabiti elle düzeltmek ölçülmemiş sayıya "
+            "ölçülmüş süsü vermektir."
+        )
 
-        `COKLU_TEST_CEKILIS_SAYISI` ölçümün fotoğrafı; defterdeki **ölçülebilir** çekiliş
-        sayısı ondan büyükse eşik bayattır. Ölçülemeyen kayıtlar (değerlendirme kaydı
-        olmayan hipotezler) sayılmaz, o yüzden karşılaştırma defterin ham sayısıyla değil
-        ölçüm çıktısındaki `olculebilir` ile yapılır.
-        """
+    def test_defter_dosyasi_olcumdeki_ile_ayni(self, foto) -> None:
+        """Satır sayısı yetmez: defter dosyasının hash'i de fotoğraftakiyle aynı olmalı."""
+        from scryne_quant.common.hash import dosya_hash
+
+        assert dosya_hash(KOK / "docs" / "Hipotez-Defteri.jsonl") == foto["defter_sha256"], (
+            "defter dosyası ölçümden beri değişmiş (append-only olsa da içerik farklı): "
+            "yeniden ölçüm ister"
+        )
+
+    def test_kimlikler_defterle_birebir(self, foto, defter) -> None:
+        """Ölçülen ∪ ölçülemez = defter; ikisi ayrık. Kimlik kayması CI'da görünür."""
+        olculen = set(foto["cekilis_kimlikleri"])
+        olculemez = set(foto["olculemez_kimlikleri"])
+        assert olculen.isdisjoint(olculemez)
+        assert olculen | olculemez == {h["kimlik"] for h in defter}
+        assert len(olculen) == foto["olculebilir"]
+
+    def test_esik_olcumun_altinda_kalmadi(self, foto) -> None:
+        """K-050 asimetrisi: sabit, ölçülen %5 sınırının **altına** düşemez (gevşek kapı)."""
+        from scryne_quant.research.kapilar import COKLU_TEST_ESIGI
+
+        assert foto["mevcut_esik"] == COKLU_TEST_ESIGI
+        assert foto["p05"] <= COKLU_TEST_ESIGI, (
+            f"ölçülen %5 sınırı {foto['p05']:.3f} > sabit {COKLU_TEST_ESIGI}: kapı olduğundan "
+            "gevşek — yeni karar kaydı ister"
+        )
+
+    def test_yerel_olcum_ciktisi_fotografla_uyusuyor(self, foto) -> None:
+        """Gitignore'daki ham çıktı varsa fotoğrafla aynı sayıları taşımalı; yoksa **görünür**
+        skip — sessiz başarı yok."""
         import json
-        from pathlib import Path
 
-        from scryne_quant.research.kapilar import COKLU_TEST_CEKILIS_SAYISI
-
-        yol = (Path(__file__).resolve().parents[2] / "runs" / "faz12"
-               / "coklu-test-birlesik-500-0.json")
-        if not yol.exists():  # ölçüm çıktısı gitignore'da; yoksa bu test sessiz geçer
-            return
-        olculebilir = json.loads(yol.read_text(encoding="utf-8"))["olculebilir"]
-        assert olculebilir <= COKLU_TEST_CEKILIS_SAYISI, (
-            f"Ölçüm çıktısı {olculebilir} çekiliş görüyor, sabit "
-            f"{COKLU_TEST_CEKILIS_SAYISI}: eşik bayat."
-        )
+        yol = KOK / foto["kaynak"]
+        if not yol.exists():
+            pytest.skip(f"ham ölçüm çıktısı bu makinede yok: {foto['kaynak']}")
+        ham = json.loads(yol.read_text(encoding="utf-8"))
+        assert ham["olculebilir"] == foto["olculebilir"]
+        assert ham["defter_sayisi"] == foto["defter_sayisi"]
+        assert ham["duzeltilmis_esikler"]["0.05"] == foto["p05"]
+        assert ham["uretildi"] == foto["uretildi"]
 
     def test_kapi_olculen_degeri_tasiyor(self) -> None:
         from scryne_quant.research.kapilar import COKLU_TEST_ESIGI, ESIKLER
@@ -419,9 +463,9 @@ class TestEsigiDefteBagla:
         """K-033'ün kalıbı: her sınır kaynağını taşır. Bu sınırın kaynağı bir ölçüm."""
         from scryne_quant.research.kapilar import ESIKLER
 
-        gerekce = next(e for e in ESIKLER if e.ad == "oos_sharpe").gerekce
-        assert "K-044" in gerekce
-        assert "coklu-test" in gerekce
+        kapi = next(e for e in ESIKLER if e.ad == "oos_sharpe")
+        assert "K-044" in kapi.gerekce
+        assert "coklu-test" in kapi.gerekce
 
 
 class TestSizintiPayi:
