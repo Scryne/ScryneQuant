@@ -9,17 +9,25 @@ dependencies = [
     # ccxt bir gun HTTP istemcisini degistirdiginde sessizce kirilmak demek.
     "aiohttp>=3.14.3",
     "ccxt>=4.5.78",
-    "duckdb>=1.5.5",
     "fastapi>=0.121.0",
     "numpy>=2.5.3",
     "pandas>=3.0.5",
     "pyarrow>=25.0.1",
     "pydantic>=2.12.0",
-    "structlog>=25.5.0",
+    # requests/urllib3 de ccxt'nin gecisli bagimliligi ama dogrudan kullaniliyor (R1(f), 2026-09-20):
+    # imzali.py (Session, Response), binance_arsiv/alfred/funding/turev_rest/cli.testnet (REST),
+    # binance.py (urllib3.util.connection IPv4 kancasi). Gecisli bagimliliga guvenmek, ccxt HTTP
+    # istemcisini degistirdiginde sessizce kirilmak demek. Alt sinirlar uv.lock'taki surumlerle
+    # uyumlu (requests 2.34, urllib3 2.7).
+    "requests>=2.32.0",
     "typer>=0.20.0",
     "typesafe-sdk>=0.6.0",
+    "urllib3>=2.2.0",
     "uvicorn>=0.40.0",
 ]
+# Cikarilanlar (R1(f), 2026-09-20): `duckdb` — K-011 "sorgu icin DuckDB" diyordu, kodda hicbir
+# sorgu DuckDB ile yapilmiyor (0 import; tek atif ortam kaydindaki surum listesiydi);
+# `structlog` — 0 import, projede logging cercevesi yok (cikti typer.echo + SQLite olay tablolari).
 
 [project.scripts]
 sq = "scryne_quant.cli.main:main"

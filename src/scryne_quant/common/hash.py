@@ -73,7 +73,11 @@ def git_durumu(repo: str | Path | None = None) -> dict[str, Any]:
     return {"commit": sha, "dirty": bool(durum), "git_yok": False}
 
 
-VARSAYILAN_PAKETLER: tuple[str, ...] = ("pandas", "numpy", "pyarrow", "duckdb", "ccxt")
+#: Ortam kaydına sürümü yazılan paketler. `duckdb` 2026-09-20'de çıktı (R1(f)): hiç kullanılmıyordu
+#: ve bağımlılıktan kaldırıldı. Eski kayıtların `kimlik.ortam.paketler`inde `duckdb` anahtarı var,
+#: yenilerinde yok — bu bilgilendirici bir alan, hiçbir hash'e (`girdi_hash`, `cikti_hash`,
+#: `config_hash`, `sonuc_hash`) girmiyor; `tests/unit/test_ortam_kaydi.py` bunu koruyor.
+VARSAYILAN_PAKETLER: tuple[str, ...] = ("pandas", "numpy", "pyarrow", "ccxt")
 
 
 def ortam_kaydi(paketler: tuple[str, ...] = VARSAYILAN_PAKETLER) -> dict[str, Any]:
