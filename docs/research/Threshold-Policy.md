@@ -56,7 +56,7 @@ Bunlar sayı değil, ihlali "görev yanlıştır" demek olan kurallar. Repo: `.c
 | Ölçülemeyen kapı = geçilmemiş | kural | K-019 | politika, değişmez |
 | Ön kayıt zorunlu; program bütçesi | zorunlu; bütçe program başına | K-039, K-051 | politika, değişmez |
 | Çoklu test düzeltmesi yöntemi | sızıntısız dairesel kaydırma, 500 deneme, seed 0, %5 yanlış-pozitif hedefi | K-044/064/071 | politika; `deneme=500` **DECISION REQUIRED** (GA genişliği 0,84-0,97 → yeterli mi?) |
-| `oos_sharpe` (tek sembol + evren, Binance spot) | **1,04** | null-kalibre, 43 çekiliş; gerçek FP %2,6; **bayat** (45) | yeniden ölçüm (R1); yeni evren için U17 |
+| `oos_sharpe` (tek sembol + evren, Binance spot) | **1,04** | null-kalibre; **45 çekiliş** (K-081, 2026-09-20): %5 sınırı 1,004, GA 0,982–1,064, sabitin FP'si %4,2 — sabit **korundu** (politika kararı, GA sabiti kapsıyor) | Bekçi: `docs/research/coklu-test-olcum.json` + defter (CI'da); defter büyürse yeniden ölçüm zorunlu. Yeni evren için U17 |
 | `oos_is_orani` ≥ 0,5 | 0,5 | politika (K-019) | kabul; gerekçesi "OOS IS'in yarısını korumalı" — ölçülmemiş |
 | `wf_katman_basari` ≥ 0,6 | 0,6 | politika | kabul; **DECISION REQUIRED**: katman sayısına bağlı binom eşiği daha doğru (16 katmanda 0,6 = 10/16; 4 katmanda 3/4) |
 | `parametre_kararliligi` ≤ 0,35 | 0,35 | politika | kabul; pertürbasyon v2 (0,0565) null-kalibre olduğu için bu v1 kapısı **gereksiz olabilir** — DECISION: birini emekliye ayır |

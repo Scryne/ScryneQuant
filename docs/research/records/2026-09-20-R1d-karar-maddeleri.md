@@ -1,7 +1,8 @@
-# R1(d) — Karar maddeleri D1–D4 (taslak, onay bekliyor)
+# R1(d) — Karar maddeleri D1–D4 (KARAR VERİLDİ → K-081)
 
-**Tarih:** 2026-09-20 · **Durum:** **hiçbiri uygulanmadı**; kod, config, eşik politikası ve
-defter değişmedi · **Girdi:** `2026-09-20-R1c-esik-yeniden-olcumu.md` (ölçüm), K-044/064/071
+**Tarih:** 2026-09-20 · **Durum:** Scryne onayladı (D1 onay, D2 koru, D3 onay, D4 ölçüm kimliğini
+koru + deploy verisini ileri sar); uygulama bu dokümanın sonundaki bölümde. Aşağıdaki madde
+metinleri karar öncesi hâliyle bırakıldı (kayıt). · **Girdi:** `2026-09-20-R1c-esik-yeniden-olcumu.md` (ölçüm), K-044/064/071
 (önceki ölçümler), K-050 (asimetri), K-039 (sayım), K-080 (veri sonu)
 · **Doğrulanan durum:** `HEAD == origin/master == e5ff3e9`, çalışma ağacı temiz; CI **UNKNOWN**
 (repo özel, bu makinede `gh`/token yok — `gh auth login && gh run list -L 3` insan adımı).
@@ -130,3 +131,15 @@ gibi git dışı ama proje içi bir yere taşınmalı (D4 ile birlikte karar).
 7. Tam takım + ruff; commit; push (ayrı onay).
 
 Bu listeden hiçbiri bu commit'te yapılmadı.
+
+
+---
+
+## Uygulama (2026-09-20, K-081)
+
+| Madde | Karar | Yapılan |
+| --- | --- | --- |
+| D1 | 43 → 45 | `research/kapilar.py` `COKLU_TEST_CEKILIS_SAYISI = 45` (+ yorumda R1(c)); testteki `OLCULEN_CEKILIS` kopyası kaldırıldı, sabit git'teki fotoğrafla karşılaştırılıyor |
+| D2 | 1,04 **korunur** | `COKLU_TEST_ESIGI` değişmedi; 1,004 hiçbir config/politika dosyasına eşik olarak yazılmadı; gerekçe K-081/2 |
+| D3 | bekçi defteri sayar | `research/coklu_test_fotograf.py` (fotoğraf yaz/oku/kur, tutarsızlıkta hata); `tools/faz12_coklu_test.py --birlestir` sonunda fotoğrafı yazar; bugünkü fotoğraf mevcut ham çıktıdan üretildi (**ham dosya değiştirilmedi**): `docs/research/coklu-test-olcum.json`; `test_coklu_test.py::TestEsigiDefteBagla` 9 test (sabit=fotoğraf, defter uzunluk+SHA, kimlik birebir, %5 ≤ sabit, ham çıktı varsa uyum / yoksa görünür skip, kapı=sabit, >0,5, gerekçe); `test_coklu_test_fotograf.py` 6 test (negatifler) |
+| D4 | kimliği koru, veriyi ileri sar | R1(c) kaydı değişmedi. Yedek → `runs/yedek/evren50-2026-09-18/` (50 sembol parquet+kaynak.json, `_sha256.txt`, geri sarım raporu). Kanıt: scratch kopyada `arsiv-indir <50> --bitis-gun 2026-09-18` (200 günlük dosya indi) → **50/50 SHA-256 yedekle aynı** (`_arsivden-yeniden-uretim-sha256.txt`, `_arsivden-yeniden-uretim-raporu.json`). Sonra `data/evren` 734 sembol güncel arşiv sonuna uzatıldı: **2026-09-19 23:00 UTC** (482 aktif sembol), 2.410 dosya, 0 hata, 3.341 s (`runs/yedek/evren-ileri-sarma-2026-09-20.{json,log}`). Ölçüm hâli `--bitis-gun 2026-09-14` ile geri gelir |

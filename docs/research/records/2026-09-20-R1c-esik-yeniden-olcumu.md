@@ -102,3 +102,5 @@ sabiti aşabilir.
 evren_esit_agirlik.py`, `strategy/kutuphane/kesitsel.py`, `tests/unit/test_oynaklik_olculebilir.py`
 (18 test) — commit `209ff2a`. Bu doküman ve ROADMAP satırı — sonraki commit. Tam takım
 1.889 yeşil (rc=0, `209ff2a`), ruff temiz; ölçüm sonrası yerelde 1 kırmızı (§6/1, bilinçli).
+
+**Sonuç (2026-09-20, K-081):** D1 45 ✓, D2 sabit 1,04 korundu, D3 bekçi fotoğraf+defter, D4 yedek `runs/yedek/evren50-2026-09-18/` (arşiv≡yedek 50/50 bayt) ve `data/evren` 2026-09-19 23:00 UTC'ye uzatıldı. Bu dokümandaki ölçüm kimliği (veri sonu 2026-09-14 23:00 UTC) **değişmedi**.

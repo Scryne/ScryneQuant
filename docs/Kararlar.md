@@ -3995,3 +3995,53 @@ kodla yeniden üretilemez, commit DIRTY" etiketi alır. İkisi de sessiz değil,
 `sonuc_hash` tanımı, `veri_sha256`'nın anlamı, defterdeki 52 satır, eşik 1,04 (yeniden ölçüm
 R1(c)), OOS penceresinin veri sonuna göreli tanımı (**bilinçli**: değiştirmek her kaydı
 yeniden üretilemez yapardı; sabit tarih bunu gereksiz kılıyor).
+
+## K-081 — Eşik yeniden ölçümü (45 çekiliş): sabit 1,04 korunur, fotoğraf 45, bekçi defteri sayar, veri ileri sarılır
+
+**Durum:** kabul · **Tarih:** 2026-09-20 · **Onay:** Scryne ("R1(d) kararlarını onaylıyorum", D1–D4)
+· **Tabi:** K-039, K-044, K-050, K-064, K-071, K-080 · **Kaynak:**
+`docs/research/records/2026-09-20-R1c-esik-yeniden-olcumu.md` (ölçüm),
+`docs/research/records/2026-09-20-R1d-karar-maddeleri.md` (maddeler), `docs/research/coklu-test-olcum.json`
+(fotoğraf), `runs/faz12/coklu-test-birlesik-500-0.json` (ham, git dışı)
+
+### Ölçüm (değiştirilmedi, yeniden koşulmadı)
+
+`tools/faz12_coklu_test.py --deneme 500 --seed 0`, kod `209ff2a` (temiz), veri sonu
+2026-09-14 23:00 UTC (K-080 ile sabitlenmiş `data/evren`), 45 ölçülebilir çekiliş (31 tek
+sembollü + 14 evren; defter 52, ölçülemeyen 7'si 1d), 43 çekilişlik önbellek aynen, h51/h52
+500/500. Null maksimumu %5 sınırı **1,004** (%90 GA 0,982–1,064); sabit 1,04'ün ölçülen
+yanlış-pozitifi **%4,2** (hedef %5). Engel ve A kararı (ölçülemeyen oynaklık = aday değil,
+`oynaklik_olculebilir`, h51/h52 hash'leri aynı) R1(c) kaydında.
+
+### Karar
+
+1. **D1 — `COKLU_TEST_CEKILIS_SAYISI = 45`.** R1(c) 45 çekiliş kullandı ve kimlikleri
+   defterle birebir; 43 artık ölçüm kapsamını temsil etmiyor. Bu sayı **eşik değil**, eşiğin
+   ölçüldüğü defter fotoğrafıdır; testteki ikinci elle-tutulan kopya (`OLCULEN_CEKILIS`)
+   kaldırıldı, sabit git'teki fotoğrafla karşılaştırılır.
+2. **D2 — `COKLU_TEST_ESIGI = 1.04` korunur.** Gerekçe: R1(c) %5 sınırı ≈ 1,004; GA
+   0,982–1,064 mevcut 1,04'ü kapsıyor; mevcut eşikte ölçülen FP ≈ %4,2, hedef %5; 52
+   çekilişin hiçbiri ne 1,004'ü ne 1,04'ü aşıyor. Bu nedenle **mevcut politika eşiğinin
+   korunması** tercih edildi. 1,004 bir ölçüm değeridir, config/politika eşiği **yapılmadı**;
+   1,064 de uygulanmadı. Bu "1,04 matematiksel olarak optimaldir" demek değildir.
+3. **D3 — Bekçi defteri sayar.** Kaynak gerçeklik `docs/research/coklu-test-olcum.json`
+   (ölçüm aracının `--birlestir` sonunda git'e yazdığı fotoğraf: ölçülen/ölçülemez kimlikler,
+   defter satır sayısı ve dosya SHA-256'sı, %5 sınırı) + `docs/Hipotez-Defteri.jsonl`. Testler
+   (`test_coklu_test.py::TestEsigiDefteBagla`): sabit = fotoğraf; defter uzunluğu ve hash'i =
+   fotoğraf; ölçülen ∪ ölçülemez = defter; ölçülen %5 ≤ sabit (K-050: gevşek kapı olamaz);
+   gitignore'daki ham çıktı varsa fotoğrafla uyuşmalı, yoksa **görünür skip**. Defter bir satır
+   büyürse CI kırmızı: yeniden ölçüm ya da bilinçli karar. Elle tutulan fotoğraf sabiti yok;
+   `COKLU_TEST_DEFTER_SAYISI` ayrı bir sabit olarak **konulmadı** — defter sayısı fotoğraftan.
+4. **D4 — Ölçüm kimliği korunur, deploy verisi ileri sarılır.** R1(c) kaydındaki veri sonu
+   (2026-09-14 23:00 UTC) değişmez. 50 sembolün 09-18 hâli `runs/yedek/evren50-2026-09-18/`e
+   (git dışı, proje içi) taşındı; arşivden `--bitis-gun 2026-09-18` ile yeniden üretim
+   **50/50 parquet SHA-256 aynı** (`_arsivden-yeniden-uretim-sha256.txt`) — K-080'in "uzatmak
+   da geri sarmak da aynı komut, bayt-aynı" iddiasının gerçek depo kanıtı. Ancak bundan sonra
+   `data/evren` (734 sembol) güncel arşiv sonuna uzatıldı: **2026-09-19 23:00 UTC** (482 aktif
+   sembol; delist edilenler kendi son barında), 2.410 dosya, 0 hata
+   (`runs/yedek/evren-ileri-sarma-2026-09-20.{json,log}`); ölçüm hâline `--bitis-gun 2026-09-14`
+   ile dönülür.
+
+### Değişmeyen
+
+`COKLU_TEST_ESIGI` 1,04; defter 52; R1(c) ölçüm artefaktları; strateji/risk/execution kodu.
