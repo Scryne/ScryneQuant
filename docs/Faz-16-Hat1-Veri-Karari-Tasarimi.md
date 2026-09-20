@@ -204,3 +204,18 @@ anahtara Futures yetkisi verilemez. K-066 ekinin erişim yolu bu anahtarla **kap
 değerlendirme `docs/spikes/08-vadeli-tarife-kademe.md` §1b — karar Scryne'ın (vadeli hesap
 açma = hesap/operasyon kararı; sonrasında yeni salt-okunur anahtar). Fee ve MMR kademeleri
 blocked kalır.
+
+**Karar (Scryne, 2026-09-20): vadeli hesap açılmıyor.** K-066 erişim yolu bu anahtarla
+doğrulanmış şekilde **kapalı** kabul edildi; vadeli hesap açıp yeni anahtar üretmek araştırma
+kapsamının zorunlu adımı değil. Kalıcı durum: fee / `commissionRate` **BLOCKED** · MMR
+kademeleri / `leverageBracket` **BLOCKED** · PIT MMR **EMPTY** · NON_PIT MMR **EMPTY** ·
+likidasyon-eşiği stres sınıfı **CLOSED / hesaplanamaz** · beş stres sınıfı hesaplamaya hazır ·
+execution maliyeti **PARTIAL** (fee eksikliği açıkça korunur). Bundan sonra alternatif uç,
+spot→perp taşıma, güncel MMR'yi geçmişe uygulama ya da başka varsayımla bu iki blokaj
+aşılmaya çalışılmaz. Uygulama: `docs/Faz-16-Hat1-Ikinci-Tavan-Kismi-Raporu.md` (tasarım §9
+"eksik sınıf"), `tools/faz16_hat1_ikinci_tavan_kismi.py`.
+
+**B-6 kararı (Scryne, 2026-09-20): AÇMA.** 26 sembol / ≈2,4 GB perp 1m slippage verisi mevcut
+kararları değiştirmiyor; backlog'da bağımsız veri kararı olarak kalır. İndirme, hesaplama,
+kapsam genişletme yok. Havuz için ikinci tavan (2)–(4) DATA BLOCKED; BTC+ETH sonuçları havuza
+genellenmez. Sonraki adım: yeni veri değil, mevcut Hat 1 çıktısının metodolojik kapanışı.
