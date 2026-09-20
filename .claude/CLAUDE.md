@@ -105,13 +105,13 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   global kalır (program başına ikinci defter yok); her araştırma programı ön kayıtlı bir
   **arama bütçesiyle** açılır; hipotez kimliğine evren tanımı, portföy yöntemi ve rejim
   tanımı eklenir.
-- `sq lab tekrar-kontrol` (`research/gizli_tekrar.py`) — **gizli tekrar çekiliş dedektörü
+- `sq lab tekrar-kontrol` (`src/scryne_quant/research/gizli_tekrar.py`) — **gizli tekrar çekiliş dedektörü
   (K-061).** `hipotez-kaydet`ten önce koşturulur; Jev yeni gerekçeyi her önceki kayıtla
   karşılaştırır, ≥0,80 uyarı / 0,50–0,80 incele. Engellemez, sayılmaz, işlem katmanına
   girmez. Soru metni hash'le donmuş: değiştirmek yeni spike ister. `TYPESAFE_API_KEY` gerekir.
 - `docs/Faz-4-Donus-4-Coklu-Test.md` — **çoklu test düzeltmesi (K-044).** `oos_sharpe`
   kapısı 0,50 → 1,02. Eşik defterdeki çekiliş sayısına bağlı; defter büyürse
-  `sq lab coklu-test` yeniden koşturulup `research/kapilar.py`deki sabit güncellenmeli.
+  `sq lab coklu-test` yeniden koşturulup `src/scryne_quant/research/kapilar.py`deki sabit güncellenmeli.
 - `docs/Faz-4-Donus-5-Tavan.md` — **tavan testi (K-045).** Maliyet sıfırken bile kapıları
   geçen strateji yok; maliyet duvarı bağlayıcı kısıt değilmiş. Tek sembollü yönlü arama
   **kapandı**. Yeni bir strateji/aile/parametre çekilişi yapılmayacak — istisna, ölçüyle
@@ -136,7 +136,7 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Arastirma-Programlari.jsonl` — **araştırma programı defteri (K-051/2, K-058).**
   Append-only. Faz 12'de her program `sq lab program-kaydet` ile **önce** buraya açılır;
   `sq lab hipotez-kaydet` artık `--program` istiyor ve bütçe dolunca reddediyor.
-- `research/kapilar_v2.py` — K-054'ün dört kapısı ve eşikleri; `butun_kapilar` 11 kapının
+- `src/scryne_quant/research/kapilar_v2.py` — K-054'ün dört kapısı ve eşikleri; `butun_kapilar` 11 kapının
   tamamı. Eşikler ızgara şekline bağlı: yeni ızgara biçimi `tools/kalibrasyon_v2_kos.py` ile
   yeniden ölçüm ister.
 - `docs/Faz-10-Coklu-Enstruman-Raporu.md` — **Faz 10 ölçümleri (K-057):** tek motor +

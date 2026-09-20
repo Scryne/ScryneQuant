@@ -58,16 +58,16 @@ promotion kapılarından (K-010, K-019, K-054) geçmek zorundadır.
 | --- | --- | --- |
 | Dil | Python 3.12 | Araştırma ekosistemi ve exchange kütüphaneleri burada |
 | Veri işleme | pandas, numpy, pyarrow | Standart; Parquet için pyarrow zaten gerekli. **Polars alınmadı**: ölçülmüş bir darboğaz yok |
-| Tarihsel veri | **Parquet + DuckDB** | K-011. Spike 6 çok sembolde yeniden ölçtü: toplam ≈0,86 GB, en büyük dosya 2 MB — düzen değişmiyor |
+| Tarihsel veri | **Parquet** (zstd, deterministik yazıcı) | K-011. Spike 6 çok sembolde yeniden ölçtü: toplam ≈0,86 GB, en büyük dosya 2 MB — düzen değişmiyor. K-011'in öngördüğü DuckDB sorgu katmanı **hiç kullanılmadı** (bütün okuma pandas/pyarrow) ve R1(f) ile bağımlılıktan çıkarıldı (2026-09-20) |
 | Operasyonel state | **SQLite (WAL)** | K-034. Çok sembollü çalışma 3. geri dönüş koşulunu tetikliyor → **Faz 9'da yeniden ölçülecek**, otomatik geçiş yok (K-052/6) |
 | Backtest | **Kendi event-driven motorumuz** | K-001 — backtest = paper = live, tek kod yolu. Çok enstrümanlı motor ikinci motor değil, genişlemesidir (K-052/2) |
 | Exchange | **CCXT** + Binance spot adapter | Adapter arkasında; venue değiştirilebilir kalsın (doküman §23) |
 | Doğrulama | **Pydantic v2** | Sinyal / config / veri sözleşmelerinde tip garantisi |
-| Zamanlama | **APScheduler** (tek proses) | Celery/Redis/Temporal yok — K-011 |
+| Zamanlama | **Windows Task Scheduler** (`tools/*.ps1`, S4U, çökmede yeniden başlatma) + koşturucu döngüleri | Celery/Redis/Temporal yok — K-011. APScheduler hiç kullanılmadı (W0 denetimi, 2026-09-20) |
 | API | **FastAPI**, trader sürecinin içinde, **salt-okunur** | Yazma ucu yok (K-036, K-043); kill switch süreç dışından gelir (Faz 14) |
 | Frontend | **Vite + React + TypeScript + Tailwind** | K-012, K-036 |
 | Grafik | **lightweight-charts** | Mum ve equity curve |
-| Log | **structlog** (JSON) + SQLite audit (zincir hash'li) | Prometheus/Grafana/Sentry yok; izleme Faz 14'te ölçülmüş ihtiyaca göre |
+| Log | **SQLite olay/audit tabloları** (zincir hash'li, append-only) + `typer.echo`/`.log` yönlendirmesi; logging çerçevesi yok | Prometheus/Grafana/Sentry yok; izleme Faz 14'te ölçülmüş ihtiyaca göre. structlog hiç kullanılmadı, R1(f) ile çıkarıldı |
 | Test | **pytest** | Determinizm ve look-ahead testleri birinci sınıf |
 | Paket yönetimi | **uv** + `uv.lock` | K-022 — K-009'un ortam kaydının kaynağı |
 | Lint/format | **ruff** | `docs/` ve `research/` hariç |

@@ -6,13 +6,14 @@ düzelten, risk kurallarıyla sınırlandıran, paper trading ile doğrulayan ve
 kapılardan geçtikten sonra kontrollü biçimde otomatik uygulayan tek kişilik quant araştırma
 ve execution platformu.
 
-**Durum (2026-09-20):** Faz 0-7 ve 9-12 kapandı; Faz 14 (üretim sertleştirme) K-069'un
-8 günlük penceresinde (host-1, 2026-09-17 → 2026-09-25); Faz 16 (sürekli araştırma) beş
-programı açıp kapattı, açık program yok. Faz 8 (kontrollü live) promotion'u geçen bir
-strateji bekliyor — **52 çekilişin hiçbiri geçmedi** (`oos_sharpe` eşiği 1,04, K-064/K-071)
-ve bu kapının çalıştığının kanıtı. Mevcut eylem uzayında (long-only spot) araştırma kapalı
-(K-078); Hat 1 (delta-nötr carry) veri engelli (K-079). Faz 8'in hazırlığı yazıldı
-(`docs/Faz-8-Hazirlik.md`), tetik yok.
+**Durum (2026-09-20):** kanonik yol haritası **`docs/ROADMAP-RESET.md`** (R0-R12; Faz 0-16
+tablosu `docs/Roadmap.md`'de tarihsel). R0 denetim döngüsü kapandı (`docs/audit/`); R1
+stabilizasyon (a)-(f) kapandı — K-080 veri sonu sabitleme, K-081 eşik yeniden ölçümü (45
+çekiliş, `oos_sharpe` 1,04 korundu), K-082 promotion zinciri + audit — (g) doküman senkronu
+bu güncellemeyle. **52 çekilişin hiçbiri kapıyı geçmedi**; bu kapının çalıştığının kanıtı.
+Mevcut eylem uzayında (long-only spot) araştırma kapalı (K-078); Hat 1 veri engelli (K-079).
+Host-1 K-069 penceresi (2026-09-17 → 09-25) sürüyor; canlı (R12) tetik bekliyor, hazırlık
+`docs/Faz-8-Hazirlik.md`.
 
 **2026-09-12 — vizyon v2 (K-048):** kapsam *multi-asset autonomous trading research &
 execution platform*'a genişledi. Çekirdek değişmedi; genişleyen şey bilgi kaynakları ve

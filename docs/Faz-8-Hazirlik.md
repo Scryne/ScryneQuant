@@ -152,6 +152,10 @@ değişir.
 
 ### 1.6 Shadow → live geçişi
 
+**Ön koşul (K-082, 2026-09-20):** stratejinin promotion kaydı zincirli ve global audit'e
+bağlı olmalı; `sq promotion onayla --audit` ve `live` açılışı bütünlük doğrulanmadan
+**çalışmaz** (fail closed). K-082 öncesi bir kayıt önce `sq promotion zincirle` ile göç edilir.
+
 Elle onay verildikten sonra, **aynı gün değil**, sırayla:
 
 1. İşlem yetkili **yeni** anahtar üretilir: spot işlem açık, çekim/transfer/margin/futures

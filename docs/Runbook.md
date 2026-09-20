@@ -56,6 +56,20 @@ tamamlanır.
 | `SEBEPSIZ_SAPMA` | model | kritik | Canlı referanstan ayrıştı ama geç bar, eksik adım, üyelik gecikmesi, geç türev girdisi, makro revizyonu **yok** | Sapma raporu `ilk_ayrisan_utc`; o adımın girdileri | Tek kod yolu (K-001) bozulmuş olabilir: dosya ana makinede `sq paper evren-sapma` ile yeniden ölçülür, ayrışan adım bar bar karşılaştırılır. Bulunana kadar koşunun sonuçları kanıt sayılmaz |
 | `SAPMA_OLCUMU_YOK` | model | uyarı | Son sapma ölçümü 36 saatten eski | `ScryneQuant-EvrenSapma` son çalışma; `runs\paper\<kosu>.sapma.log` | Elle: `tools\evren-sapma.ps1` |
 
+## Promotion kaydı ve audit bağı (K-082)
+
+`runs/promotion/<strateji>.json` zincir hash'li (`onceki_hash`/`satir_hash`) ve her satırı
+global audit defterine (`runs/audit.sqlite`, `OlayTuru.PROMOTION`) bağlı (`audit_hash`).
+`sq promotion degerlendir|onayla` `--audit` ile önce audit'e sonra dosyaya yazar.
+
+| Durum | Anlamı | Müdahale |
+| --- | --- | --- |
+| `sq promotion durum` → `K-082 öncesi biçim` | Kayıt zincirsiz (eski) | `sq promotion zincirle <strateji>` — içerik değişmez, hash'ler eklenir, satırlar audit'e `goc=true` ile yazılır; ikinci çalıştırma reddedilir. `sma_kesisim` 2026-09-20'de göç edildi (3 satır, son hash `e34640bd…`) |
+| `değiştirilmiş kayıt` / `onceki_hash uyuşmuyor` / `aşama alanı geçmişle uyuşmuyor` | Dosya kurcalanmış ya da satır eksik/yeniden sıralanmış | **Elle düzeltilmez.** `runs/yedek/` ve audit'teki `promotion` satırlarından sebep bulunur; kayıt yeniden üretilmeden strateji ilerletilemez |
+| `audit karşılığı yok` / `kısaltılmış ya da eski kopya` / `audit defterinin zinciri bozuk` | Dosya ile audit kopmuş | Aynı: sebep bulunana kadar fail closed |
+| Koşu olayı `promotion_okunamadi` | Gözlem/backtest koşusu promotion kaydını okuyamadı; koşu **sürüyor**, aşama `yok` sayıldı (bu modlar promotion'a bakmaz, K-035) | Kaydı incele; gözlem koşusu için aciliyet yok |
+| `paper`/`live` açılışı `PromotionHatasi` ile düşüyor | Promotion + audit doğrulanmadan bu modlar **açılmaz** (fail closed); `audit_yolu` verilmemişse de açılmaz | Önce kaydı/audit'i onar ya da göç et; kapıyı gevşetmek yok |
+
 ## Jev gölge koşusu (K-074) — ayrı süreç, emir yok
 
 `sq jev golge --kosu golge-<tarih>` kapanmış her `ok` 1h barda kanonik durum kurar, Jev'e sorar,

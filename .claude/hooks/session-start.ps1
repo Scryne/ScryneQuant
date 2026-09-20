@@ -79,8 +79,13 @@ if ($asama -eq 'uygulama') {
         # Tetiklemeli/kosullu fazlar siraya degil bir olaya bagli (Faz 8: promotion'u
         # gecen ilk strateji; Faz 13/15: acilma kosulu). Aktif faz onlar olamaz --
         # yoksa hook Faz 8'i "aktif" gosterip siradaki gercek isi (Faz 9) gizliyordu.
+        # Durum yalnizca UCUNCU sutundan okunur: satirin bitti-kriteri metninde gecen "(a) ✅"
+        # gibi isaretler satiri tamamlanmis gostermemeli (ROADMAP-RESET R1 boyle yazildi).
         $current = $rows |
-            Where-Object { $_ -notmatch '✅' -and $_ -notmatch '⛔' -and $_ -notmatch '\((tetiklemeli|koşullu)\)' } |
+            Where-Object {
+                $durum = ($_ -split '\|')[3]
+                $durum -notmatch '✅' -and $durum -notmatch '⛔' -and $_ -notmatch '\((tetiklemeli|koşullu)\)'
+            } |
             Select-Object -First 1
         if ($current) {
             $lines.Add("Roadmap: $total faz, aktif satır -> $current")

@@ -72,7 +72,7 @@ alan modelini mevcut dört tipin (`Enstruman`, `VeriSozlesmesi`, `SembolKurallar
 **Bugün hiçbir şey canlı parayla temas etmiyor ve edemiyor** — canlı host tanımsız, işlem
 anahtarı yok, `PaperMotoru` `live` reddediyor. "UNSAFE" sınıfı **boş**. Koşul değişince
 tehlikeli olacaklar (RISK): `AZALTAN_YONLER` yön bazlı (short açılırsa her kontrolü atlar);
-risk limitleri BTC'den kalibre, evrene tek eşik; promotion kaydı bütünlük korumasız JSON;
+risk limitleri BTC'den kalibre, evrene tek eşik; promotion kaydı bütünlük korumasız JSON (**2026-09-20 sonrası: K-082 ile promotion zinciri + audit bütünlüğü kapatıldı; bu satır denetim anının kaydıdır**);
 araştırma risk motorsuz; tek global maliyet modeli altcoinlerde iyimser.
 
 ## Ne gereksiz?

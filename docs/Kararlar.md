@@ -4090,10 +4090,14 @@ ama promotion olayları audit'e hiç yazılmıyordu.
 
 ### Göç
 
-`runs/promotion/sma_kesisim.json` (2 satır, `kalite_kontrol`, 2026-09-10) K-082 öncesi biçimde ve
-**yeniden yazılmadı**. `sq promotion durum/degerlendir` ve `paper` modlu açılış bu strateji için
-`sq promotion zincirle sma_kesisim` çalıştırılana kadar hata verir — bilerek (Scryne'ın adımı).
-Gözlem koşuları (host-1) etkilenmez.
+`runs/promotion/sma_kesisim.json` (3 satır, `kalite_kontrol`, 2026-09-10) K-082 öncesi biçimdeydi ve
+uygulama commit'inde **yeniden yazılmadı**; göç Scryne'ın kararıyla **2026-09-20'de yapıldı**
+(`sq promotion zincirle sma_kesisim`, gerçek `runs/audit.sqlite` ile): SHA `cbd7072c…` →
+`05201944…`, satır sayısı 3→3, `zaman_ms/asama/gecti/gerekce/onceki_asama/kanit` birebir, eklenen
+yalnız `onceki_hash/satir_hash/audit_hash`; `satir_hash`ler kopya üzerindeki ön doğrulamayla aynı
+(`940a5846, 067bf900, e34640bd` — deterministik); audit 1.091 → 1.094 satır (3 `promotion`,
+`goc=true`), audit zinciri sağlam; promotion+audit çapraz doğrulama geçti. Göç öncesi dosya ve
+audit kopyası `runs/yedek/promotion-goc-2026-09-20/`. Gözlem koşuları (host-1) etkilenmedi.
 
 ### Kanıt
 
