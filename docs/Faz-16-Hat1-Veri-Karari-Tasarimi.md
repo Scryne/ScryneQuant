@@ -184,3 +184,15 @@ Tasarım gereği C'nin verisi (mark 1h) indirilmeden önce iki sınır çözülm
 
 Bu iki karar verilmeden mark price indirilmedi, `mmr` tablosu kaydedilmedi, likidasyon
 sayısı üretilmedi.
+
+### K-066 eki uygulaması (2026-09-20)
+
+Scryne K-066'yı iki salt okunur uç için açtı (`Kararlar.md` K-066 Ek). Deneme: mevcut spot
+salt-okunur anahtar `commissionRate`/`leverageBracket` uçlarında **`-2015`** — vadeli okuma
+yetkisi yok. Yetkili anahtar üretimi Scryne'ın eylemi; araç hazır
+(`tools/faz16_vadeli_okuma.py`). Kaydedilen: likidasyon ücreti BTC/ETH `0.012500`
+(`exchangeInfo`, 07:07:59 UTC, SHA `926d6672…`, PIT = kayıt anı). Formül: metin kısmı
+provenance ile kayıtlı, görsel aktarılmadı. Durum: **A fee blocked · B MMR kademeleri blocked
+(likidasyon ücreti ✓, formül metni ✓ kısmen) · PIT MMR EMPTY · NON_PIT MMR EMPTY**.
+Ayrıntı: `docs/spikes/08-vadeli-tarife-kademe.md`, `docs/Faz-16-Hat1-Metodoloji-Denetimi.md`,
+`docs/Faz-16-Hat1-Fee-MMR-Erisilebilirlik.md`.

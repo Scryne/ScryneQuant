@@ -3149,6 +3149,18 @@ Bildirimsiz alarm, kimsenin bakmadığı bir dosyaya yazılmış alarmdır. ntfy
 istemeyen en basit kanal; bedeli konunun gizliliğe değil tahmin edilemezliğe dayanması — bu
 yüzden içerik sınırlandı.
 
+### Ek (2026-09-20, Scryne: "K-066: AÇ") — vadeli **salt okunur** anahtar, iki uç
+
+Hat 1 ikinci tavanının iki girdisi (VIP 0 USDT-M taker fee; C-isolated MMR kademeleri)
+anahtarsız hiçbir resmî kaynaktan doğrulanamadı (`docs/Faz-16-Hat1-Fee-MMR-Erisilebilirlik.md`).
+Ek kapsam: vadeli hesap için **salt okunur** API anahtarı; yetki yalnız `GET /fapi/v1/
+commissionRate` ve `GET /fapi/v1/leverageBracket`; işlem/emir **kapalı**, çekim **kapalı**,
+başka uç yok. Anahtar hosta konmaz (K-062/5 aynen); yalnız araştırma makinesinde, hiçbir
+çıktıya yazılmaz. Erişim ölçüm kapısı **değildir**: gelen kayıt tarihlidir, PIT sınırı kayıt
+anıdır (2020–2025 IS'e uygulanırsa `NON_PIT/leak_risk`, kapı dışı). Araç:
+`tools/faz16_vadeli_okuma.py`; kayıt `docs/spikes/08-vadeli-tarife-kademe.md`. Mevcut spot
+salt okunur anahtar bu uçlarda `-2015` verdi (yetki yok); yetkili anahtar Scryne'ın eylemi.
+
 ## K-067 — Jev'in genişleyen rolü: eleme ve **ileriye dönük** sınıflandırma; sinyal üretimi yok
 
 **Durum:** kabul · **Tarih:** 2026-09-17 · **Onay:** Scryne ("bu jev modelini de aktif olarak
