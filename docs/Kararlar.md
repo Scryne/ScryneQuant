@@ -4045,3 +4045,60 @@ yanlış-pozitifi **%4,2** (hedef %5). Engel ve A kararı (ölçülemeyen oynakl
 ### Değişmeyen
 
 `COKLU_TEST_ESIGI` 1,04; defter 52; R1(c) ölçüm artefaktları; strateji/risk/execution kodu.
+
+## K-082 — Promotion kaydı zincir hash'li ve audit'e bağlı; canlı/paper açılışı bütünlük ister
+
+**Durum:** kabul · **Tarih:** 2026-09-20 · **Onay:** Scryne (İz A P1/P2 talimatı) · **Tabi:**
+K-008/5, K-010, K-032, K-035, K-038, K-050 · **Kaynak:** `docs/audit/W2-Risk-Execution.md` B4,
+`docs/audit/IzA-CI-Kill-Promotion-Denetim.md` §3, `tests/unit/test_promotion_zinciri.py`
+
+### Bulgu
+
+`runs/promotion/<strateji>.json` düz JSON'du: satırlar arası hash yok, `yaz()` dosyayı baştan
+yazıyordu; `live/baslat.py` aşamaları buradan okuyup `RiskMotoru`'na veriyor ve `MOD_ESIGI["live"]`
+üçüncü adımda buna bakıyordu. `"asama": "live"` yazan biri (ya da bir hata) canlı modda
+promotion kapısını geçerdi. `risk/audit.py`de zincir kalıbı ve `OlayTuru.PROMOTION` tanımlıydı
+ama promotion olayları audit'e hiç yazılmıyordu.
+
+### Karar
+
+1. **P1 — kayıt zinciri.** `PromotionKaydi.gecmis`in her satırı `onceki_hash` + `satir_hash`
+   taşır. Kanonikleştirme `nesne_hash` (sort_keys, ensure_ascii=False, ayırıcısız) — audit ile
+   aynı; hash'e giren içerik = satır **eksi** `{onceki_hash, satir_hash, audit_hash}`, artı
+   stratejinin adı ve öncekinin hash'i; ilk satırın öncekisi `KOK_HASH` (audit ile ortak sabit).
+   `yukle()` zinciri baştan doğrular ve `asama == son geçilen satırın aşaması` ister. Eksik/
+   değiştirilmiş/yeniden sıralanmış satır, zincirsiz (K-082 öncesi) biçim, aşama uyuşmazlığı,
+   başka stratejiye taşınmış zincir → `PromotionHatasi`, **fail closed**. Sessiz geriye uyum
+   **yok**: eski kayıt `sq promotion zincirle <strateji>` ile açıkça göç ettirilir (içerik
+   değişmez, hash'ler eklenir, satırlar audit'e `goc=true` ile yazılır).
+2. **P2 — audit bağı.** Her promotion satırı (ilerleme, başarısız deneme, elle onay) global
+   audit defterine (`runs/audit.sqlite`, `OlayTuru.PROMOTION`, `sembol=""`, `zaman_ms` = satırın
+   zamanı) yazılır; audit satırının zincir hash'i promotion satırına `audit_hash` olarak döner,
+   audit gövdesi promotion `satir_hash`ini taşır (iki yönlü referans). Sıra: **önce audit, sonra
+   dosya** — arada ölen süreç audit'te olan/dosyada olmayan satır bırakır ve bu "kısaltılmış
+   dosya" olarak yakalanır; tersi sessiz olurdu. İkinci audit sistemi yok; koşu deposundaki
+   audit değil **global** dosya, çünkü promotion koşudan bağımsız.
+3. **Fail-closed sınırı moda bağlı** (`live/baslat.py::_promotion_asamalari`). `paper`/`live`
+   (`MOD_ESIGI` ≠ `YOK`) promotion'a **dayanır**: her kayıt zincir + audit çapraz doğrulamasından
+   geçmeden ve global audit verilmeden koşu **açılmaz**. `gozlem`/`backtest` promotion'a bakmaz
+   (K-035): bozuk ya da eski kayıt koşuyu durdurmaz, `PROMOTION_OKUNAMADI` olayı günlüğe düşer,
+   aşama `YOK` sayılır (bu modlarda eşik zaten `YOK` — gevşeme yok). Araştırma
+   (`RiskMotoru(mod="backtest")`) promotion dosyasına hiç dokunmaz.
+4. **Bilinen sınır:** son satırların silinmesi dosya içinden fark edilemez (zincir tutarlı
+   kalır); audit çapraz kontrolü yakalar. Dosyanın sahibi audit'i ve dosyayı birlikte baştan
+   yazabilir — audit.py'nin kendi sınırıyla aynı: sessiz kurcalama imkânsız, kasıtlı değil.
+
+### Göç
+
+`runs/promotion/sma_kesisim.json` (2 satır, `kalite_kontrol`, 2026-09-10) K-082 öncesi biçimde ve
+**yeniden yazılmadı**. `sq promotion durum/degerlendir` ve `paper` modlu açılış bu strateji için
+`sq promotion zincirle sma_kesisim` çalıştırılana kadar hata verir — bilerek (Scryne'ın adımı).
+Gözlem koşuları (host-1) etkilenmez.
+
+### Kanıt
+
+`tests/unit/test_promotion_zinciri.py` (28): zincir kuruluşu ve kanoniklik; 8 fail-closed vakası;
+audit iki yönlü referans, yalnız yeni satırların eklenmesi, audit'siz/başka-audit/bozuk-audit
+redleri, kısaltma; göç (içerik birebir, `goc=true`, ikinci göç red); açılış sınırı (gözlem açılır +
+olay, paper bozuk/audit'siz/karşılıksız açılmaz, doğrulanmış açılır, backtest dokunmaz); CLI
+`zincirle`/`durum`/`onayla`. Mevcut `test_promotion.py` (34) ve `test_risk_bypass.py` aynen geçiyor.

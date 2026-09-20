@@ -177,6 +177,11 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   ölçüldü, üçü de gerçekleşmemiş (tek yazıcı; audit 1.091 satır / eşik 10 M; `runs/`
   3,7 MB / eşik 5 GB; tek sembol). Şema dondurulmuş, `risk/audit.py`'nin SQLite şemasıyla
   hizalı tutuluyor ve testle korunuyor. Faz 8'e taşınan şey karar değil, bir sonraki ölçüm.
+- `src/scryne_quant/risk/promotion.py` — **promotion kaydı zincir hash'li ve audit'e bağlı
+  (K-082).** Her `gecmis` satırı `onceki_hash`/`satir_hash`/`audit_hash`; `yukle()` fail closed;
+  eski kayıt `sq promotion zincirle` ile açıkça göç eder (sessiz uyum yok); `degerlendir`/`onayla`
+  `--audit` (`runs/audit.sqlite`, `OlayTuru.PROMOTION`). `paper`/`live` açılışı bütünlük ister,
+  `gozlem`/`backtest` bakmaz (K-035). `runs/promotion/sma_kesisim.json` **göç edilmedi**.
 - `src/scryne_quant/oms/pozisyon.py` — **pozisyon mutabakatı** (K-046). Değişmez açılış
   çıpası + defter akışı vs borsa bakiyesi; açıklanamayan farkta koşu durur. `sq testnet
   pozisyon` ile okunur. Faz 8'in "açıklanamayan pozisyon farkı: sıfır" kriteri buraya

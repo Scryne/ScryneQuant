@@ -290,6 +290,10 @@ class TestPaper:
             "--depo", str(dolu_depo),
             "--kok", str(kok),
             "--pencere", "200",
+            # Gerçek `runs/promotion`a bakmasın: oradaki kayıt (ör. K-082 öncesi biçim) gözlem
+            # koşusuna `promotion_okunamadi` olayı düşürür ve bu testleri ortama bağlardı.
+            "--promotion-kok", str(kok / "promotion"),
+            "--audit", str(kok / "audit.sqlite"),
             "--ag-yok",
             *ek,
         )

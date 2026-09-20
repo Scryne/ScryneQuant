@@ -22,6 +22,19 @@ stratejinin execution'a ulaşmasını engeller.
    (her şey mümkün) ama `tests/unit/test_promotion.py` `risk/` içinde bu fonksiyonu
    çağıran başka bir yer olmadığını statik olarak kontrol ediyor.
 
+**Kayıt zinciri ve audit bağı (K-082, İz A P1/P2).** `PromotionKaydi.gecmis`in her satırı
+`onceki_hash` + `satir_hash` taşır (audit defterinin kalıbı: içerik + önceki satırın hash'i,
+`nesne_hash` ile kanonik JSON; ilk satırın öncekisi `KOK_HASH`). Hash'e giren içerik satırın
+kendisi **eksi** `onceki_hash`/`satir_hash`/`audit_hash` alanları, artı stratejinin adı (bir
+stratejinin zinciri başka bir dosyaya taşınamaz). `PromotionKaydi.yukle()` zinciri baştan
+doğrular ve `asama`nın son geçilen satırla tutarlı olmasını ister; eksik/değişmiş/yeniden
+sıralanmış satır ya da zincirsiz (K-082 öncesi) biçim → `PromotionHatasi`, **fail closed**.
+Eski kayıt sessizce kabul edilmez: `PromotionDefteri.zincirle()` açık göçtür. Her satır ayrıca
+audit defterine (`runs/audit.sqlite`, `OlayTuru.PROMOTION`) yazılır; audit satırının hash'i
+promotion satırına `audit_hash` olarak döner, audit gövdesi promotion `satir_hash`ini taşır —
+iki yönlü referans. Son satırların silinmesi (kısaltma) dosya içinden fark edilemez; onu
+audit çapraz kontrolü yakalar (`audit_ile_dogrula`).
+
 **`risk/` neden `research/`i import etmiyor.** Canlı karar yolunun araştırma koduna
 bağımlı olması, bir deney betiğindeki değişikliğin canlı davranışı etkileyebilmesi demek.
 Bu yüzden kapı sonucu buraya **veri olarak** geliyor (`Kanit.kapi_sonucu`); değerlendirmeyi
@@ -36,7 +49,13 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Final
 
+from scryne_quant.common.hash import nesne_hash
 from scryne_quant.common.zaman import simdi_ms, utc_str
+from scryne_quant.risk.audit import KOK_HASH, Defter, Olay, OlayTuru
+
+#: Zincir hash'ine **girmeyen** alanlar: hash'in kendisi ve audit referansı. Kanonikleştirme
+#: `nesne_hash` (sort_keys, ensure_ascii=False, ayırıcısız) — audit ile aynı.
+HASH_DISI: Final[frozenset[str]] = frozenset({"onceki_hash", "satir_hash", "audit_hash"})
 
 
 class Asama(StrEnum):
@@ -374,6 +393,49 @@ def yeterli_mi(asama: Asama, gereken: Asama) -> bool:
     return SIRA.index(asama) >= SIRA.index(gereken)
 
 
+def satir_hashi(strateji: str, satir: dict[str, Any], onceki_hash: str) -> str:
+    """Bir geçmiş satırının zincir hash'i: kanonik içerik + strateji + öncekinin hash'i."""
+    icerik = {k: v for k, v in satir.items() if k not in HASH_DISI}
+    return nesne_hash({"strateji": strateji, "satir": icerik, "onceki": onceki_hash})
+
+
+def zinciri_dogrula(strateji: str, gecmis: list[dict[str, Any]]) -> str:
+    """Zinciri baştan yeniden hesaplar; kırıksa `PromotionHatasi`. Döner: son satırın hash'i.
+
+    Yakaladıkları: hash alanı olmayan satır (K-082 öncesi biçim), yanlış `onceki_hash`
+    (eksik/yeniden sıralanmış satır), içerik değişikliği (`satir_hash` uyuşmazlığı). Kısaltmayı
+    (son satırların silinmesi) yakalayamaz — o `audit_ile_dogrula`nın işi.
+    """
+    onceki = KOK_HASH
+    for i, satir in enumerate(gecmis):
+        if "onceki_hash" not in satir or "satir_hash" not in satir:
+            raise PromotionHatasi(
+                f"{strateji}: {i}. geçmiş satırında zincir hash'i yok — K-082 öncesi biçim; "
+                "`sq promotion zincirle` ile açıkça göç ettirilmeli, sessiz kabul yok"
+            )
+        if satir["onceki_hash"] != onceki:
+            raise PromotionHatasi(
+                f"{strateji}: {i}. satırın onceki_hash'i zincirle uyuşmuyor — eksik ya da "
+                "yeniden sıralanmış satır (fail closed)"
+            )
+        beklenen = satir_hashi(strateji, satir, onceki)
+        if satir["satir_hash"] != beklenen:
+            raise PromotionHatasi(
+                f"{strateji}: {i}. satırın içeriği hash'iyle uyuşmuyor — değiştirilmiş kayıt "
+                "(fail closed)"
+            )
+        onceki = beklenen
+    return onceki
+
+
+def beklenen_asama(gecmis: list[dict[str, Any]]) -> Asama:
+    """Geçmişten türeyen aşama: son **geçilen** satırın aşaması; hiç yoksa `YOK`."""
+    for satir in reversed(gecmis):
+        if satir.get("gecti") is True:
+            return Asama(satir["asama"])
+    return Asama.YOK
+
+
 @dataclass
 class PromotionKaydi:
     """Bir stratejinin promotion geçmişi. Append-only: aşama kaydı silinmez."""
@@ -438,15 +500,57 @@ class PromotionKaydi:
         return list(SIRA[i + 1 :])
 
     def _kaydet(self, sonuc: AsamaSonucu, kanit: Kanit) -> None:
-        self.gecmis.append(
-            {
-                "zaman_ms": simdi_ms(),
-                "zaman_utc": utc_str(simdi_ms()),
-                "onceki_asama": str(self.asama),
-                **sonuc.sozluk(),
-                "kanit": kanit.sozluk(),
-            }
-        )
+        an = simdi_ms()
+        satir: dict[str, Any] = {
+            "zaman_ms": an,
+            "zaman_utc": utc_str(an),
+            "onceki_asama": str(self.asama),
+            **sonuc.sozluk(),
+            "kanit": kanit.sozluk(),
+        }
+        onceki = self.gecmis[-1]["satir_hash"] if self.gecmis else KOK_HASH
+        satir["onceki_hash"] = onceki
+        satir["satir_hash"] = satir_hashi(self.strateji, satir, onceki)
+        self.gecmis.append(satir)
+
+    @property
+    def son_hash(self) -> str:
+        """Zincirin ucu; boş geçmişte `KOK_HASH`."""
+        return self.gecmis[-1]["satir_hash"] if self.gecmis else KOK_HASH
+
+    def audit_ile_dogrula(self, audit: Defter) -> None:
+        """Her satırın audit defterinde karşılığı var mı (K-082 P2)? Yoksa `PromotionHatasi`.
+
+        Audit'in kendi zinciri de doğrulanır. Kısaltılmış bir dosya (son satırlar silinmiş)
+        burada yakalanır: audit'te bu stratejiye ait, dosyada olmayan bir satır kalır.
+        """
+        if not audit.dogrula():
+            raise PromotionHatasi("audit defterinin zinciri bozuk — promotion doğrulanamaz")
+        olaylar = [
+            o
+            for o in audit.oku(tur=OlayTuru.PROMOTION)  # type: ignore[call-arg]
+            if o["govde"].get("strateji") == self.strateji
+        ]
+        auditte = {o["satir_hash"]: o for o in olaylar}
+        for i, satir in enumerate(self.gecmis):
+            ref = satir.get("audit_hash")
+            if not ref:
+                raise PromotionHatasi(
+                    f"{self.strateji}: {i}. satır audit defterine yazılmamış (audit_hash yok)"
+                )
+            olay = auditte.get(ref)
+            if olay is None or olay["govde"].get("satir_hash") != satir["satir_hash"]:
+                raise PromotionHatasi(
+                    f"{self.strateji}: {i}. satırın audit karşılığı yok ya da uyuşmuyor "
+                    f"(audit_hash {ref[:12]}…)"
+                )
+        dosyada = {s["satir_hash"] for s in self.gecmis}
+        fazla = [o for o in olaylar if o["govde"].get("satir_hash") not in dosyada]
+        if fazla:
+            raise PromotionHatasi(
+                f"{self.strateji}: audit'te {len(fazla)} promotion satırı var, dosyada yok — "
+                "kayıt kısaltılmış ya da eski bir kopya (fail closed)"
+            )
 
     def sozluk(self) -> dict[str, Any]:
         return {
@@ -459,11 +563,18 @@ class PromotionKaydi:
 
     @classmethod
     def yukle(cls, kayit: dict[str, Any]) -> PromotionKaydi:
-        return cls(
-            strateji=str(kayit["strateji"]),
-            asama=Asama(kayit.get("asama", Asama.YOK)),
-            gecmis=list(kayit.get("gecmis", [])),
-        )
+        """Kaydı yükler; zincir **tam** doğrulanmadan kabul etmez (K-082 P1, fail closed)."""
+        strateji = str(kayit["strateji"])
+        gecmis = list(kayit.get("gecmis", []))
+        zinciri_dogrula(strateji, gecmis)
+        asama = Asama(kayit.get("asama", Asama.YOK))
+        beklenen = beklenen_asama(gecmis)
+        if asama is not beklenen:
+            raise PromotionHatasi(
+                f"{strateji}: dosyadaki aşama {asama} ama geçmiş {beklenen} diyor — "
+                "aşama alanı geçmişle uyuşmuyor (fail closed)"
+            )
+        return cls(strateji=strateji, asama=asama, gecmis=gecmis)
 
 
 class PromotionDefteri:
@@ -482,31 +593,103 @@ class PromotionDefteri:
     def yol(self, strateji: str) -> Path:
         return self.kok / f"{strateji}.json"
 
-    def oku(self, strateji: str) -> PromotionKaydi:
+    def oku(self, strateji: str, *, audit: Defter | None = None) -> PromotionKaydi:
         """Kaydı okur; yoksa `YOK` aşamasında yeni bir kayıt döndürür.
 
         Eksik dosyanın "hiçbir aşama geçilmemiş" anlamına gelmesi güvenli yön: kaydı
-        silmek bir stratejiyi live'a değil başa götürür.
+        silmek bir stratejiyi live'a değil başa götürür. Zincir her okumada doğrulanır
+        (`yukle`); `audit` verilirse audit çapraz kontrolü de yapılır (P2).
         """
         p = self.yol(strateji)
         if not p.exists():
             return PromotionKaydi(strateji=strateji)
-        return PromotionKaydi.yukle(json.loads(p.read_text(encoding="utf-8")))
+        kayit = PromotionKaydi.yukle(json.loads(p.read_text(encoding="utf-8")))
+        if audit is not None:
+            kayit.audit_ile_dogrula(audit)
+        return kayit
 
-    def yaz(self, kayit: PromotionKaydi) -> Path:
+    def yaz(self, kayit: PromotionKaydi, *, audit: Defter | None = None) -> Path:
+        """Kaydı yazar. `audit` verilirse audit'e yazılmamış her satır önce oraya gider (P2).
+
+        Sıra bir karardır: önce audit (append-only, zincirli), sonra JSON. Arada ölen bir
+        süreç audit'te olan ama dosyada olmayan bir satır bırakır — `audit_ile_dogrula` bunu
+        "dosya kısaltılmış" diye yakalar ve kayıt yeniden yazılana kadar fail closed kalır.
+        Tersi sıra, audit'i olmayan bir promotion satırı bırakırdı: sessiz olan o.
+        """
         p = self.yol(kayit.strateji)
+        if audit is not None:
+            for satir in kayit.gecmis:
+                if satir.get("audit_hash"):
+                    continue
+                satir["audit_hash"] = audit.yaz(_promotion_olayi(kayit, satir, p))
+        self._dosyaya_yaz(p, kayit)
+        return p
+
+    @staticmethod
+    def _dosyaya_yaz(p: Path, kayit: PromotionKaydi) -> None:
         p.write_text(
             json.dumps(kayit.sozluk(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
             newline="\n",
         )
-        return p
 
-    def hepsi(self) -> list[PromotionKaydi]:
-        return [
-            PromotionKaydi.yukle(json.loads(p.read_text(encoding="utf-8")))
-            for p in sorted(self.kok.glob("*.json"))
-        ]
+    def hepsi(self, *, audit: Defter | None = None) -> list[PromotionKaydi]:
+        """Bütün kayıtlar, ad sırasıyla; her biri zincir (ve audit) doğrulamasından geçer."""
+        return [self.oku(p.stem, audit=audit) for p in sorted(self.kok.glob("*.json"))]
+
+    def zincirle(self, strateji: str, *, audit: Defter) -> PromotionKaydi:
+        """K-082 öncesi (zincirsiz) kaydı **açıkça** göç ettirir: içerik değişmez, hash'ler
+        eklenir, her satır audit'e `goc=True` ile yazılır. Zincirli kayıtta hata."""
+        p = self.yol(strateji)
+        if not p.exists():
+            raise PromotionHatasi(f"{strateji}: kayıt yok, göç edilecek bir şey yok")
+        ham = json.loads(p.read_text(encoding="utf-8"))
+        gecmis = list(ham.get("gecmis", []))
+        if any("satir_hash" in satir for satir in gecmis):
+            raise PromotionHatasi(f"{strateji}: kayıt zaten zincirli, göç gerekmiyor")
+        onceki = KOK_HASH
+        for satir in gecmis:
+            satir.pop("audit_hash", None)
+            satir["onceki_hash"] = onceki
+            satir["satir_hash"] = satir_hashi(strateji, satir, onceki)
+            onceki = satir["satir_hash"]
+        kayit = PromotionKaydi(
+            strateji=strateji, asama=Asama(ham.get("asama", Asama.YOK)), gecmis=gecmis
+        )
+        if kayit.asama is not beklenen_asama(gecmis):
+            raise PromotionHatasi(
+                f"{strateji}: eski kaydın aşaması geçmişiyle uyuşmuyor; göç edilmez"
+            )
+        for satir in kayit.gecmis:
+            satir["audit_hash"] = audit.yaz(_promotion_olayi(kayit, satir, p, goc=True))
+        self._dosyaya_yaz(p, kayit)
+        return kayit
+
+
+def _promotion_olayi(
+    kayit: PromotionKaydi, satir: dict[str, Any], yol: Path, *, goc: bool = False
+) -> Olay:
+    """Bir promotion satırının audit karşılığı. `zaman_ms` satırın kendi zamanı (duvar saati
+    audit'in `yazim_ms`inde); `sembol` boş — promotion enstrümana değil stratejiye ait."""
+    govde: dict[str, Any] = {
+        "strateji": kayit.strateji,
+        "satir_hash": satir["satir_hash"],
+        "onceki_hash": satir["onceki_hash"],
+        "asama": satir["asama"],
+        "gecti": satir["gecti"],
+        "gerekce": satir["gerekce"],
+        "onceki_asama": satir["onceki_asama"],
+        "kanit": satir["kanit"],
+    }
+    if goc:
+        govde["goc"] = True
+    return Olay(
+        tur=OlayTuru.PROMOTION,
+        zaman_ms=int(satir["zaman_ms"]),
+        sembol="",
+        govde=govde,
+        durum={"asama_sonrasi": str(kayit.asama), "kayit": str(yol)},
+    )
 
 
 __all__ = [
@@ -520,6 +703,9 @@ __all__ = [
     "PromotionDefteri",
     "PromotionHatasi",
     "PromotionKaydi",
+    "beklenen_asama",
+    "satir_hashi",
     "sonraki",
     "yeterli_mi",
+    "zinciri_dogrula",
 ]

@@ -136,6 +136,8 @@ VARSAYILAN_PAPER_KOKU = Path("runs/paper")
 
 #: Audit defterinin varsayılan yeri (`.gitignore`'da).
 VARSAYILAN_AUDIT = Path("runs/audit.sqlite")
+#: Promotion komutlarının global audit defteri (K-082 P2): her satır önce buraya yazılır.
+AuditYolu = Annotated[Path, typer.Option("--audit", help="Global audit defteri (K-082 P2).")]
 
 Secim = Annotated[
     str,
@@ -2266,6 +2268,7 @@ def promotion_degerlendir(
         Path | None, typer.Option("--kapilar", help="`sq lab kapilar` deney kaydı.")
     ] = None,
     kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
+    audit: AuditYolu = VARSAYILAN_AUDIT,
     json_cikti: JsonCikti = False,
 ) -> None:
     """Zinciri kanıtın götürdüğü yere kadar ilerletir. (K-010)
@@ -2274,17 +2277,20 @@ def promotion_degerlendir(
     `elle_onay` aşamasında zincir durur — o adım makine tarafından geçilemez.
     """
     defter = promotion_mod.PromotionDefteri(kok)
-    kayit = defter.oku(strateji)
-    kanit = _kanit_kur(sonuc, kapilar, strateji)
+    with SqliteDefter(audit) as audit_defteri:
+        # Kayıt zincirle **ve** audit'le doğrulanmadan ilerletilmez; her yeni satır önce
+        # audit'e, sonra dosyaya (K-082 P1/P2).
+        kayit = defter.oku(strateji, audit=audit_defteri)
+        kanit = _kanit_kur(sonuc, kapilar, strateji)
 
-    adimlar: list[dict[str, Any]] = []
-    while True:
-        onceki = kayit.asama
-        sonuc_asama = kayit.ilerlet(kanit)
-        adimlar.append(sonuc_asama.sozluk())
-        if kayit.asama is onceki:
-            break
-    yol = defter.yaz(kayit)
+        adimlar: list[dict[str, Any]] = []
+        while True:
+            onceki = kayit.asama
+            sonuc_asama = kayit.ilerlet(kanit)
+            adimlar.append(sonuc_asama.sozluk())
+            if kayit.asama is onceki:
+                break
+        yol = defter.yaz(kayit, audit=audit_defteri)
 
     if json_cikti:
         _yaz_json({"kayit": kayit.sozluk(), "adimlar": adimlar, "yol": str(yol)})
@@ -2308,15 +2314,40 @@ def promotion_onayla(
     strateji: Annotated[str, typer.Argument()],
     not_metni: Annotated[str, typer.Option("--not", help="Onay gerekçesi (≥10 karakter).")],
     kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
+    audit: AuditYolu = VARSAYILAN_AUDIT,
 ) -> None:
     """K-010'un kaldırılamaz elle onayı. Yalnızca `live_adayi` aşamasında verilebilir."""
     defter = promotion_mod.PromotionDefteri(kok)
-    kayit = defter.oku(strateji)
-    sonuc = kayit.elle_onayla(not_metni)
-    yol = defter.yaz(kayit)
+    with SqliteDefter(audit) as audit_defteri:
+        kayit = defter.oku(strateji, audit=audit_defteri)
+        sonuc = kayit.elle_onayla(not_metni)
+        yol = defter.yaz(kayit, audit=audit_defteri)
     typer.secho(f"{strateji}: {sonuc.gerekce}", fg=typer.colors.GREEN)
     typer.echo(f"  aşama: {kayit.asama}")
     typer.echo(f"  kayıt: {yol}")
+
+
+@promotion_app.command("zincirle")
+def promotion_zincirle(
+    strateji: Annotated[str, typer.Argument()],
+    kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
+    audit: AuditYolu = VARSAYILAN_AUDIT,
+) -> None:
+    """K-082 öncesi (zincirsiz) promotion kaydını **açıkça** göç ettirir.
+
+    İçerik değişmez; her satıra `onceki_hash`/`satir_hash` eklenir ve satırlar audit'e
+    `goc=true` ile yazılır. Zincirsiz kayıt sessizce kabul edilmediği için bu komut
+    çalıştırılana kadar o strateji `sq promotion durum/degerlendir` ve `paper` açılışında
+    hata verir — bilerek.
+    """
+    defter = promotion_mod.PromotionDefteri(kok)
+    with SqliteDefter(audit) as audit_defteri:
+        kayit = defter.zincirle(strateji, audit=audit_defteri)
+    typer.secho(
+        f"{strateji}: {len(kayit.gecmis)} satır zincirlendi ve audit'e yazıldı (goc=true)",
+        fg=typer.colors.GREEN,
+    )
+    typer.echo(f"  aşama: {kayit.asama}  son hash: {kayit.son_hash[:16]}…")
 
 
 def _sar(metin: str, genislik: int) -> list[str]:
@@ -2371,6 +2402,10 @@ def paper_baslat(
     ),
     depo: Depo = VARSAYILAN_DEPO,
     kapasite: Annotated[int, typer.Option("--pencere", help="Kayan pencere bar sayısı.")] = 1000,
+    promotion_kok: Annotated[
+        Path, typer.Option("--promotion-kok", help="Promotion kayıtları dizini (K-082).")
+    ] = VARSAYILAN_KOSU_KOKU / "promotion",
+    audit: AuditYolu = VARSAYILAN_AUDIT,
     ag: Annotated[
         bool, typer.Option("--ag/--ag-yok", help="Borsaya bağlan. Kapalıysa yalnızca kurar.")
     ] = True,
@@ -2418,7 +2453,8 @@ def paper_baslat(
         kosu_yolu=_paper_yolu(kosu_adi, kok),
         depo_kok=depo,
         adaptor=adaptor,
-        promotion_kok=VARSAYILAN_KOSU_KOKU / "promotion",
+        promotion_kok=promotion_kok,
+        audit_yolu=audit,
         kapasite=kapasite,
         web_kok=web,
     )

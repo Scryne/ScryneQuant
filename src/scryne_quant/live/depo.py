@@ -72,6 +72,9 @@ class KosuOlayi(StrEnum):
     """Akış geri geldi ve eksik barlar tamamlandı (resync)."""
 
     TEMIZ_KAPANMADI = "temiz_kapanmadi"
+    PROMOTION_OKUNAMADI = "promotion_okunamadi"
+    """Promotion kaydı zincir doğrulamasından geçmedi; koşunun modu promotion'a
+    dayanmadığı için (gözlem/backtest, K-035) koşu sürüyor, aşama `YOK` sayıldı (K-082)."""
     """Önceki oturum `durdu` satırını yazamadan öldü: çökme, elektrik kesintisi, sert kill.
 
     **Bu olay geriye dönük yazılır** — süreç ölürken bir şey yazamaz, dolayısıyla kaydı bir

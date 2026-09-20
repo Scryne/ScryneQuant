@@ -43,7 +43,12 @@ from scryne_quant.live.toparlanma import ToparlanmaSonucu, toparlan
 from scryne_quant.risk.audit import SqliteDefter
 from scryne_quant.risk.limitler import RiskLimitleri
 from scryne_quant.risk.motor import RiskMotoru
-from scryne_quant.risk.promotion import PromotionDefteri
+from scryne_quant.risk.promotion import (
+    MOD_ESIGI,
+    Asama,
+    PromotionDefteri,
+    PromotionHatasi,
+)
 from scryne_quant.strategy.temel import Strateji
 
 
@@ -157,6 +162,46 @@ def isinma_barlari(
     return barlar[-kapasite:]
 
 
+def _promotion_asamalari(
+    mod: str, promotion_kok: Path | None, audit_yolu: Path | None, depo: KosuDeposu
+) -> dict[str, Asama]:
+    """Promotion aşamalarını yükler; bütünlük kuralı **moda** bağlı (K-082 P2).
+
+    `paper`/`live` promotion'a **dayanır** (`MOD_ESIGI` ≠ `YOK`): her kayıt zincir + audit
+    çapraz doğrulamasından geçmek zorunda; global audit defteri verilmemişse ya da tek bir
+    kayıt doğrulanamıyorsa koşu **açılmaz** (fail closed). `gozlem`/`backtest` promotion'a
+    bakmaz (K-035): bozuk ya da K-082 öncesi bir kayıt bu koşuları durdurmaz — okunamayan
+    kayıt koşu günlüğüne yazılır ve aşama `YOK` sayılır; aşama `YOK` bu modlarda zaten
+    eşiğin kendisi, yani gevşeme yok.
+    """
+    if promotion_kok is None or not promotion_kok.is_dir():
+        return {}
+    defter = PromotionDefteri(promotion_kok)
+    gerekli = MOD_ESIGI[mod] is not Asama.YOK
+    if gerekli:
+        if audit_yolu is None:
+            raise PromotionHatasi(
+                f"{mod!r} modu promotion'a dayanır; audit defteri olmadan bütünlük "
+                "doğrulanamaz — `audit_yolu` verilmeli (K-082 P2)"
+            )
+        with SqliteDefter(audit_yolu) as audit:
+            return {k.strateji: k.asama for k in defter.hepsi(audit=audit)}
+    asamalar: dict[str, Asama] = {}
+    for yol in sorted(promotion_kok.glob("*.json")):
+        try:
+            k = defter.oku(yol.stem)
+        except PromotionHatasi as hata:
+            depo.olay_yaz(
+                KosuOlayi.PROMOTION_OKUNAMADI,
+                bar_ms=None,
+                ayrinti={"strateji": yol.stem, "hata": str(hata), "mod": mod},
+            )
+            asamalar[yol.stem] = Asama.YOK
+        else:
+            asamalar[k.strateji] = k.asama
+    return asamalar
+
+
 def kur(
     *,
     kimlik: KosuKimligi,
@@ -167,6 +212,7 @@ def kur(
     depo_kok: Path,
     adaptor: BinanceAdaptoru | None = None,
     promotion_kok: Path | None = None,
+    audit_yolu: Path | None = None,
     kapasite: int = VARSAYILAN_KAPASITE,
     azami_veri_yasi_ms: int | None = None,
     web_kok: Path | None = None,
@@ -189,9 +235,7 @@ def kur(
     # yaşıyor, yani koşunun kopyası kararlarının da kopyası (K-034).
     defter = SqliteDefter(kosu_yolu)
 
-    asamalar = {}
-    if promotion_kok is not None and promotion_kok.is_dir():
-        asamalar = {k.strateji: k.asama for k in PromotionDefteri(promotion_kok).hepsi()}
+    asamalar = _promotion_asamalari(kimlik.mod, promotion_kok, audit_yolu, depo)
 
     risk = RiskMotoru(limitler, kimlik.timeframe, mod=kimlik.mod, defter=defter, asamalar=asamalar)
     motor_kw: dict[str, Any] = {"kapasite": kapasite}
