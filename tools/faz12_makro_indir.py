@@ -35,6 +35,12 @@ KOK = Path(__file__).resolve().parent.parent
 DEPO = KOK / "data" / "makro"
 UC = alfred.UC
 SERILER = ("VIXCLS", "DGS10", "T10Y2Y", "DTWEXBGS", "NFCI", "BAMLH0A0HYM2")
+#: Araştırma programı dışı ek seriler (Hat 1 B-5 benchmark, veri kararı A, 2026-09-20):
+#: 3 aylık hazine bonosu ikincil piyasa oranı (discount basis, günlük). `makro.SERILER`
+#: program sözlüğüne **girmez** — o sözlük evren koşularının alanlarını ve koşu kimliğini
+#: belirler (K-051/2); benchmark bir tavan girdisidir. Yalnız `--ek` ile iner; varsayılan
+#: çağrı program serilerini olduğu gibi bırakır.
+EK_SERILER = ("DTB3",)
 GOZLEM_BASI = "2017-01-01"
 REALTIME_BASI_YIL = 2017
 
@@ -75,6 +81,11 @@ def seri(sid: str, anahtar: str) -> dict:
 
 def main() -> int:
     anahtar = _anahtar()
+    if "--ek" in sys.argv[1:]:
+        # Yalnız ek seriler; program serilerinin dosyalarına ve `_ozet.json`a dokunmaz.
+        for sid in EK_SERILER:
+            print(json.dumps(seri(sid, anahtar), ensure_ascii=False), flush=True)
+        return 0
     ozet = []
     for sid in SERILER:
         s = seri(sid, anahtar)
