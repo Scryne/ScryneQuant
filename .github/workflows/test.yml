@@ -8,6 +8,12 @@
 #
 # İz A (2026-09-20, ROADMAP-RESET R1 sonrası):
 # - `-rs`: skip'ler adıyla listelenir. Sessiz başarı yok — atlanan bir test "geçti" görünmez.
+# - `reproducibility` adımı: kayıt → depo uzat → `sq lab dogrula` red → `--geri-sar` → yeniden
+#   üretim → `yenile`, bağımsız Decimal referansları ve K-081 bekçisi (git'teki ölçüm fotoğrafı +
+#   defter). Girdisi **sentetik ve deterministik** (`tests/conftest.py::bar_uret`, fixture'lar);
+#   gerçek deney kayıtları (`runs/`, gitignore) CI'ya girmez ve girmemeli: CI mekanizmanın
+#   çalıştığını kanıtlar, gerçek kayıtların bugünkü durumunu değil (o, araştırma ortamının işi:
+#   `tools/r1b_kayit_durumu.py`).
 # - `kill-switch (windows)`: K-065'in süreç adımı Windows API'si (NtSuspendProcess,
 #   TerminateProcess) ister; `tests/unit/test_kill_sureci.py::TestDonmusTrader` yalnız burada
 #   koşar, mock yok. Linux işinde aynı dosyanın platform bağımsız testleri koşar, iki süreç testi
@@ -38,6 +44,19 @@ jobs:
       # düşerse günlükte "leakage" satırı görünür, 1.500 testin arasında kaybolmaz.
       - name: leakage invariant (jev canonical state, byte-identical)
         run: uv run pytest tests/unit/test_jev_durum.py tests/unit/test_jev_izolasyon.py -q -rs -p no:cacheprovider
+      # Yeniden üretim mekanizması ayrıca ve adıyla (İz A1): düşerse "reproducibility" satırı
+      # görünür. Sentetik veri; gerçek kayıt yok.
+      - name: reproducibility (record -> dogrula -> geri-sar -> yenile; references; K-081 guard)
+        run: >-
+          uv run pytest
+          tests/unit/test_geri_sarim.py
+          tests/unit/test_backtest_referans.py
+          tests/unit/test_coklu_referans.py
+          tests/unit/test_depo_idempotency.py
+          tests/unit/test_depo_surecler_arasi.py
+          tests/unit/test_coklu_test.py
+          tests/unit/test_coklu_test_fotograf.py
+          -q -rs -p no:cacheprovider
       # Kill switch'in platform bağımsız yarısı Linux'ta; süreç testleri adıyla skip.
       - name: kill-switch (file/flag/report half; process tests skip here by name)
         run: uv run pytest tests/unit/test_kill_sureci.py -q -rs -p no:cacheprovider
