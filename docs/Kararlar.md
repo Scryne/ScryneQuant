@@ -3823,3 +3823,34 @@ gösterilsin. Ölçüldü.
 Seçici değil, kaynak: "gate seviyesine ulaşabilecek yeni alpha edge nereden üretilebilir?"
 Önce araştırma uzayı haritalanır (`docs/Alpha-Discovery-Gap-Audit.md`), sonra program
 açılır (K-051). Bu karar hiçbir programı açmıyor.
+
+## K-078 — Alpha Discovery Gap Audit ve iki Adım 0 ölçümü: Hat 2 kapandı, Hat 1 ikinci tavana uygun (bilgilendirici)
+
+**Durum:** kabul (bilgilendirici; hiçbir kapsam, kapı ya da karar değişmedi) · **Tarih:**
+2026-09-20 · **Onay:** Scryne · **Tabi:** K-045, K-053, K-068, K-077 (aynen); K-008, K-033,
+K-046, K-057 (açılmadı) · **Kaynak:** `docs/Alpha-Discovery-Gap-Audit.md`,
+`docs/Faz-16-Hat1-Carry-Tavan-Olcumu.md`, `docs/Faz-16-Hat2-Funding-Uzlasma-Olcumu.md`,
+`tools/faz16_carry_tavan.py`, `tools/faz16_funding_uzlasma.py`, `runs/faz16/carry_tavan.json`,
+`runs/faz16/funding_uzlasma.json`
+
+### Kayıt
+
+1. **Yapısal bulgu (korunur):** defterdeki 52 çekilişin 52'si long-only spot
+   (`strategy/sinyal.py::Yon`, `target_exposure ≤ 1`). K-077'nin "düşen rejimde 17 aileden
+   0 pozitif" sonucu alpha zayıflığı olarak *değil*, **mevcut eylem uzayının yapısal sınırı**
+   olarak okunur. Fiyat geçmişinden türeyen yönlü TA / kesitsel / rejim / seçim / Jev hattı
+   kapalıdır ve yeniden açılmaz. Açık uzaylar: eylem uzayı (short/vadeli bacak, delta-nötr
+   carry) ve veri sınıfı (haber, on-chain, ikinci varlık sınıfı — veri yok).
+2. **Hat 2 (funding uzlaşma anı mikroyapısı): CLOSE.** BTC 1m, IS 2023-08 → 2025-02, 1.688
+   olay, önceki ödemenin işaretine koşullu; en iyi bacak +0,9 bps, maliyet 30,6 bps, net
+   −29,7 bps; 32 üçlü plaseboda p = 0,156. Çapa/pencere/koşullama değiştirilerek tekrar
+   ölçülmez (M-1 kuralı).
+3. **Hat 1 (delta-nötr carry, ideal tavan): FURTHER-RESEARCH-ELIGIBLE — ekonomik edge
+   değil.** Spot long + perp short, `r_t = funding_t − Δbasis_t`, maliyet/marjin/likidasyon
+   sıfır, IS 2020-01 → 2025-02: BTC +%14,2/yıl Sharpe 9,5; havuz (28) +%13,8 / 6,6.
+   Sayıların okunuşu: BTC ödemelerinin %42'si Binance faiz tabanı (0,01 %/8h = %10,95/yıl);
+   Sharpe carry için yanlış risk ölçüsü (risk kuyrukta); 2022'de ETH 0,66, SOL −%38, BNB
+   dört yıl negatif. Tavan yalnız **ikinci tavanın** (gerçekçi maliyet, marjin, fırsat
+   maliyeti, stres) gerekçesidir; promotion kanıtı değildir ve öyle kullanılmayacaktır.
+4. **Değişmeyen:** defter 52; eşik 1,04; spot kapsamı; K-008/K-033/K-046/K-057; Jev gölge
+   yalnız ileriye dönük doğrulama. Program açılmadı; veri satın alma kararı yok.
