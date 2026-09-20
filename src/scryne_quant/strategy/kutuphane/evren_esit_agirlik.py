@@ -30,7 +30,7 @@ from typing import Any
 from scryne_quant.features.motor import OzellikTanimi
 from scryne_quant.strategy.evren import EvrenBaglam
 from scryne_quant.strategy.hedef import HedefPortfoy
-from scryne_quant.strategy.kurma import Aday, KurmaAyarlari, kur
+from scryne_quant.strategy.kurma import Aday, KurmaAyarlari, kur, oynaklik_olculebilir
 from scryne_quant.strategy.temel import PortfoyStratejisi
 
 #: Boyutlandırmanın oynaklık ölçüsü. Risk motorunun `RISK_ATR_PENCERESI`siyle aynı sayı ve
@@ -109,6 +109,12 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
             fiyat = baglam.bar("close")
             if fiyat <= 0.0:
                 continue
+            oynaklik = baglam.ozellik("atr") / fiyat
+            if not oynaklik_olculebilir(oynaklik):
+                # Ölçülemeyen oynaklık = aday değil (kurma.py başlığı, R1(c)). Eşit ağırlık
+                # varyantı oynaklığı kullanmıyor ama sembol yine dışarıda kalıyor — ısınma
+                # kontrolüyle aynı gerekçe: iki varyant aynı evreni görmeli.
+                continue
             adaylar.append(
                 Aday(
                     sembol=sembol,
@@ -118,7 +124,7 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
                     # alfabetik ilk N'ini taşıyan keyfi bir alt küme olurdu. Ölçüldü:
                     # 205 sembollü pencerede tavan gerçekten bağlıyor (Faz 10 raporu §5).
                     skor=baglam.ozellik("kote_hacim"),
-                    oynaklik=baglam.ozellik("atr") / fiyat,
+                    oynaklik=oynaklik,
                     mevcut_agirlik=ctx.pozisyon(sembol).exposure,
                     reason="EVREN_KIYASI",
                     confidence=0.5,

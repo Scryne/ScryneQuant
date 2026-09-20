@@ -41,7 +41,7 @@ from typing import Any, ClassVar
 from scryne_quant.features.motor import OzellikTanimi
 from scryne_quant.strategy.evren import EvrenBaglam
 from scryne_quant.strategy.hedef import HedefPortfoy
-from scryne_quant.strategy.kurma import Aday, KurmaAyarlari, kur
+from scryne_quant.strategy.kurma import Aday, KurmaAyarlari, kur, oynaklik_olculebilir
 from scryne_quant.strategy.temel import PortfoyStratejisi
 
 #: Kıyasla aynı oynaklık penceresi (`evren_esit_agirlik.ATR_PENCERESI`).
@@ -123,8 +123,8 @@ class _Kesitsel(PortfoyStratejisi):
             if fiyat <= 0.0:
                 continue
             oynaklik = baglam.ozellik("atr") / fiyat
-            if oynaklik <= 0.0:
-                continue
+            if not oynaklik_olculebilir(oynaklik):
+                continue  # ölçülemeyen oynaklık = aday değil (kurma.py, R1(c)); NaN dahil
             adaylar.append(
                 Aday(
                     sembol=sembol,

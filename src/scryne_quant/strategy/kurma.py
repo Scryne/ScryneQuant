@@ -23,6 +23,19 @@ canlıda hiçbir kapıyı açmaz.
 `KurmaAyarlari`nın her alanı `yontem_kimligi`ne giriyor ve hipotez kaydının parçası.
 "Eşit ağırlık yerine oynaklık ayarlı deneyelim" cümlesi, aynı veriye sorulan **yeni bir
 soru**dur; deftere yazılmadan koşturulması K-039'un yasakladığı şey.
+
+## Ölçülemeyen oynaklık = aday değil (R1(c), 2026-09-20)
+
+`Aday` pozitif ve sonlu bir oynaklık **ister** ve almazsa `KurmaHatasi` fırlatır — bu sözleşme
+değişmedi: sıfır oynaklıkla boyut hesaplamak sonsuz pozisyon demektir. Değişen şey stratejinin
+ne yaptığı: evren stratejileri oynaklığı ölçülemeyen (0, `NaN`, `inf`) sembolü `Aday`
+**kurmadan önce** aday kümesinden çıkarır (`oynaklik_olculebilir`). Semantik risk motorunun
+volatilite guard'ıyla aynı: ölçülemeyen = geçilmemiş, hata değil. Gerekçe ölçüldü: null
+kalibrasyonunun dairesel kaydırması bir sembole (REDUSDT) ATR=0 pencere düşürdü ve tek
+sembol bütün evren adımını `KurmaHatasi` ile düşürdü; canlıda aynı şey 14 düz barlı tek bir
+illikit sembolün koşuyu durdurması olurdu. Pozitif-sonlu oynaklıklı adayların davranışı
+değişmedi; null üreticisine özel bir istisna **yok** — null da gerçek koşu da aynı strateji
+kodunu görüyor (`docs/research/records/2026-09-20-R1c-esik-yeniden-olcumu.md`).
 """
 
 from __future__ import annotations
@@ -40,6 +53,16 @@ from scryne_quant.strategy.sinyal import NEDEN_DESENI, Sinyal, Yon
 #: almak demek; `fill.ASGARI_ORAN` kayan nokta artığını sıfır sayıyor, bu ise **ekonomik
 #: olarak anlamsızı** sıfır sayıyor. İkisi farklı sorular, farklı mertebeler.
 VARSAYILAN_ASGARI_AGIRLIK: Final = 0.005
+
+
+def oynaklik_olculebilir(oynaklik: float) -> bool:
+    """`Aday.oynaklik` sözleşmesinin ön kontrolü: pozitif **ve** sonlu mu?
+
+    Stratejiler bunu `Aday` kurmadan önce sorar; `False` ise sembol o barda aday değildir.
+    `NaN <= 0` Python'da `False` olduğu için yalnız `<= 0` kontrolü NaN'ı geçirirdi — sonluluk
+    ayrıca sorulur.
+    """
+    return bool(oynaklik > 0.0) and bool(np.isfinite(oynaklik))
 
 
 class KurmaHatasi(ValueError):
@@ -322,6 +345,7 @@ __all__ = [
     "KurmaHatasi",
     "agirliklar",
     "kur",
+    "oynaklik_olculebilir",
     "sec",
     "turnover_uygula",
 ]
