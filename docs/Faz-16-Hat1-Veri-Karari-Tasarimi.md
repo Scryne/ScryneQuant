@@ -196,3 +196,11 @@ provenance ile kayıtlı, görsel aktarılmadı. Durum: **A fee blocked · B MMR
 (likidasyon ücreti ✓, formül metni ✓ kısmen) · PIT MMR EMPTY · NON_PIT MMR EMPTY**.
 Ayrıntı: `docs/spikes/08-vadeli-tarife-kademe.md`, `docs/Faz-16-Hat1-Metodoloji-Denetimi.md`,
 `docs/Faz-16-Hat1-Fee-MMR-Erisilebilirlik.md`.
+
+**Ek doğrulama (2026-09-20):** `apiRestrictions` → `enableReading=true`, **`enableFutures=false`**,
+`enableSpotAndMarginTrading=false`, `enablePortfolioMarginTrading=false` (SHA `9fe27fdd…`).
+UI'da "Enable Futures" seçeneği yok; resmî FAQ 360002502072: vadeli hesap açılmadan üretilmiş
+anahtara Futures yetkisi verilemez. K-066 ekinin erişim yolu bu anahtarla **kapalı**; yeniden
+değerlendirme `docs/spikes/08-vadeli-tarife-kademe.md` §1b — karar Scryne'ın (vadeli hesap
+açma = hesap/operasyon kararı; sonrasında yeni salt-okunur anahtar). Fee ve MMR kademeleri
+blocked kalır.

@@ -23,10 +23,43 @@ kademeleri — K-066 ekinin izin verdiği iki salt okunur uçla (`commissionRate
 Araç: `tools/faz16_vadeli_okuma.py` — yalnız bu iki uç, HMAC-SHA256, anahtar hiçbir çıktıya
 yazılmaz, ham yanıt + SHA-256 `data/turev/kurallar/` (gitignore) altına.
 
-**Bulgu:** mevcut anahtar vadeli okuma yetkisi taşımıyor (ya da IP kısıtı). K-066 eki
+**Bulgu:** mevcut anahtar vadeli okuma yetkisi taşımıyor — §1b ile doğrulandı (`enableFutures=false`, IP kısıtı yok). K-066 eki
 **yetkiyi tanımladı**, anahtarı üretmedi: Binance API yönetiminde "Enable Futures" (yalnız
 okuma; işlem/çekim kapalı) verilmiş yeni ya da güncellenmiş bir anahtar **Scryne'ın**
 eylemidir. O gelene kadar fee ve kademeler **blocked**; araç hazır, yeniden koşturulur.
+
+## 1b. Anahtarın gerçek yetkileri — `apiRestrictions` (2026-09-20)
+
+`GET /sapi/v1/account/apiRestrictions` (imzalı, spot host), HTTP 200, ham yanıt SHA-256
+`9fe27fddf4f13e4b…`, kayıt `data/turev/kurallar/apiRestrictions_<damga>.json` (anahtar/sır
+yanıtta yok, çıktıya yazılmadı):
+
+| Alan | Değer |
+| --- | --- |
+| `enableReading` | **true** |
+| `enableFutures` | **false** |
+| `enableSpotAndMarginTrading` | false |
+| `enablePortfolioMarginTrading` | false |
+| `enableWithdrawals` / `enableInternalTransfer` / `permitsUniversalTransfer` / `enableMargin` / `enableVanillaOptions` | false |
+| `ipRestrict` | false · `createTime` 1789666879000 (2026-09-17) |
+
+**Bulgu:** `-2015`'in nedeni yetki: `enableFutures=false`. Scryne'ın API yönetim ekranında
+"Enable Futures" seçeneği **görünmüyor** (Enable Reading / Spot & Margin & Stock Trading /
+Margin Loan / Universal Transfer / Withdrawals / Alpha Withdrawals / Prediction Trading /
+Symbol Whitelist). Resmî açıklama — FAQ 360002502072 "How to Create API Keys on Binance?"
+(yayın 2018-04-09, güncelleme 2025-03-20): *"If the API key is created before you enable
+your Futures account, or you have activated Portfolio Margin, the API key won't be able to
+enable Futures permission."* Yani mevcut anahtarla UI'dan açmak **mümkün değil**; K-066
+ekinin erişim yolu bu anahtarla kapalı.
+
+**K-066 erişim yolunun yeniden değerlendirilmesi (karar Scryne'ın, burada verilmedi):**
+resmî metne göre "Enable Futures" seçeneği ancak vadeli hesap **açıldıktan sonra üretilen**
+yeni bir anahtarda görünür. Bu, iki ayrı şey demektir: (1) vadeli hesabın açılması — bir
+**hesap/operasyon** kararı (Final-Doküman v2 "perp ile işlem yok" kapsamıyla doğrudan
+çelişmez: hesap açmak işlem yapmak değil, ama K-062/5 ve K-066'nın ruhu "hostta borsa işlem
+anahtarı yok"tur; yeni anahtar da salt okunur ve yalnız iki uç olmalı); (2) sonrasında
+yeni salt-okunur anahtar. Başka uç/permission varsayımı yapılmadı; alternatif kaynak yok
+(§1: sayfalar 202/JS, FAQ'lar oran/kademe vermiyor).
 
 ## 2. Kaydedilen (doğrulanmış)
 
