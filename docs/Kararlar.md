@@ -4106,3 +4106,75 @@ audit iki yönlü referans, yalnız yeni satırların eklenmesi, audit'siz/başk
 redleri, kısaltma; göç (içerik birebir, `goc=true`, ikinci göç red); açılış sınırı (gözlem açılır +
 olay, paper bozuk/audit'siz/karşılıksız açılmaz, doğrulanmış açılır, backtest dokunmaz); CLI
 `zincirle`/`durum`/`onayla`. Mevcut `test_promotion.py` (34) ve `test_risk_bypass.py` aynen geçiyor.
+
+---
+
+## K-083 — Enstrüman v2: sözleşme alanları kimlikten ayrıştırıldı; U13/U16/U17 kural metinleri (TASLAK)
+
+**Durum:** açık — uygulanan kısım ölçüldü, karar maddeleri **ONAY BEKLİYOR** · **Tarih:** 2026-09-20 ·
+**Onay:** Scryne (R2 ilk iş paketi talimatı; yalnız uygulama kapsamı onaylı, kural maddeleri değil) ·
+**Tabi:** K-007, K-009, K-052, K-057/6, K-079, K-080, K-081 · **Kaynak:** `docs/ROADMAP-RESET.md` R2,
+`docs/audit/W1-Architecture.md` §6, `docs/research/Threshold-Policy.md` §1 (U13-U17) ve §3,
+`tests/unit/test_enstruman_v2.py`
+
+### Bulgu
+
+`Enstruman` (`data/kimlik.py`) yalnız kimlik taşıyordu: `kanonik_id, venue, sembol, geçerlilik,
+bar_sayisi, kirilma_ile_basladi`. Varlık sınıfı, enstrüman tipi, takvim, tick/lot/kontrat, maliyet ve
+finansman modeli için alan yoktu (W1 §6). Threshold-Policy §1 beş çok-varlık değişmezini (U13-U17)
+`DECISION REQUIRED` olarak listeliyor; hiçbiri K olarak yazılmamıştı.
+
+### Uygulandı ve ölçüldü (bu paket — karar değil, kayıt)
+
+1. `Enstruman`'a sekiz varsayılanlı alan eklendi: `asset_class="kripto"`, `instrument_type="spot"`,
+   `takvim_id="24x7"`, `tick_size=None`, `lot_size=None`, `contract_size=None`,
+   `maliyet_modeli_id="global"`, `finansman_modeli_id=None`. Varsayılanlar bugün depoda olan **tek**
+   gerçeği kodlar (Binance spot kripto, 7/24, `config/maliyet.json`'daki tek model, finansman yok).
+   `kimlikleri_kur` yalnız v1 alanlarını doldurur; v2 alanları varsayılanda kalır.
+2. `tick_size/lot_size/contract_size` **`None`**: bu katmanda güvenilir kaynak yok (arşiv verisi
+   taşımıyor; `SembolKurallari` borsadan canlı okunuyor ve bağlanmadı). Uydurma sayı yazılmadı;
+   verilirse pozitif olmak zorunda (`bool` ve 0 reddedilir).
+3. `instrument_type` kapalı küme: `("spot", "vadeli", "cfd", "etf")`; başka değer `KimlikHatasi`.
+   `asset_class` ayrı eksen ve bugün yalnız `{"kripto"}` — yeni sınıf eklemek koda dokunmak demek
+   (bilerek: sınıf "kodda geçiyor" diye desteklenmiş sayılmaz). Tipler kimlik düzeyinde ayrı
+   enstrümandır (`spot ≠ vadeli ≠ cfd ≠ etf`, testli); **çalışır değil** — execution/backtest
+   desteği yok, bu paket onu iddia etmiyor.
+4. **Kanonik kimlik değişmedi:** `<venue>:<ticker>@<tarih>`. Tip/sınıf kimliğe girmiyor.
+5. **Serileştirme:** `Enstruman.sozluk()` v1'in 9 anahtarını aynı sırada ve aynı değerle verir
+   (altın `nesne_hash` `4cd3052c…`, HEAD `dbe29ba`'da ölçüldü), ardından 8 v2 anahtarı. Gerçek
+   katalog (`data/evren/_evren/kimlik-katalogu.json`, 761 kayıt) v2 modeliyle yeniden
+   serileştirildi: v1 alt kümesi eski dosyayla **bayt-aynı**, iki üretim bayt-aynı, eklenen
+   anahtarlar tam v2 kümesi, 761 kayıtta v2 değerleri aynı varsayılan. Katalog dosyası yeniden
+   **yazılmadı** (veri yenileme kapsam dışı); bir sonraki `sq evren tablo` 8 anahtar ekleyecek —
+   bu **beklenen şema değişimi**, "eski katalog bayt-aynı kalmalı" diye bir değişmez yok.
+6. **Hash sınırı:** v2 alanları `sonuc_hash`, `config_hash`, `tablo_hash`, deney `girdi/cikti_hash`
+   ve `_maliyet_govdesi()`'ne girmiyor. Statik: `backtest/sonuc.py`, `research/deney.py`,
+   `common/hash.py`, `common/maliyet.py`, `research/tekrar.py` `data/kimlik`i import etmiyor ve
+   v2 adlarını anmıyor. Davranışsal: v1 ve v2-açık kimliklerle `evren_tablosu` → `tablo_hash` ve
+   `uyelik_matrisi` eşit. `_maliyet_govdesi(yukle("config/maliyet.json"))` kanonik SHA-256
+   `fe9f73bb…` ve `MaliyetModeli.sozluk()` `nesne_hash` `5022dec9…` testte sabit — bunlar deney
+   `girdi_hash`ine giriyor; değişmesi R1(b) kayıtlarını `semantik`e düşürür.
+7. **R1(b) regresyonu:** `tools/r1b_kayit_durumu.py` `--tip monte_carlo|stres|tarama` (9 kayıt)
+   değişiklik öncesi/sonrası birebir: `monte_carlo` 1 `ayni`; `stres` 1 `ayni`; `tarama` 3
+   `yalniz_sonuc_hash` (fark 13/37/16) + 3 `ayni` (R1(b) yenilenmiş) + 1 `veri_geri_getirilemedi`;
+   kayıt başına sınıf, `fark_sayisi` ve fark listesi aynı. `degerlendirme` tipi (10 `semantik`,
+   ≈600 s/kayıt) bu ölçüme alınmadı: sınıfı zaten `semantik`, bu paketin değişmezine girmiyor.
+   Tam test: 1.930 → 1.980 geçti (+50 = yeni dosya), 1 skip, 3 deselected; `ruff` temiz.
+
+### Karar maddeleri — ONAY BEKLİYOR (hiçbiri bu pakette uygulanmadı)
+
+| # | Aday kural (Threshold-Policy §1) | Bugünkü uygulama | Onay gerektiren nokta |
+| --- | --- | --- | --- |
+| U13 | Enstrüman = `(venue, instrument_type, sembol, geçerlilik)`; spot/vadeli/CFD/ETF/endeks verisi karıştırılmaz | Alanlar var, kapalı küme testli; **kanonik kimlik hâlâ `(venue, sembol, tarih)`** | `instrument_type` kanonik kimliğe girsin mi (`binance-spot:BTCUSDT@2017-08-17` → tip eklenirse mevcut 761 kimlik ve PIT tablosu değişir) — **ONAY BEKLİYOR** |
+| U14 | Maliyet enstrüman başına; global maliyet reddedilir | `maliyet_modeli_id="global"` yalnız etiket; motor tek nesne alıyor | R2 sonraki paket; bu K'da karar yok |
+| U15 | Takvim enstrüman özelliği; "eksik bar" takvime göre | `takvim_id="24x7"` yalnız etiket; ızgara 24/7 | Takvim kaynağı (`exchange_calendars` / elle) — **ONAY BEKLİYOR**, Threshold-Policy §3 |
+| U16 | Veri seti kimliği = içerik hash **+ bitiş tarihi**; kayıt `veri_sonu` taşır | K-080: kimlik = içerik hash; `veri_son_ms` kayıtta **ama kimliğe girmiyor** (`deney.py`: "kimliğe girmez — geri dönmenin adresi") | U16 metni K-080'e hizalanacak mı ("kimlik = hash; bitiş tarihi = adres") yoksa kimliğe tarih eklenecek mi — **ONAY BEKLİYOR**; öneri: K-080 yürürlükte, U16 metni düzeltilir |
+| U17 | Yeni evren/varlık sınıfı = yeni null dağılım = yeni `oos_sharpe` eşiği; eşik taşınmaz | K-058/K-081 kalıbı (eşik ızgara/evren şekline bağlı, 45 çekiliş 1,04 yalnız Binance spot için) | Kural cümlesi olarak kabul — **ONAY BEKLİYOR** (uygulama gerektirmez; `kalibrasyon_v2` zaten evren-bağımlı) |
+
+### Kanıt
+
+`tests/unit/test_enstruman_v2.py` (50): varsayılan/açık/donmuş; tip kümesi (4 geçerli, 6 red, 4 çift
+ayrımı, sınıf≠tip); serileştirme A/B/C (sıra, altın hash, tam şema, determinizm, eski⊂yeni);
+hash sınırı D (5 modül statik, `tablo_hash`/`uyelik_matrisi` davranışsal, `Sonuc` alanları);
+maliyet gövdesi (yürürlükteki dosya SHA, sentetik literal, `tekrar._maliyet` gidiş-dönüş, geçici model).
+Mevcut `test_kimlik.py`, `test_evren.py`, `test_izgara.py`, `test_coklu_motor.py` değişmeden geçiyor.

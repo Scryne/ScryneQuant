@@ -60,6 +60,32 @@ from scryne_quant.common.zaman import timeframe_ms, utc_str
 
 VENUE_BINANCE_SPOT: Final = "binance-spot"
 
+# --- Enstrüman v2 alanları (ROADMAP-RESET R2, K-083 taslağı) -------------------------------
+#
+# Aşağıdaki kümeler ve varsayılanlar **bugün depoda olan tek gerçeği** kodlar: Binance spot
+# kripto, 7/24, tek global maliyet modeli (K-007), finansman yok. Yeni bir sınıf/tip/takvim
+# eklemek bu sabitlere dokunmak demek — bilerek; bir varlık sınıfı "kodda geçiyor" diye
+# desteklenmiş sayılmaz (Threshold-Policy §3'teki sütunlar `DECISION REQUIRED`). Alanlar
+# yalnızca **kimlik** taşır: motor/fill/live bunları okumaz (R4'ün işi), `sozluk()` çıktısı
+# hiçbir deney/sonuç hash'ine girmez (`tests/unit/test_enstruman_v2.py` bunu tarıyor).
+
+#: Varlık sınıfları. Yalnız `kripto` — başka sınıf için veri/lisans/takvim kararı yok (R3).
+VARLIK_SINIFLARI: Final[frozenset[str]] = frozenset({"kripto"})
+VARLIK_KRIPTO: Final = "kripto"
+
+#: Enstrüman tipleri — kapalı küme (U13). Spot ≠ vadeli ≠ CFD ≠ ETF: aynı dayanağın farklı
+#: sözleşmeleri farklı enstrümandır; verileri karıştırılmaz. Bugün yalnız `spot` üretiliyor;
+#: diğerleri kimlik düzeyinde tanımlı, **çalışır değil** (execution/backtest desteği yok).
+ENSTRUMAN_TIPLERI: Final[tuple[str, ...]] = ("spot", "vadeli", "cfd", "etf")
+TIP_SPOT: Final = "spot"
+
+#: Takvim kimliği. Yalnız bir etiket: takvim soyutlaması (seans, tatil, eksik-bar tanımı)
+#: bu pakette yok, `data/izgara.py` 24/7 ızgara varsayımıyla çalışmaya devam ediyor.
+TAKVIM_24X7: Final = "24x7"
+
+#: Maliyet modeli kimliği. `global` = `config/maliyet.json`'daki tek model (K-007, U14 açık).
+MALIYET_MODELI_GLOBAL: Final = "global"
+
 #: Kimlik kırılması: asgari eksik bar (1h serileri için). Ölçülen yanlış-pozitif bölgesi
 #: ≤ 4 bar (2021-05-19 kesintisi); eşik onun üç katı. Bkz. modül notundaki tablo.
 KIRILMA_ASGARI_EKSIK_BAR: Final = 12
@@ -113,7 +139,16 @@ class KimlikKirilmasi:
 
 @dataclass(frozen=True, slots=True)
 class Enstruman:
-    """Geçerlilik aralığı taşıyan kanonik enstrüman. Aralık `[baslangic, bitis)`."""
+    """Geçerlilik aralığı taşıyan kanonik enstrüman. Aralık `[baslangic, bitis)`.
+
+    **v2 (R2):** kimlik alanlarına sözleşme alanları eklendi — varlık sınıfı, enstrüman tipi,
+    takvim, tick/lot/kontrat, maliyet ve finansman modeli kimlikleri. Hepsi varsayılanlı ve
+    varsayılanlar bugünkü tek gerçeği (Binance spot kripto) kodlar; `kimlikleri_kur` yalnız
+    v1 alanlarını verir. Kanonik kimlik (`kanonik_id`) **değişmedi**: kimlik hâlâ
+    `<venue>:<ticker>@<tarih>`; tip/sınıf kimliğe girmiyor, çünkü bugün tek venue tek tip.
+    U13'ün `(venue, instrument_type, sembol, geçerlilik)` dörtlüsü ONAY BEKLİYOR — kabul
+    edilirse kanonik kimlik biçimi ayrı bir K ile değişir, bu pakette değil.
+    """
 
     kanonik_id: str
     venue: str
@@ -124,7 +159,55 @@ class Enstruman:
     bar_sayisi: int
     kirilma_ile_basladi: bool
 
+    # --- v2 sözleşme alanları (varsayılan = bugünkü tek gerçek) ---
+    asset_class: str = VARLIK_KRIPTO
+    """Dayanağın sınıfı (`kripto`; FX/endeks/emtia için karar yok). Tipten ayrı eksen."""
+    instrument_type: str = TIP_SPOT
+    """`ENSTRUMAN_TIPLERI`den biri. Sınıfla karıştırılmaz: kripto spot ≠ kripto vadeli."""
+    takvim_id: str = TAKVIM_24X7
+    """Takvim etiketi. Davranışı yok (U15 açık); ızgara hâlâ sürekli 24/7 varsayıyor."""
+    tick_size: float | None = None
+    """Fiyat adımı. `None` = **bilinmiyor**: arşiv verisi taşımıyor, `exchange/kurallar.py`
+    (`SembolKurallari`) borsadan canlı okuyor ve bu katman ona bağlanmadı. Uydurulmaz."""
+    lot_size: float | None = None
+    """Miktar adımı. `None` = bilinmiyor (bkz. `tick_size`)."""
+    contract_size: float | None = None
+    """Kontrat büyüklüğü. Spot'ta kavram yok; vadeli/CFD için kaynak yok → `None`."""
+    maliyet_modeli_id: str = MALIYET_MODELI_GLOBAL
+    """Hangi maliyet modeli. Bugün tek global model (K-007); enstrüman-başı maliyet U14/R2
+    sonraki paket — motor bu alanı **okumuyor**."""
+    finansman_modeli_id: str | None = None
+    """Finansman/rollover modeli. Spot'ta yok; perp funding verisi var, modeli yok (K-079)."""
+
+    def __post_init__(self) -> None:
+        if self.asset_class not in VARLIK_SINIFLARI:
+            raise KimlikHatasi(
+                f"{self.kanonik_id}: bilinmeyen varlık sınıfı {self.asset_class!r}; "
+                f"geçerli: {sorted(VARLIK_SINIFLARI)}"
+            )
+        if self.instrument_type not in ENSTRUMAN_TIPLERI:
+            raise KimlikHatasi(
+                f"{self.kanonik_id}: bilinmeyen enstrüman tipi {self.instrument_type!r}; "
+                f"geçerli: {list(ENSTRUMAN_TIPLERI)}"
+            )
+        if not self.takvim_id or not self.maliyet_modeli_id:
+            raise KimlikHatasi(f"{self.kanonik_id}: takvim_id ve maliyet_modeli_id boş olamaz")
+        for ad in ("tick_size", "lot_size", "contract_size"):
+            deger = getattr(self, ad)
+            if deger is not None and (
+                isinstance(deger, bool)
+                or not isinstance(deger, (int, float))
+                or not math.isfinite(deger)
+                or not deger > 0
+            ):
+                raise KimlikHatasi(
+                    f"{self.kanonik_id}: {ad} sonlu pozitif sayı ya da None olmalı"
+                )
+
     def sozluk(self) -> dict[str, Any]:
+        """Katalog kaydı. v1 anahtarları **aynı sırada ve aynı değerle** önce; v2 alanları
+        sonra. Bu sözlük `_evren/kimlik-katalogu.json`a yazılır ve **hiçbir hash'e girmez**
+        (`sonuc_hash`, `config_hash`, `tablo_hash`, deney kimliği) — test_enstruman_v2."""
         return {
             "kanonik_id": self.kanonik_id,
             "venue": self.venue,
@@ -135,6 +218,14 @@ class Enstruman:
             "gecerli_bitis": utc_str(self.gecerli_bitis_ms),
             "bar_sayisi": self.bar_sayisi,
             "kirilma_ile_basladi": self.kirilma_ile_basladi,
+            "asset_class": self.asset_class,
+            "instrument_type": self.instrument_type,
+            "takvim_id": self.takvim_id,
+            "tick_size": self.tick_size,
+            "lot_size": self.lot_size,
+            "contract_size": self.contract_size,
+            "maliyet_modeli_id": self.maliyet_modeli_id,
+            "finansman_modeli_id": self.finansman_modeli_id,
         }
 
 
@@ -230,8 +321,14 @@ def kimlikleri_kur(
 
 
 __all__ = [
+    "ENSTRUMAN_TIPLERI",
     "KIRILMA_ASGARI_EKSIK_BAR",
     "KIRILMA_ASGARI_LOG_ORAN",
+    "MALIYET_MODELI_GLOBAL",
+    "TAKVIM_24X7",
+    "TIP_SPOT",
+    "VARLIK_KRIPTO",
+    "VARLIK_SINIFLARI",
     "VENUE_BINANCE_SPOT",
     "Enstruman",
     "KimlikHatasi",
