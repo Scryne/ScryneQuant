@@ -6,15 +6,20 @@ düzelten, risk kurallarıyla sınırlandıran, paper trading ile doğrulayan ve
 kapılardan geçtikten sonra kontrollü biçimde otomatik uygulayan tek kişilik quant araştırma
 ve execution platformu.
 
-**Durum:** Faz 0-5 ve 7 kapandı; Faz 6'nın 30 günlük gözlem koşusu sürüyor (`gozlem-2`,
-2026-09-11 → ≈2026-10-11). Faz 8 (kontrollü live) promotion'u geçen bir strateji bekliyor —
-38 hipotezin hiçbiri geçmedi (K-044, K-045) ve bu kapının çalıştığının kanıtı.
+**Durum (2026-09-20):** Faz 0-7 ve 9-12 kapandı; Faz 14 (üretim sertleştirme) K-069'un
+8 günlük penceresinde (host-1, 2026-09-17 → 2026-09-25); Faz 16 (sürekli araştırma) beş
+programı açıp kapattı, açık program yok. Faz 8 (kontrollü live) promotion'u geçen bir
+strateji bekliyor — **52 çekilişin hiçbiri geçmedi** (`oos_sharpe` eşiği 1,04, K-064/K-071)
+ve bu kapının çalıştığının kanıtı. Mevcut eylem uzayında (long-only spot) araştırma kapalı
+(K-078); Hat 1 (delta-nötr carry) veri engelli (K-079). Faz 8'in hazırlığı yazıldı
+(`docs/Faz-8-Hazirlik.md`), tetik yok.
 
 **2026-09-12 — vizyon v2 (K-048):** kapsam *multi-asset autonomous trading research &
 execution platform*'a genişledi. Çekirdek değişmedi; genişleyen şey bilgi kaynakları ve
-enstrüman evreni. Sıradaki iş **Faz 9**: PIT veri platformu, hayatta kalma yanlılığı olmayan
-çoklu sembol evreni ve kanonik enstrüman kimliği (Spike 6 ölçtü: 659 aday sembol, ≈0,86 GB,
-bugünkü listeden kurulan bir evren her ayın likit isimlerinin medyan %18'ini atıyor).
+enstrüman evreni: PIT veri platformu ve hayatta kalma yanlılığı olmayan evren (Faz 9), çok
+enstrümanlı tek motor (Faz 10), dört yeni doğrulama kapısı (Faz 11), ön kayıtlı arama
+bütçeli araştırma programları (Faz 12). Jev (TypeSafe) karar katmanı yalnızca gölgede
+(K-074); yön ekseni ölçülüp kapandı (K-076).
 
 ## Kurulum ve ilk komutlar
 
@@ -57,7 +62,7 @@ kaç kötü stratejiyi elediğiyle ölçülür.
 | Soru | Dosya |
 | --- | --- |
 | Proje ne yapacak? | [`docs/Final-Dokuman.md`](docs/Final-Dokuman.md) — **bağlayıcı (v2)** |
-| Neden böyle karar verildi? | [`docs/Kararlar.md`](docs/Kararlar.md) — K-001…K-054 |
+| Neden böyle karar verildi? | [`docs/Kararlar.md`](docs/Kararlar.md) — K-001…K-079 |
 | Yeni vizyon ne? | [`docs/Proje-Fikri-v2.md`](docs/Proje-Fikri-v2.md) · denetimi [`docs/Denetim-v2.md`](docs/Denetim-v2.md) |
 | Çoklu sembol evreni kurulabilir mi? | [`docs/spikes/06-coklu-sembol-evren.md`](docs/spikes/06-coklu-sembol-evren.md) — evet, ölçüldü |
 | Timeframe denendi mi? | [`docs/Faz-4-Donus-1-Timeframe.md`](docs/Faz-4-Donus-1-Timeframe.md) — çürütüldü |
@@ -70,7 +75,10 @@ kaç kötü stratejiyi elediğiyle ölçülür.
 | Veri katmanı ne buldu? | [`docs/Faz-1-Veri-Raporu.md`](docs/Faz-1-Veri-Raporu.md) |
 | Laboratuvar ne ölçtü? | [`docs/Faz-4-Laboratuvar-Raporu.md`](docs/Faz-4-Laboratuvar-Raporu.md) |
 | Risk motoru ne yaptı? | [`docs/Faz-5-Risk-Raporu.md`](docs/Faz-5-Risk-Raporu.md) |
-| Canlı taraf nerede? | [`docs/Faz-6-Paper-Raporu.md`](docs/Faz-6-Paper-Raporu.md) — **açık** |
+| Canlı taraf nerede? | [`docs/Faz-6-Paper-Raporu.md`](docs/Faz-6-Paper-Raporu.md) · [`docs/Faz-7-Execution-Raporu.md`](docs/Faz-7-Execution-Raporu.md) · host operasyonu [`docs/Runbook.md`](docs/Runbook.md) |
+| Canlıya nasıl geçilir? | [`docs/Faz-8-Hazirlik.md`](docs/Faz-8-Hazirlik.md) — shadow, kademe, venue; tetik yok |
+| Araştırma nerede kapandı? | [`docs/Alpha-Discovery-Gap-Audit.md`](docs/Alpha-Discovery-Gap-Audit.md) (K-078) · [`docs/Faz-16-Hat1-Kapanis.md`](docs/Faz-16-Hat1-Kapanis.md) (K-079) |
+| Jev ne yapıyor? | [`docs/Jev-Denetim.md`](docs/Jev-Denetim.md) · [`docs/Jev-Golge-Raporu.md`](docs/Jev-Golge-Raporu.md) — yalnız gölge (K-074) |
 
 ## Değişmez kurallar
 

@@ -298,7 +298,8 @@ class TestLeakRiski:
         assert not _kur(egitim_kesim_ms=KARAR_MS + 365 * 24 * SAAT).leak_riski
 
     def test_kesim_bilinmiyorsa_yayin_alt_sinirdir(self):
-        """K-075: kesim ≤ yayın; karar barı yayından sonra açılıyorsa t sonrası veri eğitimde olamaz."""
+        """K-075: kesim ≤ yayın; karar barı yayından sonra açılıyorsa t sonrası veri
+        eğitimde olamaz."""
         geriye = dict(uretim_ms=KARAR_MS + 10 * SAAT, geriye_donuk=True, egitim_kesim_ms=None)
         assert not _kur(**geriye, yayin_ms=KARAR_MS).leak_riski  # yayın = bar açılışı: sınır dahil
         assert not _kur(**geriye, yayin_ms=KARAR_MS - SAAT).leak_riski

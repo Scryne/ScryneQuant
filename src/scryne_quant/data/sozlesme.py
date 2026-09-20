@@ -145,7 +145,7 @@ class KatmanTamlikRaporu:
 
 
 def _ay_araligi(ilk: str, son: str) -> list[str]:
-    aylar = np.arange(np.datetime64(ilk, "M"), np.datetime64(son, "M") + 1)
+    aylar = np.arange(np.datetime64(ilk, "M"), np.datetime64(son, "M") + np.timedelta64(1, "M"))
     return [str(a) for a in aylar]
 
 

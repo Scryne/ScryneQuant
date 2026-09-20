@@ -86,10 +86,15 @@ def tekrar(
     funding_depo: Annotated[Path, typer.Option("--funding-depo")] = VARSAYILAN_FUNDING,
     sembol: Annotated[
         str | None,
-        typer.Option("--sembol", help="config/jev.json'daki sembol yerine (K-076: çoklu sembol replay)."),
+        typer.Option(
+            "--sembol", help="config/jev.json'daki sembol yerine (K-076: çoklu sembol replay)."
+        ),
     ] = None,
 ) -> None:
-    """Tarihsel replay: durum → Jev → defter. **Backtest değil**; kanıt yalnız `leak_riski=false` satırlarda."""
+    """Tarihsel replay: durum → Jev → defter.
+
+    **Backtest değil**; kanıt yalnız `leak_riski=false` satırlarda.
+    """
     from dataclasses import replace
 
     from scryne_quant.common.hash import dosya_hash

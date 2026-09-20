@@ -29,10 +29,17 @@ from scryne_quant.jev.sorular import SORULAR
 #: Ortamda aranan sır değişkenleri. Değerleri kayda giremez; adları girebilir.
 SIR_DEGISKENLERI: Final[tuple[str, ...]] = (
     "TYPESAFE_API_KEY",
+    # Canlı salt okunur anahtar bugün `BINANCE_API_KEY` adıyla yaşıyor (tools/faz14_anahtar_
+    # denetimi.py, tools/faz16_vadeli_okuma.py); `SQ_` önekli ad Faz 8'in işlem anahtarı için
+    # ayrılmış (.env.example). İkisi de taranır: ad değişince tarama sessizce boşa düşmesin.
+    "BINANCE_API_KEY",
+    "BINANCE_API_SECRET",
     "SQ_BINANCE_API_KEY",
     "SQ_BINANCE_API_SECRET",
     "SQ_BINANCE_TESTNET_API_KEY",
     "SQ_BINANCE_TESTNET_API_SECRET",
+    "FRED_API_KEY",
+    "SQ_NTFY_KONU",
 )
 
 #: Bu kadar kısa bir "sır" (boş, ya da tesadüfen metinde geçebilecek kadar kısa) taranmaz.

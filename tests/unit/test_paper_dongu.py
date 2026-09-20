@@ -105,6 +105,12 @@ class TestKurulum:
         with pytest.raises(MotorHatasi, match="modunda çalışmaz"):
             motor_kur(mod="backtest")
 
+    def test_live_modu_reddediliyor(self) -> None:
+        # Simüle fill üreten motor `live` etiketi taşıyamaz: Faz 8'in drift ölçümü
+        # paper ile live'ı ayrı kayıtlarda ister; aynı motorun iki adı olamaz.
+        with pytest.raises(MotorHatasi, match="modunda çalışmaz"):
+            motor_kur(mod="live")
+
     def test_risk_modu_kosu_moduyla_uyusmali(self) -> None:
         with pytest.raises(MotorHatasi, match="uyuşmuyor"):
             PaperMotoru(

@@ -1,7 +1,7 @@
 # Minimal CI (K-074/8). Tek iş, tek amaç: "aynı karar zamanı ve aynı PIT koşullarında kanonik
 # durum gelecekten etkilenmez" invariantını ve mevcut test takımını her push'ta koşturmak.
 #
-# Kapsam bilerek dar: lint yok, matris yok, önbellek yok, dağıtım yok. Ağ isteyen testler
+# Kapsam bilerek dar: lint yalnız `ruff check`, matris yok, önbellek yok, dağıtım yok. Ağ isteyen testler
 # (`network` işareti) CI'da koşmaz — Binance'e bağımlı bir CI, kodun değil ağın durumunu ölçer.
 # Sızıntı testleri `tests/unit/test_jev_durum.py` ve `test_look_ahead.py`; ikisi de takımın içinde.
 name: test
@@ -21,6 +21,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --frozen --group dev
+      # Lint yalnızca `ruff check` (biçimlendirme değil): pyproject'teki kural kümesi, hata
+      # bulan kurallar (F, B) dahil. `tools/faz16_*` per-file-ignores ile dışarıda.
+      - run: uv run ruff check src tests tools
       - run: uv run pytest -m "not network" -p no:cacheprovider
       # Jev sızıntı invariantı ayrıca ve adıyla: takımın içinde zaten koşuyor, ama bu adım
       # düşerse günlükte "leakage" satırı görünür, 1.500 testin arasında kaybolmaz.

@@ -155,10 +155,14 @@ class PaperMotoru:
         kapasite: int = VARSAYILAN_KAPASITE,
         azami_veri_yasi_ms: int = VARSAYILAN_AZAMI_VERI_YASI_MS,
     ) -> None:
-        if kimlik.mod not in ("gozlem", "paper", "live"):
+        # `live` burada **yok** ve bu bir eksik değil: bu motorun fill'leri simülasyondur.
+        # Simüle fill üreten bir koşuya `live` etiketi vermek, drift ölçümünün (Faz 8) iki
+        # tarafını aynı kayıtta karıştırırdı. Canlı motor Faz 8'in işi; o gelene kadar
+        # `live` etiketli tek bir koşu kaydı bile olmamalı.
+        if kimlik.mod not in ("gozlem", "paper"):
             raise MotorHatasi(
-                f"paper motoru {kimlik.mod!r} modunda çalışmaz; `gozlem`, `paper` veya "
-                "`live` bekleniyor (K-035)"
+                f"paper motoru {kimlik.mod!r} modunda çalışmaz; `gozlem` veya `paper` "
+                "bekleniyor (K-035). `live` bu motorun işi değil: fill'ler simüle"
             )
         if risk.mod != kimlik.mod:
             raise MotorHatasi(

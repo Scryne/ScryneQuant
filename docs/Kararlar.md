@@ -440,6 +440,17 @@ anahtarla **tekrarlanmalıdır**; bugünkü kanıt "yol açık" der, "hesap çal
 
 ---
 
+## K-016 — Fee/slippage'ın kesin sayıları
+
+**Durum:** kabul · **Tarih:** 2026-09-08 · **Kapatır:** Spike 4 · **Kaynak:**
+`docs/spikes/04-maliyet-tarifesi.md`
+
+Bu karar ayrı bir başlık taşımıyordu; numarası "Açık kararlar" tablosunda ve sekiz kararın
+"İlgili" satırında geçtiği için başlık 2026-09-20'de eklendi (içerik yeni değil). Sayıların
+kendisi K-007'nin "Ölçülen değerler" bloğunda: `fee_taker_bps = 10.0` (Binance VIP 0 spot,
+BNB indirimi varsayılmıyor). Slippage bu kararda kapanmadı → K-020 (çürütüldü) → **K-021**
+(5,2996 bps, yürütme penceresinden kalibre). Konfigürasyon biçimi K-025.
+
 ## K-017 — Birincil timeframe: 1h
 
 **Durum:** kabul · **Kaynak:** Spike 2 · **Tarih:** 2026-09-08 ·

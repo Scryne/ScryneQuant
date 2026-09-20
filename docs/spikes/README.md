@@ -25,6 +25,8 @@ Raporlar — **dördü de tamamlandı (2026-09-08):**
 | --- | --- | --- |
 | `05-funding-verisi.md` | K-042 ✅ | Dört türev veri ucundan üçü elendi (~31 gün saklama); geriye funding rate kaldı (7,01 yıl, sıfır boşluk) |
 | `06-coklu-sembol-evren.md` | K-053 ✅ | Hayatta kalma yanlılığı olmayan çoklu sembol evreni ücretsiz veriden kurulabiliyor: 659 aday, delist edilen 192'nin 191'inin geçmişi indirilebilir, ≈0,86 GB. Yanlılığın büyüklüğü ölçüldü: ayda medyan %18 |
+| `07-jev-durum.md` | K-074 ✅ | Jev kanonik durumu: 4h barları 1h'den kapanmış kovalarla bit düzeyinde eşit; Jev aynı duruma tutarlı cevap veriyor; model kesim tarihi bulunamadı → `null` (UNKNOWN, K-074/3) |
+| `08-vadeli-tarife-kademe.md` | K-079 ✅ | Perp taker fee ve MMR kademeleri hiçbir resmî kaynaktan alınamadı: `apiRestrictions` `enableFutures=false`, UI'da seçenek yok (FAQ 360002502072). **DATA BLOCKED**; vadeli hesap açılmıyor |
 
 **Ham ölçüm çıktıları:** `research/spikes/out/` (JSON, gitignore'da — raporlardaki sayılar
 oradan geliyor).
