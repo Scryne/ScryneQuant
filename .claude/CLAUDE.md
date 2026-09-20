@@ -16,7 +16,7 @@ bittiğinde `asama` alanını sırayla güncelle: `fikir` → `denetim` → `fin
 - `docs/Proje-Fikri.md` — ilk fikir (v1, tarihsel)
 - `docs/Proje-Fikri-v2.md` — **yürürlükteki vizyon** (2026-09-12, multi-asset platform)
 - `docs/Final-Dokuman.md` — nihai kararlar (teknoloji stack, mimari, riskler) — **v2**
-- `docs/Roadmap.md` — fazlı yol haritası; her faz "Durum" sütunuyla takip edilir, hook bunu
+- `docs/ROADMAP-RESET.md` — kanonik yol haritası (R0-R12); `docs/Roadmap.md` tarihsel. Her faz "Durum" sütunuyla takip edilir, hook bunu
   otomatik okur
 - `DESIGN.md` (proje kökünde) — bu projeye özel frontend kimliği (accent palet, tipografi,
   mood). Google DESIGN.md spec'i (alpha): kesin değerler frontmatter'da, gerekçe Markdown'da.
@@ -119,7 +119,11 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   istisnayı kullanıyor** (K-048): cross-sectional, evren geneli türev ve makro programları
   K-051'in program kaydı + arama bütçesiyle açılır, serbest çekilişle değil.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
-- `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri. Faz 0-8 v1 (8'i kapalı),
+- `docs/ROADMAP-RESET.md` — **kanonik yol haritası (2026-09-20, denetim döngüsü kabulü):**
+  R0-R12 + 10 paralel iz; hook bunu okur. `docs/Roadmap.md` — Faz 0-16, **tarihsel**.
+- `docs/audit/00-08` — denetim döngüsü (W0-W8 + Executive Summary); `docs/research/
+  Threshold-Policy.md` — eşik politikası (ölçülmüş / iştah / `DECISION REQUIRED`).
+- `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri (tarihsel). Faz 0-8 v1 (8'i kapalı),
   Faz 9-16 v2. **Faz 8 sıraya değil tetiklenmeye bağlıdır:** promotion'u geçen ilk strateji
   çıktığında başlar.
 - `docs/Faz-8-Hazirlik.md` — **Faz 8 hazırlık (2026-09-20, kod yok, K yok).** Shadow adımı
@@ -143,6 +147,14 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Faz-9-Veri-Platformu-Raporu.md` — **Faz 9 ölçümleri (K-056):** arşivden 735 sembol,
   µs geçişi, checksum, ızgaraya oturmayan barlar, kimlik kırılması eşikleri (12 bar / ln 10),
   PIT evren tablosu ve yeniden ölçülen hayatta kalma yanlılığı (medyan %16,7).
+- **Veri sonu sabitleme / geri sarım (K-080).** Veri seti kimliği dosya hash'i + son bar;
+  depoyu uzatmak eski kayıtları yeniden üretilemez yapar. `sq data indir|arsiv-indir
+  --bitis-gun YYYY-MM-DD` depoyu o güne sabitler (sonrası atılır, uzatmak da geri sarmak da
+  aynı komut); `sq lab dogrula --geri-sar [--veri-sonu 'YYYY-MM-DD HH:MM']` reddedilen kaydı
+  depoyu kaydın `veri_son_ms`ine kırparak yeniden dener (ana depo değişir; `sq data indir`
+  geri getirir). Deney ve defter kayıtları `veri_son_ms` taşır (kimliğe girmez). Kanıt:
+  `tests/unit/test_geri_sarim.py`. Gerçek depo: 2026-09-09 10:00 UTC sınırı `e3adb02c…`yi
+  bayt düzeyinde geri veriyor; kalan uyuşmazlık K-057/6 hash algoritması (R1(b)).
 - `data/evren/` — arşivden inen çoklu sembol deposu (`.gitignore`'da). Sembol başına
   `1h.parquet` + `1h.kaynak.json` (indirilen her arşiv dosyasının SHA-256'sı); `_evren/`
   altında PIT evren tablosu ve kimlik kataloğu. `data/market/` REST verisiyle **karıştırılmaz**

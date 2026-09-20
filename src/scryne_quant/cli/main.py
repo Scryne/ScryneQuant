@@ -172,6 +172,15 @@ def _tarih_ms(deger: str | None, yil: float | None) -> int:
     return _yil_once_ms(yil)
 
 
+def _tarih_saat_ms(deger: str) -> int:
+    """`'YYYY-MM-DD HH:MM'` (UTC) → epoch ms. `sq lab dogrula --veri-sonu` için (K-080)."""
+    try:
+        an = dt.datetime.strptime(deger, "%Y-%m-%d %H:%M").replace(tzinfo=dt.UTC)
+    except ValueError as hata:
+        raise typer.BadParameter(f"tarih 'YYYY-MM-DD HH:MM' olmalı: {deger!r}") from hata
+    return int(an.timestamp() * 1000)
+
+
 # ---------------------------------------------------------------- data indir
 
 
@@ -183,6 +192,16 @@ def data_indir(
     yil: Annotated[float | None, typer.Option("--yil", help="Kaç yıl geriye inilecek")] = None,
     bitis: Annotated[
         str | None, typer.Option("--bitis", help="YYYY-MM-DD (UTC), dışlayıcı")
+    ] = None,
+    bitis_gun: Annotated[
+        str | None,
+        typer.Option(
+            "--bitis-gun",
+            help=(
+                "Depoyu bu güne sabitle (UTC, dahil): sonrası indirilmez, depoda varsa "
+                "atılır (K-080)."
+            ),
+        ),
     ] = None,
     depo_kok: Depo = VARSAYILAN_DEPO,
     json_cikti: JsonCikti = False,
@@ -196,7 +215,7 @@ def data_indir(
     baslangic_ms = _tarih_ms(baslangic, yil)
     bitis_ms = _tarih_ms(bitis, None) if bitis else None
 
-    indirici = TarihselIndirici(BinanceAdaptoru(), ParquetDepo(depo_kok))
+    indirici = TarihselIndirici(BinanceAdaptoru(), ParquetDepo(depo_kok), bitis_gun=bitis_gun)
 
     def ilerleme(bar: int, cagri: int) -> None:
         if not json_cikti and cagri % 25 == 0:
@@ -346,6 +365,16 @@ def data_arsiv_indir(
     rapor: Annotated[
         Path | None, typer.Option("--rapor", help="JSON raporun yazılacağı yol")
     ] = None,
+    bitis_gun: Annotated[
+        str | None,
+        typer.Option(
+            "--bitis-gun",
+            help=(
+                "Depoyu bu güne sabitle (UTC, dahil): sonrası indirilmez, depoda varsa "
+                "atılır (K-080)."
+            ),
+        ),
+    ] = None,
     json_cikti: JsonCikti = False,
 ) -> None:
     """Binance arşivinden (delist edilenler dahil) bar indirir, doğrular, depoya yazar. (Faz 9)
@@ -365,7 +394,9 @@ def data_arsiv_indir(
         tumu = spot_sembolleri(kaynak)
         liste = [s for s in tumu if s.endswith("USDT")] if usdt else tumu
 
-    indirici = arsiv_mod.ArsivIndirici(kaynak, ParquetDepo(depo_kok), paralel=paralel)
+    indirici = arsiv_mod.ArsivIndirici(
+        kaynak, ParquetDepo(depo_kok), paralel=paralel, bitis_gun=bitis_gun
+    )
     t0 = time.perf_counter()
 
     def ilerleme(i: int, toplam: int, sembol: str) -> None:
@@ -899,6 +930,11 @@ def _veri_kimligi(ad: str, bar_hash: str, funding_hash: str | None) -> str:
     return hashlib.sha256(f"{bar_hash}:{funding_hash}".encode()).hexdigest()
 
 
+def _veri_sonu(diziler: dict[str, Any]) -> int:
+    """Verinin son barının açılışı — deney kaydının geri sarma adresi (K-080)."""
+    return int(diziler["open_time"][-1])
+
+
 def _lab_veri(depo: Path, sembol: str, timeframe: str):
     """Depodan bar dizileri + veri kimlikleri. Her lab komutunun ilk adımı.
 
@@ -1040,6 +1076,7 @@ def lab_tara(
         tip="tarama",
         strateji=strateji,
         veri_sha256=veri_hash,
+        veri_son_ms=_veri_sonu(diziler),
         girdi={
             "sembol": sembol,
             "timeframe": timeframe,
@@ -1126,6 +1163,7 @@ def lab_walkforward(
         tip="walk_forward",
         strateji=strateji,
         veri_sha256=veri_hash,
+        veri_son_ms=_veri_sonu(diziler),
         girdi={
             "sembol": sembol,
             "timeframe": timeframe,
@@ -1205,6 +1243,7 @@ def lab_montecarlo(
         tip="monte_carlo",
         strateji=strateji,
         veri_sha256=veri_hash,
+        veri_son_ms=_veri_sonu(diziler),
         seed=seed,
         girdi={
             "sembol": sembol,
@@ -1266,6 +1305,7 @@ def lab_stres(
         tip="stres",
         strateji=strateji,
         veri_sha256=veri_hash,
+        veri_son_ms=_veri_sonu(diziler),
         girdi={
             "sembol": sembol,
             "timeframe": timeframe,
@@ -1383,6 +1423,7 @@ def lab_karsilastir(
         tip="karsilastirma",
         strateji="+".join(adlar),
         veri_sha256=veri_hash,
+        veri_son_ms=_veri_sonu(diziler),
         girdi={
             "sembol": sembol,
             "timeframe": timeframe,
@@ -1444,6 +1485,26 @@ def lab_deneyler(
 def lab_dogrula(
     kayit_yolu: Annotated[Path, typer.Argument(help="Deney kaydı (.json).")],
     depo: Depo = VARSAYILAN_DEPO,
+    geri_sar: Annotated[
+        bool,
+        typer.Option(
+            "--geri-sar",
+            help=(
+                "Veri hash'i uyuşmazsa depoyu kaydın veri sonuna kırpıp yeniden dene "
+                "(K-080). Depodaki sonraki barlar ATILIR; `sq data indir` geri getirir."
+            ),
+        ),
+    ] = False,
+    veri_sonu: Annotated[
+        str | None,
+        typer.Option(
+            "--veri-sonu",
+            help=(
+                "Eski kayıtlar için geri sarma adresi: son barın açılışı, "
+                "'YYYY-MM-DD HH:MM' UTC. `--geri-sar` ister."
+            ),
+        ),
+    ] = None,
     json_cikti: JsonCikti = False,
 ) -> None:
     """Bir deneyi kaydından yeniden koşturur ve çıktı hash'ini doğrular. (Faz 4)
@@ -1451,6 +1512,10 @@ def lab_dogrula(
     Faz 4'ün bitti kriteri "rastgele seçilen bir deney yeniden çalıştırılıp hash'i
     doğrulanır" diyor; bu komut o kanıtın kendisi. Çıkış kodu 0 ise aynı, 1 ise değil —
     yani bir betikten de çağrılabilir.
+
+    **Geri sarma (K-080):** veri hash'i uyuşmuyorsa ve `--geri-sar` verildiyse depo kaydın
+    `veri_son_ms`ine (ya da `--veri-sonu`ya) kırpılır ve hash **yeniden** karşılaştırılır.
+    Geri sarım hash'i geri getirmediyse red aynen kalır — kırpma bir tahmin değil, ölçüm.
     """
     kayit = deney_mod.oku(kayit_yolu)
     if kayit["tip"] not in tekrar.TEKRAR_EDILEBILIR:
@@ -1460,19 +1525,49 @@ def lab_dogrula(
             fg=typer.colors.YELLOW,
         )
         raise typer.Exit(1)
+    if veri_sonu is not None and not geri_sar:
+        raise typer.BadParameter("--veri-sonu yalnız --geri-sar ile anlamlı")
+    sembol, timeframe = kayit["girdi"]["sembol"], kayit["girdi"]["timeframe"]
     # Strateji adı kaydın **üst düzeyinde**, `girdi` içinde değil (`deney.kaydet` böyle
     # yazıyor). Yanlış yerden okumak her kaydı `KeyError` ile düşürüyordu — ve bu komut
     # Faz 4'ün "herhangi bir deney kaydından yeniden üretilebiliyor" kanıtının kendisi.
-    diziler, veri_hash, funding_hash = _lab_veri(
-        depo, kayit["girdi"]["sembol"], kayit["girdi"]["timeframe"]
-    )
+    diziler, veri_hash, funding_hash = _lab_veri(depo, sembol, timeframe)
     veri_hash = _veri_kimligi(kayit["strateji"], veri_hash, funding_hash)
+
+    geri_sarildi: dict[str, Any] | None = None
+    beklenen_veri = kayit.get("kimlik", {}).get("veri_sha256")
+    if geri_sar and beklenen_veri and beklenen_veri != veri_hash:
+        son_bar = _tarih_saat_ms(veri_sonu) if veri_sonu else tekrar.veri_son_ms(kayit)
+        if son_bar is None:
+            typer.secho(
+                "  geri sarılamadı: kayıtta `veri_son_ms` yok (K-080 öncesi kayıt); "
+                "adresi `--veri-sonu 'YYYY-MM-DD HH:MM'` ile ver.",
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(1)
+        kirpma = tekrar.geri_sar(ParquetDepo(depo), sembol, timeframe, son_bar)
+        diziler, veri_hash, funding_hash = _lab_veri(depo, sembol, timeframe)
+        veri_hash = _veri_kimligi(kayit["strateji"], veri_hash, funding_hash)
+        geri_sarildi = {
+            "son_bar_ms": son_bar,
+            "son_bar_utc": utc_str(son_bar),
+            "bar_sayisi": kirpma.bar_sayisi,
+            "sha256": kirpma.sha256,
+            "hash_geri_geldi": beklenen_veri == veri_hash,
+        }
+
     yeniden = tekrar.tekrar_uret(kayit, diziler, veri_hash)
     ayni, aciklama = deney_mod.dogrula(kayit, yeniden)
 
     if json_cikti:
         _yaz_json(
-            {"kayit": str(kayit_yolu), "tip": kayit["tip"], "ayni": ayni, "aciklama": aciklama}
+            {
+                "kayit": str(kayit_yolu),
+                "tip": kayit["tip"],
+                "ayni": ayni,
+                "aciklama": aciklama,
+                "geri_sarildi": geri_sarildi,
+            }
         )
         raise typer.Exit(0 if ayni else 1)
 
@@ -1480,6 +1575,13 @@ def lab_dogrula(
     kimlik = kayit["kimlik"]
     typer.echo(f"  kayıt commit: {kimlik['commit']}{' (DIRTY)' if kimlik['dirty'] else ''}")
     typer.echo(f"  veri: {kimlik['veri_sha256'][:16]}…")
+    if geri_sarildi is not None:
+        typer.secho(
+            f"  depo {geri_sarildi['son_bar_utc']} son barına geri sarıldı "
+            f"({geri_sarildi['bar_sayisi']} bar, {geri_sarildi['sha256'][:16]}…) — "
+            "sonraki barlar atıldı; `sq data indir` geri getirir",
+            fg=typer.colors.YELLOW,
+        )
     if ayni:
         typer.secho(f"  yeniden üretildi: {aciklama}", fg=typer.colors.GREEN)
     else:
@@ -1538,6 +1640,7 @@ def lab_kapilar(
         tip="degerlendirme",
         strateji="+".join(adlar),
         veri_sha256=veri_hash,
+        veri_son_ms=_veri_sonu(diziler),
         girdi={
             "sembol": sembol,
             "timeframe": timeframe,
@@ -2819,7 +2922,8 @@ def lab_hipotez_kaydet(
     # Kimlik, `_defteri_zorla`nın aradığıyla **aynı** kurala göre hesaplanmalı: funding
     # okuyan bir stratejiyi yalnızca bar hash'iyle kaydetmek, kaydı defterde bulunamaz
     # hâle getirir ve ön kayıt yapılmış olmasına rağmen koşu reddedilirdi.
-    bar_sha = ParquetDepo(depo).sha256(sembol, timeframe)
+    depo_nesnesi = ParquetDepo(depo)
+    bar_sha = depo_nesnesi.sha256(sembol, timeframe)
     f_sha: str | None = None
     if _funding_okuyor_mu(strateji_adi):
         f_sha = _funding_hash(funding_mod.oku(sembol))
@@ -2835,6 +2939,8 @@ def lab_hipotez_kaydet(
         evren=evren,
         portfoy=portfoy,
         rejim=rejim,
+        # Geri sarma adresi (K-080): defter satırı hangi veri sonuyla yazıldıysa o.
+        veri_son_ms=int(depo_nesnesi.oku(sembol, timeframe)["open_time"].iloc[-1]),
     )
 
     defter = hipotez_mod.HipotezDefteri()

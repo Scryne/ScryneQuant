@@ -185,6 +185,34 @@ class ParquetDepo:
             birlesik = yeni
         return self.yaz(sembol, timeframe, birlesik)
 
+    def kirp(self, sembol: str, timeframe: str, bitis_ms: int) -> DepoKaydi:
+        """Depoyu bir veri sonuna **geri sarar**: `open_time < bitis_ms` barlar kalır. (K-080)
+
+        Veri seti kimliği dosyanın SHA-256'sı ve OOS penceresi veri sonuna göreli; depoyu
+        uzatmak geçmiş kayıtları yeniden üretilemez yapıyor. Geri sarım aynı barları aynı
+        deterministik yazıcıyla yazdığı için eski dosyayı **bayt düzeyinde** geri verir
+        (`tests/unit/test_depo_idempotency.py::TestGeriSarim`). Kırpılacak bar yoksa dosyaya
+        dokunulmaz. Sınırın ötesindeki barlar geri gelmez: uzatmak indiricinin işi.
+        """
+        df = self.oku(sembol, timeframe)
+        zamanlar = df["open_time"].to_numpy(dtype="int64")
+        if len(zamanlar) == 0 or int(zamanlar[-1]) < bitis_ms:
+            yol = self.yol(sembol, timeframe)
+            return DepoKaydi(
+                yol=yol,
+                bar_sayisi=len(df),
+                ilk_ms=int(zamanlar[0]) if len(zamanlar) else 0,
+                son_ms=int(zamanlar[-1]) if len(zamanlar) else 0,
+                sha256=dosya_hash(yol),
+                bayt=yol.stat().st_size,
+            )
+        kalan = df[zamanlar < bitis_ms]
+        if kalan.empty:
+            raise DepoHatasi(
+                f"{sembol} {timeframe}: {bitis_ms} öncesinde bar yok, depo boş bırakılamaz"
+            )
+        return self.yaz(sembol, timeframe, kalan)
+
     # ---------------------------------------------------------------- kimlik
 
     def sha256(self, sembol: str, timeframe: str) -> str:

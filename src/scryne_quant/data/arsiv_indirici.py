@@ -30,6 +30,15 @@ kayıtlar düşer; barların değeri aynı olduğu için depo dosyası değişme
 indirilmez: 25 bin dosyanın checksum'ını her koşuda yeniden sormak ~50 bin istek demek.
 `tam_dogrulama=True` her dosyanın güncel checksum'ını sorar; değişen dosya yeniden inip
 `degisen_dosyalar` altında raporlanır.
+
+**Veri sonu sabitlenebilir (`bitis_gun`, K-080).** Depo bir tarihe **çekilebilir**: plan o
+günden sonraki dosyaları içermez ve depoda o günden sonraki barlar varsa **atılır**, manifesto
+da o dosyaları düşürür. Sebep ölçüldü (2026-09-20): evren kayıtlarının OOS penceresi veri
+sonuna göredir (`is_oos(n, …)`) ve `sonuc_hash` sembol dosyalarının SHA-256'sını taşır;
+depoyu dört gün uzatmak 52 çekilişin tamamını yeniden üretilemez yaptı — hipotez kaydı
+değişmeden. Geri sarım aynı dosya kümesini aynı deterministik yazıcıyla (K-011) yeniden
+üretir, yani bayt düzeyinde eski dosyayı verir. Uzatmak da geri sarmak da aynı komut; hangi
+tarihe sabitlendiği kayıtta durur.
 """
 
 from __future__ import annotations
@@ -129,10 +138,22 @@ class ArsivIndirici:
         depo: ParquetDepo,
         *,
         paralel: int = VARSAYILAN_PARALEL,
+        bitis_gun: str | None = None,
     ) -> None:
         self.kaynak = kaynak
         self.depo = depo
         self.paralel = max(1, paralel)
+        if bitis_gun is not None and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", bitis_gun):
+            raise ValueError(f"bitis_gun YYYY-MM-DD olmalı: {bitis_gun!r}")
+        self.bitis_gun = bitis_gun
+
+    @property
+    def bitis_ms(self) -> int | None:
+        """`bitis_gun`ün **ertesi** gününün UTC 00:00'ı; bar `open_time < bitis_ms` ise kalır."""
+        if self.bitis_gun is None:
+            return None
+        gun = pd.Timestamp(self.bitis_gun, tz="UTC") + pd.Timedelta(days=1)
+        return int(gun.value // 1_000_000)
 
     # ------------------------------------------------------------ manifesto
 
@@ -172,6 +193,8 @@ class ArsivIndirici:
             # Izgaraya oturmayan ve **atılan** bar sayısı, dosya başına. Atılan veri kayıtsız
             # kalmamalı: depoda yalnızca `gap` bayrağı olarak görünür, sebebi burada.
             "atilan_hizasiz_bar": {a: n for a, n in sorted(hizasiz.items()) if a in dosyalar},
+            # Depo bir tarihe sabitlenmişse (K-080) o tarih burada durur; `null` = sabit değil.
+            "bitis_gun": self.bitis_gun,
         }
         gecici = yol.with_suffix(".json.tmp")
         gecici.write_text(
@@ -188,11 +211,15 @@ class ArsivIndirici:
         ayın günlük kopyasını indirmek aynı barları iki kez indirmektir.
         """
         aylik = aylik_dosyalar(self.kaynak, sembol, timeframe)
+        if self.bitis_gun is not None:
+            # Bitiş gününün ayı aylık katmandan **alınmaz**: aylık dosya ayın tamamını taşır
+            # ve "o güne kadar" kesmek ayı günlük katmandan kurmayı gerektirir.
+            aylik = {ay: a for ay, a in aylik.items() if ay < self.bitis_gun[:7]}
         son_ay = max(aylik) if aylik else ""
         gunluk = {
             gun: anahtar
             for gun, anahtar in gunluk_dosyalar(self.kaynak, sembol, timeframe).items()
-            if gun[:7] > son_ay
+            if gun[:7] > son_ay and (self.bitis_gun is None or gun <= self.bitis_gun)
         }
         return aylik, gunluk
 
@@ -227,6 +254,13 @@ class ArsivIndirici:
         onceki = self.depo.sha256(sembol, timeframe) if vardi else None
 
         if not planli:
+            if vardi and self.bitis_ms is not None:
+                # Sabit tarih depodaki her barın öncesinde: kırpmak depoyu boşaltırdı, sessizce
+                # dokunmamak ise depoyu sabitle çelişik bırakırdı. İkisi de olmaz (K-080).
+                raise ArsivIndirmeHatasi(
+                    f"{sembol} {timeframe}: {self.bitis_gun} öncesi arşiv dosyası yok, depo "
+                    "boş bırakılamaz — sabit tarih depodaki ilk bardan önce"
+                )
             return ArsivIndirmeSonucu(
                 sembol=sembol,
                 timeframe=timeframe,
@@ -266,8 +300,21 @@ class ArsivIndirici:
             for a, h in yeni_manifesto.items()
             if not (a in manifesto and a not in planli and _gun_ayi(a) in aylik_aylar)
         }
+        # Veri sonu sabitliyse (K-080) sınırın ötesindeki dosyalar manifestodan düşer ve
+        # depodaki barlar aşağıda kırpılır; geri sarım da bir "değişiklik"tir.
+        geri_sarim = False
+        if self.bitis_gun is not None:
+            otede = [
+                a for a in yeni_manifesto
+                if a not in planli and _dosya_donemi(a) > self.bitis_gun
+            ]
+            for a in otede:
+                yeni_manifesto.pop(a)
+            geri_sarim = bool(otede) or (
+                vardi and int(self.depo.oku(sembol, timeframe)["open_time"].max()) >= self.bitis_ms
+            )
 
-        if not inenler and onceki is not None:
+        if not inenler and onceki is not None and not geri_sarim:
             if yeni_manifesto != manifesto:
                 self._manifesto_yaz(sembol, timeframe, yeni_manifesto, hizasiz)
             return ArsivIndirmeSonucu(
@@ -284,6 +331,8 @@ class ArsivIndirici:
             )
 
         birlesik = self._ham_birlestir(sembol, timeframe, [d.barlar for d in inenler])
+        if self.bitis_ms is not None:
+            birlesik = birlesik[birlesik["open_time"].to_numpy(dtype="int64") < self.bitis_ms]
         if birlesik.empty:
             raise ArsivIndirmeHatasi(f"{sembol} {timeframe}: arşiv dosyaları boş ve depo da boş")
 
@@ -366,6 +415,20 @@ def _hizasizlari_at(
 
 
 _GUN_ANAHTARI: Final = re.compile(r"/daily/.*-(\d{4}-\d{2})-\d{2}\.zip$")
+
+
+_DONEM_ANAHTARI: Final = re.compile(r"-(\d{4}-\d{2}(?:-\d{2})?)\.zip$")
+
+
+def _dosya_donemi(anahtar: str) -> str:
+    """Dosyanın dönemi: aylık için `YYYY-MM`, günlük için `YYYY-MM-DD`. Karşılaştırma
+    `bitis_gun` (`YYYY-MM-DD`) ile sözlük sırasında: `"2026-09" > "2026-09-14"` yanlış olurdu,
+    bu yüzden aylık dönem ayın **ilk günü** olarak döner."""
+    eslesme = _DONEM_ANAHTARI.search(anahtar)
+    if not eslesme:
+        return ""
+    donem = eslesme.group(1)
+    return donem if len(donem) == 10 else f"{donem}-01"
 
 
 def _gun_ayi(anahtar: str) -> str:

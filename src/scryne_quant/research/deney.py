@@ -74,6 +74,11 @@ class Deney:
     seed: int = 0
     etiket: str = ""
     zaman: str = field(default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds"))
+    veri_son_ms: int | None = None
+    """Verinin son barının açılışı (K-080). Kimliğe **girmez** — `veri_sha256` zaten veriyi
+    tanımlıyor; bu alan o veriye **geri dönmenin** adresi: depo uzatıldıysa
+    `sq lab dogrula --geri-sar` depoyu `veri_son_ms + timeframe`e kırpıp hash'i yeniden
+    kurar. Eski kayıtlarda yok (`None`); onlar için tarih elle verilir (`--veri-sonu`)."""
 
     def __post_init__(self) -> None:
         if self.tip not in TIPLER:
@@ -104,6 +109,7 @@ class Deney:
                 "girdi_hash": self.girdi_hash,
                 "cikti_hash": self.cikti_hash,
                 "veri_sha256": self.veri_sha256,
+                "veri_son_ms": self.veri_son_ms,
                 "commit": git.get("commit"),
                 "dirty": git.get("dirty"),
                 "seed": self.seed,

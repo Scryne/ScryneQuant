@@ -19,10 +19,20 @@ başlangıcından önceki bir aralık istenirse bu çağrı başına bir boş ya
 getirir — ve karşılığında, borsa sonradan bir boşluğu doldurduğunda veri setinin kendi
 kendine iyileşmesini sağlar. Ölçülen maliyet (Spike 1: klines çağrısı = 2 weight,
 limit 6.000/dk) bu takası tartışmaya değmeyecek kadar ucuz kılıyor.
+
+**Veri sonu sabitlenebilir (`bitis_gun`, K-080).** Arşiv indiricisiyle aynı sözleşme: depo bir
+tarihe **çekilebilir**; o günden sonraki barlar indirilmez, depoda varsa **atılır**. Sebep
+ölçüldü (2026-09-20): veri seti kimliği dosyanın SHA-256'sı, OOS penceresi veri sonuna
+göreli; `data/market/BTCUSDT/1h.parquet` on gün uzatılınca 16 deney kaydının 10'u "veri seti
+değişmiş" ile yeniden üretilemez oldu. Geri sarım aynı barları aynı deterministik yazıcıyla
+yazar: bugünkü depo 2026-09-09 10:00 UTC'ye kırpıldığında kayıtlardaki `e3adb02c…` hash'i
+**bayt düzeyinde** geri geldi (45.576 bar). Uzatmak da geri sarmak da aynı komut; sabitlenen
+tarih deney kaydında (`kimlik.veri_son_ms`) durur.
 """
 
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -108,9 +118,22 @@ class IndirmeSonucu:
 class TarihselIndirici:
     """Borsadan tarihsel bar indirip depoya yazar."""
 
-    def __init__(self, adaptor: BorsaAdaptoru, depo: ParquetDepo) -> None:
+    def __init__(
+        self, adaptor: BorsaAdaptoru, depo: ParquetDepo, *, bitis_gun: str | None = None
+    ) -> None:
         self.adaptor = adaptor
         self.depo = depo
+        if bitis_gun is not None and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", bitis_gun):
+            raise IndirmeHatasi(f"bitis_gun YYYY-MM-DD olmalı: {bitis_gun!r}")
+        self.bitis_gun = bitis_gun
+
+    @property
+    def bitis_ms(self) -> int | None:
+        """`bitis_gun`ün **ertesi** gününün UTC 00:00'ı; bar `open_time < bitis_ms` ise kalır."""
+        if self.bitis_gun is None:
+            return None
+        gun = pd.Timestamp(self.bitis_gun, tz="UTC") + pd.Timedelta(days=1)
+        return int(gun.value // 1_000_000)
 
     # ------------------------------------------------------------- aralık
 
@@ -226,6 +249,9 @@ class TarihselIndirici:
             bitis_ms = self.son_kapali_bar_sonu(timeframe)
         else:
             bitis_ms = bar_acilisi(bitis_ms, timeframe)
+        # Sabit veri sonu (K-080) istenen aralığı kırpar: sınırın ötesi hiç istenmez.
+        if self.bitis_ms is not None:
+            bitis_ms = min(bitis_ms, self.bitis_ms)
 
         aralik = Aralik(baslangic_ms, bitis_ms)
         if aralik.bitis_ms <= aralik.baslangic_ms:
@@ -250,6 +276,11 @@ class TarihselIndirici:
         # Ham veriyi birleştir, sonra **tümünü** doğrula. Sıra önemli: bayrak tam seriden
         # hesaplanmazsa dosya, indirmenin kaç parçaya bölündüğüne bağlı hale gelir.
         birlesik = self._ham_birlestir(sembol, timeframe, inen)
+        if self.bitis_ms is not None:
+            # Geri sarım: depoda sınırın ötesinde bar varsa düşer. Bayraklar aşağıda tam
+            # seriden yeniden hesaplandığı için kırpılmış seri, o güne kadar indirilmiş
+            # seriyle aynı dosyayı verir (`test_indirici.py::TestVeriSonu`).
+            birlesik = birlesik[birlesik["open_time"].to_numpy(dtype="int64") < self.bitis_ms]
         if birlesik.empty:
             raise IndirmeHatasi(
                 f"{sembol} {timeframe}: {aralik} aralığında hiç bar yok ve depo da boş"

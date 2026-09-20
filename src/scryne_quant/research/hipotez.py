@@ -101,6 +101,10 @@ class Hipotez:
 
     zaman_ms: int = field(default_factory=simdi_ms)
 
+    veri_son_ms: int | None = None
+    """Verinin son barının açılışı (K-080). Kimliğe girmez: `veri_sha256` veriyi zaten
+    tanımlıyor, bu alan o veriye geri sarmanın adresi. Eski kayıtlarda yok."""
+
     def __post_init__(self) -> None:
         if not self.strateji or not self.timeframe:
             raise HipotezHatasi("hipotez strateji ve timeframe taşımalı")
@@ -157,6 +161,7 @@ class Hipotez:
             "rejim": self.rejim,
             "zaman_ms": self.zaman_ms,
             "zaman_utc": utc_str(self.zaman_ms),
+            "veri_son_ms": self.veri_son_ms,
         }
 
     @classmethod
@@ -172,6 +177,7 @@ class Hipotez:
         evren: str = "",
         portfoy: str = "",
         rejim: str = "",
+        veri_son_ms: int | None = None,
     ) -> Hipotez:
         return cls(
             strateji=strateji,
@@ -184,6 +190,7 @@ class Hipotez:
             evren=evren,
             portfoy=portfoy,
             rejim=rejim,
+            veri_son_ms=veri_son_ms,
         )
 
 

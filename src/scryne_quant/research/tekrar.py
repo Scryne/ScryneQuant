@@ -13,6 +13,13 @@ totoloji hâline gelirdi.
 **Veri kimliği kontrol edilir.** Kayıttaki `veri_sha256` ile eldeki dosyanınki farklıysa
 tekrar **reddedilir**. Aynı komutun altı ay sonra daha uzun bir veri setiyle çalışıp
 farklı sonuç vermesi, yeniden üretilememenin en yaygın ve en sessiz biçimi.
+
+**Veri geri sarılabilir (K-080).** Reddin en yaygın sebebi verinin bozulması değil,
+**uzaması**: depo büyüyünce dosya hash'i değişir, ama kayıt yazıldığı günkü barlar hâlâ
+depodadır. `geri_sar()` depoyu kaydın `veri_son_ms`ine kırpar; deterministik yazıcı (K-011)
+aynı barlardan aynı dosyayı üretir, hash geri gelir ve tekrar anlamlı hâle döner. Bu bir
+tahmin değil, ölçüm: `sq lab dogrula --geri-sar` reddettiği kaydı önce geri sarar, sonra
+hash'i **yeniden** karşılaştırır — geri sarım hash'i geri getirmediyse red aynen kalır.
 """
 
 from __future__ import annotations
@@ -23,6 +30,8 @@ from typing import Any
 import numpy as np
 
 from scryne_quant.common.maliyet import MaliyetModeli, SlippageKalibrasyonu
+from scryne_quant.common.zaman import timeframe_ms
+from scryne_quant.data.depo import DepoKaydi, ParquetDepo
 from scryne_quant.research import analiz, degerlendirme, karsilastirma, tarama, walkforward
 from scryne_quant.research.bolme import Pencere, walk_forward
 from scryne_quant.research.deney import DeneyHatasi
@@ -41,6 +50,19 @@ class TekrarHatasi(DeneyHatasi):
 TEKRAR_EDILEBILIR: frozenset[str] = frozenset(
     {"tarama", "walk_forward", "stres", "monte_carlo", "karsilastirma", "degerlendirme"}
 )
+
+
+def veri_son_ms(kayit: Mapping[str, Any]) -> int | None:
+    """Kaydın geri sarma adresi: verinin son barının açılışı. Eski kayıtlarda yok."""
+    deger = kayit.get("kimlik", {}).get("veri_son_ms")
+    return None if deger is None else int(deger)
+
+
+def geri_sar(
+    depo: ParquetDepo, sembol: str, timeframe: str, son_bar_ms: int
+) -> DepoKaydi:
+    """Depoyu `son_bar_ms` **dahil** son bara kırpar (K-080). Döner: yeni depo kaydı."""
+    return depo.kirp(sembol, timeframe, son_bar_ms + timeframe_ms(timeframe))
 
 
 def _maliyet(govde: Mapping[str, Any]) -> MaliyetModeli:

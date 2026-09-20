@@ -3913,3 +3913,85 @@ K-045, K-049/4, K-054, K-058, K-066 (+Ek), K-077, K-078 · **Kaynak:** `docs/Faz
    koşullardan biri gerçekten sağlanmadan Hat 1 yeniden açılmaz.
 7. **Değişmeyen:** `src/`, config, execution, spot kapsamı, K-008/K-033/K-046/K-057, defter 52,
    eşik 1,04, Jev gölge yalnız doğrulama.
+
+## K-080 — Veri seti kimliği tarihe sabitlenir: `bitis_gun` ile geri sarım, kayıtta `veri_son_ms`
+
+**Durum:** kabul · **Tarih:** 2026-09-20 · **Onay:** Scryne ("A / K-080 ONAY", denetim döngüsü
+kapanışı) · **Tabi:** K-009, K-011, K-039, K-057/6 · **Kaynak:** `docs/audit/W3-Research-Backtest.md`
+§6, `docs/audit/W6-Testing-CI.md` T3, `tests/unit/test_geri_sarim.py`, `docs/ROADMAP-RESET.md` R1(a)
+
+### Bulgu (W3, 2026-09-20)
+
+Veri seti kimliği dosyanın SHA-256'sı (K-009) ve OOS penceresi veri **sonuna** göreli
+(`is_oos(n, …)`). Depo uzatılınca ikisi birden kayar. `data/market/BTCUSDT/1h.parquet`
+2026-09-20 01:06'da 2026-09-19'a uzatıldı; sonuç: `sq lab dogrula` 16 tekrar-edilebilir kayıttan
+**10'unu** "veri seti değişmiş" ile reddetti (kalan 6'sı K-057/6 hash algoritması değişimi —
+ayrı kalem, R1(b)), defterdeki 52 kaydın 9 farklı `veri_sha256`'sının **hiçbiri** depoda
+kalmadı, ve eşik yeniden ölçümü (`tools/faz12_coklu_test.py`, 45 çekiliş) `h51`'de "kaydırmasız
+koşu kayıttaki OOS `sonuc_hash`'ini üretmedi" ile durdu. "Kayıttan yeniden üretilebilir"
+iddiası o an **kanıtlanamıyordu**.
+
+### Ölçülen
+
+Depodaki barlar değişmemişti; yalnız **uzamıştı**. K-011'in deterministik yazıcısı aynı
+barlardan aynı dosyayı üretir: bugünkü depo 2026-09-09 10:00 UTC sınırına kırpıldığında
+(45.576 bar) 38 tek sembollü çekilişin `veri_sha256`'sı `e3adb02c…` **bayt düzeyinde** geri
+geldi (`tests/unit/test_geri_sarim.py` modül başlığı; tarama `--geri-sar --veri-sonu
+"2026-09-09 09:00"` ile kayıt yeniden üretildi, aşağıda "Kanıt").
+
+### Karar
+
+1. **Veri sonu sabitlenebilir.** `ArsivIndirici(bitis_gun=)` ve `TarihselIndirici(bitis_gun=)`
+   (`sq data arsiv-indir --bitis-gun`, `sq data indir --bitis-gun`, `YYYY-MM-DD` UTC dahil): o
+   günden sonraki dosya/bar indirilmez, depoda varsa **atılır**. Uzatmak da geri sarmak da aynı
+   komut; arşiv deposunda sabit tarih `1h.kaynak.json::bitis_gun`te durur. Bitiş gününün ayı
+   aylık katmandan alınmaz (ayı kesmek günlük katman ister).
+2. **Depo kırpılabilir.** `ParquetDepo.kirp(sembol, tf, bitis_ms)`: ağsız geri sarım, aynı
+   yazıcı, bayt-aynı; kırpılacak bar yoksa dosyaya dokunmaz; depoyu boşaltacak kırpma hata.
+3. **Kayıt geri sarma adresi taşır.** `Deney.kimlik.veri_son_ms` ve `Hipotez.veri_son_ms`
+   (defter satırı): verinin son barının açılışı. **Kimliğe girmez** — `veri_sha256` veriyi
+   zaten tanımlıyor; bu alan o veriye dönmenin adresi. Eski kayıtlarda yok (`null`), defter
+   append-only olduğu için geriye yazılmaz.
+4. **`sq lab dogrula --geri-sar`.** Veri hash'i uyuşmazsa depoyu kaydın `veri_son_ms`ine
+   (K-080 öncesi kayıt için `--veri-sonu 'YYYY-MM-DD HH:MM'`) kırpar ve hash'i **yeniden**
+   karşılaştırır; geri sarım hash'i geri getirmediyse red aynen kalır — kırpma tahmin değil,
+   ölçüm. Kırpma depodaki sonraki barları atar (`sq data indir` geri getirir); bu yüzden
+   bayrak açık, varsayılan değil.
+5. **Kapsam dışı (bilerek):** funding/makro/PIT depoları (ayrı kimlik; `_veri_kimligi`
+   bileşik hash'i onlar uzadıysa yine reddeder — doğru davranış); evren tanımı dosyası;
+   K-057/6 hash algoritması değişiminden kalan 6 kayıt (R1(b): yenilenir, etiketlenir); risk/
+   execution/OMS/Jev katmanları.
+
+### Kanıt
+
+`tests/unit/test_geri_sarim.py` (20 test): depo kırpma bayt-aynı; REST ve arşiv için
+"uzat → sabitle" ≡ "baştan sabit" (bayt), sabiti kaldırmak eski dosyayı geri veriyor, geri
+sarım ağ kullanmıyor; `sq lab tara` kaydı `veri_son_ms` taşıyor; uzatılmış depoda `dogrula`
+reddediyor, `--geri-sar` ile yeniden üretiliyor ve depo hash'i kayda dönüyor; adressiz eski
+kayıt reddediliyor, `--veri-sonu` ile sarılıyor; yanlış adres red'i kaldırmıyor; `veri_son_ms`
+defter kimliğini değiştirmiyor.
+
+**Gerçek depo (2026-09-20, `data/market` kopyası üzerinde, ana depo dokunulmadı):**
+`sq lab dogrula --geri-sar --veri-sonu "2026-09-09 09:00"` dört e3adb-dönemi kayıtta depoyu
+45.576 bara kırptı ve **veri hash'i dördünde de geri geldi** (`e3adb02c…`). Çıktı hash'i
+dördünde de uyuşmadı; alan alan karşılaştırma (`tekrar.tekrar_uret` çıktısı ↔ kayıt):
+- `tarama` ×2 (`4353f031`, `895715401b`): **yalnız** `sonuc_hash` alanları farklı (13 / 37);
+  getiri, Sharpe, işlem, drawdown, parametreler birebir — Faz 10 §3'ün K-057/6 bulgusu
+  (atlama sayacı listesi), veri sorunu değil.
+- `karsilastirma` (`96889713`): 158 fark; `kiyas/in_sample/*` (al-tut) metrikleri değişmiş ve
+  kayıtta olmayan yeni alanlar var (`cvar_95`) — kayıt 2026-09-09'dan, kod o günden beri
+  metrik ekledi ve kıyas semantiği değişti (K-070/K-072 dönemi). **Kod sürümü** sorunu:
+  bugünkü kodla yeniden üretilemez; kaydın `commit`i DIRTY olduğu için eski ağaç da tam
+  değil.
+- `degerlendirme` (`51c76510`): veri hash'i geri geldi, çıktı uyuşmadı (`karsilastirma` ile
+  aynı sınıf — kıyas ve metrik alanları; kayıt 2026-09-09, commit DIRTY).
+Sonuç: K-080 **veri kimliği** yarısını kapatıyor; **kod/hash sürümü** yarısı R1(b)'nin işi
+ve iki alt sınıfa ayrılıyor: (i) yalnız `sonuc_hash` (K-057/6) — kayıt "hash algoritması
+değişti" etiketiyle yenilenir; (ii) metrik/semantik drift — kayıt tarihsel kalır, "bugünkü
+kodla yeniden üretilemez, commit DIRTY" etiketi alır. İkisi de sessiz değil, adıyla yazılı.
+
+### Değişmeyen
+
+`sonuc_hash` tanımı, `veri_sha256`'nın anlamı, defterdeki 52 satır, eşik 1,04 (yeniden ölçüm
+R1(c)), OOS penceresinin veri sonuna göreli tanımı (**bilinçli**: değiştirmek her kaydı
+yeniden üretilemez yapardı; sabit tarih bunu gereksiz kılıyor).
