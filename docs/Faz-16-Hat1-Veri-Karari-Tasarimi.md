@@ -4,7 +4,7 @@ faz: 16
 tur: DESIGN + uygulama kaydı — üç veri ekleme kararı; A ve B uygulandı, C bekliyor (bkz. son bölüm)
 tarih: 2026-09-20
 type: tasarım
-durum: A ve B uygulandı (2026-09-20); C iki operasyon kararını bekliyor
+durum: A ve B uygulandı; C kararları verildi (iki senaryo, PIT/NON_PIT ayrı satır) ve mark verisi indirildi; mmr yok (2026-09-20)
 ---
 # Hat 1 — Veri ekleme kararları: DTB3 · perp 1m klines · mark price
 
@@ -71,7 +71,7 @@ Hiçbiri K-008/K-033/K-046/K-057'yi açmaz. Bu doküman hiçbirini vermedi; indi
 
 ## Uygulama kaydı (2026-09-20)
 
-Scryne kararı: A → B → C sırası; A **tamamlandı**, B **slippage tamamlandı + fee DATA BLOCKED**, C **karar bekliyor**.
+Scryne kararı: A → B → C sırası; A **tamamlandı**, B **slippage tamamlandı + fee DATA BLOCKED**, C **kararlar verildi + mark verisi doğrulandı; `mmr` yok**.
 
 ### A — DTB3: UYGULANDI
 
@@ -113,7 +113,56 @@ karar: program kaydı güncellemesi + host senkronu.
 | Açtığı ölçüm | `tools/faz16_hat1_b1_perp_slippage.py` → `runs/faz16/hat1_b1_perp_slippage.json` (`kalibre_et`, p75, config'e **yazılmadı**): perp IS p75 **BTC 7,11 / ETH 9,11 bps**; örtüşme 2023-08 → 2025-02: perp BTC 5,83 / ETH 7,04, aynı pencerede spot BTC 5,67 (yürürlükteki spot config 5,30 = 2023-08 → 2026-09 penceresi, değişmedi). İçerik hash'i iki koşuda aynı (`087f4862…`). Seçim yok; iki pencere de raporlandı. |
 | **Tarife** | **DATA BLOCKED — Scryne kararı (2026-09-20): şimdilik açılmaz.** Gerekçe: `c_perp` için gerekli gerçek ücret girdisi mevcut yöntemle doğrulanamıyor; herkese açık kaynak yalnız varsayımsal örnek içeriyor; imzalı erişim (`commissionRate`/`leverageBracket`) K-066 kapsamında ayrı bir güvenlik/erişim kararı. Bu karar verilene kadar: varsayımsal tablo kullanılmaz, BNB indirimi modele girmez, vadeli anahtar oluşturulmaz/kullanılmaz, K-066 açılmaz; fee bileşeni DATA BLOCKED, `c_perp` tamamlanmamış, config'e perp slippage yazılmaz, canlı/işlem davranışına etki yok. Ayrıntı: Herkese açık `binance.com/en/fee/futureFee` JS ile üretiliyor, HTML'de tablo yok ("No records found", giriş ister). Destek makalesi (360033544231) yalnız *varsayımsal* örnek veriyor (0,02 %/0,05 % — "assumed", **kullanılmadı**) ve BNB ile ödemede %10 indirim cümlesi (kaydedildi, varsayılmadı). İmzalı `GET /fapi/v1/commissionRate` vadeli yetkili anahtar ister; mevcut anahtar salt okunur spot (K-066) — sınır ihlal edilmedi, denenmedi. Sonuç: `c_perp_tek_yon` tamamlanamıyor; ikinci tavan 2. aşaması **hâlâ blocked** (slippage hazır, fee yok). |
 
-### C — Mark price: AÇILMADI — Scryne kararı (2026-09-20): iki karar çözülmeden indirilmez
+### C — Mark price: iki karar verildi (Scryne, 2026-09-20), veri indirildi
+
+**C-1 — Ölçüm rejimi: iki ayrı senaryo, tek rejim seçilmedi.**
+
+| Senaryo | Varsayım | Uygunluk koşulu | Çıktı |
+| --- | --- | --- | --- |
+| `C-isolated` | perp bacağı yalnız kendi marjiniyle (`m·N` + tampon `b·N`) ayakta; spot bacağın değeri/kazancı teminat **sayılmaz**; funding marjine akar (negatif funding marjinden düşer) | her hesapta mevcut; ek şart yok | `L` ızgarası × sembol: marjin oranı < `mmr + tampon` sayısı ve tarihleri; likidasyon sayısı |
+| `C-portfolio` | spot bacak teminat sayılır (portföy marjini / çapraz teminat); likidasyon iki bacağın toplam öz kaynağına bakar | hesap tipi/venue uygunluğu, asgari bakiye, teminat kesinti oranları (haircut) — **repoda yok**, kural kaydı ister | aynı ızgara; teminat haircut'ı parametre olarak ayrı satır |
+
+Anlamı: ikisinin gerçek kullanımda eşdeğer olduğu **değil**, ölçümün marjin rejimine
+duyarlılığının görünür kılınması. Hangisinin resmi kapı/rejim olacağı **ayrı ve açık** karar.
+
+**C-2 — Tarihsel `mmr` / PIT: (c) ayrı satır / ayrı senaryo.**
+
+| Sınıf | Tanım | Kullanım |
+| --- | --- | --- |
+| `PIT` | `mmr` tablosunun kaydedildiği andan **ileriye** dönük ölçüm (kayıt tarihi + kaynak + hash) | kapıya girebilir (K-054 çerçevesinde, program açılırsa) |
+| `NON_PIT` (`leak_risk`) | bugünkü tablo 2020–2025 IS fiyat yoluna uygulanır | **resmi kapıya girmez**, doğrulanmış tarihsel sonuç gibi sunulmaz, yalnız duyarlılık/araştırma satırı; raporda her satır bu etiketi taşır |
+
+MMR'nin tarihsel PIT arşivi olmadığı dönem bugünkü tabloyla "gerçek tarihsel veri" gibi
+kapatılmaz. **MMR kararı (Scryne, 2026-09-20): iki sınıf da boş kalır.** Durum:
+
+| Sınıf | Durum |
+| --- | --- |
+| PIT MMR | **EMPTY / veri yok** |
+| NON_PIT · leak_risk MMR | **EMPTY / veri yok** |
+
+K-066 kapalı olduğu sürece: imzalı `leverageBracket`/`commissionRate` denenmez, vadeli anahtar
+istenmez/oluşturulmaz, public JS sayfasından MMR kazınıp tarihsel veri gibi kaydedilmez,
+bugünkü tablo 2020–2025 IS'e uygulanmaz. Public sayfa yalnız erişilebilirlik/format keşfi
+için incelenebilir; ölçüm girdisi üretmez. Tablo bir gün kaydedilirse kayıt tarihi PIT
+sınırıdır, öncesi tamamen NON_PIT.
+
+**Mark ≠ MMR:** mark serisi PIT'tir, indirildi ve doğrulandı; blocker yalnız MMR ve marjin
+kurallarıdır. Sayaç üretimini bloke eden girdiler (varsayım üretilmez): MMR · bakım
+marjı/likidasyon ücreti · otomatik marjin kuralları · portföy haircut + hesap uygunluğu.
+
+**Açık küçük karar (backlog):** mark'taki tam-gün boşluklarının günlük arşivden
+(`futures/um/daily/markPriceKlines`) doldurulması — açılmadı; mevcut seri doğrulamasıyla
+ilerlenir, boşluk günü ölçümde "ölçülemez".
+
+**Durum:** mark yolu ✅ · spot yolu ✅ · MMR ❌ · marjin/likidasyon girdileri ❌ →
+stres/likidasyon sayacı **kapalı**. Sonraki aşama kod değil: eksik girdilerden hangisinin
+metodolojik olarak gerçekten gerekli olduğunun belirlenmesi.
+
+**İndirilen veri:** mark price 1h, BTC+ETH, 2020-01 → 2025-02, `tools/faz16_mark_indir.py`,
+`data/turev/mark/<S>.parquet` + `.kaynak.json` (62 zip SHA); parquet SHA BTC `991e4ac5…`,
+ETH `f9beee15…`; iki koşuda eşit; kapsama 0,9958 / 0,9989 (arşiv tarafı tam-gün boşlukları,
+doldurulmadı); suspect 0. Doğrulama raporu: `docs/Faz-16-Hat1-C-Veri-Dogrulama.md`.
+Stres tavanı ve likidasyon sayacı **açılmadı** (`mmr` yok).
 
 Tasarım gereği C'nin verisi (mark 1h) indirilmeden önce iki sınır çözülmeli; ikisi de
 **Scryne kararı**, burada verilmedi:
