@@ -63,7 +63,9 @@ $lines.Add("[Proje Sistemi] Proje: $projeAdi")
 $lines.Add("Aşama: $asama -- $aciklama")
 
 if ($asama -eq 'uygulama') {
-    $roadmapPath = Join-Path $docsDir 'Roadmap.md'
+    # Kanonik roadmap 2026-09-20'den itibaren ROADMAP-RESET.md (denetim döngüsü kararı);
+    # docs/Roadmap.md tarihsel referans. Faz kimligi 'R0'..'R12', durum sutunu ucuncu sutun.
+    $roadmapPath = Join-Path $docsDir 'ROADMAP-RESET.md'
     if (Test-Path -LiteralPath $roadmapPath -PathType Leaf) {
         # Yalnizca FAZ tablosunun satirlari. Onceki desen ('^\|\s*\d+\s*\|')
         # Roadmap'teki HER numarali tabloyu yakaliyordu -- spike tablosu da oyle
@@ -71,14 +73,14 @@ if ($asama -eq 'uygulama') {
         # bir durum isareti tasiyor; ayirt edici olan o.
         $rows = @(
             Get-Content -LiteralPath $roadmapPath |
-                Where-Object { $_ -match '^\|\s*\d+\s*\|[^|]*\|\s*(✅|🔄|⏳)' }
+                Where-Object { $_ -match '^\|\s*R?\d+\s*\|[^|]*\|\s*(✅|🔄|⏳|⛔)' }
         )
         $total = $rows.Count
         # Tetiklemeli/kosullu fazlar siraya degil bir olaya bagli (Faz 8: promotion'u
         # gecen ilk strateji; Faz 13/15: acilma kosulu). Aktif faz onlar olamaz --
         # yoksa hook Faz 8'i "aktif" gosterip siradaki gercek isi (Faz 9) gizliyordu.
         $current = $rows |
-            Where-Object { $_ -notmatch '✅' -and $_ -notmatch '\((tetiklemeli|koşullu)\)' } |
+            Where-Object { $_ -notmatch '✅' -and $_ -notmatch '⛔' -and $_ -notmatch '\((tetiklemeli|koşullu)\)' } |
             Select-Object -First 1
         if ($current) {
             $lines.Add("Roadmap: $total faz, aktif satır -> $current")
