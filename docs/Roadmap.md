@@ -37,7 +37,7 @@ yanlış sonuç olarak geri döner.
 | 11 | Doğrulama v2 | ✅ Tamamlandı | Dört yeni kapı hesaplanıyor, eşikleri gerekçeyle sabit; mevcut 38 çekiliş yeni kapılardan geçirilmiş |
 | 12 | Araştırma programları (cross-sectional, türev, makro) | ✅ Tamamlandı | Her program bütçesi içinde kapanmış, raporlanmış; defter büyümesi sonrası eşik yeniden ölçülmüş |
 | 13 | Haber/olay zekâsı + ML (koşullu) | ⏳ Bekliyor | Açılma koşulu: veri bütçesi kararı + kaynak spike'ı. Açılırsa: LLM kesim tarihi kayıtlı, `leak_riski` uygulanıyor |
-| 14 | Üretim sertleştirme | 🔄 Devam | Kriterler: kill switch ✅ (K-065) · dört boyut dashboard'da + her alarmın runbook satırı ✅ · yedekten yeniden üretim tatbikatı ✅ · anahtar ayrımı ✅ (salt okunur anahtar, çekim/işlem kapalı) · **≥8 gün** ⏳ (K-069; host-1 2026-09-17 → 2026-09-25, ilk yeniden dengeleme 24 Eylül; evren koşuları 3 adet) |
+| 14 | Üretim sertleştirme | 🔄 Devam | Kriterler: kill switch ✅ (K-065) · dört boyut dashboard'da + her alarmın runbook satırı ✅ · yedekten yeniden üretim tatbikatı ✅ · anahtar ayrımı ✅ (salt okunur anahtar, çekim/işlem kapalı) · **≥8 gün** ⏳ (K-069; host-1 2026-09-17 → 2026-09-25, ilk yeniden dengeleme 24 Eylül; evren koşuları 3 adet + Jev gölgesi `golge-1`, K-074) · host **bilerek** 41 commit geride (`3a74ebf`, K-069 penceresi; senkron 25 Eylül sonrası) · açık pozisyonla gerçek toparlanma henüz ölçülmedi ⏳ (Faz 8 ön koşulu 5; 25 Eylül senkron restart'ında ölçülebilir) |
 | 15 | İkinci varlık sınıfı (US equities/ETF) | ⏳ Bekliyor | Açılma koşulu: broker/lisans spike'ı. Açılırsa: aynı kod yolu ikinci varlık sınıfında paper koşuyor |
 | 16 | Sürekli araştırma | 🔄 Devam Ediyor | Kapanmaz; her tur bir program kaydı ve bir rapor bırakır |
 
@@ -951,3 +951,44 @@ risk, emir **yok**; K-067 aynen. Kesim tarihi UNKNOWN → replay `leak_riski`, k
 marj kuralıyla 48/48 `flat` — gölgede de böyle çıkarsa "yön isabeti" `n=0` kalır ve öyle
 yazılır. **Çekiliş değildir** (strateji koşmuyor, parametre seçilmiyor); B/C/D deneyleri
 program kaydı + yeni K-kaydı ister.
+
+**Jev ölçümlerinin sonucu (K-075…K-077, 2026-09-19/20): yön ekseni ve seçici rolü kapandı;
+gölge yalnız ileriye dönük doğrulama.** K-075: yayın tarihi kesimin üst sınırı, yayın sonrası
+açılan barlar için replay kesimden bağımsız (219 barlık ilk ölçüm). K-076: PIT 2026-09 ilk
+50 sembol × 197 bar, 1.099 yönlü karar, isabet **%49,0** (CI 0,46–0,52), net −%0,38/işlem —
+**Jev'in yönü bilgi kaynağı değildir**; B/C/D açılmaz. K-077: rejim × aile oracle tavanı
+(hindsight seçim, geçiş bedava) birleşik OOS Sharpe **0,60** (eşik 1,04), en kötü rejim 0,52
+(eşik 0,685) — "mevcut alpha evreni üzerinde selector/filter için headroom yok". Hiçbiri
+çekiliş değil; defter 52'de, eşik değişmedi. `golge-1` hostta açık kalır (K-074).
+
+**Dördüncü hat — M-1 NY saati çapası (2026-09-19/20): kapandı, çekiliş harcanmadı.**
+`docs/Faz-16-M1-NY-Saati-Olcumu.md`: 13:00 ET çapasına bağlı süpürme-dönüş yapısı BTC 1m'de
+ölçülemedi (96 çapa plasebosu, p = 0,385); sonuç görülmeden yazılmış karar kuralı iki testten
+birini geçemedi. Lunch ailesi (KAANERMI-LUNCH-01) program açılmadan kapandı; kural gereği
+başka çapa denenmez.
+
+**Alpha Discovery Gap Audit (K-078, 2026-09-20).** `docs/Alpha-Discovery-Gap-Audit.md`:
+fiyat geçmişinden türeyen her şey (yönlü TA, kesitsel, kıyas-üstü dışlama, rejim/seçim, Jev)
+ölçülmüş ve kapalı. **Yapısal bulgu:** 52 çekilişin 52'si long-only spot (`Sinyal.side`,
+`target_exposure ≤ 1`); düşen rejimde 17 aileden 0'ının pozitif olması alpha zayıflığı değil,
+eylem uzayının sınırı. Açık uzaylar bilgi kaynağı değil **eylem uzayı** (short/perp, carry) ve
+**veri sınıfı** (haber, on-chain, ikinci varlık — veri yok). İki Adım 0 ölçümü (çekiliş değil):
+
+| Hat | Ölçüm | Sonuç | Kayıt |
+| --- | --- | --- | --- |
+| **Hat 2** — funding uzlaşma anı mikroyapısı | BTC 1m, IS 2023-08 → 2025-02, 1.688 olay, önceki ödeme işaretine koşullu | En iyi bacak +0,9 bps, maliyet 30,6 bps, net **−29,7 bps**; 32 plaseboda p = 0,156. **CLOSE** — çapa/pencere değiştirilerek tekrar ölçülmez (M-1 kuralı) | K-078/2, `docs/Faz-16-Hat2-Funding-Uzlasma-Olcumu.md` |
+| **Hat 1** — delta-nötr carry, ideal tavan | Spot long + perp short, `r_t = funding_t − Δbasis_t`, maliyet/marjin/likidasyon sıfır, IS 2020-01 → 2025-02 | BTC +%14,2/yıl Sharpe 9,5; havuz (28) +%13,8 / 6,6 — **ekonomik edge değil**, yalnız ikinci tavanın gerekçesi (BTC ödemelerinin %42'si faiz tabanı; risk kuyrukta; 2022 ETH 0,66, SOL −%38) | K-078/3, `docs/Faz-16-Hat1-Carry-Tavan-Olcumu.md` |
+| **Hat 1** — ikinci tavan (gerçekçi maliyet, marjin, fırsat maliyeti, stres) | Erişilebilen katmanlar ölçüldü: perp slippage BTC 7,11 / ETH 9,11 bps (K-021 yöntemi, config'e yazılmadı); DTB3 benchmark (PIT); fee=0 üst sınırı; `basabas_fee_perp_bps` eşiği (BTC H30 8 bps); beş stres sınıfı | **`DATA BLOCKED — eksik katman (perp fee) + eksik sınıf (liquidation threshold)`**. Perp taker fee ve MMR kademeleri yalnız vadeli yetkili anahtarla alınabiliyor (`apiRestrictions` `enableFutures=false`, Spike 8); **Scryne: vadeli hesap açılmıyor.** CLOSE/ELIGIBLE verilmedi; hiçbir sayı promotion kanıtı değil. Yeniden açılma koşulları K-079/6 ve `docs/Faz-16-Hat1-Kapanis.md` §7 | K-079, `docs/Faz-16-Hat1-Ikinci-Tavan-Kismi-Raporu.md`, `docs/Faz-16-Hat1-Metodoloji-Denetimi.md`, `docs/spikes/08-vadeli-tarife-kademe.md` |
+
+**Hat 1 "başarısız strateji" değil, DATA BLOCKED'dır** — bu ayrım korunur. K-079'un dış
+koşullarından biri gerçekten sağlanmadan hat yeniden açılmaz; K-079 bahane edilerek genel
+strateji araştırması da yeniden açılmaz.
+
+**Faz 16'nın 2026-09-20 durumu.** Defter 52 kayıt, **0/52** promotion; 5 program açıldı ve
+kapandı (`kesitsel_fiyat`, `turev_evren`, `makro_rejim`, `konumlanma_evren`, `kurma_evren`),
+açık program yok. Mevcut eylem uzayında (long-only spot) araştırma uzayı **kapalı**; açık iki
+eksen (eylem uzayı, veri sınıfı) bugün araştırma değil karar konusu. Eşik: son ölçüm 43
+ölçülebilir çekilişle (K-071), bugün ölçülebilir 45 (h51, h52 eklendi) — bekçi test
+`runs/faz12/coklu-test-birlesik-500-0.json`'u okuduğu için araç yeniden koşturulmadan
+bayatlığı **yakalamaz**; bir sonraki program açılışından önce `tools/faz12_coklu_test.py
+--deneme 500 --seed 0` koşturulur. Promotion'a giden strateji **yok**, Faz 8 tetiklenmedi.
