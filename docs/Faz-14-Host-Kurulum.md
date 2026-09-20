@@ -217,3 +217,90 @@ arası determinizm kontrolü, bedava.
 replay `leak_riski=true`). Her kapalı gün bir günlük örneklem kaybı; masaüstü her gün
 kapanıyor (`gozlem-2`yi kesen şey). Kanıtın birikmesinin tek yolu bu koşunun hostta kesintisiz
 durmasıydı.
+
+## 7. K-069 penceresi: kesinti kaydı ve açık pozisyonlu toparlanma (2026-09-20 denetimi)
+
+Bu bölüm K-069/1'in *"kesinti olduysa sebebi kayıtlı ve giderilmiş"* şartının **"kayıtlı"**
+yarısını belgeye işler. K-069'un kapanış kararı ayrıdır ve burada verilmiyor. Kanıt kaynağı:
+hostta salt okunur okunan `runs\paper\<koşu>.sqlite` `olay` tabloları, `Get-Process`,
+Windows System günlüğü (`wevtutil`), `evren-kiyas.log`. Hosta ve koşulara dokunulmadı.
+
+### 7a. Dört WebSocket kopması (2026-09-19)
+
+| Koşu | Bağlantı başlangıcı (UTC) | `kopma` (UTC) | `yeniden_baglandi` | `kopuk_ms` | `resync_bar` | Bağlantıdan bu yana |
+| --- | --- | --- | --- | ---: | ---: | --- |
+| `evren-makro-nfci` | 09-17 16:50:58 (`basladi`) | 09-19 16:54:01 | 16:54:31 | 29.141 | 0 | 48 sa 03 dk |
+| `evren-funding-basis` | 09-17 16:34:53 (`basladi`) | 09-19 17:01:02 | 17:01:31 | 29.636 | 0 | 48 sa 26 dk |
+| `evren-kiyas` | 09-17 16:22:50 (`toparlandi`) | 09-19 17:15:02 | 17:15:31 | 29.800 | 0 | 48 sa 52 dk |
+| `host-1` | 09-17 17:04:32 (`toparlandi`) | 09-19 17:47:01 | 17:47:18 | 16.575 | 0 | 48 sa 42 dk |
+
+Dördünde `sebep` aynı: `AkisKoptu: WebSocket kapandı: CLOSED`. **Kesinti sayısı koşu başına
+1** (`KOPMA ∈ KESINTI_OLAYLARI`, `live/depo.py`). `runs\izleme\alarmlar.jsonl` boş — `KOPMA`
+alarmının eşiği 24 saatte >5 (Runbook), aşılmadı.
+
+**Giderilme (ölçüldü):** yeniden bağlanma otomatik ve K-043'ün tasarladığı yoldan
+(`BACKOFF[0]` 1 s → REST resync → yeni bağlantı → ilk mesajda `yeniden_baglandi`): 16,6 s tek
+sembolde, ≈29,5 s 50 sembollü birleşik akışta. `resync_bar 0` beklenen değer — kopma bir bardan
+kısa sürdü, tamamlanacak kapanmış bar yoktu. Kayıp bar 0, `backfilled` bar 0, toparlanma
+ayrışması 0; `evren-kiyas.log` saatlik satırları 16:00 → 17:00 → 18:00 kesintisiz, `eksik 0`.
+Süreçler yeniden başlamadı (`Get-Process`: dört koşu 2026-09-17'den beri aynı PID'de);
+`olay` tablolarında 09-19'da başka kayıt yok.
+
+**Kanıtla dışlananlar** (`exchange/akis.py`, `exchange/coklu_akis.py`, aiohttp 3.14.3):
+- Uygulama kapatması: `kapat()` çağrılmadı, süreç aynı; kapatma `AkisKoptu` fırlatmaz.
+- aiohttp heartbeat (30 s ping / 15 s pong) zaman aşımı: `WSMsgType.ERROR` üretir, `CLOSED` değil.
+- 90 s okuma sessizliği: farklı metin (`"90 s boyunca mesaj gelmedi"`).
+- Yeniden bağlanma hatası: `aiohttp.ClientError` adıyla yazılırdı.
+- Host OS/zamanlayıcı: System günlüğü 16:00–18:30 UTC'de yalnız 16:06:47 DCOM 10010 (GameBar,
+  ilgisiz); NDIS/TCPIP/DHCP/güç/uyku/Time-Service olayı yok; Windows Update indirmeleri
+  22:11 UTC'de (olaydan 4,5 sa sonra); zamanlanmış görev ızgarası (`Izleme` :00/:15/:30/:45)
+  kopma dakikalarıyla örtüşmüyor.
+- Tek ağ kesintisi/NAT sıfırlaması/uyku: dört olay 53 dakikaya dağılmış, eşzamanlı değil.
+
+**Sınıf: dış sonlandırma.** aiohttp `CLOSED`ı üç yoldan üretir (karşı taraftan CLOSE frame;
+TCP EOF; `ServerDisconnectedError`) ve üçü de bağlantının uygulama dışından bitirilmesidir.
+**Kök neden belirlenemedi:** kapanış kodu (`ws.close_code`) ve `ws.exception()` hiçbir yere
+yazılmıyor; sunucunun düzenli kapatması ile yol üstünde kopma bu kayıtla ayrılamaz. Binance'in
+belgelenmiş 24 saatlik bağlantı sınırı bu olayları açıklamıyor: 24 sa işaretinde (09-18
+15:28–17:04 UTC) hiçbir koşuda kopma yok. **Binance tarafı bakım/duyuru kaydı kontrol
+edilmedi** — o yönde kanıt yok, her iki yönde.
+
+**Gözlemler — sebep değil:** (1) dört olay dakika sınırının +1…+2 s içinde; kayıt `except`
+bloğunda anında yazıldığı için damga kapanma anını yansıtır. (2) Bağlantıdan ≈48 sa sonra,
+ama ofset 3–52 dk oynuyor; sabit bir bağlantı ömrü değil ve **sebep olarak kullanılmaz**.
+(3) Günün saati 16:54–17:47 UTC.
+
+**K-055 ile karşılaştırma:** `gozlem-2` (ana makine, 2026-09-14 17:58:59 UTC) aynı imza
+(`CLOSED`, 18.013 ms, `resync_bar 0`), bağlantıdan +2 sa 57 dk sonra. Aynı mekanizma sınıfı,
+farklı makine ve ağ; 48 saatlik bir ömür hipotezini çürütür — bu yüzden öyle bir hipotez
+(H3) **kaydedilmiyor**.
+
+**Ön kayıtlı gözlem hipotezleri** (pencere 2026-09-20 → 2026-09-25, müdahale yok; tutmaları
+kök nedeni **kanıtlamaz**, yalnız sınıfı daraltır):
+- **H1 (dakika tiki):** bir sonraki her `CLOSED` olayı dakika sınırının ±2 s içindedir.
+  Bandın dışına düşen tek olay H1'i çürütür.
+- **H2 (saat bandı):** sonraki olaylar 16:54–17:59 UTC bandındadır. Zayıf; band dışı tek
+  olay yeter.
+
+**Pencere sonrası backlog (kod, şimdi yapılmıyor):** `AkisKoptu` metnine `ws.close_code` ve
+`ws.exception()` eklenmesi (`exchange/akis.py`, `exchange/coklu_akis.py`; ayrıca `CLOSE`
+mesaj tipinin ele alınması) — kök nedeni ölçebilecek tek değişiklik. K-069 penceresi
+kapanmadan hosta konamaz; senkronla birlikte değerlendirilir.
+
+### 7b. host-1: açık pozisyonla toparlanma (2026-09-17 17:04 UTC)
+
+§6 yalnız 15:00 tatbikatını yazıyor. `host-1.sqlite` şunu da kaydetmiş:
+
+| Zaman (UTC) | Olay |
+| --- | --- |
+| 09-17 16:00:00 | `fill` #1: AL 0,016472547 BTC @ 76.820,70 (sinyal barı 15:00, fill sonraki barın açılışında — K-004) |
+| 09-17 17:04:18 | `durdu` — sebep "kod guncellemesi: izleme paneli", planlı (K-043, kesinti sayılmadı) |
+| 09-17 17:04:32 | `toparlandi` `{"fill_sayisi": 1, "pencere_bar": 1000, "yazim": 3, "bekleyen_dogrulandi": null}`; `host-1.log`: "toparlandı: son bar 2026-09-17 16:00:00 UTC, 1 fill" |
+
+Pozisyon bugün hâlâ açık (`durum`: `giris_ms` 1789660800000, miktar 0,016472547, `fill_sayisi` 1,
+`kapanis_ms` null). Toparlanma ayrışması 0. Bu, K-055/4'te *"toparlanmanın açık pozisyonla
+canlıda sınanması (0 fill)"* diye açık bırakılan yolun **tek sembolde bir kez** çalıştığı
+kayıttır. Sınırları: planlı durdurma, tek fill, tek sembol. Çok enstrümanlı yol
+(`live/evren_kosturucu.py`) yalnız 09-17 16:22:50'de, adım 771'de ve pozisyon öncesi çalıştı;
+`evren-kiyas` şu an 8 pozisyon taşıyor — çok enstrümanlı açık pozisyonlu toparlanma henüz
+görülmedi, pencere sonrası senkron restart'ında ölçülebilir.
