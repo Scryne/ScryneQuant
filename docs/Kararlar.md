@@ -3866,3 +3866,39 @@ K-046, K-057 (açılmadı) · **Kaynak:** `docs/Alpha-Discovery-Gap-Audit.md`,
    maliyeti, stres) gerekçesidir; promotion kanıtı değildir ve öyle kullanılmayacaktır.
 4. **Değişmeyen:** defter 52; eşik 1,04; spot kapsamı; K-008/K-033/K-046/K-057; Jev gölge
    yalnız ileriye dönük doğrulama. Program açılmadı; veri satın alma kararı yok.
+
+## K-079 — Hat 1 ikinci tavanı: DATA BLOCKED — eksik katman (perp fee) + eksik sınıf (liquidation threshold); vadeli hesap açılmıyor
+
+**Durum:** kabul (bilgilendirici — Hat 1'in mevcut metodolojik kapanış durumunun kalıcı kaydı;
+yeni veri erişimi, yeni kapsam, yeni kapı ya da yeni yetki **açmaz**; yeni kural ve yeni K
+bağımlılığı üretmez) · **Tarih:** 2026-09-20 · **Onay:** Scryne · **Tabi:** K-007, K-021,
+K-045, K-049/4, K-054, K-058, K-066 (+Ek), K-077, K-078 · **Kaynak:** `docs/Faz-16-Hat1-Kapanis.md`,
+`docs/Faz-16-Hat1-Ikinci-Tavan-Kismi-Raporu.md`, `docs/Faz-16-Hat1-Metodoloji-Denetimi.md`,
+`docs/Faz-16-Hat1-Fee-MMR-Erisilebilirlik.md`, `docs/spikes/08-vadeli-tarife-kademe.md`
+
+1. **Ölçülen:** ideal carry tavanı (K-078); perp slippage K-021 yöntemiyle BTC 7,11 / ETH
+   9,11 bps (config'e yazılmadı); DTB3 benchmark (BEY, K-060 PIT); fee=0 maliyet **üst
+   sınırı**; `r_excess` üst sınırı (L×b×H ızgarası, seçim yok); `basabas_fee_perp_bps`
+   (**eşik**, gerçek fee değil: BTC L1/b0 H30 8 bps, H365 346 bps); beş stres sınıfı + kısmi
+   execution; `stres_bozulma` **alt sınırı** (BTC H30 35,7 pp, H365 10,95 pp — IS yıllık; OOS
+   toplam-getiri kapısıyla yalnız mertebe kıyası).
+2. **Bloke:** perp taker fee ve MMR kademeleri — resmî sayfalar bot korumalı/JS, FAQ'lar
+   oran/kademe vermiyor, imzalı uçlar `-2015`, `apiRestrictions` `enableFutures=false`, UI'da
+   seçenek yok (FAQ 360002502072: vadeli hesap açılmadan üretilmiş anahtara verilemez).
+   **Scryne: vadeli hesap açılmıyor** — bu, mevcut kararın kaydıdır; gelecekte zorunlu bir
+   erişim yolu tanımlamaz. K-066 Ek'in erişim yolu bu anahtarla kapalı. Alternatif uç,
+   spot→perp taşıma, güncel MMR'yi geçmişe uygulama, varsayım: yapılmaz.
+3. **Sonuç:** `DATA BLOCKED — eksik katman (perp fee) + eksik sınıf (liquidation threshold)`.
+   CLOSE/ELIGIBLE verilmedi; `gecici_maliyet_modeli` mutlak engeli; hiçbir sayı promotion
+   kanıtı değil. Adım 0 durumu (K-078/3 FURTHER-RESEARCH-ELIGIBLE) eksik katmanla askıda.
+4. **PIT:** fee/MMR ne zaman alınırsa alınsın kayıt tarihi PIT sınırıdır; 2020–2025 IS'e
+   uygulanırsa `NON_PIT/leak_risk`, kapı dışı. PIT MMR EMPTY, NON_PIT MMR EMPTY.
+5. **Kapsam:** BTC+ETH; havuz (2)–(4) yok, genellenmez. B-6 (havuz perp slippage) AÇMA —
+   backlog, mevcut karar için gerekli değil. C-portfolio, mark boşluk günleri, DTB3'ün program
+   sözlüğüne/host sözleşmesine dahil edilmesi: bağımsız backlog.
+6. **Yeniden açılma:** doğrulanabilir taker fee + MMR kademeleri/bakım tutarı + PIT
+   kapsamının açıkça belirlenmesi → `tools/faz16_hat1_ikinci_tavan_kismi.py` tam, `C-isolated`
+   sayacı kayıt tarihinden ileriye, tasarım §10 kuralı; sonuç yine promotion değil. Bu
+   koşullardan biri gerçekten sağlanmadan Hat 1 yeniden açılmaz.
+7. **Değişmeyen:** `src/`, config, execution, spot kapsamı, K-008/K-033/K-046/K-057, defter 52,
+   eşik 1,04, Jev gölge yalnız doğrulama.
