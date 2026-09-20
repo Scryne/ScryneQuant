@@ -11,6 +11,7 @@ __pycache__/
 
 # Hook'ların ürettiği çalışma-anı durumu — makineye özel, koda ait değil
 .claude/.sync-lock.json
+.claude/sync-health.json
 
 # Ortam / sır dosyaları
 .env
