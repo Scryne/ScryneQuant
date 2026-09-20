@@ -456,10 +456,23 @@ class TestIstemci:
         k = _kur(yanit=r.yanit)
         assert k.durum is KararDurumu.SEMA_HATASI  # …şema karar katmanında düşer
 
-    def test_gercek_istemci_fabrikasi_ayarlari_uygular(self):
-        c = istemci_mod.typesafe_istemci(self._ayar())
-        assert hasattr(c, "system_one")
-        c.close() if hasattr(c, "close") else None
+    def test_gercek_istemci_fabrikasi_ayarlari_uygular(self, monkeypatch):
+        """Gerçek SDK kurucusu; anahtar **sahte** (kurucu ağa çıkmaz, anahtarı doğrulamaz —
+        iddia SDK uyumluluğu ve ayarların uygulanması, kimlik değil). Gerçek anahtar CI'da
+        bilerek yok (K-074/8); `ipv4=False` süreç geneli `getaddrinfo` patch'ini oturuma
+        sızdırmamak için."""
+        from tenacity.stop import stop_after_attempt
+
+        monkeypatch.setenv("TYPESAFE_API_KEY", "sk-test-sahte-anahtar-000000")
+        ayar = self._ayar()
+        c = istemci_mod.typesafe_istemci(ayar, ipv4=False)
+        try:
+            assert hasattr(c, "system_one")
+            assert c._config.timeout == ayar.timeout_s
+            deneme = [s for s in c._retry.stop.stops if isinstance(s, stop_after_attempt)]
+            assert deneme and deneme[0].max_attempt_number == ayar.azami_deneme
+        finally:
+            c.close() if hasattr(c, "close") else None
 
 
 def test_kopya_bagimsizligi():
