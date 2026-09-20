@@ -1,9 +1,18 @@
-# Minimal CI (K-074/8). Tek iş, tek amaç: "aynı karar zamanı ve aynı PIT koşullarında kanonik
-# durum gelecekten etkilenmez" invariantını ve mevcut test takımını her push'ta koşturmak.
+# Minimal CI (K-074/8). Tek amaç: "aynı karar zamanı ve aynı PIT koşullarında kanonik durum
+# gelecekten etkilenmez" invariantını ve mevcut test takımını her push'ta koşturmak.
 #
-# Kapsam bilerek dar: lint yalnız `ruff check`, matris yok, önbellek yok, dağıtım yok. Ağ isteyen testler
-# (`network` işareti) CI'da koşmaz — Binance'e bağımlı bir CI, kodun değil ağın durumunu ölçer.
-# Sızıntı testleri `tests/unit/test_jev_durum.py` ve `test_look_ahead.py`; ikisi de takımın içinde.
+# Kapsam bilerek dar: lint yalnız `ruff check`, matris yok, önbellek yok, dağıtım yok. Ağ isteyen
+# testler (`network` işareti) CI'da koşmaz — Binance'e bağımlı bir CI, kodun değil ağın durumunu
+# ölçer. Sızıntı testleri `tests/unit/test_jev_durum.py` ve `test_look_ahead.py`; ikisi de takımın
+# içinde.
+#
+# İz A (2026-09-20, ROADMAP-RESET R1 sonrası):
+# - `-rs`: skip'ler adıyla listelenir. Sessiz başarı yok — atlanan bir test "geçti" görünmez.
+# - `kill-switch (windows)`: K-065'in süreç adımı Windows API'si (NtSuspendProcess,
+#   TerminateProcess) ister; `tests/unit/test_kill_sureci.py::TestDonmusTrader` yalnız burada
+#   koşar, mock yok. Linux işinde aynı dosyanın platform bağımsız testleri koşar, iki süreç testi
+#   adıyla skip görünür. `kill.py`nin POSIX dalı (`os.kill`) hiçbir işte tam test edilmiyor —
+#   host Windows.
 name: test
 
 on:
@@ -24,8 +33,25 @@ jobs:
       # Lint yalnızca `ruff check` (biçimlendirme değil): pyproject'teki kural kümesi, hata
       # bulan kurallar (F, B) dahil. `tools/faz16_*` per-file-ignores ile dışarıda.
       - run: uv run ruff check src tests tools
-      - run: uv run pytest -m "not network" -p no:cacheprovider
+      - run: uv run pytest -m "not network" -rs -p no:cacheprovider
       # Jev sızıntı invariantı ayrıca ve adıyla: takımın içinde zaten koşuyor, ama bu adım
       # düşerse günlükte "leakage" satırı görünür, 1.500 testin arasında kaybolmaz.
       - name: leakage invariant (jev canonical state, byte-identical)
-        run: uv run pytest tests/unit/test_jev_durum.py tests/unit/test_jev_izolasyon.py -q -p no:cacheprovider
+        run: uv run pytest tests/unit/test_jev_durum.py tests/unit/test_jev_izolasyon.py -q -rs -p no:cacheprovider
+      # Kill switch'in platform bağımsız yarısı Linux'ta; süreç testleri adıyla skip.
+      - name: kill-switch (file/flag/report half; process tests skip here by name)
+        run: uv run pytest tests/unit/test_kill_sureci.py -q -rs -p no:cacheprovider
+
+  kill-switch-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --group dev
+      # Gerçek süreç: Popen + NtSuspendProcess (askıdaki trader) + TerminateProcess + rapor.
+      # Burada skip beklenmez; `-rs` listesi boş olmalı.
+      - name: kill-switch (windows, real suspended process, no mocks)
+        run: uv run pytest tests/unit/test_kill_sureci.py -q -rs -p no:cacheprovider

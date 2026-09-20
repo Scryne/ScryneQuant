@@ -3,6 +3,14 @@
 Faz 14'ün bitti kriteri: *"Kill switch, trader süreci **askıdayken** çalışıyor: açık emirler
 iptal edilmiş, süreç durmuş, yeniden başlatma SAFE_MODE'da açılmış."* Borsa kısmı burada
 sahte bir borsayla; testnet kanıtı `docs/Faz-14-*` raporunda.
+
+**Platform (İz A2, 2026-09-20):** yalnız `TestDonmusTrader` gerçek bir süreç ister (`Popen` +
+`NtSuspendProcess` + `TerminateProcess`) ve Windows'a özgüdür; CI'da ayrı `windows-latest` işi
+koşturur, mock yok. Geri kalan testler dosya/işaret/rapor/başlatma davranışı — platform
+bağımsız, Linux CI'da da koşar. Eskiden modül düzeyindeki `skipif` 10 testin 10'unu Linux'ta
+atlıyordu ve bu, K-065'in CI kanıtını sessizce sıfırlıyordu (W6 T1). `kill.py`nin POSIX dalı
+(`os.kill`) yalnız `test_surec_yasiyor_mu_olu_pid` ile hafifçe dokunulur; `sureci_sonlandir`in
+POSIX dalı **testsizdir** — host Windows.
 """
 
 from __future__ import annotations
@@ -18,7 +26,8 @@ import pytest
 
 from scryne_quant.live import kill as kill_mod
 
-pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="Windows süreç API'si")
+#: Yalnız gerçek süreç askıya alan testler için (NtSuspendProcess, TerminateProcess).
+YALNIZ_WINDOWS = pytest.mark.skipif(sys.platform != "win32", reason="Windows süreç API'si")
 
 
 def _askiya_al(pid: int) -> None:
@@ -83,6 +92,7 @@ class SahteBorsa:
         self.emirler = [e for e in self.emirler if e.istemci_kimligi != istemci_kimligi]
 
 
+@YALNIZ_WINDOWS
 class TestDonmusTrader:
     def test_askidaki_surec_sonlandirilir_emirler_iptal_isaret_yazilir(self, donmus_trader):
         kosu, pid = donmus_trader
