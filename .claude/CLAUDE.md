@@ -122,6 +122,10 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri. Faz 0-8 v1 (8'i kapalı),
   Faz 9-16 v2. **Faz 8 sıraya değil tetiklenmeye bağlıdır:** promotion'u geçen ilk strateji
   çıktığında başlar.
+- `docs/Faz-8-Hazirlik.md` — **Faz 8 hazırlık (2026-09-20, kod yok, K yok).** Shadow adımı
+  (tanım, anahtar-yetkisiyle yapısal "gönderilmez" garantisi, `GolgeAdaptoru`/`GOLGE` durumu
+  tasarımı), `config/kademe.json` şeması, drift tanımı (`|paper − live|` işlem başına bps),
+  venue hukuki statü kayıt biçimi (**doldurulmadı**), tetik gelince iş sırası. Tetik yok.
 - `docs/Faz-11-Dogrulama-Raporu.md` — **Faz 11 ölçümleri (K-058):** K-054'ün dört kapısının
   null kalibrasyonu (PBO'nun 0,5 referansı gerçek ızgarada geçersiz — null medyanı 0,237),
   evren dayanıklılığının yapısal ölçümü, 38 çekilişin yeni kapılardaki durumu (0/38).

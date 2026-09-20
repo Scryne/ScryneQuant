@@ -700,6 +700,12 @@ live arasındaki gerçek operasyon farkı.
   değil, ve artık K-050/3'ün sayısal kuralıyla. Drift beklenenden büyükse sermaye artmaz,
   Faz 3-4'e (v2'de Faz 10-12'ye) geri dönülür.
 
+**Hazırlık dokümanı (2026-09-20): `docs/Faz-8-Hazirlik.md`.** Shadow adımının tanımı ve
+kodsal tasarımı, kademeli sermaye tablosunun makine-okunur biçimi (`config/kademe.json`
+şeması, drift tanımı `|paper − live|` işlem başına bps), venue hukuki statü kaydının biçimi,
+ön koşulların bugünkü ölçülmüş durumu ve tetik geldiğinde iş sırası. Kod yazılmadı, K
+açılmadı; Scryne'ın vereceği yedi karar §6'da listeli. Tetik hâlâ yok (0/52).
+
 ---
 
 # v2 — Faz 9-16
