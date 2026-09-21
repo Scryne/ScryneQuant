@@ -64,7 +64,19 @@ Day, Veterans Day haftaları **120/120** (kapanış yok). Kısa saatlerin NY yer
 2024/52 var) — Noel/Yılbaşı 2024 ölçülemedi. Takvim + 2 ölçülmüş kapanış gerçek depoyu bar bar
 açıklıyor: beklenen 6.663 = 6.543 + 120 (h35 dosyası); takvim dışı bar 0.
 
-## 5. Açık
+## 5. PIT evren ve hayatta kalma — tasarım (Paket 1(e), K-090)
+
+Kural `dosya-var` (kimlik `6124cf568498…`, 21 çift): üyelik = o haftanın M1 dosyası sağlayıcıda var.
+Kanıt kaynağı HEAD keşfi (`kesif-*.json`) + indirilmiş manifestolar; kanıtsız hücre bilinmiyor.
+Bugünkü kanıt: EURUSD 80 hafta (2011 h50 → 2026 h39; 69 var), GBPUSD/USDJPY 4'er hafta → `kapsam:
+kismi`, **ölçülen hafta 0** (21/21 kanıtlı hafta yok). Tam ölçüm için gereken **minimum kapsam**:
+21 çift × 770 hafta HEAD (≈16.170 istek, veri indirmesiz, curl hızıyla ≈ 80 dk; sunucu uzun
+oturumu düşürdüğü için yıl yıl `--bas/--bit` parçalarıyla). Tam veri indirme (≈1,5 GB) hayatta
+kalma ölçümü için **gerekmez**; kalite bazlı eleme ve R6 araştırması için, kullanılacak pencere
+kadar. "2012 h1'de 21/21" varsayılmıyor: matris ölçecek (örnek kanıt: 21 çiftte 2012 h10 200,
+2011 h10 404).
+
+## 6. Açık
 
 - Hayatta kalma yanlılığı (1e): 21 çift sabit; PIT tablosu "hangi çiftin hangi haftadan itibaren
   dosyası var" ile kurulacak (2012 h1'de 21/21 var → sıfır beklenir, ölçülecek).

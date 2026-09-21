@@ -4538,3 +4538,48 @@ K-005, K-009, K-083/U15-U16, K-088 · **Kaynak:** `src/scryne_quant/data/takvim.
    beklenen 6.663 = mevcut 6.543 + 120 (yalnız sağlayıcının h35 dosyası); takvim dışı bar 0;
    kalite raporu 6.543/6.543, eksik 0, `kapali_saat` 57.
 6. Kapsam dışı: spread/mid (R4), `izgara`/`gap`/`bar_yili`'nin takvime bağlanması (R4), canlı.
+
+---
+
+## K-090 — FX PIT evreni "dosya-var" kuralı; hayatta kalma ölçümü HEAD kanıtıyla, indirmesiz
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (Paket 1(e) tasarım talimatı; büyük
+indirme ve ödeme yok) · **Tabi:** K-051/4, K-052, K-088, K-089 · **Kaynak:**
+`src/scryne_quant/data/fx_evren.py`, `tests/unit/test_fx_evren.py`, `docs/Faz-R3-FX-Veri-Raporu.md` §5
+
+### Karar
+
+1. **Kural (`FxEvrenKurali`, içerik hash'li):** çift `w` haftasında üye ⇔ sözleşmede (21 çift,
+   `fxcm-candledata-m1`) **ve** o haftanın M1 dosyası sağlayıcıda var. Hacim yok → kripto
+   evreninin hacim sıralaması yok; kural adı `dosya-var`. Kalite bazlı eleme (dosya indirilince,
+   `fx_kalite`) **ayrı kural adı/sürümü** olur, bu kurala sessizce eklenmez.
+2. **PIT anlamı:** haftalık dosya hafta bitince yayımlanır (ölçüldü: ~1-2 hafta); bar `t`nin
+   kullanılabilirliği haftanın kapanışından sonradır — `available_time = bar kapanışı`
+   sözleşmesiyle (K-052/5) uyumlu; canlı yok (K-087/2).
+3. **Kanıt iki kaynaktan ve ayrı:** `_gelen/<PAIR>/kesif-*.json` (HEAD, indirmesiz) ve
+   `<PAIR>/1h.kaynak.json` (indirilmiş, sha'lı). Çelişki → hata. Kanıtı olmayan hücre
+   **bilinmiyor**; tabloya girmez ("yok" sayılmaz). `kapsam` bunu raporlar (`tam`/`kismi`).
+4. **Hayatta kalma yanlılığı (Spike 6 kalıbı):** yalnız **tam kanıtlı** haftalarda (21/21 hücre)
+   `|bugünkü liste \ PIT| / |bugünkü liste|`; medyan/azami/sıfır olmayan hafta. Tüm çiftlerde boş
+   hafta = `saglayici_boslugu` (evren yok, yanlılık değil). Kısmi kanıtlı hafta ölçüme girmez.
+5. **Tam indirme gerekli değil.** PIT tablosu ve hayatta kalma ölçümü **varlık** bilgisine
+   dayanır; varlık HEAD ile ölçülür (`sq data fx-kesif --hepsi`): 21 × 770 hafta ≈ 16.170 HEAD,
+   veri transferi ≈ 0; tam veri (~1,5 GB) yalnız kalite eleme kuralı ve araştırma (R6) için ve
+   o zaman da yalnız kullanılacak pencere/çift altkümesi kadar (`--bas/--bit`).
+6. **"2012 h1'de 21/21" varsayım değil, ölçülecek:** tam HEAD matrisi 2011 h50 → bugün; ilk
+   hafta 21/21 ise yanlılık o haftadan itibaren 0 çıkar, değilse ölçüm gösterir. Bugünkü kanıt:
+   21 çiftte 6 örnek hafta (2011 h10 404; 2012/2013/2017/2020/2026 h10 200) + EURUSD sınır
+   taramaları — **kısmi**; mevcut çıktı `kapsam: kismi, ölçülen hafta 0` (uydurma yok).
+7. Enstrüman kimliği: `fxcm-fx:cfd:<PAIR>@2012-01-01` tek segment — kimlik kırılması tespiti
+   (K-052/4) bar verisi ister; dosya indirilince aynı `kimlikleri_kur` yoluyla ölçülür, şimdi tek
+   segment varsayımı **açıkça** kayıtta.
+
+### Uygulama
+
+`data/fx_evren.py`: `FxEvrenKurali`, `kanit_topla`, `pit_tablo` (sütunlar `hafta, pazar,
+kanonik_id, sembol, uye, kanit`; deterministik), `tablo_hash`, `hayatta_kalma`, `kapsam`,
+`evren_kur` → `data/fx/_evren/<kural>.{parquet,json}`. CLI `sq data fx-evren`, `sq data fx-kesif
+--hepsi` (dosya adı aralık taşır, kanıtlar birleşir). Testler (15): kural kimliği/sözleşme dışı,
+hafta anahtarı çözümü (2012-1, 2023-53, 2024-1 yok), kanıt birleşme/çelişki, tablo determinizmi,
+tekdüze → 0, eksik çift → 1/6 medyan 1/3 azami, sağlayıcı boşluğu, kısmi kanıt, kapsam,
+`evren_kur` deterministik, gerçek kanıt → kısmi/ölçüm yok.

@@ -310,7 +310,8 @@ def data_fx_al(
 
 @data_app.command("fx-kesif")
 def data_fx_kesif(
-    pair: Annotated[str, typer.Argument(help="Örn. EURUSD")],
+    pair: Annotated[str | None, typer.Argument(help="Örn. EURUSD (boşsa --hepsi)")] = None,
+    hepsi: Annotated[bool, typer.Option("--hepsi", help="21 çiftin tamamı")] = False,
     bas_gun: Annotated[str, typer.Option("--bas")] = fx_mod.KAYNAK_BASLANGIC.isoformat(),
     bit_gun: Annotated[str | None, typer.Option("--bit", help="Boşsa bugün")] = None,
     depo_kok: Annotated[Path, typer.Option("--depo", help="FX depo kökü")] = fx_mod.VARSAYILAN_DEPO,
@@ -321,22 +322,69 @@ def data_fx_kesif(
     Sonuç `data/fx/_gelen/<PAIR>/kesif.json`a yazılır (tarihsel derinlik kanıtı, indirme planı).
     """
     bit = bit_gun or dt.datetime.now(dt.UTC).date().isoformat()
-    try:
-        sonuc = fx_mod.kesfet(pair.upper(), bas_gun, bit, var_mi=fx_mod.https_var_mi())
-    except fx_mod.FxHatasi as hata:
-        raise typer.BadParameter(str(hata)) from hata
-    yol = Path(depo_kok) / fx_mod.GELEN_DIZINI / pair.upper() / "kesif.json"
-    yol.parent.mkdir(parents=True, exist_ok=True)
-    yol.write_text(
-        json.dumps(sonuc, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8", newline="\n",
-    )
+    secim = list(fx_mod.FXCM_CIFTLER) if hepsi else ([pair.upper()] if pair else [])
+    if not secim:
+        raise typer.BadParameter("çift ver (örn. EURUSD) ya da --hepsi")
+    var_mi = fx_mod.https_var_mi()
+    sonuclar = []
+    for p in secim:
+        try:
+            sonuc = fx_mod.kesfet(p, bas_gun, bit, var_mi=var_mi)
+        except fx_mod.FxHatasi as hata:
+            raise typer.BadParameter(str(hata)) from hata
+        # Dosya adı aralığı taşır: farklı aralıkların kanıtı birbirini ezmez (fx_evren birleştirir).
+        yol = Path(depo_kok) / fx_mod.GELEN_DIZINI / p / (
+            f"kesif-{sonuc['bas_gun']}_{sonuc['bit_gun']}.json"
+        )
+        yol.parent.mkdir(parents=True, exist_ok=True)
+        yol.write_text(
+            json.dumps(sonuc, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8", newline="\n",
+        )
+        sonuclar.append(sonuc)
+        if not json_cikti:
+            typer.echo(
+                f"{sonuc['pair']} · {sonuc['var']} var / {sonuc['yok']} yok "
+                f"({sonuc['hafta']} hafta) · ilk {sonuc['ilk_var']} → son {sonuc['son_var']}"
+                f" · {yol}"
+            )
     if json_cikti:
-        _yaz_json(sonuc)
+        _yaz_json(sonuclar)
+
+
+@data_app.command("fx-evren")
+def data_fx_evren(
+    depo_kok: Annotated[Path, typer.Option("--depo", help="FX depo kökü")] = fx_mod.VARSAYILAN_DEPO,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """FX PIT evren tablosu + hayatta kalma yanlılığı, mevcut kanıttan (kesif + manifesto). (K-090)
+
+    Kanıtı olmayan hücre bilinmiyor sayılır; tam ölçüm için 21 çift × tüm haftalar kanıt gerekir
+    (`sq data fx-kesif --hepsi`, HEAD — indirme değil). Çıktı `data/fx/_evren/<kural>.*`.
+    """
+    from scryne_quant.data import fx_evren as fe_mod
+
+    try:
+        meta = fe_mod.evren_kur(fx_mod.FxDepo(depo_kok), fe_mod.FxEvrenKurali())
+    except fe_mod.FxEvrenHatasi as hata:
+        raise typer.BadParameter(str(hata)) from hata
+    if json_cikti:
+        _yaz_json(meta)
         return
+    k, h = meta["kapsam"], meta["hayatta_kalma"]
     typer.echo(
-        f"{sonuc['pair']} · {sonuc['var']} var / {sonuc['yok']} yok ({sonuc['hafta']} hafta) · "
-        f"ilk {sonuc['ilk_var']} → son {sonuc['son_var']} · {yol}"
+        f"kural {meta['kural_kimlik'][:12]} · tablo {meta['tablo_hash'][:12]} · "
+        f"satır {meta['satir']}"
+    )
+    typer.echo(
+        f"  kapsam : {k['durum']} — {k['kanitli_cift']}/{k['cift']} çift kanıtlı, "
+        f"{k['hafta']} hafta ({k['ilk_hafta']} → {k['son_hafta']}), tam kanıtlı çift "
+        f"{len(k['tam_kanitli_cift'])}"
+    )
+    typer.echo(
+        f"  hayatta kalma : ölçülen hafta {h['olculen_hafta']} · kısmi kanıt "
+        f"{h['kismi_kanit_hafta']} · sağlayıcı boşluğu {len(h['saglayici_boslugu'])} · medyan "
+        f"{h['medyan']} · azami {h['azami']} · sıfır olmayan hafta {h['sifir_olmayan_hafta']}"
     )
 
 
