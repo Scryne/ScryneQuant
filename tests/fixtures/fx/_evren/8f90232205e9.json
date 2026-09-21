@@ -1,0 +1,28 @@
+{
+  "kaynak_depo": {
+    "haftalar": [
+      "2024-2",
+      "2024-3",
+      "2024-4",
+      "2024-5",
+      "2024-6",
+      "2024-7",
+      "2024-8"
+    ],
+    "pair": "EURUSD",
+    "sha256": "9dee3e07e4669de4223178c2a50fd0e9f19aee93197ea06755862f8b00be02e9"
+  },
+  "kural": {
+    "ciftler": [
+      "EURUSD"
+    ],
+    "kaynak": "fxcm-candledata-m1",
+    "kural": "dosya-var",
+    "takvim": "fx-5x24"
+  },
+  "kural_kimlik": "8f90232205e9e7d9312ced2e98d0ea4ea9b4c2bba4e5f303ed10fac58c96a70f",
+  "satir": 7,
+  "tablo": "tests/fixtures/fx/_evren/8f90232205e9.parquet",
+  "tablo_hash": "7e73049fb1aee0bb3e02f30ebbcc1e1efe0164c053058e6de1a4b4a1542b0f65",
+  "uye_satir": 7
+}

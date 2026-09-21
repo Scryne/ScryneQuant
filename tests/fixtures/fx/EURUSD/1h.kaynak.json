@@ -1,0 +1,71 @@
+{
+  "bar_sayisi": 839,
+  "bitis_gun": null,
+  "haftalar": {
+    "2024-2": {
+      "durum": "var",
+      "ilk_ms": 1704665280000,
+      "m1_satir": 7172,
+      "pazar": "2024-01-07",
+      "sha256": "5c4b8445cc721593c79a28967b447b83efde97eeedcb0b4aae99ecf5419fbb70",
+      "son_ms": 1705096740000
+    },
+    "2024-3": {
+      "durum": "var",
+      "ilk_ms": 1705269600000,
+      "m1_satir": 7174,
+      "pazar": "2024-01-14",
+      "sha256": "d43e36cab7d044719609251ed4db1c37b12bfac32d8fd2a6d6c25810ba0c5002",
+      "son_ms": 1705701540000
+    },
+    "2024-4": {
+      "durum": "var",
+      "ilk_ms": 1705874400000,
+      "m1_satir": 7177,
+      "pazar": "2024-01-21",
+      "sha256": "fc6cadd3dcde097bf2b7767fea0072b69a79dfdc7f67968a0105a4e5617d29fa",
+      "son_ms": 1706306340000
+    },
+    "2024-5": {
+      "durum": "var",
+      "ilk_ms": 1706479200000,
+      "m1_satir": 7187,
+      "pazar": "2024-01-28",
+      "sha256": "6453da9fc4b04ae43d99af0c7a0c51751eb6eb4d50fa2a1ff82c36d6f5371e7d",
+      "son_ms": 1706911140000
+    },
+    "2024-6": {
+      "durum": "var",
+      "ilk_ms": 1707084000000,
+      "m1_satir": 7179,
+      "pazar": "2024-02-04",
+      "sha256": "7bd510e55e4160bce4153cdfe9fcfe05d49405cc04b8b20f76bbc68dfdbacd36",
+      "son_ms": 1707515940000
+    },
+    "2024-7": {
+      "durum": "var",
+      "ilk_ms": 1707688800000,
+      "m1_satir": 7184,
+      "pazar": "2024-02-11",
+      "sha256": "c3c7668569e87f5e387f38546178e39e788eeb03afb355f662ee417102939704",
+      "son_ms": 1708120740000
+    },
+    "2024-8": {
+      "durum": "var",
+      "ilk_ms": 1708293780000,
+      "m1_satir": 7183,
+      "pazar": "2024-02-18",
+      "sha256": "a407afcad6d2500dc3a69afc86b7d16a6e881eecc4497a2793df8f932984d917",
+      "son_ms": 1708725540000
+    }
+  },
+  "ilk": "2024-01-07 23:00:00 UTC",
+  "ilk_ms": 1704668400000,
+  "kaynak": "fxcm-candledata-m1",
+  "pair": "EURUSD",
+  "sha256": "ced350678333d309685ff493b9c574a0b1b41054b40d76f39e1dc428f4db5f2c",
+  "son": "2024-02-23 21:00:00 UTC",
+  "son_ms": 1708722000000,
+  "timeframe": "1h",
+  "veri_sonu": "2024-02-23 21:00:00 UTC"
+}

@@ -210,6 +210,12 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   (`Takvim.rollover_anlari`), bedel `CokluAdimci._finansman_isle`te bir kez nakitten; kayda
   `finansmanlar`/`Islem.finansman`/`toplam_finansman` yalnız varsa. Finansman seanslı takvim
   ister; nakit yetmezse koşu durur.
+- `src/scryne_quant/data/fx_gorunum.py` — **FXCM Parquet → motor adaptörü (K-096, R4 Paket 4).**
+  `fx_dogrula` FX kalite bayrağı (sözleşme ihlali hata, bozuk bar `suspect`, takvimli gap),
+  `fx_barlar` (orta OHLC, hacim NaN, bid/ask aynen), `fx_hizala`, haftalık üyelik, cfd kimlik
+  (`maliyet fxcm-fx`, `finansman fxcm-<pair>` — dosyaları **yok**, uydurulmaz).
+  `evren_kosu.fx_kur`; `sq evren backtest` FX tablosunu meta'dan tanır (`--fx-depo`).
+  Fixture `tests/fixtures/fx/` gerçek EURUSD 2024 h2-h8 (`tools/fx_fixture_uret.py`).
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

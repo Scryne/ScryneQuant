@@ -31,6 +31,8 @@ from scryne_quant.common import finansman as finansman_mod
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data import funding as funding_mod
+from scryne_quant.data import fx as fx_mod
+from scryne_quant.data import fx_gorunum as fxg_mod
 from scryne_quant.data import kimlik as kimlik_mod
 from scryne_quant.data import konumlanma as konumlanma_mod
 from scryne_quant.data import makro as makro_mod
@@ -41,6 +43,8 @@ from scryne_quant.data.izgara import (
     uyeligi_barlara_kis,
     uyelik_matrisi,
 )
+from scryne_quant.data.takvim import TAKVIM_FX_5X24
+from scryne_quant.data.takvim import takvim as takvim_al
 from scryne_quant.strategy.evren import EvrenGorunumu
 from scryne_quant.strategy.kosu import evren_gorunum_kur
 from scryne_quant.strategy.temel import PortfoyStratejisi
@@ -311,6 +315,146 @@ def kur(
         veri.uyelik,
         strateji,
         kural_kimligi=veri.kural_kimligi,
+    )
+    return EvrenKurulumu(
+        gorunum=gorunum,
+        veri_sha256=veri.veri_sha256,
+        meta=veri.meta,
+        olcum_baslangici=veri.olcum_baslangici,
+        kimlikler=veri.kimlikler,
+    )
+
+
+# ------------------------------------------------------------------ FX (K-096, R4 Paket 4)
+
+
+def fx_tablo_mu(meta: Mapping[str, Any]) -> bool:
+    """Evren meta'sı FX PIT tablosuna mı ait (`fx_evren.FxEvrenKurali`, `fxcm-candledata-m1`)?"""
+    kural = meta.get("kural") or {}
+    return isinstance(kural, Mapping) and kural.get("kaynak") == "fxcm-candledata-m1"
+
+
+def fx_veri_kur(
+    tablo_yolu: str | Path,
+    *,
+    depo_kok: str | Path = fx_mod.VARSAYILAN_DEPO,
+    isinma_bar: int = 0,
+    baslangic_ay: str | None = None,
+    bitis_ay: str | None = None,
+    azami_sembol: int | None = None,
+) -> EvrenVerisi:
+    """FX PIT tablosu (`fx_evren`) + `FxDepo` → `EvrenVerisi`; kripto `veri_kur`un FX ikizi.
+
+    Farklar, hepsi bilerek: kalite bayrağı `fx_gorunum.fx_dogrula` (takvimli, hata sınıfları
+    kripto ile aynı şema), ızgara `ortak_izgara(..., takvim=fx-5x24)` (seans dışı damga hata),
+    üyelik haftalık (`fx_uyelik_matrisi`), kimlik tablodaki tek segment (`fx_enstruman`;
+    kırılma tespiti FX'te yok). Pencere `YYYY-MM`: haftanın Pazar'ı o aylarda olan satırlar.
+    Depoda üye görünüp barı olmayan çift hata; barı olup üye olmayan hafta üye değil.
+    """
+    tablo, meta = tablo_oku(tablo_yolu)
+    if not fx_tablo_mu(meta):
+        raise EvrenKosuHatasi(f"{tablo_yolu}: FX evren tablosu değil (kaynak fxcm-candledata-m1)")
+    tk = takvim_al(str((meta.get("kural") or {}).get("takvim", TAKVIM_FX_5X24)))
+    timeframe = fx_mod.TIMEFRAME
+
+    pencere = tablo[tablo["uye"].astype(bool)]
+    if baslangic_ay:
+        pencere = pencere[pencere["pazar"].astype(str).str[:7] >= baslangic_ay]
+    if bitis_ay:
+        pencere = pencere[pencere["pazar"].astype(str).str[:7] <= bitis_ay]
+    if pencere.empty:
+        raise EvrenKosuHatasi(
+            f"pencerede ({baslangic_ay or 'başı'}…{bitis_ay or 'sonu'}) hiç üyelik yok"
+        )
+    semboller = sorted(set(pencere["sembol"].astype(str)))
+    if azami_sembol is not None and len(semboller) > azami_sembol:
+        raise EvrenKosuHatasi(
+            f"pencerede {len(semboller)} çift üye olmuş, tavan {azami_sembol}; kırpmak evreni "
+            "daraltmak olur"
+        )
+
+    adim = timeframe_ms(timeframe)
+    alt_ms, ust_ms = _pencere_sinirlari(baslangic_ay, bitis_ay)
+    yukleme_alt = None if alt_ms is None else alt_ms - max(0, isinma_bar) * adim
+
+    depo = fx_mod.FxDepo(depo_kok)
+    barlar: dict[str, dict[str, np.ndarray]] = {}
+    kimlikler: dict[str, list[kimlik_mod.Enstruman]] = {}
+    veri_sha256: dict[str, str] = {}
+    kalite: dict[str, dict[str, Any]] = {}
+    for pair in semboller:
+        manifesto = depo.manifesto(pair)
+        if manifesto is None or not depo.parquet_yolu(pair).exists():
+            raise EvrenKosuHatasi(f"{pair}: FX deposunda yok ama tabloda üye görünüyor")
+        df = depo.oku(pair)
+        if df.empty:
+            raise EvrenKosuHatasi(f"{pair}: FX deposu boş ama tabloda üye görünüyor")
+        veri_sha256[pair] = str(manifesto.get("sha256") or "")
+        kimlikler[pair] = [fxg_mod.fx_enstruman(pair, int(df["open_time"].iloc[-1]), len(df))]
+        bayrakli, rapor = fxg_mod.fx_dogrula(_kirp(df, yukleme_alt, ust_ms), tk, pair=pair)
+        kalite[pair] = {k: rapor[k] for k in ("bar_sayisi", "bayraklar", "suspect_nedenleri",
+                                              "bosluk_sayisi", "eksik_bar", "kisa_saat")}
+        if not bayrakli.empty:
+            barlar[pair] = fxg_mod.fx_barlar(bayrakli)
+    if not barlar:
+        raise EvrenKosuHatasi("pencerede hiçbir çiftin barı yok")
+
+    izgara = ortak_izgara([b["open_time"] for b in barlar.values()], timeframe, takvim=tk)
+    if len(izgara) < 2:
+        raise EvrenKosuHatasi("pencerede 2'den az bar var")
+    olcum_baslangici = 0 if alt_ms is None else int(np.searchsorted(izgara, alt_ms, "left"))
+    olcum_baslangici = min(olcum_baslangici, len(izgara) - 2)
+
+    diziler = {s: fxg_mod.fx_hizala(b, izgara) for s, b in barlar.items()}
+    uyelik, bar_yok_uyelik = uyeligi_barlara_kis(
+        fxg_mod.fx_uyelik_matrisi(tablo, izgara, tuple(diziler)), diziler
+    )
+    return EvrenVerisi(
+        timeframe=timeframe,
+        zamanlar=np.asarray(izgara, dtype="int64"),
+        diziler=diziler,
+        uyelik=uyelik,
+        veri_sha256=veri_sha256,
+        meta={
+            "tablo": str(tablo_yolu),
+            "tablo_hash": meta.get("tablo_hash"),
+            "kural": meta.get("kural"),
+            "kural_kimlik": meta.get("kural_kimlik"),
+            "takvim": {"id": tk.kimlik, "icerik_hash": tk.icerik_hash},
+            "pencere": {"baslangic_ay": baslangic_ay, "bitis_ay": bitis_ay},
+            "sembol_sayisi": len(semboller),
+            "bar_sayisi": int(len(izgara)),
+            "isinma_bar": int(olcum_baslangici),
+            "uye_bar_toplami": int(sum(int(u.sum()) for u in uyelik.values())),
+            "bar_yok_uyelik": dict(sorted(bar_yok_uyelik.items())),
+            "kalite": {s: kalite[s] for s in sorted(kalite)},
+        },
+        olcum_baslangici=olcum_baslangici,
+        kimlikler=kimlikler,
+        kural_kimligi=str(meta.get("kural_kimlik", "")),
+    )
+
+
+def fx_kur(
+    tablo_yolu: str | Path,
+    strateji: PortfoyStratejisi,
+    *,
+    depo_kok: str | Path = fx_mod.VARSAYILAN_DEPO,
+    baslangic_ay: str | None = None,
+    bitis_ay: str | None = None,
+    azami_sembol: int | None = None,
+) -> EvrenKurulumu:
+    """FX evren tablosundan tek strateji için koşulabilir görünüm (`kur`un FX ikizi)."""
+    veri = fx_veri_kur(
+        tablo_yolu,
+        depo_kok=depo_kok,
+        isinma_bar=strateji.isinma_bar(),
+        baslangic_ay=baslangic_ay,
+        bitis_ay=bitis_ay,
+        azami_sembol=azami_sembol,
+    )
+    gorunum = evren_gorunum_kur(
+        veri.timeframe, veri.diziler, veri.uyelik, strateji, kural_kimligi=veri.kural_kimligi
     )
     return EvrenKurulumu(
         gorunum=gorunum,

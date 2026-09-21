@@ -4803,3 +4803,67 @@ K-089, K-094 · **Kaynak:** `common/finansman.py`, `data/takvim.py`, `portfolio/
   %100 pozisyonda rollover → `nakit yetersiz` hata; katalogda dosya yok / negatif bps / fazla alan
   (`kisa_gunluk_bps`) / `../x` → hata; cfd `Enstruman` `finansman_modeli_id=None` zaten kurulamaz.
 - **Suite:** ağ dışı 2.227 test yeşil (22 yeni).
+
+## K-096 — R4 Paket 4: gerçek FXCM Parquet → `PiyasaGorunumu` adaptörü, FX kalite bayrağı, `sq` FX akışı
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R4 Paket 4 talimatı) · **Tabi:**
+K-006, K-028, K-057 (kanıt kalıbı), K-083/U13-U17, K-084, K-088, K-089, K-090, K-093, K-094,
+K-095 · **Kaynak:** `data/fx_gorunum.py`, `research/evren_kosu.py` (`fx_veri_kur`/`fx_kur`/
+`fx_tablo_mu`), `cli/main.py` (`sq evren backtest --fx-depo`), `tools/fx_fixture_uret.py`,
+`tests/fixtures/fx/`, `tests/unit/test_fx_gorunum.py`
+
+### Karar
+
+1. **Tek çeviri:** `data/fx_gorunum.py` FXCM 1h deposunu (`data/fx.py`, bid/ask OHLC + `m1_sayisi`)
+   motorun bar sözleşmesine çevirir. `open/high/low/close` = alan alan `(bid + ask) / 2`; `volume`/
+   `quote_volume` **NaN** (sağlayıcı vermiyor; sıfır "hacim yok" olurdu — kapasite oranı üretilmez,
+   hacim isteyen strateji `hazir()` alamaz); `trades` 0; bid/ask OHLC ve `m1_sayisi` **aynen**
+   taşınır → fill K-094 ile `ask_open`/`bid_open`dan. `data/fx.py` değişmedi (K-088: kaynağın
+   verdiğini taşır, mid/kalite üretmez).
+2. **FX kalite bayrağı (`fx_dogrula`):** kripto şemasıyla (`ok`/`gap`/`suspect`), FX kuralları:
+   iki yanın OHLC tutarlılığı, çapraz kotasyon (`ask < bid`, K-094 `bid ≤ orta ≤ ask` ister),
+   sonlu/pozitif olmayan fiyat, aşırı hareket (orta kapanış; eşik kripto `ASIRI_HAREKET_BPS`
+   5.000 = üst sınır, FX için ölçülmüş değil — R5), `m1_sayisi` ∉ 1..60. `gap` = `fx-5x24`
+   takviminin beklediği ama olmayan saat (hafta sonu/ölçülmüş kapalı dönem gap değil, K-089).
+   **Sözleşme ihlali bayrakla geçiştirilmez:** hizasız damga, tekrar damga, takvim dışı bar, eksik
+   sütun, sürekli takvim → `FxGorunumHatasi`. Motor yalnız `ok` barda karar verir ve doldurur
+   (K-028/K-006, değişmedi): bozuk fill barı `fill_bari_ok_degil` sayılır, tek fiyata düşülmez.
+3. **Izgara ve üyelik:** `ortak_izgara(..., takvim=fx-5x24)` (seans dışı damga hata, K-093);
+   olmayan saat `listelenmedi` (`fx_hizala`, uydurma bar yok). Üyelik haftalık PIT tablosundan
+   (`fx_evren.pit_tablo`, `hafta_anahtari` = UTC tarihini içeren Pazar-başlı hafta); pencere ay
+   bazlı (kripto ile aynı: haftanın Pazar'ı pencere ayında → üye; bar kırpması ay sınırında).
+   Depoda barı olmayan üye çift → hata (`AUDCAD: FX deposunda yok ama tabloda üye`), yani 21
+   çiftlik gerçek tablo hepsi indirilmeden koşmaz — bilerek, kripto yoluyla aynı.
+4. **Kimlik:** tablodaki kanonik kimlik (`fxcm-fx:cfd:<PAIR>@2012-01-01`) tek segment; FX'te
+   kırılma tespiti uygulanmadı. `maliyet_modeli_id="fxcm-fx"`, `finansman_modeli_id=
+   "fxcm-<pair>"` **referans**: `config/maliyet/fxcm-fx.json` ve `config/finansman/fxcm-<pair>.json`
+   yoksa koşu katalogda durur (K-084/K-095; ikisi de bugün **yok**, oran uydurulmadı).
+5. **`sq evren backtest`:** tablo meta'sı `fxcm-candledata-m1` kaynağını taşıyorsa (`fx_tablo_mu`)
+   görünüm `--fx-depo`dan `fx_kur` ile kurulur, takvim tablonun takvimi olarak motora geçer
+   (`Sonuc.takvim` bloğu), maliyet + finansman katalogdan zorunlu. Kripto tablosu için yol
+   **değişmedi**. Varsayılan kıyas kote hacim ister → FX'te sinyal üretmez (dürüst sıfır; FX kıyası
+   K-030 kapsamında ayrı karar).
+6. **Fixture:** `tests/fixtures/fx/` = gerçek EURUSD deposunun 2024 h2-h8 dilimi (839 bar,
+   `tools/fx_fixture_uret.py`, `FxDepo` yazımı → bayt-aynı, sha `ced35067…`; manifesto hafta
+   sha'ları gerçek depodan kopya) + tek çiftlik PIT tablosu (`8f90232205e9`).
+
+### Kanıt (K-057 kalıbı)
+
+- **Kripto bit-aynı (HEAD `74c2cef` vs değişiklik, aynı betik):** `coklu_referans` 2 senaryo
+  `sonuc_hash`/`config_hash` + katalog senaryosu tam kayıt SAME; `96933a8` (Paket 1 öncesi) ile de
+  SAME. Kripto `hizala`/`veri_kur`/`dogrula` dokunulmadı; referans fixture testleri aynen.
+- **Gerçek dilim kalite:** 839/839 `ok`, 0 gap, 0 suspect, 51 kısa saat (rollover dakikası,
+  bilgi); tam 55 haftalık gerçek depo: 6.543 bar, 1 gap (120 saat = 2024 h35 sağlayıcı boşluğu,
+  K-089 ile tutarlı), 0 suspect, 0,03 s.
+- **Uçtan uca (fixture → `fx_kur` → motor):** tur alış fiyatı Parquet'teki `ask_open[3] × (1+s)`,
+  satış `bid_open[61] × (1−s)` (`Decimal` ≤ 1e-12, kaymalı ve kaymasız); spread = gerçek yarım
+  spread × miktar iki bacak (≤ 1e-12); iki rollover (Pzt + Sal) `Islem.finansman > 0`; kayıtta
+  `takvim` (`16bafe19…`), `maliyetler["EURUSD"].id = fxcm-fx`, `finansmanlar["EURUSD"].id =
+  fxcm-eurusd`, `toplam_spread`/`toplam_finansman`; iki koşu aynı hash.
+- **Kalite fail-closed:** çapraz kotasyon → `suspect` → motor doldurmaz (`fill_bari_ok_degil` 1,
+  işlem 0); beş suspect kuralı tek tek; hafta içi iki saat eksik → 1 gap / 2 eksik; Cumartesi
+  damgası, hizasız damga, eksik sütun, 24x7 takvim, tekrar damga → hata.
+- **`sq`:** maliyet dosyası yok → `fxcm-fx … dosya yok` ile başlamaz; finansman dosyası yok →
+  `fxcm-eurusd` ile başlamaz; geçici kataloglarla koşar: `evren.takvim.id = fx-5x24`, kalite
+  839 ok, kıyas 0 işlem, `toplam_finansman`/`toplam_spread` kayıtta.
+- **Suite:** ağ dışı 2.248 test yeşil (21 yeni).

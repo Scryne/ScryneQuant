@@ -40,6 +40,7 @@ from scryne_quant.data import funding as funding_mod
 from scryne_quant.data import fx as fx_mod
 from scryne_quant.data import kimlik as kimlik_mod
 from scryne_quant.data import sozlesme as sozlesme_mod
+from scryne_quant.data import takvim as takvim_mod
 from scryne_quant.data.depo import ParquetDepo
 from scryne_quant.data.dogrulama import rapor_cikar
 from scryne_quant.data.indirici import TarihselIndirici
@@ -3707,6 +3708,9 @@ def evren_backtest(
     ] = 120,
     sermaye: Annotated[float, typer.Option("--sermaye")] = 10_000.0,
     depo_kok: Depo = arsiv_mod.VARSAYILAN_EVREN_DEPO,
+    fx_depo: Annotated[
+        Path, typer.Option("--fx-depo", help="FX tablosu için FXCM depo kökü (K-096).")
+    ] = fx_mod.VARSAYILAN_DEPO,
     yaz: Annotated[bool, typer.Option("--yaz/--yazma", help="Sonucu runs/ altına yaz.")] = True,
     json_cikti: JsonCikti = False,
 ) -> None:
@@ -3715,6 +3719,13 @@ def evren_backtest(
     **Bu komut alfa aramaz.** Varsayılan strateji bir kıyastır (K-030): "o ay listelenmiş
     likit isimlerin hepsini taşısaydım ne olurdu". Bir araştırma programı açmadan
     (K-051) buradan bir hipotez üretilmez; ölçülen şey çekirdeğin kendisi.
+
+    **FX tablosu (K-096):** tablo meta'sı `fxcm-candledata-m1` kaynağını taşıyorsa görünüm
+    `--fx-depo`dan `fx_gorunum` ile kurulur (bid/ask fill, kalite bayrağı), takvim tablonun
+    takvimi (`fx-5x24`) olarak motora geçer; maliyet (`fxcm-fx`) ve finansman (`fxcm-<çift>`)
+    modelleri katalogdan **zorunlu** çözülür — dosya yoksa koşu başlamaz (K-084, K-095).
+    Varsayılan kıyas kote hacim ister; FX'te hacim yok, o yüzden sinyal üretmez — FX için
+    kıyas tanımı ayrı karar (K-030).
     """
     if strateji not in EVREN_KIYAS:
         raise typer.BadParameter(
@@ -3730,14 +3741,27 @@ def evren_backtest(
     )
 
     basladi = time.perf_counter()
-    kurulum = evren_kosu_mod.kur(
-        tablo,
-        nesne,
-        depo_kok=depo_kok,
-        baslangic_ay=baslangic_ay or None,
-        bitis_ay=bitis_ay or None,
-        azami_sembol=azami_sembol,
-    )
+    _, tablo_meta = evren_kosu_mod.tablo_oku(tablo)
+    takvim: takvim_mod.Takvim | None = None
+    if evren_kosu_mod.fx_tablo_mu(tablo_meta):
+        kurulum = evren_kosu_mod.fx_kur(
+            tablo,
+            nesne,
+            depo_kok=fx_depo,
+            baslangic_ay=baslangic_ay or None,
+            bitis_ay=bitis_ay or None,
+            azami_sembol=azami_sembol,
+        )
+        takvim = takvim_mod.takvim(str(kurulum.meta["takvim"]["id"]))
+    else:
+        kurulum = evren_kosu_mod.kur(
+            tablo,
+            nesne,
+            depo_kok=depo_kok,
+            baslangic_ay=baslangic_ay or None,
+            bitis_ay=bitis_ay or None,
+            azami_sembol=azami_sembol,
+        )
     kurulum_sn = time.perf_counter() - basladi
 
     # K-084/U14: her enstrümanın `maliyet_modeli_id`si katalogdan çözümlenir (dosya yoksa /
@@ -3746,10 +3770,9 @@ def evren_backtest(
     maliyetler = evren_kosu_mod.enstruman_maliyetleri(
         maliyet_mod.MaliyetKatalogu(), kurulum.kimlikler
     )
-    # K-095: `finansman_modeli_id` taşıyan (cfd/vadeli) üye varsa modeli katalogdan çözülür
-    # (dosya yoksa hata); spot evreninde hepsi `None` → motor finansmansız yolda. Bu komut
-    # takvim geçirmediği için finansmanlı üye bugün burada koşmaz — motor reddeder (seanslı
-    # takvim ister); FX evren koşusu R4'ün kalan adımı.
+    # K-095: `finansman_modeli_id` taşıyan (cfd) üye varsa modeli katalogdan çözülür (dosya
+    # yoksa hata); spot evreninde hepsi `None` → motor finansmansız yolda. FX tablosunda takvim
+    # yukarıda çözüldü (K-096); finansman seanslı takvimle motora girer.
     finansmanlar = evren_kosu_mod.enstruman_finansmanlari(
         finansman_mod.FinansmanKatalogu(), kurulum.kimlikler
     )
@@ -3760,6 +3783,7 @@ def evren_backtest(
         baslangic_sermaye=sermaye,
         maliyetler=maliyetler,
         finansmanlar=finansmanlar,
+        takvim=takvim,
     ).calistir(
         kurulum.gorunum,
         veri_sha256=kurulum.veri_sha256,
