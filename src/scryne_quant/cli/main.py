@@ -252,9 +252,17 @@ def data_indir(
 
 @data_app.command("fx-al")
 def data_fx_al(
-    pair: Annotated[str, typer.Argument(help="Örn. EURUSD (FXCM MarketData, K-088)")],
-    bas_gun: Annotated[str, typer.Option("--bas", help="İlk gün YYYY-MM-DD (o hafta dahil)")],
-    bit_gun: Annotated[str, typer.Option("--bit", help="Son gün YYYY-MM-DD (o hafta dahil)")],
+    pairs: Annotated[
+        list[str] | None,
+        typer.Argument(help="Örn. EURUSD GBPUSD (FXCM MarketData, K-088; boşsa --hepsi)"),
+    ] = None,
+    hepsi: Annotated[bool, typer.Option("--hepsi", help="FXCM'nin 21 çiftinin tamamı")] = False,
+    bas_gun: Annotated[
+        str, typer.Option("--bas", help="İlk gün YYYY-MM-DD (o hafta dahil)")
+    ] = fx_mod.KAYNAK_BASLANGIC.isoformat(),
+    bit_gun: Annotated[
+        str | None, typer.Option("--bit", help="Son gün YYYY-MM-DD (o hafta dahil; boşsa bugün)")
+    ] = None,
     depo_kok: Annotated[Path, typer.Option("--depo", help="FX depo kökü")] = fx_mod.VARSAYILAN_DEPO,
     bitis_gun: Annotated[
         str | None,
@@ -272,25 +280,64 @@ def data_fx_al(
     (404 hatırlanır), depo gelen kümeden **baştan** kurulur — aynı komut iki kez → aynı baytlar.
     Yalnız araştırma verisi (K-087/2); mid/spread üretilmez (R4).
     """
+    secim = list(fx_mod.FXCM_CIFTLER) if hepsi else [p.upper() for p in (pairs or [])]
+    if not secim:
+        raise typer.BadParameter("çift ver (örn. EURUSD) ya da --hepsi")
+    bit = bit_gun or dt.datetime.now(dt.UTC).date().isoformat()
+    kayitlar = []
+    for pair in secim:
+        try:
+            kayit = fx_mod.fx_al(
+                pair, bas_gun, bit, depo=fx_mod.FxDepo(depo_kok),
+                indirici=fx_mod.https_indirici(), bitis_gun=bitis_gun,
+            )
+        except fx_mod.FxHatasi as hata:
+            raise typer.BadParameter(str(hata)) from hata
+        kayitlar.append(kayit)
+        if not json_cikti:
+            var = sum(1 for h in kayit.haftalar.values() if h.get("durum") == "var")
+            yok = len(kayit.haftalar) - var
+            typer.echo(f"{kayit.pair} 1h · {kayit.bar_sayisi:,} bar · hafta {var} var / {yok} yok")
+            if kayit.bar_sayisi:
+                typer.echo(f"  aralık : {utc_str(kayit.ilk_ms)} → {utc_str(kayit.son_ms)}")
+                typer.echo(f"  sha256 : {kayit.sha256}")
+            if bitis_gun:
+                typer.echo(f"  veri sonu sabit: {bitis_gun} (K-080)")
+            typer.echo(f"  dosya  : {kayit.yol}")
+    if json_cikti:
+        _yaz_json([k.sozluk() for k in kayitlar])
+
+
+@data_app.command("fx-kesif")
+def data_fx_kesif(
+    pair: Annotated[str, typer.Argument(help="Örn. EURUSD")],
+    bas_gun: Annotated[str, typer.Option("--bas")] = fx_mod.KAYNAK_BASLANGIC.isoformat(),
+    bit_gun: Annotated[str | None, typer.Option("--bit", help="Boşsa bugün")] = None,
+    depo_kok: Annotated[Path, typer.Option("--depo", help="FX depo kökü")] = fx_mod.VARSAYILAN_DEPO,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """Sağlayıcıda hangi haftaların var olduğunu HEAD ile ölçer; **indirmez**. (K-088)
+
+    Sonuç `data/fx/_gelen/<PAIR>/kesif.json`a yazılır (tarihsel derinlik kanıtı, indirme planı).
+    """
+    bit = bit_gun or dt.datetime.now(dt.UTC).date().isoformat()
     try:
-        kayit = fx_mod.fx_al(
-            pair.upper(), bas_gun, bit_gun, depo=fx_mod.FxDepo(depo_kok),
-            indirici=fx_mod.https_indirici(), bitis_gun=bitis_gun,
-        )
+        sonuc = fx_mod.kesfet(pair.upper(), bas_gun, bit, var_mi=fx_mod.https_var_mi())
     except fx_mod.FxHatasi as hata:
         raise typer.BadParameter(str(hata)) from hata
+    yol = Path(depo_kok) / fx_mod.GELEN_DIZINI / pair.upper() / "kesif.json"
+    yol.parent.mkdir(parents=True, exist_ok=True)
+    yol.write_text(
+        json.dumps(sonuc, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8", newline="\n",
+    )
     if json_cikti:
-        _yaz_json(kayit.sozluk())
+        _yaz_json(sonuc)
         return
-    var = sum(1 for h in kayit.haftalar.values() if h.get("durum") == "var")
-    yok = len(kayit.haftalar) - var
-    typer.echo(f"{kayit.pair} 1h · {kayit.bar_sayisi:,} bar · hafta {var} var / {yok} yok")
-    if kayit.bar_sayisi:
-        typer.echo(f"  aralık : {utc_str(kayit.ilk_ms)} → {utc_str(kayit.son_ms)}")
-        typer.echo(f"  sha256 : {kayit.sha256}")
-    if bitis_gun:
-        typer.echo(f"  veri sonu sabit: {bitis_gun} (K-080)")
-    typer.echo(f"  dosya  : {kayit.yol}")
+    typer.echo(
+        f"{sonuc['pair']} · {sonuc['var']} var / {sonuc['yok']} yok ({sonuc['hafta']} hafta) · "
+        f"ilk {sonuc['ilk_var']} → son {sonuc['son_var']} · {yol}"
+    )
 
 
 @data_app.command("quality")
@@ -307,7 +354,47 @@ def data_quality(
 
     Bayrakları yeniden hesaplamaz — depodaki bayrak indirme anındaki doğrulamanın
     sonucudur. Rapor onu sayar, boşlukları timestamp dizisinden çıkarır.
+
+    `sq data quality fx EURUSD` (R3 Paket 1(c), K-088): FX deposu için 5/7 seans farkında rapor —
+    hafta sonu boşluğu gap değil, hafta içi eksik saat gap; eksik **dosya** ile eksik **bar**
+    ayrı; DST sınırı yanlış gap üretmez (`data/fx.fx_kalite`). `--depo` verilmezse `data/fx`.
     """
+    if sembol.lower() == "fx":
+        fx_kok = fx_mod.VARSAYILAN_DEPO if depo_kok == VARSAYILAN_DEPO else depo_kok
+        try:
+            fx_govde = {
+                "uretildi": utc_str(simdi_ms()),
+                "git": git_durumu(),
+                "ortam": ortam_kaydi(),
+                "kalite": fx_mod.fx_kalite(fx_mod.FxDepo(fx_kok), timeframe.upper()),
+            }
+        except fx_mod.FxHatasi as hata:
+            raise typer.BadParameter(str(hata)) from hata
+        if rapor is not None:
+            rapor.parent.mkdir(parents=True, exist_ok=True)
+            rapor.write_text(
+                json.dumps(fx_govde, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8", newline="\n",
+            )
+        if json_cikti:
+            _yaz_json(fx_govde)
+            return
+        k = fx_govde["kalite"]
+        typer.echo(f"{k['pair']} 1h (fxcm) · veri {str(k['veri_sha256'])[:12]}")
+        typer.echo(
+            f"  dosya : {k['dosya']['var']}/{k['dosya']['hafta']} hafta var · eksik dosya "
+            f"{len(k['dosya']['eksik_dosya'])} · kapsam dışı {len(k['dosya']['kapsam_disi'])}"
+        )
+        typer.echo(
+            f"  bar   : {k['bar']['mevcut']:,} / beklenen {k['bar']['beklenen']:,} · eksik saat "
+            f"{k['bar']['eksik']} ({k['bar']['eksik_orani']:.4%}) · kısa saat "
+            f"{k['bar']['kisa_saat']}"
+        )
+        typer.echo(
+            f"  seans : açılış {k['seans']['acilis_saati_utc']} · kapanış "
+            f"{k['seans']['kapanis_saati_utc']} · uzunluk {k['seans']['hafta_uzunlugu_saat']}"
+        )
+        return
     depo = ParquetDepo(depo_kok)
     df = depo.oku(sembol, timeframe)
     kalite = rapor_cikar(df, timeframe, sembol=sembol.upper())

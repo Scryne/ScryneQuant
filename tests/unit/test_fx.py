@@ -243,3 +243,124 @@ class TestGercekDosya:
         h = saatlik(m1)
         assert len(h) == 120 and 1 <= h["m1_sayisi"].min() <= h["m1_sayisi"].max() <= 60
         assert (h["ask_close"] >= h["bid_close"]).all()  # spread ≥ 0 her saatte
+
+
+# --------------------------------------------------------- Paket 1(b)+(c): çiftler, keşif, kalite
+
+
+class TestCiftlerVeKesif:
+    def test_21_cift_kapali_kume(self, tmp_path, kaynak):
+        assert len(fx.FXCM_CIFTLER) == 21 and len(set(fx.FXCM_CIFTLER)) == 21
+        assert all(len(p) == 6 and p.isupper() for p in fx.FXCM_CIFTLER)
+        with pytest.raises(FxHatasi, match="listesinde yok"):
+            fx_al("ABCDEF", "2024-01-07", "2024-01-13", depo=FxDepo(tmp_path), indirici=kaynak)
+        assert dt.date(2012, 1, 1) == fx.KAYNAK_BASLANGIC
+        assert fx.hafta_no(fx.KAYNAK_BASLANGIC) == (2012, 1)
+
+    def test_kesfet_head_ile_indirmeden(self):
+        soruldu = []
+
+        def var_mi(url: str) -> bool:
+            soruldu.append(url)
+            return "2024/5" not in url
+
+        r = fx.kesfet("EURUSD", "2024-01-07", "2024-02-02", var_mi=var_mi)
+        assert (r["hafta"], r["var"], r["yok"]) == (4, 3, 1)
+        assert r["ilk_var"] == "2024-01-07" and r["son_var"] == "2024-01-21"
+        assert r["haftalar"]["2024-5"] == {"pazar": "2024-01-28", "var": False}
+        assert soruldu == [fx.dosya_url("EURUSD", 2024, w) for w in (2, 3, 4, 5)]
+        assert json.dumps(r, sort_keys=True) == json.dumps(
+            fx.kesfet("EURUSD", "2024-01-07", "2024-02-02", var_mi=var_mi), sort_keys=True
+        )
+        with pytest.raises(FxHatasi, match="listesinde yok"):
+            fx.kesfet("ABCDEF", "2024-01-07", "2024-01-13", var_mi=var_mi)
+
+
+def _hafta_saatli(pazar: dt.date, *, saatler: list[int], bas_saat: int = 22) -> bytes:
+    """Pazar `bas_saat`:00'dan itibaren yalnız verilen saat ofsetlerinde 60'ar dakika."""
+    t0 = dt.datetime.combine(pazar, dt.time(bas_saat), tzinfo=dt.UTC)
+    satirlar = []
+    for h in saatler:
+        for m in range(60):
+            satirlar.append(_satir(t0 + dt.timedelta(hours=h, minutes=m), 1.1 + h * 1e-4))
+    return _dosya(satirlar)
+
+
+class TestFxKalite:
+    @pytest.fixture
+    def kalite_depo(self, tmp_path):
+        kaynak = SahteKaynak(
+            {
+                # h2: kış açılışı 22:00, 5 saat tam
+                (2024, 2): _hafta_saatli(dt.date(2024, 1, 7), saatler=[0, 1, 2, 3, 4]),
+                # h3: 2. saat eksik → hafta içi gap
+                (2024, 3): _hafta_saatli(dt.date(2024, 1, 14), saatler=[0, 1, 3, 4]),
+                # h4: dosya yok (404) → eksik_dosya
+                # h5: "DST" haftası 21:00 açılış, tam
+                (2024, 5): _hafta_saatli(dt.date(2024, 1, 28), saatler=[0, 1, 2], bas_saat=21),
+                # h6: son saat kısa (30 dk) — gap değil, kısa saat
+                (2024, 6): _dosya(
+                    [
+                        _satir(
+                            dt.datetime(2024, 2, 4, 22, tzinfo=dt.UTC) + dt.timedelta(minutes=m),
+                            1.2,
+                        )
+                        for m in range(90)
+                    ]
+                ),
+            },
+            yok={(2024, 4), (2024, 7)},
+        )
+        depo = FxDepo(tmp_path)
+        fx_al("EURUSD", "2024-01-07", "2024-02-16", depo=depo, indirici=kaynak)
+        return depo
+
+    def test_hafta_sonu_gap_degil_hafta_ici_eksik_saat_gap(self, kalite_depo):
+        k = fx.fx_kalite(kalite_depo, "EURUSD")
+        assert k["bar"]["mevcut"] == 5 + 4 + 3 + 2
+        assert k["bar"]["beklenen"] == 5 + 5 + 3 + 2  # haftalar arası (hafta sonu) sayılmaz
+        assert k["bar"]["eksik"] == 1
+        assert k["bar"]["eksik_saatler"] == ["2024-01-15 00:00:00 UTC"]
+        assert k["haftalar"]["2024-3"]["eksik_bar"] == 1
+        assert k["haftalar"]["2024-2"]["eksik_bar"] == 0
+
+    def test_eksik_dosya_ile_kapsam_disi_ayri(self, kalite_depo):
+        k = fx.fx_kalite(kalite_depo, "EURUSD")
+        assert k["dosya"] == {
+            "hafta": 6, "var": 4, "eksik_dosya": ["2024-4"], "kapsam_disi": ["2024-7"]
+        }
+        assert k["haftalar"]["2024-4"] == {"durum": "yok", "pazar": "2024-01-21"}
+
+    def test_dst_acilisi_yanlis_gap_uretmez_ve_seans_kaniti(self, kalite_depo):
+        k = fx.fx_kalite(kalite_depo, "EURUSD")
+        assert k["haftalar"]["2024-5"]["acilis"] == "2024-01-28 21:00:00 UTC"
+        assert k["haftalar"]["2024-5"]["eksik_bar"] == 0
+        assert k["seans"]["acilis_saati_utc"] == {"21": 1, "22": 3}
+        assert k["seans"]["hafta_uzunlugu_saat"] == {"2": 1, "3": 1, "5": 2}
+
+    def test_kisa_saat_gap_degil(self, kalite_depo):
+        k = fx.fx_kalite(kalite_depo, "EURUSD")
+        assert k["bar"]["kisa_saat"] == 1 and k["bar"]["kisa_saat_dagilimi"] == {"23": 1}
+        assert k["haftalar"]["2024-6"]["eksik_bar"] == 0
+
+    def test_deterministik_ve_json(self, kalite_depo):
+        a = json.dumps(fx.fx_kalite(kalite_depo, "EURUSD"), sort_keys=True)
+        b = json.dumps(fx.fx_kalite(kalite_depo, "EURUSD"), sort_keys=True)
+        assert a == b
+        assert json.loads(a)["veri_sha256"] == kalite_depo.manifesto("EURUSD")["sha256"]
+
+    def test_manifesto_yoksa_hata(self, tmp_path):
+        with pytest.raises(FxHatasi, match="manifesto yok"):
+            fx.fx_kalite(FxDepo(tmp_path), "EURUSD")
+
+    def test_cli_quality_fx(self, kalite_depo):
+        from typer.testing import CliRunner
+
+        from scryne_quant.cli.main import app
+
+        r = CliRunner().invoke(
+            app, ["data", "quality", "fx", "EURUSD", "--depo", str(kalite_depo.kok), "--json"]
+        )
+        assert r.exit_code == 0, r.output
+        govde = json.loads(r.output)
+        assert govde["kalite"]["pair"] == "EURUSD" and govde["kalite"]["bar"]["eksik"] == 1

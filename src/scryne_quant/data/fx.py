@@ -65,6 +65,17 @@ _GUN: Final = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SAAT_MS: Final = timeframe_ms(TIMEFRAME)
 DAKIKA_MS: Final = 60_000
 
+#: FXCM MarketData README'nin candle verisi için saydığı 21 çift (2026-09-21 okundu) — kapalı küme;
+#: listede olmayan çift istenmez (sağlayıcı listesi uydurulmaz). HEAD ölçümü: 21'inin tamamında
+#: 2012 h1 → 2026 h36 mevcut, 2011 404, 2026 h37+ (yayın gecikmesi ≈ 2 hafta) 404.
+FXCM_CIFTLER: Final[tuple[str, ...]] = (
+    "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "CADCHF", "EURAUD", "EURCHF", "EURGBP", "EURJPY",
+    "EURUSD", "GBPCHF", "GBPJPY", "GBPNZD", "GBPUSD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
+    "USDCAD", "USDCHF", "USDJPY",
+)
+#: Sağlayıcının ilk haftası (ölçüldü: 2012 h1 = 2012-01-01 Pazar; 2011 404).
+KAYNAK_BASLANGIC: Final = dt.date(2012, 1, 1)
+
 FX_SEMASI: Final = pa.schema(
     [
         ("open_time", pa.int64()),
@@ -346,6 +357,8 @@ def fx_al(
     """
     if not _PAIR.match(pair):
         raise FxHatasi(f"pair 6 büyük harf olmalı: {pair!r}")
+    if pair not in FXCM_CIFTLER:
+        raise FxHatasi(f"{pair}: FXCM MarketData listesinde yok (K-088; 21 çift: FXCM_CIFTLER)")
     depo = depo or FxDepo()
     bas, bit = _gun(bas_gun), _gun(bit_gun)
     sinir_ms: int | None = None
@@ -385,32 +398,221 @@ def fx_al(
     return depo._yaz(pair, saatlik(m1_hepsi), haftalar, bitis_gun)
 
 
-def https_indirici(zaman_asimi_s: float = 60.0) -> Indirici:
-    """`requests` ile doğrudan GET; 404 → `None`, diğer hata → `FxHatasi`. Tek istek/dosya."""
+# ------------------------------------------------------------------ kalite (R3 Paket 1(c))
+
+#: Raporda listelenen eksik saat / kısa saat sayısı üst sınırı (toplam sayı ayrıca verilir).
+KALITE_LISTE_SINIRI: Final = 50
+
+
+def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
+    """FX deposunun kalite raporu — 5/7 seans farkında, deterministik, makinece okunur.
+
+    Tanımlar (K-088; R4 takvim bağlamasından **önce**, o yüzden takvim varsayımı yok — her
+    haftanın beklenen ızgarası **kendi** ilk ve son barından türetilir):
+
+    - **Hafta dosyası**: manifestodaki `haftalar` — `var` / `yok`. `yok` haftalardan ilk ve son
+      `var` hafta arasında kalanlar `eksik_dosya` (sağlayıcıda yok ya da indirilmemiş), dışında
+      kalanlar `kapsam_disi` (sağlayıcı başlangıcından önce / henüz yayımlanmamış). Dosya
+      eksikliği bar eksikliği **sayılmaz**; ayrı raporlanır.
+    - **Eksik saat (gap)**: `var` bir haftanın ilk saatiyle son saati arasında bulunmayan saat
+      başları. Hafta içi FX 24 saat işlem gördüğü için aralıktaki her saat beklenir; hafta sonu
+      (Cuma kapanış → Pazar açılış) aralık **dışı**, gap değil. Seans açılış/kapanış saati
+      haftadan haftaya (ABD yaz saati) değiştiği için ızgara sabit bir saatten değil, haftanın
+      kendi verisinden başlar — DST sınırı yanlış gap üretmez.
+    - **Kısa saat**: `m1_sayisi < 60` — gap değil, bilgi (tick'siz dakika; günlük rollover
+      dakikası burada görünür). Saat dağılımı seans kanıtı olarak verilir.
+    - **Seans kanıtı** (Paket 1(d) için): haftaların açılış/kapanış saatleri (UTC) ve uzunluk
+      dağılımı.
+    """
+    manifesto = depo.manifesto(pair)
+    if manifesto is None:
+        raise FxHatasi(f"{pair}: manifesto yok ({depo.manifesto_yolu(pair)})")
+    haftalar: dict[str, dict[str, Any]] = manifesto.get("haftalar", {})
+    sirali = sorted(haftalar.items(), key=lambda kv: kv[1]["pazar"])
+    var_idx = [i for i, (_, h) in enumerate(sirali) if h.get("durum") == "var"]
+    eksik_dosya, kapsam_disi = [], []
+    for i, (anahtar, h) in enumerate(sirali):
+        if h.get("durum") == "var":
+            continue
+        (eksik_dosya if var_idx and var_idx[0] < i < var_idx[-1] else kapsam_disi).append(anahtar)
+
+    df = depo.oku(pair) if depo.parquet_yolu(pair).exists() else None
+    zaman = (
+        df["open_time"].to_numpy(dtype="int64") if df is not None else np.empty(0, dtype="int64")
+    )
+    m1 = df["m1_sayisi"].to_numpy(dtype="int64") if df is not None else np.empty(0, dtype="int64")
+    mevcut = set(zaman.tolist())
+
+    beklenen_toplam = 0
+    eksik: list[int] = []
+    acilis_saat: dict[str, int] = {}
+    kapanis_saat: dict[str, int] = {}
+    uzunluk: dict[str, int] = {}
+    hafta_raporu: dict[str, dict[str, Any]] = {}
+    for anahtar, h in sirali:
+        if h.get("durum") != "var":
+            hafta_raporu[anahtar] = {"durum": h.get("durum"), "pazar": h.get("pazar")}
+            continue
+        ilk = (int(h["ilk_ms"]) // SAAT_MS) * SAAT_MS
+        son = (int(h["son_ms"]) // SAAT_MS) * SAAT_MS
+        beklenen = int((son - ilk) // SAAT_MS) + 1
+        hafta_eksik = [t for t in range(ilk, son + SAAT_MS, SAAT_MS) if t not in mevcut]
+        beklenen_toplam += beklenen
+        eksik.extend(hafta_eksik)
+        a_saat = utc_str(ilk)[11:13]
+        k_saat = utc_str(son)[11:13]
+        acilis_saat[a_saat] = acilis_saat.get(a_saat, 0) + 1
+        kapanis_saat[k_saat] = kapanis_saat.get(k_saat, 0) + 1
+        uzunluk[str(beklenen)] = uzunluk.get(str(beklenen), 0) + 1
+        hafta_raporu[anahtar] = {
+            "durum": "var", "pazar": h["pazar"], "acilis": utc_str(ilk), "kapanis": utc_str(son),
+            "beklenen_bar": beklenen, "eksik_bar": len(hafta_eksik), "m1_satir": h.get("m1_satir"),
+        }
+
+    kisa_maske = m1 < 60
+    kisa_saatler: dict[str, int] = {}
+    for t in zaman[kisa_maske].tolist():
+        sa = utc_str(int(t))[11:13]
+        kisa_saatler[sa] = kisa_saatler.get(sa, 0) + 1
+
+    return {
+        "pair": pair,
+        "timeframe": TIMEFRAME,
+        "kaynak": "fxcm-candledata-m1",
+        "veri_sha256": manifesto.get("sha256"),
+        "bitis_gun": manifesto.get("bitis_gun"),
+        "dosya": {
+            "hafta": len(sirali),
+            "var": len(var_idx),
+            "eksik_dosya": eksik_dosya,
+            "kapsam_disi": kapsam_disi,
+        },
+        "bar": {
+            "mevcut": int(len(zaman)),
+            "beklenen": beklenen_toplam,
+            "eksik": len(eksik),
+            "eksik_orani": (len(eksik) / beklenen_toplam) if beklenen_toplam else 0.0,
+            "eksik_saatler": [utc_str(t) for t in eksik[:KALITE_LISTE_SINIRI]],
+            "kisa_saat": int(kisa_maske.sum()),
+            "kisa_saat_dagilimi": {k: kisa_saatler[k] for k in sorted(kisa_saatler)},
+        },
+        "seans": {
+            "acilis_saati_utc": {k: acilis_saat[k] for k in sorted(acilis_saat)},
+            "kapanis_saati_utc": {k: kapanis_saat[k] for k in sorted(kapanis_saat)},
+            "hafta_uzunlugu_saat": {k: uzunluk[k] for k in sorted(uzunluk, key=int)},
+            "not": "hafta sonu (Cuma kapanış → Pazar açılış) beklenen ızgaranın dışında; "
+            "açılış/kapanış saati ABD yaz saatiyle kayar (K-088 ölçümü)",
+        },
+        "haftalar": hafta_raporu,
+    }
+
+
+Varlik = Callable[[str], bool]
+"""URL → sağlayıcıda var mı (HEAD 200). İndirmez."""
+
+
+def kesfet(pair: str, bas_gun: str, bit_gun: str, *, var_mi: Varlik) -> dict[str, Any]:
+    """Aralıktaki haftaların sağlayıcıda **var olup olmadığını** HEAD ile ölçer; indirmez.
+
+    Tarihsel derinlik kanıtı ve indirme planı: tam evreni çekmeden hangi haftaların mevcut olduğu
+    bilinir. Çıktı deterministik (haftalar sıralı), `_gelen/<PAIR>/kesif.json`a yazılabilir.
+    """
+    if pair not in FXCM_CIFTLER:
+        raise FxHatasi(f"{pair}: FXCM MarketData listesinde yok (K-088)")
+    bas, bit = _gun(bas_gun), _gun(bit_gun)
+    haftalar: dict[str, dict[str, Any]] = {}
+    for pazar in pazarlar(bas, bit):
+        yil, hafta = hafta_no(pazar)
+        haftalar[f"{yil}-{hafta}"] = {
+            "pazar": pazar.isoformat(), "var": bool(var_mi(dosya_url(pair, yil, hafta)))
+        }
+    varlar = [k for k, v in haftalar.items() if v["var"]]
+    return {
+        "pair": pair, "kaynak": "fxcm-candledata-m1", "bas_gun": bas.isoformat(),
+        "bit_gun": bit.isoformat(), "hafta": len(haftalar), "var": len(varlar),
+        "yok": len(haftalar) - len(varlar),
+        "ilk_var": haftalar[varlar[0]]["pazar"] if varlar else None,
+        "son_var": haftalar[varlar[-1]]["pazar"] if varlar else None,
+        "haftalar": haftalar,
+    }
+
+
+def https_var_mi(zaman_asimi_s: float = 30.0, deneme: int = 4) -> Varlik:
+    """`requests.head` (tek oturum); 200 → var, 404 → yok, diğer → `FxHatasi`.
+
+    Uzun taramada sunucu bağlantıyı düşürebiliyor (ölçüldü: ~770 HEAD'de `RemoteDisconnected`);
+    bağlantı hatası üstel beklemeyle `deneme` kez yinelenir, sonra hata — sessizce "yok" denmez.
+    """
+    import time
+
     import requests
 
-    def al(url: str) -> bytes | None:
-        y = requests.get(url, timeout=zaman_asimi_s, headers={"User-Agent": "ScryneQuant/fx"})
-        if y.status_code == 404:
-            return None
-        if y.status_code != 200:
+    oturum = requests.Session()
+    oturum.headers["User-Agent"] = "ScryneQuant/fx"
+
+    def bak(url: str) -> bool:
+        for i in range(deneme):
+            try:
+                y = oturum.head(url, timeout=zaman_asimi_s)
+            except requests.ConnectionError as hata:
+                if i == deneme - 1:
+                    raise FxHatasi(f"{url}: bağlantı hatası ({hata})") from hata
+                time.sleep(2.0 * (2**i))
+                continue
+            if y.status_code == 200:
+                return True
+            if y.status_code == 404:
+                return False
             raise FxHatasi(f"{url}: HTTP {y.status_code}")
-        return y.content
+        raise AssertionError("unreachable")
+
+    return bak
+
+
+def https_indirici(zaman_asimi_s: float = 60.0) -> Indirici:
+    """`requests` ile doğrudan GET; 404 → `None`, diğer hata → `FxHatasi`. Tek istek/dosya."""
+    import time
+
+    import requests
+
+    oturum = requests.Session()
+    oturum.headers["User-Agent"] = "ScryneQuant/fx"
+
+    def al(url: str) -> bytes | None:
+        for i in range(4):
+            try:
+                y = oturum.get(url, timeout=zaman_asimi_s)
+            except requests.ConnectionError as hata:
+                if i == 3:
+                    raise FxHatasi(f"{url}: bağlantı hatası ({hata})") from hata
+                time.sleep(2.0 * (2**i))
+                continue
+            if y.status_code == 404:
+                return None
+            if y.status_code != 200:
+                raise FxHatasi(f"{url}: HTTP {y.status_code}")
+            return y.content
+        raise AssertionError("unreachable")
 
     return al
 
 
 __all__ = [
+    "FXCM_CIFTLER",
     "FX_SEMASI",
     "FxDepo",
     "FxHatasi",
     "FxKaydi",
+    "KAYNAK_BASLANGIC",
     "KAYNAK_BASLIK",
     "VARSAYILAN_DEPO",
     "dosya_url",
     "fx_al",
+    "fx_kalite",
     "hafta_no",
     "https_indirici",
+    "https_var_mi",
+    "kesfet",
     "m1_oku",
     "pazarlar",
     "saatlik",
