@@ -19,6 +19,7 @@ kapalı dönemde (ölçülmüş tatil) rollover **atlanmaz** (bedel yine işler)
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -56,11 +57,24 @@ class FinansmanKaynagi(BaseModel):
     saglayici: str = Field(min_length=1, description="Oranı yayımlayan kaynak (URL/belge)")
     tarih: str = Field(min_length=1, description="Oranın okunduğu gün (UTC)")
     gerekce: str = Field(min_length=1)
-    aralik: str = Field(min_length=1, description="Geçerlilik dönemi, `YYYY-MM-DD..YYYY-MM-DD`")
+    aralik: str = Field(
+        min_length=1,
+        pattern=r"^\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}$",
+        description="Geçerlilik `YYYY-MM-DD..YYYY-MM-DD` (başlangıç dahil, bitiş hariç, UTC)",
+    )
     tur: Literal["broker", "proxy"]
     ham_gunluk_bps: float | None = Field(
         default=None, description="Türetimin işaretli değeri, taban uygulanmadan (proxy'de zorunlu)"
     )
+
+    def aralik_ms(self) -> tuple[int, int]:
+        """`[bas_ms, bit_ms)` UTC epoch ms; bitiş günü hariç (o gün oran değişmiştir)."""
+        bas, bit = self.aralik.split("..")
+        b0 = dt.datetime.combine(dt.date.fromisoformat(bas), dt.time(), tzinfo=dt.UTC)
+        b1 = dt.datetime.combine(dt.date.fromisoformat(bit), dt.time(), tzinfo=dt.UTC)
+        if b1 <= b0:
+            raise FinansmanHatasi(f"finansman aralığı boş ya da ters: {self.aralik}")
+        return int(b0.timestamp() * 1000), int(b1.timestamp() * 1000)
 
 
 class FinansmanModeli(BaseModel):
@@ -80,6 +94,18 @@ class FinansmanModeli(BaseModel):
     def gecici(self) -> bool:
         """Kaynağı yazılmamış **ya da proxy** model; promotion'a giremez (K-021, K-095, K-098)."""
         return self.kaynak is None or self.kaynak.tur == "proxy"
+
+    def gecerli_mi(self, ilk_ms: int, son_ms: int) -> bool:
+        """Koşu penceresi `[ilk_ms, son_ms]` modelin geçerlilik aralığının içinde mi (K-101).
+
+        Kaynaksız (aralıksız) model için **False**: geçerlilik iddiası olmayan model hiçbir
+        pencerede geçerli değildir — bilinmeyen sıfır değil. Sabit oran aralığının dışında koşmak,
+        değişmiş bir faizi eski değeriyle kullanmak olurdu (sessiz yanlış sonuç).
+        """
+        if self.kaynak is None:
+            return False
+        bas, bit = self.kaynak.aralik_ms()
+        return bas <= ilk_ms and son_ms < bit
 
     def gun_bedeli(self, notional: float, gun: int) -> float:
         """`gun` günlük rollover bedeli, quote biriminde; her zaman ≥ 0 (K-007)."""

@@ -262,10 +262,40 @@ class TestFxRollover:
         assert "gecici_finansman_modeli" not in var.promotion_engelleri
 
     def test_gecici_model_promotion_engeli(self):
-        gecici = FinansmanModeli(uzun_gunluk_bps=2.5)
-        var = _kosu("var", model=gecici)
+        proxy = FinansmanModeli(
+            uzun_gunluk_bps=2.5,
+            kaynak=KAYNAK.model_copy(update={"tur": "proxy", "ham_gunluk_bps": 2.5}),
+        )
+        var = _kosu("var", model=proxy)
         assert var.finansman_gecici is True
         assert "gecici_finansman_modeli" in var.promotion_engelleri
+
+    def test_aralik_disi_kosu_baslamaz(self):
+        """K-101: koşu penceresi (2024-01-08..12) aralığın dışındaysa `FinansmanHatasi`; kaynaksız
+        model hiçbir pencerede geçerli değil; aralık sınırı: bitiş günü hariç."""
+        dar = FinansmanModeli(
+            uzun_gunluk_bps=2.5,
+            kaynak=KAYNAK.model_copy(update={"aralik": "2024-01-09..2024-06-01"}),
+        )
+        with pytest.raises(FinansmanHatasi, match="K-101"):
+            _kosu("var", model=dar)
+        biten = FinansmanModeli(
+            uzun_gunluk_bps=2.5,
+            kaynak=KAYNAK.model_copy(update={"aralik": "2024-01-01..2024-01-12"}),
+        )
+        with pytest.raises(FinansmanHatasi, match="penceresinin dışında"):
+            _kosu("var", model=biten)
+        assert not FinansmanModeli(uzun_gunluk_bps=2.5).gecerli_mi(0, 1)
+        tam = FinansmanModeli(
+            uzun_gunluk_bps=2.5,
+            kaynak=KAYNAK.model_copy(update={"aralik": "2024-01-08..2024-01-13"}),
+        )
+        assert tam.gecerli_mi(_ms("2024-01-08 00:00"), _ms("2024-01-12 23:00"))
+        assert not tam.gecerli_mi(_ms("2024-01-08 00:00"), _ms("2024-01-13 00:00"))
+        assert tam.kaynak.aralik_ms() == (_ms("2024-01-08 00:00"), _ms("2024-01-13 00:00"))
+        _kosu("var", model=tam)  # sınır içinde: koşar
+        with pytest.raises(FinansmanHatasi, match="ters"):
+            KAYNAK.model_copy(update={"aralik": "2024-02-01..2024-01-01"}).aralik_ms()
 
 
 # ------------------------------------------------------------------ fail closed

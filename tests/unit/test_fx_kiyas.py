@@ -46,6 +46,13 @@ FIXTURE = KOK / "tests" / "fixtures" / "fx"
 TABLO = FIXTURE / "_evren" / "27f528fa4aec.parquet"
 TFX = takvim(TAKVIM_FX_5X24)
 CIFTLER = ("EURUSD", "GBPUSD", "USDJPY")
+KAYNAK_2024 = fin_mod.FinansmanKaynagi(
+    saglayici="test",
+    tarih="2026-09-21",
+    gerekce="fixture",
+    aralik="2024-01-01..2025-01-01",
+    tur="broker",
+)
 SAAT = 3_600_000
 TOLERANS = 1e-12
 
@@ -200,7 +207,9 @@ class TestPitCikisi:
             strateji,
         )
         m = MaliyetModeli(fee_taker_bps=0.26, slippage_bps=1.0)
-        fin = fin_mod.FinansmanModeli(uzun_gunluk_bps=1.0)
+        fin = fin_mod.FinansmanModeli(
+            uzun_gunluk_bps=1.0, kaynak=KAYNAK_2024
+        )  # K-101: aralıksız model koşamaz
         sonuc = CokluBacktest(
             strateji,
             m,
@@ -250,7 +259,9 @@ class TestTakiliPozisyon:
             strateji,
         )
         m = MaliyetModeli(fee_taker_bps=0.26, slippage_bps=1.0)
-        fin = fin_mod.FinansmanModeli(uzun_gunluk_bps=1.0)
+        fin = fin_mod.FinansmanModeli(
+            uzun_gunluk_bps=1.0, kaynak=KAYNAK_2024
+        )  # K-101: aralıksız model koşamaz
         sonuc = CokluBacktest(
             strateji,
             m,

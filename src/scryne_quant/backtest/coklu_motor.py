@@ -67,7 +67,7 @@ from scryne_quant.common.maliyet import (
     gecici_mi,
     maliyetler_govdesi,
 )
-from scryne_quant.common.zaman import timeframe_ms
+from scryne_quant.common.zaman import timeframe_ms, utc_str
 from scryne_quant.data.semalar import KaliteDurumu
 from scryne_quant.data.takvim import TAKVIM_24X7, Takvim
 from scryne_quant.features.indikator import atr as atr_hesapla
@@ -177,6 +177,20 @@ class CokluBacktest:
             if eksik:
                 raise CokluBacktestHatasi(
                     f"finansman modeli olmayan sembol(ler): {eksik} — sessiz 0 yok (K-095)"
+                )
+            # K-101: sabit finansman oranı yalnız kaynağının geçerlilik aralığında kullanılır.
+            # Ölçüm penceresi (ısınma hariç) aralığın dışına taşan sembol koşuyu **başlatmaz**.
+            ilk_ms, son_ms = int(gorunum.zamanlar[olcum_baslangici]), int(gorunum.zamanlar[-1])
+            disari = sorted(
+                f"{s} ({sf.kimlik}: {sf.model.kaynak.aralik if sf.model.kaynak else 'aralıksız'})"
+                for s, sf in self.finansmanlar.items()
+                if s in semboller and not sf.model.gecerli_mi(ilk_ms, son_ms)
+            )
+            if disari:
+                raise FinansmanHatasi(
+                    "finansman modeli koşu penceresinin dışında "
+                    f"[{utc_str(ilk_ms)[:10]}..{utc_str(son_ms)[:10]}]: {', '.join(disari)} — "
+                    "oran o dönem için ölçülmedi, sessizce uzatılmaz (K-101)"
                 )
 
         adim = timeframe_ms(gorunum.timeframe)

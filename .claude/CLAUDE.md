@@ -227,6 +227,9 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   fx_depo_durumu.py` durum tablosu (tam/kısmi/sağlayıcı boşluğu/`bozuk`); `bozuk` = sağlayıcı 200
   ama gövde kullanılamaz (kanıt `.bozuk.bin`, bar yok, evrende `var`). Maliyet **çift başına**
   `config/maliyet/fxcm-<pair>.json` (21, ölçülmüş), finansman proxy 21 dosya (gecici).
+- **Finansman geçerlilik aralığı (K-101).** `FinansmanKaynagi.aralik` (`bas..bit`, bitiş hariç)
+  motorda denetlenir: ölçüm penceresi dışına taşan sembolde koşu başlamaz. FXCM tarihli rollover
+  arşivi yok (`docs/research/records/2026-09-21-R5-fx-rollover-kaynak.md`); 21 proxy geçici.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

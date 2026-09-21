@@ -5084,3 +5084,43 @@ K-007, K-088, K-089, K-090/5 (pencere kadar indirme), K-091, K-094, K-095, K-096
   33cc0a32…` iki koşuda aynı; `gecici_finansman_modeli` engeli duruyor. Kurulum 0,4 s, koşu 0,6 s.
 - Kripto: `coklu_referans` + katalog senaryosu `96933a8` ile SAME; kripto kıyası sentetik evrende
   HEAD ile SAME; ağ dışı 2.268 test (fixture testleri çift başına kimliğe güncellendi).
+
+## K-101 — R5 Paket 4: FXCM tarihli rollover oranı yok — proxy geçici kalır; finansman aralığı motorda denetlenir
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R5 Paket 4 talimatı) · **Tabi:**
+K-095 (semantik değişmedi), K-098/5, K-100/6 · **Kaynak:** `docs/research/records/
+2026-09-21-R5-fx-rollover-kaynak.md`, `common/finansman.py` (`aralik_ms`, `gecerli_mi`),
+`backtest/coklu_motor.py` (K-101 denetimi), `tests/unit/test_finansman.py`
+
+### Karar
+
+1. **Gerçek kaynak yok (kanıtlı):** FXCM rollover oranını yalnız Trading Station / ForexConnect
+   Offers tablosunda (`Roll S`/`Roll B`, `RolloverBuy`/`RolloverSell`, 1k lot, bir gün önceden,
+   hesap gerekir) gösteriyor; **tarihli, çift bazlı, herkese açık arşiv yok**. Resmi "FX Rollover
+   Calendar" PDF'i (`docs.fxcorporate.com/user-guide/FXCMFXRolloverCalendar.pdf`, Q3 2026) yalnız
+   **gün çarpanlarını** (0/1/2/3/4) veriyor, oran değil, yalnız cari çeyrek. MarketData deposunda
+   rollover veri seti yok. Üçüncü taraf aggregator'larda FXCM yok. Ayrıntı ve URL/tarihler kayıtta.
+2. **Sınıflandırma:** 21/21 çift `tur=proxy`, geçici; broker sınıfında **0** çift, karışım yok.
+   Proxy "gerçek finansman" olarak **yeniden etiketlenmedi**; `gecici_finansman_modeli` promotion
+   engeli duruyor.
+3. **Resmi takvimle doğrulanan:** Çarşamba 3 gün (K-095 `uclu_swap_gunu=2`) ✓. Fark: FXCM tatil
+   günü 0 + iki iş günü önce +1; K-095 kapalı dönemde bedeli atlamıyor — haftalık toplam aynı,
+   zamanlama ≤ 2 gün. **K-095 semantiği değiştirilmedi** (talimat); resmi takvimi bağlamak ayrı karar
+   (tarihsel takvim yayımlanmıyor).
+4. **Geçerlilik aralığı motorda (bu paketin küçük parçası):** `FinansmanKaynagi.aralik`
+   `YYYY-MM-DD..YYYY-MM-DD` (bitiş hariç, UTC) biçimi zorunlu; `FinansmanModeli.gecerli_mi(ilk, son)`;
+   `CokluBacktest.calistir` ölçüm penceresi (ısınma hariç) aralığın dışına taşan sembolde
+   **başlamaz** (`FinansmanHatasi`, sembol + kimlik + aralık listesiyle). Kaynaksız model hiçbir
+   pencerede geçerli değil (bilinmeyen sıfır değil). Sonuç: K-100'ün 55 haftalık koşusu artık
+   reddediliyor; 21 proxy'nin ortak geçerli penceresi 2023-11-19..2024-03-18 (BoJ), `--baslangic
+   2023-11 --bitis 2024-02` ile gerçek koşu: 1.721 bar, 315 fill, finansman 7,14, hash
+   `7fc528c0…/4f1333bd…`.
+5. **Birim/dönüşüm (broker verisi gelirse):** platform değeri 1k lot başına hesap para birimi →
+   `bps/gün = roll / (1000 × kur) × 10⁴`; long = `Roll B`, short = `Roll S` (short bacak bugün
+   modelde yok, K-095). Kaynak URL + erişim tarihi + dönem + `tur=broker` ile `FinansmanKaynagi`ye.
+
+### Kanıt
+
+- Testler: aralık dışı pencere → `FinansmanHatasi` (K-101), sınır bitiş günü hariç, kaynaksız
+  `gecerli_mi` False, ters aralık hata; fixture koşuları 2024 Ocak-Şubat (aralık içi) aynen.
+- Kripto: `coklu_referans` `96933a8` ile SAME, kripto kıyası SAME; ağ dışı 2.269 test.
