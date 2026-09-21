@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 
 from scryne_quant.backtest.coklu_motor import CokluAdimci, CokluBacktest
-from scryne_quant.common.maliyet import MaliyetModeli
+from scryne_quant.common.maliyet import Maliyetler, MaliyetModeli
 from scryne_quant.common.zaman import timeframe_ms, utc_str
 from scryne_quant.data import funding as funding_mod
 from scryne_quant.data import makro as makro_mod
@@ -74,6 +74,7 @@ class EvrenPaperMotoru:
         sifira_yaz_bar: int | None = 48,
         turev: bool = False,
         makro: tuple[str, ...] = (),
+        maliyetler: Maliyetler | None = None,
     ) -> None:
         self.timeframe = timeframe
         self.makro = tuple(makro)
@@ -83,7 +84,7 @@ class EvrenPaperMotoru:
         ile aynı fonksiyonlar: `funding_mod.evren_dizileri`, `evren_premium_dizisi`)."""
         self.backtest = CokluBacktest(
             strateji, maliyet, baslangic_sermaye=baslangic_sermaye, risk=risk,
-            sifira_yaz_bar=sifira_yaz_bar,
+            sifira_yaz_bar=sifira_yaz_bar, maliyetler=maliyetler,
         )
         self.adimci = CokluAdimci(self.backtest)
         self.depo = depo

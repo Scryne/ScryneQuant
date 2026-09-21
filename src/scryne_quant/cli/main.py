@@ -987,11 +987,7 @@ def _maliyet_govdesi(model: maliyet_mod.MaliyetModeli) -> dict[str, Any]:
     Tekrar bu bloğu okur, `config/maliyet.json`ın **bugünkü** hâlini değil — aksi hâlde
     kalibrasyon güncellendiği gün eski deneyler sessizce farklı sonuç verirdi (K-009).
     """
-    return {
-        "fee_taker_bps": model.fee_taker_bps,
-        "slippage_bps": model.slippage_bps,
-        "kalibrasyon": model.kalibrasyon.model_dump() if model.kalibrasyon else None,
-    }
+    return maliyet_mod.govde(model)
 
 
 def _tam_pencere(diziler: dict[str, Any], strateji_adi: str) -> bolme.Pencere:
@@ -2670,7 +2666,9 @@ def paper_evren_baslat(
         )
     kwargs = _parametreleri_coz(parametre)
     strateji = kutuphane[strateji_adi](**kwargs)
-    maliyet = maliyet_mod.yukle()
+    # K-084/U14: canlı evren yolu `Enstruman` görmüyor (K-083 açık kalan, İz G); bugün tek
+    # model, katalogdan `global` (Binance spot — adaptör Binance) — dosya yoksa açılmaz.
+    maliyet = maliyet_mod.MaliyetKatalogu().coz(maliyet_mod.GLOBAL_KIMLIK, binance_spot_kripto=True)
     limitler = limit_mod.yukle()
     kok.mkdir(parents=True, exist_ok=True)
     kosu_yolu = _paper_yolu(kosu_adi, kok)
@@ -3540,9 +3538,15 @@ def evren_backtest(
     )
     kurulum_sn = time.perf_counter() - basladi
 
+    # K-084/U14: her enstrümanın `maliyet_modeli_id`si katalogdan çözümlenir (dosya yoksa /
+    # global spot dışıysa hata). Bugünkü Binance spot evreninde hepsi `global` → `None`,
+    # motor tek-model yolunda ve kayıt biçimi Faz 10-16 ile aynı.
+    maliyetler = evren_kosu_mod.enstruman_maliyetleri(
+        maliyet_mod.MaliyetKatalogu(), kurulum.kimlikler
+    )
     basladi = time.perf_counter()
     sonuc = CokluBacktest(
-        nesne, maliyet_mod.yukle(), baslangic_sermaye=sermaye
+        nesne, maliyet_mod.yukle(), baslangic_sermaye=sermaye, maliyetler=maliyetler
     ).calistir(
         kurulum.gorunum,
         veri_sha256=kurulum.veri_sha256,

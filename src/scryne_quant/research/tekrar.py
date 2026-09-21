@@ -29,7 +29,8 @@ from typing import Any
 
 import numpy as np
 
-from scryne_quant.common.maliyet import MaliyetModeli, SlippageKalibrasyonu
+from scryne_quant.common import maliyet as maliyet_mod
+from scryne_quant.common.maliyet import MaliyetModeli
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.depo import DepoKaydi, ParquetDepo
 from scryne_quant.research import analiz, degerlendirme, karsilastirma, tarama, walkforward
@@ -66,13 +67,8 @@ def geri_sar(
 
 
 def _maliyet(govde: Mapping[str, Any]) -> MaliyetModeli:
-    """Kayıttaki maliyet bloğunu modele çevirir — dosyadan **okumaz**."""
-    kalibrasyon = govde.get("kalibrasyon")
-    return MaliyetModeli(
-        fee_taker_bps=float(govde["fee_taker_bps"]),
-        slippage_bps=float(govde["slippage_bps"]),
-        kalibrasyon=SlippageKalibrasyonu(**kalibrasyon) if kalibrasyon else None,
-    )
+    """Kayıttaki maliyet bloğunu modele çevirir — dosyadan **okumaz** (`maliyet.govdeden`)."""
+    return maliyet_mod.govdeden(govde)
 
 
 def _pencere(govde: Mapping[str, Any]) -> Pencere:
@@ -108,6 +104,15 @@ def tekrar_uret(
             f"{', '.join(sorted(TEKRAR_EDILEBILIR))}"
         )
     maliyet = _maliyet(girdi["maliyet"])
+    if girdi.get("maliyetler") is not None:
+        # K-084: çok modelli blok tek sembollü tekrar yolunda **yorumlanmaz**. Blok yine
+        # kayıttan kurulur (bozuksa hata) ama bu yol onu uygulayamaz — sessizce tek modele
+        # düşmek yerine açıkça reddedilir.
+        maliyet_mod.maliyetler_govdeden(girdi["maliyetler"])
+        raise TekrarHatasi(
+            f"{tip}: kayıt enstrüman-başı maliyet bloğu taşıyor; tek sembollü tekrar yolu "
+            "bunu uygulamıyor (K-084/U14)"
+        )
     sembol, timeframe = girdi["sembol"], girdi["timeframe"]
     sermaye = float(girdi["baslangic_sermaye"])
 

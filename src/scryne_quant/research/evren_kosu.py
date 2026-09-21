@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
+from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data import funding as funding_mod
 from scryne_quant.data import kimlik as kimlik_mod
@@ -54,6 +56,8 @@ class EvrenKurulumu:
     gorunum: EvrenGorunumu
     veri_sha256: dict[str, str]
     meta: dict[str, Any]
+    kimlikler: dict[str, list[kimlik_mod.Enstruman]] = field(default_factory=dict)
+    """Sembol → kimlik segmentleri; `enstruman_maliyetleri` bunu çözümler (K-084)."""
     olcum_baslangici: int = 0
     """Isınma barlarının bittiği indeks. Pencere başından **önceki** barlar yalnızca
     indikatörleri ısıtmak için yüklendi; ölçüm oradan başlamaz.
@@ -99,6 +103,9 @@ class EvrenVerisi:
     meta: dict[str, Any]
     olcum_baslangici: int
     kural_kimligi: str
+    kimlikler: dict[str, list[kimlik_mod.Enstruman]] = field(default_factory=dict)
+    """Sembol → kanonik kimlik segmentleri (`kimlikleri_kur`). Maliyet çözümlemesi buradan
+    (`enstruman_maliyetleri`, K-084/U14); veri kimliğine **girmez** (`veri_kimligi` sabit)."""
 
     def __len__(self) -> int:
         return len(self.zamanlar)
@@ -274,6 +281,7 @@ def veri_kur(
             ),
         },
         olcum_baslangici=olcum_baslangici,
+        kimlikler=kimlikler,
         kural_kimligi=str(meta.get("kural_kimlik", "")),
     )
 
@@ -308,7 +316,39 @@ def kur(
         veri_sha256=veri.veri_sha256,
         meta=veri.meta,
         olcum_baslangici=veri.olcum_baslangici,
+        kimlikler=veri.kimlikler,
     )
+
+
+def enstruman_maliyetleri(
+    katalog: maliyet_mod.MaliyetKatalogu,
+    kimlikler: Mapping[str, Sequence[kimlik_mod.Enstruman]],
+) -> dict[str, maliyet_mod.SembolMaliyeti] | None:
+    """`Enstruman.maliyet_modeli_id` → katalog → model, sembol başına. (K-084/U14)
+
+    Çözümleme **her zaman** yapılır (dosya var mı, `global` Binance spot mu — fail closed);
+    ama hepsi `global`e çıkıyorsa `None` döner: motor tek-model yolunda kalır ve kayıt
+    biçimi bugünkü Binance spot kaydıyla aynı olur. Bir sembolün segmentleri farklı kimlik
+    taşıyamaz. `common/maliyet.py` `Enstruman`ı bilmez; bağ bu katmanda.
+    """
+    out: dict[str, maliyet_mod.SembolMaliyeti] = {}
+    for sembol in sorted(kimlikler):
+        segmentler = list(kimlikler[sembol])
+        if not segmentler:
+            raise maliyet_mod.MaliyetHatasi(f"{sembol}: kimlik segmenti yok")
+        kimlik_kumesi = {seg.maliyet_modeli_id for seg in segmentler}
+        if len(kimlik_kumesi) != 1:
+            raise maliyet_mod.MaliyetHatasi(
+                f"{sembol}: segmentler farklı maliyet modeli taşıyor {sorted(kimlik_kumesi)}"
+            )
+        kimlik = segmentler[0].maliyet_modeli_id
+        model = katalog.coz(
+            kimlik, binance_spot_kripto=all(seg.binance_spot_kripto for seg in segmentler)
+        )
+        out[sembol] = maliyet_mod.SembolMaliyeti(kimlik, model)
+    if all(em.kimlik == maliyet_mod.GLOBAL_KIMLIK for em in out.values()):
+        return None
+    return out
 
 
 def _pencere_sinirlari(
@@ -342,4 +382,12 @@ def _kirp(df: pd.DataFrame, alt_ms: int | None, ust_ms: int | None) -> pd.DataFr
     return df.loc[maske]
 
 
-__all__ = ["EvrenKosuHatasi", "EvrenKurulumu", "EvrenVerisi", "kur", "tablo_oku", "veri_kur"]
+__all__ = [
+    "EvrenKosuHatasi",
+    "EvrenKurulumu",
+    "EvrenVerisi",
+    "enstruman_maliyetleri",
+    "kur",
+    "tablo_oku",
+    "veri_kur",
+]

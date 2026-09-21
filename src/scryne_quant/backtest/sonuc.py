@@ -110,6 +110,19 @@ class Sonuc:
     1-7'de kaydedilmiş her sonucun hash'ini değiştirirdi (K-009).
     """
 
+    maliyetler: dict[str, Any] | None = None
+    """Enstrüman-başı maliyet bloğu `{sembol: {"id", "govde"}}`; tek modelli koşuda `None`.
+    (K-084/U14)
+
+    `risk`/`evren` ile aynı kural: `config_hash`e ve kayda **yalnız varsa** girer — Binance
+    spot (tek model) kayıtlarının kimliği değişmez. `maliyet` alanı her durumda tek modeli
+    taşımaya devam eder (eski biçim)."""
+
+    gecici: bool | None = None
+    """Koşunun maliyet modeli geçici mi. `None` = tek modelin `maliyet["gecici"]` bayrağı
+    (eski kayıt biçimi); çok modelde herhangi biri geçiciyse `True` (K-084/6). Hash'e
+    girmez — `promotion_engelleri` okur."""
+
     risk: dict[str, Any] | None = None
     """Risk motoru özeti (`RiskMotoru.ozet()`); motor devre dışıysa `None`. (Faz 5)
 
@@ -122,17 +135,21 @@ class Sonuc:
 
     @property
     def config_hash(self) -> str:
-        """Girdiyi özetler: strateji + parametreler + maliyet + sermaye + seed."""
-        return nesne_hash(
-            {
-                "strateji": self.strateji,
-                "maliyet": self.maliyet,
-                "baslangic_sermaye": self.baslangic_sermaye,
-                "seed": self.seed,
-                "sembol": self.veri.sembol,
-                "timeframe": self.veri.timeframe,
-            }
-        )
+        """Girdiyi özetler: strateji + parametreler + maliyet + sermaye + seed.
+
+        `maliyetler` yalnız varsa girer (K-084): tek modelli kayıtların hash'i değişmez.
+        """
+        govde: dict[str, Any] = {
+            "strateji": self.strateji,
+            "maliyet": self.maliyet,
+            "baslangic_sermaye": self.baslangic_sermaye,
+            "seed": self.seed,
+            "sembol": self.veri.sembol,
+            "timeframe": self.veri.timeframe,
+        }
+        if self.maliyetler is not None:
+            govde["maliyetler"] = self.maliyetler
+        return nesne_hash(govde)
 
     @property
     def sonuc_hash(self) -> str:
@@ -185,8 +202,9 @@ class Sonuc:
             engeller.append("dirty")  # K-009
         if self.data_quality_warning:
             engeller.append("data_quality_warning")  # K-006
-        if self.maliyet.get("gecici"):
-            engeller.append("gecici_maliyet_modeli")  # K-021
+        gecici = self.maliyet.get("gecici") if self.gecici is None else self.gecici
+        if gecici:
+            engeller.append("gecici_maliyet_modeli")  # K-021, K-084/6
         if self.leak_riski:
             engeller.append("leak_riski")  # K-049/4, K-054
         return engeller
@@ -225,6 +243,8 @@ class Sonuc:
                 "maliyet": self.maliyet,
                 "baslangic_sermaye": self.baslangic_sermaye,
                 "kalite_esigi": self.kalite_esigi,
+                # Yalnız çok modelde (K-084): tek modelli kaydın biçimi Faz 3-16 ile aynı.
+                **({"maliyetler": self.maliyetler} if self.maliyetler is not None else {}),
             },
             "metrikler": self.metrikler.sozluk(),
             "akis": {

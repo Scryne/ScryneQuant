@@ -4247,3 +4247,78 @@ ayrımı, sınıf≠tip); serileştirme A/B/C (sıra, altın hash, tam şema, de
 hash sınırı D (5 modül statik, `tablo_hash`/`uyelik_matrisi` davranışsal, `Sonuc` alanları);
 maliyet gövdesi (yürürlükteki dosya SHA, sentetik literal, `tekrar._maliyet` gidiş-dönüş, geçici model).
 Mevcut `test_kimlik.py`, `test_evren.py`, `test_izgara.py`, `test_coklu_motor.py` değişmeden geçiyor.
+
+---
+
+## K-084 — Enstrüman-başı maliyet modeli: katalog + çözümleyici; tek-model Binance spot yolu bit-aynı (U14)
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (U14 spike → tasarım A kabulü, R2 Paket 3
+talimatı) · **Tabi:** K-007, K-009, K-021, K-057/6, K-083 · **Kaynak:** `docs/audit/W3` R5 (tek global
+maliyet 761 sembole uygulanıyor), Threshold-Policy U14, U14 Spike (2026-09-21),
+`tests/unit/test_maliyet_katalogu.py`
+
+### Bulgu
+
+`MaliyetModeli` koşu başına **tek** nesneydi (`config/maliyet.json`; BTCUSDT 1m p75 slippage, K-021)
+ve evren koşularında her sembole aynen uygulanıyordu. `Enstruman.maliyet_modeli_id` (K-083) yalnız
+metadata idi, tüketicisi yoktu. Maliyet üç kimlik zincirine giriyor: deney `girdi["maliyet"]`
+(`_maliyet_govdesi`, `girdi_hash`), `Sonuc.maliyet = sozluk()` (`config_hash`, evren kaydı), paper
+`KosuKimligi.maliyet` (+ toparlanma eşitliği, K-038). Hipotez/evren çekiliş kimliğinde maliyet yok.
+
+### Karar
+
+1. **Tasarım A — katalog + çözümleyici** (`common/maliyet.py:MaliyetKatalogu`). `global` →
+   `config/maliyet.json` (mevcut dosya, aynı şema); diğer kimlikler → `config/maliyet/<id>.json`
+   (aynı `MaliyetModeli` şeması). Dosya yok / JSON bozuk / şema uymuyor / kimlik biçimsiz
+   (`^[A-Za-z0-9][A-Za-z0-9_.@-]{0,63}$`) → `MaliyetHatasi`, **fail closed**; sessiz global
+   düşüşü yok. Çözümleme yalnız dosya: ortam, sağlayıcı, ağ yok.
+2. **`global` yalnız Binance spot kripto** (K-083/U17 ile tutarlı): `coz("global",
+   binance_spot_kripto=False)` hata. Yeni enstrümana yayılmaz.
+3. **Kimlik kararlı ad**, içerik hash'i gömülmez; kanonik kanıt kayıttaki gövde
+   (`fee, slippage, kalibrasyon` — `kalibrasyon.veri_sha256` dahil). Aynı gövdeli iki kimlik iki
+   ayrı modeldir (kayıt `id` ile ayırt eder).
+4. **Sahiplik/bağ:** `common/maliyet.py` `Enstruman`ı bilmez (statik testle); `Enstruman →
+   maliyet_modeli_id → katalog → model` çözümlemesi `research/evren_kosu.enstruman_maliyetleri`
+   (kimlik segmentleri orada). Bir sembolün segmentleri farklı kimlik taşıyamaz. **Hepsi `global`
+   ise `None`** döner → motor tek-model yolunda.
+5. **Motor:** `CokluBacktest(maliyet, maliyetler=None)`; `emirleri_hazirla(..., maliyetler)`
+   sembolün modelini kullanır (yalnız fee/slippage; satış-önce sırası, sembol sırası, nakit tavanı
+   maliyetten bağımsız — değişmedi). `maliyetler=None` → bugünkü yol **bit-aynı**; verilmişse
+   evrendeki her sembol için model zorunlu (eksik → `CokluBacktestHatasi`).
+6. **Kayıt/hash:** `Sonuc.maliyetler` (`{sembol: {id, govde}}`, sembol sıralı; ekleme sırasından
+   bağımsız) ve `Sonuc.gecici` **yalnız çok modelde** dolu; `config_hash`e ve `config` bloğuna
+   yalnız varsa girer (`risk`/`evren` kalıbı). Tek modelli kaydın `maliyet` bloğu, `config_hash`
+   formülü ve `Sonuc` alanları (`gecici=None`) **aynen**. `_maliyet_govdesi` → `maliyet.govde`
+   delege (çıktı bayt-aynı, SHA `fe9f73bb…` testli); `tekrar._maliyet` → `govdeden`.
+7. **Geçici (K-021):** çok modelde herhangi bir model `gecici` ise koşu geçici →
+   `promotion_engelleri` `gecici_maliyet_modeli`. Tek modelde eski okuma (`maliyet["gecici"]`).
+8. **Tekrar:** eski `maliyet` bloğu aynen okunur; `maliyetler` bloğu taşıyan kayıt tek sembollü
+   tekrar yolunda **uygulanmaz** — blok kurulur (bozuksa `MaliyetHatasi`), sonra `TekrarHatasi`
+   ile açıkça reddedilir (sessiz tek modele düşüş yok). Eski kayıtlar dönüştürülmez.
+9. **Paper/toparlanma (evren yolu):** başlangıçta `global` katalogdan çözülür (dosya yoksa açılmaz);
+   kimlik biçimi aynı (`maliyet` tekil blok); `maliyetler` bloğu varsa toparlanma her kimliği
+   katalogdan **yeniden** çözer ve gövdeyi kayıtla karşılaştırır — fark/eksik/bozuk →
+   `KurulumUyusmazligi` (sebep `MaliyetHatasi` zincirde; çağıranlar tek tipi yakalıyor). `EvrenPaperMotoru(maliyetler=None)` geçişi. Tek sembollü `PaperMotoru`/
+   `runs/paper` sqlite şeması **değişmedi** (tek sembol = tek model). Canlı evren yolu `Enstruman`
+   görmediği için (K-083 açık kalan, İz G) çok modelli kimlik bugün yalnız toparlanma tarafında
+   doğrulanabilir; üretimi İz G'ye bağlı.
+10. **Execution/OMS/risk:** `MaliyetModeli` bağımlılığı yok, değişmedi.
+11. **Kapsam dışı:** spread ayrı bileşen (R4), yeni kalibrasyon koşusu (her yeni `(venue, tip, id)`
+    kendi `SlippageKalibrasyonu`nu ister; kalibrasyonsuz = geçici = promotion engeli), spot-dışı
+    adaptör/veri, `tools/` betikleri (global `yukle()` ile devam).
+
+### Kanıt (2026-09-21)
+
+- `_maliyet_govdesi` SHA `fe9f73bb…`, `MaliyetModeli.sozluk()` `5022dec9…`, katalog dosyası,
+  kural kimliği `27b7a16ed0ed…`, PIT `tablo_hash` `b06857c0…`, 14 çekilişin `veri_sha256`sı: SAME.
+- `runs/evren/` 5 gerçek kaydın `config_hash`i bugünkü formülle yeniden hesaplandı: 5/5 SAME,
+  hiçbirinde `maliyetler` bloğu yok. R1(b) 9 kayıt (monte_carlo/stres/tarama) sınıf + fark listesi
+  birebir. `runs/paper/gozlem-1/2.sqlite` `maliyet` bloğu bugünkü `yukle().sozluk()` ile aynı (test).
+- `tests/unit/test_maliyet_katalogu.py` (31): çözümleyici (global/dosya/eksik/bozuk×3/spot-dışı
+  global/kimlik biçimi×7/deterministik/aynı gövde iki kimlik), enstrüman çözümleme (hepsi global →
+  `None` ama fail closed; karışık evren; segment tutarsızlığı), tek model bit-aynı (`config_hash`
+  formülü, eski `Sonuc` biçimi, aynı modelin haritası = aynı `sonuc_hash`, sabitler), çok model
+  (fill sembol bazında, sıra aynı, ekleme sırası hash'i değiştirmez, eksik sembol red, kayıt
+  gidiş-dönüş, tekrar reddi), geçici yayılımı + promotion engeli, paper toparlanma (tek model
+  doğrulanır, çok model katalogla, dosya değişince/eksikte fail closed, gerçek gözlem sqlite'ları).
+  Tam ağ dışı suite 2.052 → 2.083, 1 skip, 3 deselected; ruff temiz.

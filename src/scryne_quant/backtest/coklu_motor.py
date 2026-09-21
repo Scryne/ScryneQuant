@@ -53,7 +53,13 @@ from scryne_quant.backtest.fill import AtlamaSebebi, emirleri_hazirla
 from scryne_quant.backtest.metrikler import Islem, gunluk_hacim, hesapla
 from scryne_quant.backtest.sonuc import VARSAYILAN_KALITE_ESIGI, Sonuc, VeriKimligi, atlama_sayimi
 from scryne_quant.common.hash import nesne_hash
-from scryne_quant.common.maliyet import MaliyetModeli
+from scryne_quant.common.maliyet import (
+    Maliyetler,
+    MaliyetModeli,
+    SembolMaliyeti,
+    gecici_mi,
+    maliyetler_govdesi,
+)
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import KaliteDurumu
 from scryne_quant.features.indikator import atr as atr_hesapla
@@ -83,6 +89,7 @@ class CokluBacktest:
         kalite_esigi: float = VARSAYILAN_KALITE_ESIGI,
         risk: RiskMotoru | None = None,
         sifira_yaz_bar: int | None = None,
+        maliyetler: Maliyetler | None = None,
     ) -> None:
         if baslangic_sermaye <= 0.0:
             raise CokluBacktestHatasi(
@@ -90,6 +97,15 @@ class CokluBacktest:
             )
         self.strateji = strateji
         self.maliyet = maliyet
+        self.maliyetler: dict[str, SembolMaliyeti] | None = (
+            None if maliyetler is None else dict(maliyetler)
+        )
+        """Sembol → `SembolMaliyeti` (K-084/U14). `None` = tek model, bugünkü yol bit-aynı.
+        Verilmişse fill'ler sembolün modelini kullanır; kayda `maliyetler` bloğu **yalnız o
+        zaman** girer. `maliyet` (tek model) her durumda kayıtta kalır — eski biçim korunur."""
+        self.fill_maliyetleri: dict[str, MaliyetModeli] | None = (
+            None if maliyetler is None else {s: em.model for s, em in maliyetler.items()}
+        )
         self.baslangic_sermaye = baslangic_sermaye
         self.seed = seed
         self.kalite_esigi = kalite_esigi
@@ -125,6 +141,12 @@ class CokluBacktest:
         semboller = gorunum.semboller
         if tekil_sembol is not None and tekil_sembol not in semboller:
             raise CokluBacktestHatasi(f"{tekil_sembol}: evren görünümünde yok")
+        if self.fill_maliyetleri is not None:
+            eksik = sorted(set(semboller) - set(self.fill_maliyetleri))
+            if eksik:
+                raise CokluBacktestHatasi(
+                    f"enstrüman-başı maliyet modeli olmayan sembol(ler): {eksik} (K-084/U14)"
+                )
 
         adim = timeframe_ms(gorunum.timeframe)
         girdi = self.girdi_kur(gorunum)
@@ -316,6 +338,9 @@ class CokluBacktest:
             veri=veri,
             strateji=self.strateji.sozluk(),
             maliyet=self.maliyet.sozluk(),
+            maliyetler=None if self.maliyetler is None else maliyetler_govdesi(self.maliyetler),
+            # Tek modelde `None`: eski `Sonuc` biçimi aynen; bayrak `maliyet["gecici"]`den okunur.
+            gecici=None if self.maliyetler is None else gecici_mi(self.maliyet, self.maliyetler),
             baslangic_sermaye=self.baslangic_sermaye,
             seed=self.seed,
             metrikler=hesapla(
@@ -484,7 +509,8 @@ class CokluAdimci:
                     (*portfoy.sirali_semboller, *uygun), self.son_acilis, i, silinen
                 )
                 emirler, atlama = emirleri_hazirla(
-                    uygun, portfoy, fiyatlar_a, int(girdi.zamanlar[i]), motor.maliyet
+                    uygun, portfoy, fiyatlar_a, int(girdi.zamanlar[i]), motor.maliyet,
+                    maliyetler=motor.fill_maliyetleri,
                 )
                 for s in sorted(atlama):
                     self.atlanan.append(atlama[s])

@@ -241,8 +241,14 @@ def emirleri_hazirla(
     acilislar: Mapping[str, float],
     zaman_ms: int,
     maliyet: MaliyetModeli,
+    maliyetler: Mapping[str, MaliyetModeli] | None = None,
 ) -> tuple[list[Emir], dict[str, AtlamaSebebi]]:
     """Onaylanmış hedefleri `t+1` açılışında emir listesine çevirir. (Faz 10)
+
+    `maliyetler` (K-084/U14): sembol → model. `None` ise her sembol `maliyet`i kullanır —
+    bugünkü tek-model yolu, bit-aynı. Verilmişse **her** sembol için bir model olmak zorunda;
+    eksik sembol `maliyet`e düşmez, hata verir. Maliyet yalnız fee/slippage'ı değiştirir;
+    satış-önce sırası, sembol sırası ve nakit tavanı maliyetten bağımsızdır.
 
     **Önce satışlar, sonra alımlar.** Sıra bir tercih değil, nakdin fiziği: aynı barda hem
     çıkılıp hem girilen bir yeniden dengelemede alım, satıştan gelen nakdi kullanabilmeli.
@@ -263,11 +269,17 @@ def emirleri_hazirla(
     def _isle(semboller: list[str], p: CokluPortfoy) -> CokluPortfoy:
         for sembol in semboller:
             sinyal, hedef = onayli[sembol]
+            if maliyetler is None:
+                sembol_maliyeti = maliyet
+            elif sembol in maliyetler:
+                sembol_maliyeti = maliyetler[sembol]
+            else:
+                raise KeyError(f"{sembol}: enstrüman-başı maliyet modeli yok (K-084/U14)")
             sonuc = emir_hazirla_genel(
                 sinyal,
                 acilis=acilislar[sembol],
                 zaman_ms=zaman_ms,
-                maliyet=maliyet,
+                maliyet=sembol_maliyeti,
                 nakit=p.nakit,
                 elde_miktar=p.pozisyon(sembol).miktar,
                 ozkaynak=ozkaynak,
