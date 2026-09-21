@@ -261,3 +261,70 @@ class TestAltEvrenVeHaftalikKesim:
         assert int(kesik.zamanlar[-1]) < ust <= int(veri.zamanlar[-1])
         assert kesik.meta["pencere"]["bitis_pazar"] == "2024-01-21"
         assert len(kesik) < len(veri)
+
+
+# ------------------------------------------------------------ K-104: ortalama dönüş ailesi
+
+
+class TestOrtalamaDonus:
+    def test_kayitli_ve_izgaralar(self):
+        from scryne_quant.research.izgaralar import FX_DONUS_CEKILISLERI
+        from scryne_quant.strategy.kutuphane.ortalama_donus import ZamanSerisiRsi, ZamanSerisiSapma
+
+        assert EVREN_AILELER["zaman_serisi_sapma"] is ZamanSerisiSapma
+        assert EVREN_AILELER["zaman_serisi_rsi"] is ZamanSerisiRsi
+        assert PROGRAM_CEKILISLERI["fx_ortalama_donus"] == tuple(FX_DONUS_CEKILISLERI)
+        for ad in FX_DONUS_CEKILISLERI:
+            strateji, g = evren_cekilisi(ad)
+            noktalar = list(izgara(g))
+            assert len(noktalar) == 12 and g["yeniden_dengele_bar"] == (120,)
+            for p in noktalar:
+                EVREN_AILELER[strateji](**p)
+        with pytest.raises(ValueError):
+            ZamanSerisiRsi(esik=150.0)
+        with pytest.raises(ValueError):
+            ZamanSerisiSapma(esik=0.0)
+
+    @pytest.mark.parametrize("ad", ["zaman_serisi_sapma", "zaman_serisi_rsi"])
+    def test_yalniz_esigi_gecen_tasinir(self, veri, ad):
+        """Alınan her sembolde karar barında (fill − 1) ölçü eşiğin altında."""
+        from scryne_quant.strategy.kosu import evren_gorunum_kur
+
+        esik = 1.0 if ad == "zaman_serisi_sapma" else 40.0
+        s = EVREN_AILELER[ad](pencere=24, esik=esik, azami_enstruman=3, yeniden_dengele_bar=48)
+        _, _, tam, _ = ed.pencereler(veri, isinma_bar=ISINMA)
+        sonuc = ed.kosu(s, MALIYET, veri, tam)
+        assert sonuc.metrikler.islem_sayisi > 0
+        g = evren_gorunum_kur(veri.timeframe, veri.diziler, veri.uyelik, s,
+                              kural_kimligi=veri.kural_kimligi)
+        for islem in sonuc.islemler:
+            i = int(np.searchsorted(g.zamanlar, islem.acilis_ms)) - 1
+            pg = g.gorunumler[islem.sembol]
+            if ad == "zaman_serisi_sapma":
+                z = (pg.barlar["close"][i] - pg.ozellikler["skor_ham"][i]) / pg.ozellikler["atr"][i]
+                assert z < -esik, (islem.sembol, z)
+            else:
+                assert pg.ozellikler["skor_ham"][i] < esik, (islem.sembol,)
+
+    def test_esigi_gecen_yoksa_islem_yok(self):
+        """Tekdüze yükselen evren: sapma hep pozitif, RSI 100 → hiç aday, 0 işlem."""
+        from scryne_quant.backtest.coklu_motor import CokluBacktest
+        from scryne_quant.features.barlar import bar_dizileri
+        from scryne_quant.strategy.kosu import evren_gorunum_kur
+        from tests.conftest import bar_uret
+
+        n = 400
+        diziler = {}
+        for i, sembol in enumerate(("AAAUSDT", "BBBUSDT")):
+            ham = bar_dizileri(bar_uret(n=n, tohum=3 + i))
+            d = {a: np.array(x, copy=True) for a, x in ham.items()}
+            egim = 1.0 + 0.001 * (i + 1) * np.arange(n)
+            for alan in ("open", "high", "low", "close"):
+                d[alan] = 100.0 * egim * (1.0 + {"high": 0.0005, "low": -0.0005}.get(alan, 0.0))
+            diziler[sembol] = d
+        uyelik = {s: np.ones(n, dtype=bool) for s in diziler}
+        for ad, esik in (("zaman_serisi_sapma", 1.0), ("zaman_serisi_rsi", 40.0)):
+            s = EVREN_AILELER[ad](pencere=24, esik=esik, azami_enstruman=2, yeniden_dengele_bar=48)
+            g = evren_gorunum_kur("1h", diziler, uyelik, s, kural_kimligi="test")
+            sonuc = CokluBacktest(s, MALIYET).calistir(g, veri_sha256={}, olcum_baslangici=0)
+            assert sonuc.metrikler.islem_sayisi == 0

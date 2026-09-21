@@ -52,6 +52,7 @@ from scryne_quant.research import hipotez as hipotez_mod
 from scryne_quant.research import program as program_mod
 from scryne_quant.research.izgaralar import (
     FX_CEKILISLERI,
+    FX_DONUS_CEKILISLERI,
     FX_HAFTALIK,
     SABIT_MARUZIYET,
     cekilis_programi,
@@ -64,7 +65,16 @@ KOK = Path(__file__).resolve().parent.parent
 TABLO = KOK / "data" / "fx" / "_evren" / "6124cf568498.parquet"
 DEPO = KOK / "data" / "fx"
 CIKTI = KOK / "runs" / "fx"
-PROGRAM = "fx_fiyat"
+#: FX programları ve çekilişleri (K-102 `fx_fiyat`, K-104 `fx_ortalama_donus`): aynı pencere, aynı
+#: kontrol, aynı ısınma tabanı — sonuçlar programlar arasında aynı IS/OOS barlarında karşılaştırılır
+FX_PROGRAMLAR: dict[str, tuple[str, ...]] = {
+    "fx_fiyat": tuple(FX_CEKILISLERI),
+    "fx_ortalama_donus": tuple(FX_DONUS_CEKILISLERI),
+}
+TUM_CEKILISLER = tuple(c for adlar in FX_PROGRAMLAR.values() for c in adlar)
+#: Isınma tabanı: `fx_fiyat`ın en büyük penceresi (240) + 2. Daha küçük pencereli program da bu
+#: tabanı kullanır ki IS/OOS barları ve kontrol sayıları programlar arasında **aynı** olsun.
+ISINMA_TABANI = 240 + 2
 #: K-101/4: 21 proxy'nin ortak geçerli penceresi 2023-11-19..2024-03-18; aylık çözünürlükte
 #: Mart dışarıda kalır (JPY çiftleri 03-19'da biter, `--bitis 2024-03` Mart'ın tamamını ister).
 BASLANGIC_AY = "2023-11"
@@ -77,7 +87,7 @@ PORTFOY = ed.KESITSEL_PORTFOY
 
 
 def _isinma(secenekler: dict[str, Any]) -> int:
-    return max(ATR_PENCERESI, max(int(p) for p in secenekler["pencere"])) + 2
+    return max(ISINMA_TABANI, max(ATR_PENCERESI, max(int(p) for p in secenekler["pencere"])) + 2)
 
 
 def _veri(cekilis: str) -> evren_kosu.EvrenVerisi:
@@ -103,20 +113,23 @@ def _temiz(x: Any) -> Any:
 
 
 def _hipotez(cekilis: str, veri: evren_kosu.EvrenVerisi, gerekce: str) -> hipotez_mod.Hipotez:
-    return ed.hipotez_kur(cekilis, veri, program=PROGRAM, gerekce=gerekce, portfoy=PORTFOY)
+    return ed.hipotez_kur(
+        cekilis, veri, program=cekilis_programi(cekilis), gerekce=gerekce, portfoy=PORTFOY
+    )
 
 
 def kaydet(cekilis: str, gerekce: str) -> int:
+    program = cekilis_programi(cekilis)
     veri = _veri(cekilis)
     hip = _hipotez(cekilis, veri, gerekce)
     defter = hipotez_mod.HipotezDefteri()
     programlar = program_mod.ProgramDefteri()
     onceki = defter.sira(hip)
     sira = defter.kaydet(hip, programlar=None if onceki is not None else programlar)
-    butce = programlar.butce(PROGRAM, defter.tumu())
+    butce = programlar.butce(program, defter.tumu())
     print(("zaten kayıtlı" if onceki is not None else "kaydedildi") + f": {sira}. hipotez")
     print(f"kimlik : {hip.kimlik[:16]} · strateji {hip.strateji} · veri {hip.veri_sha256[:12]}")
-    print(f"bütçe  : {PROGRAM} {butce['harcanan']}/{butce['azami_cekilis']} "
+    print(f"bütçe  : {program} {butce['harcanan']}/{butce['azami_cekilis']} "
           f"(kalan {butce['kalan']})")
     return 0
 
@@ -161,8 +174,9 @@ def _maliyet_ozeti(sonuc: Any) -> dict[str, Any]:
 
 def kos(cekilis: str) -> int:
     strateji_adi, secenekler = evren_cekilisi(cekilis)
-    if cekilis_programi(cekilis) != PROGRAM:
-        print(f"HATA: {cekilis} {PROGRAM} programının çekilişi değil", file=sys.stderr)
+    program = cekilis_programi(cekilis)
+    if program not in FX_PROGRAMLAR:
+        print(f"HATA: {cekilis} bir FX programının çekilişi değil", file=sys.stderr)
         return 2
     sinif = EVREN_AILELER[strateji_adi]
     basladi = time.perf_counter()
@@ -232,7 +246,7 @@ def kos(cekilis: str) -> int:
     kiyas_oos_sharpe = kiyaslar["out_of_sample"]["metrikler"]["sharpe"]
     govde = {
         "cekilis": cekilis,
-        "program": PROGRAM,
+        "program": program,
         "hipotez": {"sira": sira, "kimlik": hip.kimlik, "veri_kimligi": hip.veri_sha256},
         "evren": {k: v for k, v in veri.meta.items() if k != "kalite"},
         "veri_penceresi": {
@@ -288,21 +302,22 @@ def kos(cekilis: str) -> int:
 def durum() -> int:
     defter = hipotez_mod.HipotezDefteri()
     programlar = program_mod.ProgramDefteri()
-    acik = programlar.acik(PROGRAM)
     print(f"defter {defter.sayi()}")
-    if acik is None:
-        print(f"{PROGRAM}: kapalı")
-    else:
-        b = programlar.butce(PROGRAM, defter.tumu())
-        print(f"{PROGRAM}: {b['harcanan']}/{b['azami_cekilis']}")
-    for ad in FX_CEKILISLERI:
-        yol = CIKTI / f"{ad}.json"
-        if not yol.exists():
-            print(f"  {ad:28s} sonuç yok")
-            continue
-        d = json.loads(yol.read_text(encoding="utf-8"))["durma_kurali_olcumu"]
-        print(f"  {ad:28s} oos {d['oos_sharpe']} · kıyas {d['kiyas_oos_sharpe']:.3f} · "
-              f"geçti={d['kiyasi_gecti']}")
+    for program, adlar in FX_PROGRAMLAR.items():
+        acik = programlar.acik(program)
+        if acik is None:
+            print(f"{program}: kapalı")
+        else:
+            b = programlar.butce(program, defter.tumu())
+            print(f"{program}: {b['harcanan']}/{b['azami_cekilis']}")
+        for ad in adlar:
+            yol = CIKTI / f"{ad}.json"
+            if not yol.exists():
+                print(f"  {ad:28s} sonuç yok")
+                continue
+            d = json.loads(yol.read_text(encoding="utf-8"))["durma_kurali_olcumu"]
+            print(f"  {ad:28s} oos {d['oos_sharpe']} · kıyas {d['kiyas_oos_sharpe']:.3f} · "
+                  f"geçti={d['kiyasi_gecti']}")
     return 0
 
 
@@ -310,10 +325,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     alt = ap.add_subparsers(dest="komut", required=True)
     k = alt.add_parser("kaydet")
-    k.add_argument("cekilis", choices=tuple(FX_CEKILISLERI))
+    k.add_argument("cekilis", choices=TUM_CEKILISLER)
     k.add_argument("-g", "--gerekce", required=True)
     r = alt.add_parser("kos")
-    r.add_argument("cekilis", choices=tuple(FX_CEKILISLERI))
+    r.add_argument("cekilis", choices=TUM_CEKILISLER)
     alt.add_parser("durum")
     a = ap.parse_args()
     if a.komut == "kaydet":

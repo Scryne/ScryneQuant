@@ -46,8 +46,8 @@
   "f845b3fba9cba79654bcc0e89edde06501d3dfbddce5494337ecd440dafbb2dc",
   "fdce091fbfa2d5a639f3a709bf2288856b01d47848c1314cde9a14995bf3b7be"
  ],
- "defter_sayisi": 55,
- "defter_sha256": "71efcfd97959da4bc667c7584fc66ccd1ef33bf9d80c3866ffa138ab24ea6a99",
+ "defter_sayisi": 57,
+ "defter_sha256": "57baab3f425ac2a55d81097099f9f75e88666fc04c7bb260896aab3c501de189",
  "deneme": 500,
  "evren": 14,
  "ga05": [
@@ -55,7 +55,7 @@
   1.0634610745437818
  ],
  "git": {
-  "commit": "02f6a2057e854c51de4c3a09ab36f74c406420e4",
+  "commit": "d599fcef39d319f037399cc19da577b77b532e37",
   "dirty": true,
   "git_yok": false
  },
@@ -73,10 +73,12 @@
   "783fefe5b2d3eeb303e6bd07735df4d1835ec266000ec37cca5cab450019d2b1",
   "673b47b9af23b82d95bd0a88338fdbebd60855843a57710f7399df4e455eaead",
   "67e7cf3bcc779304c468d93fb58f4b014e9a551c7c3b67f5621321cf17af4a56",
-  "85258ff9335674344cf91cec9e89c29f0320b7c697a2e5364edf6c2904844d55"
+  "85258ff9335674344cf91cec9e89c29f0320b7c697a2e5364edf6c2904844d55",
+  "2346fdff4ca9eb7f4cae85fb657bb166d5d91dca992cbc66bbbe131fada25b34",
+  "e6b085a1e5f3ae1a7e19d3e3888b9b1291121561172bd392b2eea9fd0ee2dd0f"
  ],
  "p05": 1.0039280761569713,
  "seed": 0,
  "tek_sembollu": 31,
- "uretildi": "2026-09-21 19:08:04 UTC"
+ "uretildi": "2026-09-21 23:16:03 UTC"
 }

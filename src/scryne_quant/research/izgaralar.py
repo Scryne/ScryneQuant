@@ -280,6 +280,30 @@ FX_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
     "fx_zaman_serisi_trend": _fx("zaman_serisi_trend"),
 }
 
+#: `fx_ortalama_donus` programının çekilişleri (R6, K-104): zaman serisi ortalama dönüş, eşikli.
+#: 12 nokta: pencere (3) × eşik (2) × yoğunluk (2). Eşikler önceden sabit ve ikişer: z için 1 ve 2
+#: ATR (klasik bant genişlikleri), RSI için 30 (klasik) ve 40 (gevşek; 1h FX'te 30 seyrek tetikler).
+#: Yoğunluk {2, 5}: **sinyal setinin büyüklüğünden** (getiri okunmadan) seçildi — W1'de 13
+#: dengeleme anında eşiği geçen çift sayısı ortalama 1,4-4,6, haftaların %23-85'i boş
+#: (`runs/fx/donus-kaynak-olcumu.json`, program kaydında). 5/10 ekseni hiç bağlamaz ve ızgarada
+#: iki özdeş sütun PBO'yu bozardı; 2 çoğu hafta bağlar. Dengeleme 120, brüt 0,2 (kıyas aynı).
+FX_DONUS_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "fx_zaman_serisi_sapma": ("zaman_serisi_sapma", {
+        "pencere": (48, 120, 240),
+        "esik": (1.0, 2.0),
+        "azami_enstruman": (2, 5),
+        "yeniden_dengele_bar": (FX_HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }),
+    "fx_zaman_serisi_rsi": ("zaman_serisi_rsi", {
+        "pencere": (14, 24, 48),
+        "esik": (30.0, 40.0),
+        "azami_enstruman": (2, 5),
+        "yeniden_dengele_bar": (FX_HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }),
+}
+
 #: Program → çekilişleri. Koşucu çekilişin programını buradan bulur.
 PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "kesitsel_fiyat": tuple(EVREN_CEKILISLERI),
@@ -288,6 +312,7 @@ PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "konumlanma_evren": tuple(KONUMLANMA_CEKILISLERI),
     "kurma_evren": tuple(KURMA_CEKILISLERI),
     "fx_fiyat": tuple(FX_CEKILISLERI),
+    "fx_ortalama_donus": tuple(FX_DONUS_CEKILISLERI),
 }
 
 
@@ -295,7 +320,8 @@ def _TUM_CEKILISLER() -> dict[str, tuple[str, dict[str, Sequence[Any]]]]:
     """Bütün evren çekilişleri tek sözlükte. Yeni bir program eklenince **tek yer**
     değişsin diye ayrı: iki ayrı birleştirme listesi sessizce ayrışabilirdi."""
     return {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
-            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **FX_CEKILISLERI}
+            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **FX_CEKILISLERI,
+            **FX_DONUS_CEKILISLERI}
 
 
 def evren_cekilisi(ad: str) -> tuple[str, Mapping[str, Sequence[Any]]]:

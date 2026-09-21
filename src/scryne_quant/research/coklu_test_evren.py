@@ -106,6 +106,9 @@ SINYAL_OZELLIKLERI: Final[dict[str, tuple[str, ...]]] = {
     # Zaman serisi trend (R5, `fx_fiyat`): iddia `roc > 0` eşiği, taşıyıcı alan kesitsel
     # ailelerle aynı (`skor_ham`). Kaydırılan skor eşiği de sıralamayı da rastgele zamanlar.
     "zaman_serisi_trend": ("skor_ham",),
+    # Ortalama dönüş (R6, `fx_ortalama_donus`): iddia sma/rsi eşiği; taşıyıcı alan `skor_ham`.
+    "zaman_serisi_sapma": ("skor_ham",),
+    "zaman_serisi_rsi": ("skor_ham",),
 }
 
 

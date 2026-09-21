@@ -5230,3 +5230,36 @@ turuna al; parametre arama yok, promotion yok, yeni katman yok") · **Tabi:** K-
   IS ızgarasındaki sabit noktanın hash'i tek koşuyla aynı (koşucu `assert`).
 - Testler: alt evren meta/hata, tam küme alt evren değil, `bitis_pazar` üst sınırı; FX/araştırma
   testleri geçti.
+
+## K-104 — R6: FX ortalama dönüş ailesi (`fx_ortalama_donus`, h56-h57) — zayıf, aile kapalı; h56 tekrar gereksinimi taşıyor
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne (R6 talimatı: "yeni aile: yalnız
+mean-reversion; 2-3 basit hipotez; küçük parametre seti; zayıfsa aileyi kapat") · **Tabi:** K-039,
+K-045 (istisna, ölçümle), K-051, K-061, K-099, K-101, K-102, K-103 · **Kaynak:**
+`docs/research/records/2026-09-22-R6-fx-ortalama-donus.md`, `strategy/kutuphane/ortalama_donus.py`,
+`research/izgaralar.py` (`FX_DONUS_CEKILISLERI`), `tools/r5_fx_kos.py`, `tests/unit/test_fx_arastirma.py`
+
+### Karar
+
+1. **Aile:** zaman serisi ortalama dönüş, **eşikli** (h54'ün sıralamasından farkı bu): `zaman_serisi_sapma`
+   (`(close − sma)/atr14 < −esik`) ve `zaman_serisi_rsi` (`rsi < esik`); eşiği geçen yoksa nakit; yalnız uzun.
+   Ortak iskelet `_EsikliDonus`; K-102 motor hattı ve penceresi aynen (aynı IS/OOS barları, aynı kontrol).
+2. **Izgara 12 nokta, yoğunluk {2,5} sinyal-seti ölçümünden** (getiri okunmadan: eşiği geçen çift
+   ortalama 1,4-4,6, boş hafta %23-85). Eşikler klasik değerler. Program bütçesi 2, kaynak ölçümü kayıtta.
+3. **Sonuç:** h56 seçilen (48/1/5): IS +5,84 vs kontrol −10,59 USD; **OOS +22,59 vs +20,76 → +1,82 USD,
+   9 tur**; pertürbasyon **1,0** (tek komşu, negatif), pbo 0,482, `asgari_islem` 9, IS'te 12 noktanın 10'u
+   geçersiz/negatif, `yillik_anlamli=False`. h57: IS'te hiçbir nokta asgari tura ulaşmadı → seçilemedi,
+   **elendi**. Kapılar 0/2. Mutlak engel `gecici_finansman_modeli`.
+4. **Aile kapalı, zayıf.** Genişletilmez (durma kuralı). h56 program kuralı gereği **tekrar gereksinimi**
+   taşır (K-103 kalıbı: sabit nokta, W2/W3) — ayrı tur, bu pakette koşulmadı; promotion adayı değil.
+5. **Yapısal (üç FX programı):** `asgari_islem` (30) haftalık dengeleme × 4,3 haftalık OOS'ta geçilemez;
+   sıklaştırmak maliyet (h56 IS'te brütün %55'i), uzatmak finansman modeli ister (K-101). Kapı
+   küçültülmedi; FX için pencere sorunu K-101'in çözümüne bağlı.
+6. **Defter fotoğrafı** önbellekten yenilendi (57 satır; 45 ölçülebilir, p05 aynı; h53-h57 ölçülemez).
+
+### Kanıt
+
+- Testler: iki sınıf kayıtlı/ızgaralar 12 noktalı ve kurulabilir; fixture'da alınan her sembolde karar
+  barında ölçü eşiğin altında; tekdüze yükselen evrende 0 işlem; FX/araştırma testleri geçti.
+- K-061: h56 incele 1 (h54 "farklı"), h57 incele 1 (h4 tek sembol RSI "parametre varyasyonu", bilerek).
+- Koşu: `tools/r5_fx_kos.py kos` × 2 (~3,5 s); h56 OOS hash `807c7c89cf29`, kontrol `5689acde9405`.
