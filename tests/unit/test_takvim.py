@@ -108,14 +108,13 @@ class TestBitAyni24x7:
 
 
 #: Veri sonu / kimlik / hash yolları: takvimi **görmemeli** (U16 — K-080 semantiği değişmez).
+#: `izgara`/`dogrulama`/`metrikler` R4 Paket 1'de (K-093) takvime bağlandı — listeden çıktı;
+#: 24x7 yolu bit-aynı (`test_takvim_baglama.py`).
 KIMLIK_MODULLERI = (
     "data/depo.py",  # ParquetDepo.kirp (K-080 geri sarım)
     "research/deney.py",  # girdi_hash / cikti_hash / veri_son_ms
     "backtest/sonuc.py",  # sonuc_hash / config_hash
     "common/hash.py",
-    "data/izgara.py",  # ortak_izgara / hizala — R4'te bağlanır, bugün değil
-    "data/dogrulama.py",  # beklenen_bar — R4
-    "backtest/metrikler.py",  # bar_yili — R4
 )
 
 

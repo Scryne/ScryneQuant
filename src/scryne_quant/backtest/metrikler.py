@@ -26,8 +26,11 @@ from typing import Any, Final
 
 import numpy as np
 
-#: Yıl uzunluğu, milisaniye. 365,25 gün — artık yıl sessizce kaymasın.
-YIL_MS: Final = 365.25 * 24 * 3_600_000
+from scryne_quant.data.takvim import YIL_MS as _YIL_MS
+from scryne_quant.data.takvim import Takvim
+
+#: Yıl uzunluğu, milisaniye — tanımı `data/takvim.YIL_MS` (R4 Paket 1); ad burada korunur.
+YIL_MS: Final = _YIL_MS
 
 #: Yıllıklandırmanın anlamlı sayılması için gereken asgari pencere: 30 gün.
 #:
@@ -253,11 +256,17 @@ class Drawdown:
     seri: np.ndarray = field(repr=False)
 
 
-def bar_yili(timeframe_ms: int) -> float:
-    """Bir yıla kaç bar sığar. Yıllıklandırmanın tek kaynağı."""
+def bar_yili(timeframe_ms: int, takvim: Takvim | None = None) -> float:
+    """Bir yıla kaç bar sığar. Yıllıklandırmanın tek kaynağı — artık takvimden (R4 Paket 1).
+
+    `takvim=None` = 24x7 (kripto, Faz 3'ten beri): `YIL_MS / timeframe_ms`, ifade aynı, sonuç
+    bit-aynı. Seanslı takvim haftalık açık saat oranıyla ölçekler (`Takvim.yillik_bar`).
+    """
     if timeframe_ms <= 0:
         raise ValueError(f"timeframe_ms pozitif olmalı: {timeframe_ms}")
-    return YIL_MS / timeframe_ms
+    if takvim is None:
+        return YIL_MS / timeframe_ms
+    return takvim.yillik_bar(timeframe_ms)
 
 
 def drawdown(ozkaynak: np.ndarray) -> Drawdown:
@@ -350,6 +359,7 @@ def hesapla(
     baslangic_sermaye: float,
     *,
     kapasite_oranlari: Sequence[float] = (),
+    takvim: Takvim | None = None,
 ) -> Metrikler:
     """Equity eğrisi + işlem defterinden metrikleri üretir.
 
@@ -365,7 +375,7 @@ def hesapla(
     bitis = float(ozkaynak[-1])
     toplam_getiri = _bolum(bitis - baslangic_sermaye, baslangic_sermaye)
 
-    yil_bar = bar_yili(timeframe_ms)
+    yil_bar = bar_yili(timeframe_ms, takvim)
     yil = ozkaynak.size / yil_bar
 
     if bitis > 0.0 and baslangic_sermaye > 0.0 and yil > 0.0:

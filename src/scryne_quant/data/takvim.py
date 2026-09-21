@@ -34,6 +34,11 @@ from scryne_quant.common.zaman import timeframe_ms
 TAKVIM_24X7: Final = "24x7"
 TAKVIM_FX_5X24: Final = "fx-5x24"
 
+#: Yıl uzunluğu, milisaniye — 365,25 gün (artık yıl sessizce kaymasın). Eskiden
+#: `backtest/metrikler.YIL_MS`; oradaki ad aynı nesneyi yeniden dışa verir (R4 Paket 1).
+YIL_MS: Final = 365.25 * 24 * 3_600_000
+HAFTA_SAAT: Final = 7 * 24
+
 #: Haftanın günleri (`datetime.weekday`): 0 Pazartesi … 6 Pazar.
 _PAZAR: Final = 6
 _CUMA: Final = 4
@@ -156,6 +161,29 @@ class Takvim:
             maske |= (z >= k.bas_ms) & (z < k.bit_ms)
         return maske
 
+    def haftalik_saat(self) -> float:
+        """Haftada kaç saat açık: sürekli 168; seanslı `[açılış, kapanış)` uzunluğu (fx-5x24: 120).
+
+        Ölçülmüş kapalı dönemler (tatil) buna girmez — yıllıklandırma kural düzeyindedir, tatil
+        yılı değil; kapalı dönem sayısı yıldan yıla değişir ve `kapali` yalnız ölçülmüş yılları
+        taşır (K-089/2).
+        """
+        if self.surekli or self.seans is None:
+            return float(HAFTA_SAAT)
+        acilis = self.seans.acilis_gun * 24 + self.seans.acilis_saat
+        kapanis = self.seans.kapanis_gun * 24 + self.seans.kapanis_saat
+        return float((kapanis - acilis) % HAFTA_SAAT or HAFTA_SAAT)
+
+    def yillik_bar(self, timeframe_ms: int) -> float:
+        """Bir yıla kaç bar sığar (R4 Paket 1). Sürekli: `YIL_MS / timeframe_ms` — R2 öncesi
+        `metrikler.bar_yili` ifadesinin **aynısı** (bit-aynı). Seanslı: haftalık açık saat oranıyla
+        ölçeklenir (fx-5x24 1h: 8.766 × 120/168 = 6.261,43)."""
+        if timeframe_ms <= 0:
+            raise TakvimHatasi(f"timeframe_ms pozitif olmalı: {timeframe_ms}")
+        if self.surekli:
+            return YIL_MS / timeframe_ms
+        return YIL_MS / timeframe_ms * (self.haftalik_saat() / HAFTA_SAAT)
+
     def olcum_icinde(self, ms: int) -> bool:
         """Kapalı dönem bilgisi bu an için ölçülmüş mü (sürekli takvimde hep True)."""
         if self.surekli:
@@ -253,9 +281,11 @@ def takvim(kimlik: str) -> Takvim:
 
 
 __all__ = [
+    "HAFTA_SAAT",
     "KATALOG",
     "TAKVIM_24X7",
     "TAKVIM_FX_5X24",
+    "YIL_MS",
     "Kapali",
     "Seans",
     "Takvim",

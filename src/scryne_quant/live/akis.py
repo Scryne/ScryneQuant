@@ -31,8 +31,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Final, Protocol, runtime_checkable
 
+import numpy as np
+
 from scryne_quant.common.zaman import timeframe_ms, utc_str
 from scryne_quant.data.semalar import HAM_BAR_SUTUNLARI
+from scryne_quant.data.takvim import Takvim
 
 
 class AkisHatasi(RuntimeError):
@@ -111,12 +114,15 @@ class Tazelik:
     veri kaç saniyeliktı" sorusunun cevabı bulunabilsin.
     """
 
-    __slots__ = ("_azami_yas_ms", "_son_nabiz_ms", "_bayat_giris", "_bayat_cikis")
+    __slots__ = ("_azami_yas_ms", "_son_nabiz_ms", "_bayat_giris", "_bayat_cikis", "_takvim")
 
-    def __init__(self, azami_yas_ms: int) -> None:
+    def __init__(self, azami_yas_ms: int, takvim: Takvim | None = None) -> None:
         if azami_yas_ms <= 0:
             raise AkisHatasi(f"azami veri yaşı pozitif olmalı: {azami_yas_ms}")
         self._azami_yas_ms = azami_yas_ms
+        self._takvim = takvim
+        """R4 Paket 1: seanslı takvimde piyasa kapalıyken sessizlik bayatlık değildir. `None`/24x7
+        → davranış Faz 6 ile aynı (bit-aynı)."""
         self._son_nabiz_ms: int | None = None
         self._bayat_giris = 0
         """Kaç kez bayat duruma girildi. Faz 6'nın "kesinti sebebi kayıtlı" kriterinin sayacı."""
@@ -152,9 +158,21 @@ class Tazelik:
         return max(0, simdi_ms - self._son_nabiz_ms)
 
     def bayat_mi(self, simdi_ms: int) -> bool:
-        """Veri bayat mı? Hiç nabız alınmadıysa **evet** — ölçülemeyen guard geçilmez."""
+        """Veri bayat mı? Hiç nabız alınmadıysa **evet** — ölçülemeyen guard geçilmez.
+
+        Seanslı takvimde (R4) piyasa kapalıyken (`acik_mi` False) daha önce nabız alınmışsa bayat
+        **değil**: kapanışta veri gelmemesi beklenen durumdur; hiç nabız yoksa yine evet.
+        """
         yas = self.yas(simdi_ms)
-        return True if yas is None else yas > self._azami_yas_ms
+        if yas is None:
+            return True
+        if (
+            self._takvim is not None
+            and not self._takvim.surekli
+            and not bool(self._takvim.acik_mi(np.array([simdi_ms], dtype="int64"))[0])
+        ):
+            return False
+        return yas > self._azami_yas_ms
 
     def gecis_isle(self, simdi_ms: int) -> bool | None:
         """Durum değiştiyse yeni durumu, değişmediyse `None` döner. Sayaçları günceller.

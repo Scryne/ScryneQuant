@@ -33,6 +33,7 @@ import pandas as pd
 
 from scryne_quant.common.zaman import timeframe_ms, utc_str
 from scryne_quant.data.semalar import HAM_BAR_SUTUNLARI, KaliteDurumu
+from scryne_quant.data.takvim import Takvim
 
 #: Bir barın önceki kapanışa göre hareketi bunu aşarsa `suspect`.
 #:
@@ -130,6 +131,34 @@ class KaliteRaporu:
         }
 
 
+def _eksik_arasi(zaman: np.ndarray, timeframe: str, takvim: Takvim | None) -> np.ndarray:
+    """Ardışık barlar arasında beklenip gelmeyen bar sayısı (`len(zaman)-1` uzunlukta).
+
+    `takvim=None` (24x7): `(Δ // adım) − 1` — Faz 1 formülü, bit-aynı. Seanslı: takvimin iki
+    açılış arasında beklediği bar sayısı eksi iki uç.
+    """
+    adim = timeframe_ms(timeframe)
+    if zaman.size < 2:
+        return np.zeros(0, dtype="int64")
+    if takvim is None or takvim.surekli:
+        return (np.diff(zaman) // adim - 1).astype("int64")
+    return np.array(
+        [
+            takvim.beklenen_bar(int(a), int(b), timeframe) - 2
+            for a, b in zip(zaman[:-1], zaman[1:], strict=True)
+        ],
+        dtype="int64",
+    )
+
+
+def _beklenen(zaman: np.ndarray, timeframe: str, takvim: Takvim | None) -> int:
+    """İlk ve son bar dahil beklenen bar sayısı; 24x7'de `(son − ilk) // adım + 1` (bit-aynı)."""
+    adim = timeframe_ms(timeframe)
+    if takvim is None or takvim.surekli:
+        return int((zaman[-1] - zaman[0]) // adim) + 1
+    return takvim.beklenen_bar(int(zaman[0]), int(zaman[-1]), timeframe)
+
+
 def dogrula(
     df: pd.DataFrame,
     timeframe: str,
@@ -137,6 +166,7 @@ def dogrula(
     sembol: str = "",
     asiri_hareket_bps: float = ASIRI_HAREKET_BPS,
     backfill: bool = False,
+    takvim: Takvim | None = None,
 ) -> tuple[pd.DataFrame, KaliteRaporu]:
     """Ham barları doğrular, `quality_status` sütununu ekler ve raporu üretir.
 
@@ -240,9 +270,12 @@ def dogrula(
     # Boşluktan **sonraki** bar işaretlenir: eksik barlar için satır uydurulmaz. Sentetik
     # bar üretmek, olmayan bir fiyatı varmış gibi göstermek olurdu; bu projede en pahalı
     # hata sınıfı tam olarak budur. Boşluk gerçeği raporda ve bayrakta durur, veride değil.
-    fark = np.diff(zaman, prepend=zaman[0])
+    # R4 Paket 1: ardışık iki bar arasında takvimin beklediği bar sayısı — 24x7'de
+    # `(Δ // adım) − 1`, yani eski `fark > adım` ile aynı bayrak (bit-aynı); seanslı takvimde
+    # hafta sonu / ölçülmüş kapalı dönem beklenmez, gap sayılmaz.
+    eksik_arasi = _eksik_arasi(zaman, timeframe, takvim)
     gap = np.zeros(n, dtype=bool)
-    gap[1:] = fark[1:] > adim
+    gap[1:] = eksik_arasi > 0
 
     duplicate = np.fromiter((int(t) in tekrar_eden_ts for t in zaman), dtype=bool, count=n)
 
@@ -261,11 +294,11 @@ def dogrula(
         Bosluk(
             baslangic_ms=int(zaman[i - 1] + adim),
             bitis_ms=int(zaman[i]),
-            eksik_bar=int((zaman[i] - zaman[i - 1]) // adim) - 1,
+            eksik_bar=int(eksik_arasi[i - 1]),
         )
         for i in bosluk_idx[:RAPOR_BOSLUK_LIMITI]
     )
-    beklenen = int((zaman[-1] - zaman[0]) // adim) + 1
+    beklenen = _beklenen(zaman, timeframe, takvim)
 
     rapor = KaliteRaporu(
         sembol=sembol,
@@ -283,7 +316,9 @@ def dogrula(
     return calisma, rapor
 
 
-def rapor_cikar(df: pd.DataFrame, timeframe: str, *, sembol: str = "") -> KaliteRaporu:
+def rapor_cikar(
+    df: pd.DataFrame, timeframe: str, *, sembol: str = "", takvim: Takvim | None = None
+) -> KaliteRaporu:
     """Depodan okunan, **bayrağı zaten hesaplanmış** veri için rapor üretir.
 
     `dogrula`'dan farkı: bayrağı yeniden hesaplamaz, mevcut bayrakları sayar. `data
@@ -311,17 +346,17 @@ def rapor_cikar(df: pd.DataFrame, timeframe: str, *, sembol: str = "") -> Kalite
         )
 
     zaman = df["open_time"].to_numpy(dtype="int64")
-    fark = np.diff(zaman)
-    bosluk_idx = np.flatnonzero(fark > adim)
+    eksik_arasi = _eksik_arasi(zaman, timeframe, takvim)
+    bosluk_idx = np.flatnonzero(eksik_arasi > 0)
     bosluklar = tuple(
         Bosluk(
             baslangic_ms=int(zaman[i] + adim),
             bitis_ms=int(zaman[i + 1]),
-            eksik_bar=int((zaman[i + 1] - zaman[i]) // adim) - 1,
+            eksik_bar=int(eksik_arasi[i]),
         )
         for i in bosluk_idx[:RAPOR_BOSLUK_LIMITI]
     )
-    beklenen = int((zaman[-1] - zaman[0]) // adim) + 1
+    beklenen = _beklenen(zaman, timeframe, takvim)
 
     return KaliteRaporu(
         sembol=sembol,

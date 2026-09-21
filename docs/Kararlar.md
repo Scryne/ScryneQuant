@@ -4645,3 +4645,47 @@ canlı yolu kapalı (K-079, W7 §5).
 ölçüm kapsamı dışına genişletilmesi (veri indirildikçe, yeni sürüm); asgari üye eşiği kuralı ve
 FX null kalibrasyonu (R5/U17); FX slippage/spread kalibrasyonu (K-021 kalıbı, bid/ask); tam veri
 indirme yalnız kullanılacak pencere kadar (K-090/5).
+
+---
+
+## K-093 — R4 Paket 1: takvim ızgara/bar_yili/gap/bayatlık hesaplarına bağlandı; 24x7 yolu bit-aynı
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R4 Paket 1 talimatı) · **Tabi:**
+K-057 (kanıt kalıbı), K-083/U15-U16, K-089 · **Kaynak:** `data/takvim.py`, `backtest/metrikler.py`,
+`backtest/coklu_motor.py`, `data/dogrulama.py`, `data/kimlik.py`, `data/izgara.py`, `live/akis.py`,
+`tests/unit/test_takvim_baglama.py`
+
+### Karar
+
+1. **Tek kaynak:** `data/takvim.Takvim` artık davranış üretiyor — `yillik_bar(timeframe_ms)`
+   (sürekli: `YIL_MS / timeframe_ms`, ifade R2 öncesiyle aynı; seanslı: × haftalık açık saat/168 —
+   fx-5x24 1h: 6.261,43), `beklenen_bar`, `acik_mi`. `YIL_MS` tanımı takvime taşındı,
+   `metrikler.YIL_MS` aynı nesneyi dışa verir.
+2. **Bağlanan hesaplar** (hepsi `takvim: Takvim | None = None`, `None` = 24x7 = eski formül):
+   `metrikler.bar_yili/hesapla` (`CokluBacktest(takvim=…)` geçirir; kayda **girmez** — seanslı
+   takvim `{"takvim": {id, icerik_hash}}` bloğuyla R4'ün sonraki paketinde, yalnız 24x7 değilse);
+   `dogrulama.dogrula/rapor_cikar` (`gap` bayrağı ve `beklenen_bar` takvimin iki bar arasında
+   beklediği sayıdan — 24x7'de `(Δ // adım) − 1`, aynı bayrak); `kimlik.bosluklar/kirilmalar`
+   (`eksik_bar` aynı yoldan; duck-typed, `kimlik` → `takvim` import'u yok); `izgara.ortak_izgara`
+   (seanslı takvimde seans dışı damga **reddedilir**, sessizce atılmaz); `live/akis.Tazelik`
+   (seanslı takvimde piyasa kapalıyken sessizlik bayat değil; nabız hiç yoksa yine bayat).
+3. **FX motor fiyatına/spread'e bağlanmadı** (bu paketin kapsamı dışı; R4 Paket 2).
+4. `24x7` içerik hash'i ve `Takvim.sozluk()` R2 ile aynı; kimlik/hash modülleri (`depo`, `deney`,
+   `sonuc`, `hash`) takvimi hâlâ import etmiyor (AST testi; `izgara`/`dogrulama`/`metrikler`
+   listeden çıktı — bağlanma bu K).
+
+### Bit-aynı kanıtı (K-057 kalıbı)
+
+- **Statik:** 7 fonksiyon `takvim` parametresi alıyor, varsayılan `None`; `YIL_MS` aynı nesne;
+  `24x7` sözlüğü 4 anahtar (test).
+- **Referans (aynı girdi, `None` vs `takvim("24x7")`):** `CokluBacktest` → `sonuc_hash`,
+  `config_hash`, metrikler birebir; `hesapla` sözlüğü birebir; `dogrula` raporu + bayrak dizisi
+  birebir (boşluklu seri: 2 gap, 7 eksik, beklenen 300); `kirilmalar` LUNA fixture'ı birebir
+  (`eksik_bar` 437); `ortak_izgara` birebir; `Tazelik` aynı kararlar.
+- **Gerçek veri:** ağ dışı suite 2.185 (referans fixture testleri değişmeden); R1(b) 9 kayıt
+  sınıf + fark listesi birebir; `_maliyet_govdesi` `fe9f73bb…` SAME; PIT tablosu gerçek depodan
+  **yeniden üretildi** (kırılma yolu takvim üzerinden) → `tablo_hash b06857c0…`, 761 kimlik,
+  kural `27b7a16ed0ed…`, 14 çekiliş girdileri SAME.
+- **Seanslı davranış (fx-5x24, beklenen fark):** iki haftalık FX serisinde hafta sonu gap
+  değil (24x7: 2 gap/48 eksik → fx: 1 gap/1 eksik, beklenen 240), kırılma boşluğu yalnız hafta
+  içi, Cumartesi damgası `IzgaraHatasi`, Cumartesi sessizliği bayat değil / Pazar açılışı bayat.

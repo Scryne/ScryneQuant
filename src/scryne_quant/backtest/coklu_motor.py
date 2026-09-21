@@ -62,6 +62,7 @@ from scryne_quant.common.maliyet import (
 )
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import KaliteDurumu
+from scryne_quant.data.takvim import Takvim
 from scryne_quant.features.indikator import atr as atr_hesapla
 from scryne_quant.portfolio.durum import CokluPortfoy
 from scryne_quant.risk.motor import RISK_ATR_PENCERESI, PiyasaOlcumu, RiskMotoru
@@ -90,6 +91,7 @@ class CokluBacktest:
         risk: RiskMotoru | None = None,
         sifira_yaz_bar: int | None = None,
         maliyetler: Maliyetler | None = None,
+        takvim: Takvim | None = None,
     ) -> None:
         if baslangic_sermaye <= 0.0:
             raise CokluBacktestHatasi(
@@ -106,6 +108,10 @@ class CokluBacktest:
         self.fill_maliyetleri: dict[str, MaliyetModeli] | None = (
             None if maliyetler is None else {s: em.model for s, em in maliyetler.items()}
         )
+        self.takvim = takvim
+        """Yıllıklandırma takvimi (R4 Paket 1). `None` = 24x7, `hesapla` bit-aynı; kayda girmez —
+        seanslı takvim kayda `{"takvim": {id, icerik_hash}}` ile R4'ün sonraki paketinde girer
+        (K-083/U16: yalnız 24x7 değilse)."""
         self.baslangic_sermaye = baslangic_sermaye
         self.seed = seed
         self.kalite_esigi = kalite_esigi
@@ -350,6 +356,7 @@ class CokluBacktest:
                 adim,
                 self.baslangic_sermaye,
                 kapasite_oranlari=kapasite_oranlari,
+                takvim=self.takvim,
             ),
             islemler=islemler,
             ozkaynak=ozkaynak,

@@ -28,6 +28,7 @@ import pandas as pd
 
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.kimlik import Enstruman
+from scryne_quant.data.takvim import Takvim
 from scryne_quant.strategy.evren import LISTELENMEDI
 
 #: Doldurma barında NaN alan alacak sütunlar. `trades` tamsayı olduğu için ayrı: NaN'a
@@ -46,11 +47,17 @@ class IzgaraHatasi(ValueError):
     """Izgaraya oturtma girdisi tutarsız."""
 
 
-def ortak_izgara(zamanlar: Sequence[np.ndarray], timeframe: str) -> np.ndarray:
+def ortak_izgara(
+    zamanlar: Sequence[np.ndarray], timeframe: str, takvim: Takvim | None = None
+) -> np.ndarray:
     """Tüm sembollerin zamanlarının birleşimi, ızgaraya hizalı ve artan.
 
     Birleşim (kesişim değil) seçildi: kesişim, en kısa geçmişli sembolün penceresine
     herkesi hapsederdi — yani evrenin tamamını en yeni üyesi kadar kısaltırdı.
+
+    `takvim` (R4 Paket 1): `None`/24x7 → birleşim aynen (bit-aynı). Seanslı takvimde seans dışı
+    (hafta sonu, ölçülmüş kapalı dönem) damga **reddedilir** — sessizce atılmaz; K-089 ölçümünde
+    gerçek FX deposunda takvim dışı bar 0.
     """
     adim = timeframe_ms(timeframe)
     if not zamanlar:
@@ -63,6 +70,13 @@ def ortak_izgara(zamanlar: Sequence[np.ndarray], timeframe: str) -> np.ndarray:
             f"ızgaraya oturmayan timestamp var (adım {adim} ms). Faz 9'da ölçülmüştü: "
             "2018-02 kesintisinden sonra bazı semboller ızgara dışına düşüyor (K-056)"
         )
+    if takvim is not None and not takvim.surekli:
+        disari = birlesim[~takvim.acik_mi(birlesim)]
+        if disari.size:
+            raise IzgaraHatasi(
+                f"{takvim.kimlik}: seans dışı {disari.size} damga (ilk {int(disari[0])}); "
+                "takvim dışı bar sessizce alınmaz (K-089)"
+            )
     return birlesim
 
 

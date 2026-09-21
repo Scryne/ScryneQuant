@@ -311,10 +311,15 @@ class Enstruman:
         }
 
 
-def bosluklar(df: pd.DataFrame, timeframe: str, sembol: str = "") -> list[KimlikKirilmasi]:
+def bosluklar(
+    df: pd.DataFrame, timeframe: str, sembol: str = "", takvim: Any = None
+) -> list[KimlikKirilmasi]:
     """Serideki **tüm** boşluklar, eşik uygulanmadan. Ölçüm (dağılım) buradan yapılır.
 
     Girdi `open_time`'a göre sıralı ve tekil olmalı (depodan okunan veri öyledir).
+    `takvim` (R4 Paket 1, `data/takvim.Takvim`, duck-typed — `kimlik` → `takvim` import'u yok):
+    `None` = 24x7, `eksik_bar = Δ // adım − 1` (Faz 9 formülü, bit-aynı); seanslı takvimde
+    hafta sonu/kapalı dönem eksik bar sayılmaz, o boşluk kırılma adayı olmaz.
     """
     if df.empty:
         return []
@@ -325,7 +330,17 @@ def bosluklar(df: pd.DataFrame, timeframe: str, sembol: str = "") -> list[Kimlik
     acilis = df["open"].to_numpy(dtype="float64")
     kapanis = df["close"].to_numpy(dtype="float64")
     out: list[KimlikKirilmasi] = []
-    for i in np.flatnonzero(np.diff(zaman) > adim):
+    if takvim is None or getattr(takvim, "surekli", True):
+        eksik = (np.diff(zaman) // adim - 1).astype("int64")
+    else:
+        eksik = np.array(
+            [
+            takvim.beklenen_bar(int(a), int(b), timeframe) - 2
+            for a, b in zip(zaman[:-1], zaman[1:], strict=True)
+        ],
+            dtype="int64",
+        )
+    for i in np.flatnonzero(eksik > 0):
         onceki, sonraki = float(kapanis[i]), float(acilis[i + 1])
         if not (onceki > 0 and sonraki > 0):
             # Pozitif olmayan fiyat `suspect` kuralının konusu; oran tanımsız, uydurulmaz.
@@ -335,7 +350,7 @@ def bosluklar(df: pd.DataFrame, timeframe: str, sembol: str = "") -> list[Kimlik
                 sembol=sembol,
                 onceki_son_ms=int(zaman[i]),
                 sonraki_ilk_ms=int(zaman[i + 1]),
-                eksik_bar=int((zaman[i + 1] - zaman[i]) // adim) - 1,
+                eksik_bar=int(eksik[i]),
                 onceki_kapanis=onceki,
                 sonraki_acilis=sonraki,
             )
@@ -350,6 +365,7 @@ def kirilmalar(
     asgari_eksik_bar: int,
     asgari_log_oran: float,
     sembol: str = "",
+    takvim: Any = None,
 ) -> list[KimlikKirilmasi]:
     """Kimlik kırılması şüphesi: `eksik_bar >= asgari_eksik_bar` **ve**
     `log_oran >= asgari_log_oran`. Eşikler zorunlu parametre; ölçülen değerler
@@ -358,7 +374,7 @@ def kirilmalar(
         raise KimlikHatasi("eşikler pozitif olmalı: boşluksuz veya oransız kırılma tanımsız")
     return [
         b
-        for b in bosluklar(df, timeframe, sembol)
+        for b in bosluklar(df, timeframe, sembol, takvim)
         if b.eksik_bar >= asgari_eksik_bar and b.log_oran >= asgari_log_oran
     ]
 
