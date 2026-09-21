@@ -296,7 +296,7 @@ class TestFxKalite:
                 # h3: 2. saat eksik → hafta içi gap
                 (2024, 3): _hafta_saatli(dt.date(2024, 1, 14), saatler=[0, 1, 3, 4]),
                 # h4: dosya yok (404) → eksik_dosya
-                # h5: "DST" haftası 21:00 açılış, tam
+                # h5: 21:00 UTC açılış ama Ocak (kış) → NY 16:00, seans DIŞI → takvim_disi_bar
                 (2024, 5): _hafta_saatli(dt.date(2024, 1, 28), saatler=[0, 1, 2], bas_saat=21),
                 # h6: son saat kısa (30 dk) — gap değil, kısa saat
                 (2024, 6): _dosya(
@@ -308,17 +308,22 @@ class TestFxKalite:
                         for m in range(90)
                     ]
                 ),
+                # h11: gerçek DST haftası (10 Mart 2024) — 21:00 UTC = NY 17:00, seans içi
+                (2024, 11): _hafta_saatli(dt.date(2024, 3, 10), saatler=[0, 1, 2], bas_saat=21),
             },
-            yok={(2024, 4), (2024, 7)},
+            yok={(2024, 4), (2024, 7), (2024, 8), (2024, 9), (2024, 10)},
         )
         depo = FxDepo(tmp_path)
-        fx_al("EURUSD", "2024-01-07", "2024-02-16", depo=depo, indirici=kaynak)
+        fx_al("EURUSD", "2024-01-07", "2024-03-15", depo=depo, indirici=kaynak)
         return depo
 
     def test_hafta_sonu_gap_degil_hafta_ici_eksik_saat_gap(self, kalite_depo):
         k = fx.fx_kalite(kalite_depo, "EURUSD")
-        assert k["bar"]["mevcut"] == 5 + 4 + 3 + 2
-        assert k["bar"]["beklenen"] == 5 + 5 + 3 + 2  # haftalar arası (hafta sonu) sayılmaz
+        assert k["takvim"]["kimlik"] == "fx-5x24"
+        assert k["bar"]["mevcut"] == 5 + 4 + 3 + 2 + 3
+        # h5'in 21:00 UTC barı seans dışı (NY 16:00): beklenmez; 22/23 beklenir.
+        assert k["bar"]["beklenen"] == 5 + 5 + 2 + 2 + 3
+        assert k["bar"]["kapali_saat"] == 0
         assert k["bar"]["eksik"] == 1
         assert k["bar"]["eksik_saatler"] == ["2024-01-15 00:00:00 UTC"]
         assert k["haftalar"]["2024-3"]["eksik_bar"] == 1
@@ -327,16 +332,26 @@ class TestFxKalite:
     def test_eksik_dosya_ile_kapsam_disi_ayri(self, kalite_depo):
         k = fx.fx_kalite(kalite_depo, "EURUSD")
         assert k["dosya"] == {
-            "hafta": 6, "var": 4, "eksik_dosya": ["2024-4"], "kapsam_disi": ["2024-7"]
+            "hafta": 10, "var": 5,
+            "eksik_dosya": ["2024-4", "2024-7", "2024-8", "2024-9", "2024-10"], "kapsam_disi": [],
         }
         assert k["haftalar"]["2024-4"] == {"durum": "yok", "pazar": "2024-01-21"}
 
-    def test_dst_acilisi_yanlis_gap_uretmez_ve_seans_kaniti(self, kalite_depo):
+    def test_dst_acilisi_yanlis_gap_uretmez_seans_disi_bar_yakalanir(self, kalite_depo):
         k = fx.fx_kalite(kalite_depo, "EURUSD")
-        assert k["haftalar"]["2024-5"]["acilis"] == "2024-01-28 21:00:00 UTC"
-        assert k["haftalar"]["2024-5"]["eksik_bar"] == 0
-        assert k["seans"]["acilis_saati_utc"] == {"21": 1, "22": 3}
-        assert k["seans"]["hafta_uzunlugu_saat"] == {"2": 1, "3": 1, "5": 2}
+        # Gerçek DST haftası: 21:00 UTC açılış seans içi, gap yok.
+        assert k["haftalar"]["2024-11"]["acilis"] == "2024-03-10 21:00:00 UTC"
+        h11 = k["haftalar"]["2024-11"]
+        assert (h11["beklenen_bar"], h11["eksik_bar"]) == (3, 0)
+        # Kış haftasında 21:00 UTC = NY 16:00: takvim kapalı diyor, veri var → takvimi
+        # yanlışlayan bar (1); 22:00 ve 23:00 seans içi → beklenen 2, eksik 0.
+        h5 = k["haftalar"]["2024-5"]
+        assert (h5["beklenen_bar"], h5["eksik_bar"]) == (2, 0)
+        assert k["bar"]["takvim_disi_bar"] == 1
+        assert k["seans"]["acilis_saati_utc"] == {"21": 2, "22": 3}
+        assert k["seans"]["hafta_uzunlugu_saat"] == {"2": 2, "3": 1, "5": 2}
+        varlar = [v for v in k["haftalar"].values() if v["durum"] == "var"]
+        assert all(not v["takvim_olcumu_disinda"] for v in varlar)
 
     def test_kisa_saat_gap_degil(self, kalite_depo):
         k = fx.fx_kalite(kalite_depo, "EURUSD")

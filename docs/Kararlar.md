@@ -4494,3 +4494,47 @@ zaten yasaktı. Ayrıca veri yalnız bid ve kaynak akışı adsızdı. FTP için
    komut. Kripto yolu (`ParquetDepo`, `data/market`, `data/evren`) **değişmedi**.
 5. Takvim (`fx-5x24`), kalite raporu, hayatta kalma ölçümü, kalibrasyon: K-087/5-7 aynen, sonraki
    paketler.
+
+---
+
+## K-089 — `fx-5x24` takvimi: New York 17:00 dönümlü 5/7 seans + yalnız ölçülmüş kapalı dönemler
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R3 Paket 1(d) talimatı) · **Tabi:**
+K-005, K-009, K-083/U15-U16, K-088 · **Kaynak:** `src/scryne_quant/data/takvim.py`,
+`docs/Faz-R3-FX-Veri-Raporu.md` §3-4, `tests/unit/test_takvim.py::TestFx5x24`, `test_fx.py::TestFxKalite`
+
+### Ölçüm (FXCM EURUSD m1, 55 hafta: 2023-11-19 22:00 → 2024-12-13 21:00 UTC)
+
+| Soru | Sonuç |
+| --- | --- |
+| Hafta uzunluğu | 53/55 hafta **120 saat**; hafta içi eksik saat **0** |
+| Açılış/kapanış UTC | kış Pazar 22:00 → Cuma 21:00 (son bar); yaz (10 Mart–3 Kasım 2024) 21:00 → 20:00 |
+| Rollover | kısa saatlerin (m1<60) 447'sinden 257'si **NY yerel 17:00**; kış/yaz fark etmiyor → dönüm yerel saate bağlı |
+| ABD/İngiltere tatilleri | Şükran Günü 2023-11-23, Good Friday 2024-03-29, Easter Monday 04-01, May Day 05-06, Memorial Day 05-27, 4 Temmuz, Labor Day 09-02, Veterans Day 11-11: **kapanış yok** (120/120) |
+| Noel 2023 | h52 92/120: kapalı 2023-12-25 01:00 → 2023-12-26 05:00 UTC (NY 24 Aralık 20:00 → 26 Aralık 00:00), 28 saat |
+| Yılbaşı 2024 | h53 91/120: kapalı 2024-01-01 00:00 → 2024-01-02 05:00 UTC (NY 31 Aralık 19:00 → 2 Ocak 00:00), 29 saat |
+| Sağlayıcı boşluğu (takvim değil) | m1 dosyası yok: 2024 h35 (25-30 Ağu), h51-53, 2025 h2 (21 çift); `H1/EURUSD/2024/52` var — m1 katmanının boşluğu |
+| Noel/Yılbaşı 2024 | **ölçülemedi** (m1 h51-53 yok) |
+
+### Karar
+
+1. `data/takvim.py` kataloğuna **`fx-5x24`** (sürüm 1, içerik hash `16bafe19…`): `Seans("America/
+   New_York", Pazar 17:00 → Cuma 17:00)`; hafta içi kesintisiz; UTC ızgarası IANA bölgesinden
+   türetilir (yaz saati yerel saati sabit, UTC'yi kaydırır — ölçümle aynı). `izgara()` sürekli
+   `arange`'i seans maskesiyle keser; `beklenen_bar()` ızgara uzunluğu.
+2. **`kapali` yalnız ölçülmüş dönemleri taşır** (Noel 2023, Yılbaşı 2024, kaynağı yazılı);
+   `olcum_kapsami` ölçümün UTC aralığı. Kapsam dışı için kapalı dönem **bilinmiyor**, "yok" değil
+   (K-083/U15: uydurma tatil yok). ABD/İngiltere tatilleri ölçüldü ve kapalı **değil** — takvime
+   girmedi. Takvim yeni ölçümle yalnız `surum`+`kapali` eklenerek büyür (yeni içerik = yeni hash).
+3. **`24x7` değişmedi:** `Takvim.sozluk()` seans alanlarını yalnız seanslı takvimde yazar; 24x7
+   içerik hash'i R2 ile aynı (testli); kripto kimlik/hash yolları takvimi hâlâ import etmiyor
+   (AST testi aynen). Takvim sağlayıcı kapsamıyla **karıştırılmaz**: sağlayıcının dosya
+   boşlukları (h35, h51-53) takvimde değil, kalite raporunda `eksik_dosya`.
+4. **`sq data quality fx`** takvimi kullanır: haftanın beklenen ızgarası = ilk/son bar arasında
+   takvimin açık saydığı saatler; `kapali_saat` ayrı; takvimin kapalı saydığı anda bar varsa
+   `takvim_disi_bar` (takvimi yanlışlayan kanıt, sıfır beklenir); `olcum_kapsami` dışı haftalar
+   `takvim_olcumu_disinda=True`. Rapor `takvim {kimlik, icerik_hash, surum}` taşır.
+5. Doğrulama: takvim + 2 ölçülmüş kapanış, 55 haftalık gerçek depoyu **bar bar açıklıyor**:
+   beklenen 6.663 = mevcut 6.543 + 120 (yalnız sağlayıcının h35 dosyası); takvim dışı bar 0;
+   kalite raporu 6.543/6.543, eksik 0, `kapali_saat` 57.
+6. Kapsam dışı: spread/mid (R4), `izgara`/`gap`/`bar_yili`'nin takvime bağlanması (R4), canlı.

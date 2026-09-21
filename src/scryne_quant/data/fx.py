@@ -48,6 +48,7 @@ from scryne_quant.data.depo import (
     SIKISTIRMA_SEVIYESI,
 )
 from scryne_quant.data.sozlesme import FX_BAR_SUTUNLARI
+from scryne_quant.data.takvim import TAKVIM_FX_5X24, Takvim, takvim
 
 KAYNAK_KOK: Final = "https://candledata.fxcorporate.com"
 VARSAYILAN_DEPO: Final = Path("data/fx")
@@ -404,21 +405,23 @@ def fx_al(
 KALITE_LISTE_SINIRI: Final = 50
 
 
-def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
-    """FX deposunun kalite raporu — 5/7 seans farkında, deterministik, makinece okunur.
+def fx_kalite(depo: FxDepo, pair: str, takvim_id: str = TAKVIM_FX_5X24) -> dict[str, Any]:
+    """FX deposunun kalite raporu — takvim (`fx-5x24`, K-089) üzerinden; deterministik JSON.
 
-    Tanımlar (K-088; R4 takvim bağlamasından **önce**, o yüzden takvim varsayımı yok — her
-    haftanın beklenen ızgarası **kendi** ilk ve son barından türetilir):
+    Tanımlar (K-088/K-089): her `var` haftanın beklenen ızgarası, haftanın kendi ilk ve son barı
+    arasında **takvimin açık saydığı** saatlerdir (`Takvim.izgara`): seans penceresi NY 17:00
+    dönümlü olduğundan DST kayması ve hafta sonu ızgara dışındadır; ölçülmüş kapalı dönemler
+    (`kapali`) beklenmez ve ayrıca sayılır (`kapali_saat`). Takvimin kapsamadığı (`olcum_kapsami`
+    dışı) haftalarda kapalı dönem bilinmiyor → hafta `takvim_olcumu_disinda=True` ile işaretlenir,
+    eksikler yine gap sayılır (uydurma tatil yok). Takvimin kapalı saydığı anda bar varsa
+    `takvim_disi_bar` — takvimin yanlışlandığı yer, sıfır beklenir.
 
     - **Hafta dosyası**: manifestodaki `haftalar` — `var` / `yok`. `yok` haftalardan ilk ve son
       `var` hafta arasında kalanlar `eksik_dosya` (sağlayıcıda yok ya da indirilmemiş), dışında
       kalanlar `kapsam_disi` (sağlayıcı başlangıcından önce / henüz yayımlanmamış). Dosya
       eksikliği bar eksikliği **sayılmaz**; ayrı raporlanır.
-    - **Eksik saat (gap)**: `var` bir haftanın ilk saatiyle son saati arasında bulunmayan saat
-      başları. Hafta içi FX 24 saat işlem gördüğü için aralıktaki her saat beklenir; hafta sonu
-      (Cuma kapanış → Pazar açılış) aralık **dışı**, gap değil. Seans açılış/kapanış saati
-      haftadan haftaya (ABD yaz saati) değiştiği için ızgara sabit bir saatten değil, haftanın
-      kendi verisinden başlar — DST sınırı yanlış gap üretmez.
+    - **Eksik saat (gap)**: `var` bir haftanın ilk saatiyle son saati arasında takvimin
+      beklediği ama depoda olmayan saat başları. Hafta sonu ve `kapali` dönemler beklenmez.
     - **Kısa saat**: `m1_sayisi < 60` — gap değil, bilgi (tick'siz dakika; günlük rollover
       dakikası burada görünür). Saat dağılımı seans kanıtı olarak verilir.
     - **Seans kanıtı** (Paket 1(d) için): haftaların açılış/kapanış saatleri (UTC) ve uzunluk
@@ -427,6 +430,7 @@ def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
     manifesto = depo.manifesto(pair)
     if manifesto is None:
         raise FxHatasi(f"{pair}: manifesto yok ({depo.manifesto_yolu(pair)})")
+    tk: Takvim = takvim(takvim_id)
     haftalar: dict[str, dict[str, Any]] = manifesto.get("haftalar", {})
     sirali = sorted(haftalar.items(), key=lambda kv: kv[1]["pazar"])
     var_idx = [i for i, (_, h) in enumerate(sirali) if h.get("durum") == "var"]
@@ -444,6 +448,7 @@ def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
     mevcut = set(zaman.tolist())
 
     beklenen_toplam = 0
+    kapali_toplam = 0
     eksik: list[int] = []
     acilis_saat: dict[str, int] = {}
     kapanis_saat: dict[str, int] = {}
@@ -455,9 +460,14 @@ def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
             continue
         ilk = (int(h["ilk_ms"]) // SAAT_MS) * SAAT_MS
         son = (int(h["son_ms"]) // SAAT_MS) * SAAT_MS
-        beklenen = int((son - ilk) // SAAT_MS) + 1
-        hafta_eksik = [t for t in range(ilk, son + SAAT_MS, SAAT_MS) if t not in mevcut]
+        tum = np.arange(ilk, son + SAAT_MS, SAAT_MS, dtype="int64")
+        acik = tk.acik_mi(tum)
+        kapali = tk.kapali_mi(tum)
+        beklenen_dizi = tum[acik]
+        beklenen = int(beklenen_dizi.size)
+        hafta_eksik = [int(t) for t in beklenen_dizi.tolist() if t not in mevcut]
         beklenen_toplam += beklenen
+        kapali_toplam += int(kapali.sum())
         eksik.extend(hafta_eksik)
         a_saat = utc_str(ilk)[11:13]
         k_saat = utc_str(son)[11:13]
@@ -466,8 +476,12 @@ def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
         uzunluk[str(beklenen)] = uzunluk.get(str(beklenen), 0) + 1
         hafta_raporu[anahtar] = {
             "durum": "var", "pazar": h["pazar"], "acilis": utc_str(ilk), "kapanis": utc_str(son),
-            "beklenen_bar": beklenen, "eksik_bar": len(hafta_eksik), "m1_satir": h.get("m1_satir"),
+            "beklenen_bar": beklenen, "eksik_bar": len(hafta_eksik),
+            "kapali_saat": int(kapali.sum()),
+            "m1_satir": h.get("m1_satir"),
+            "takvim_olcumu_disinda": not (tk.olcum_icinde(ilk) and tk.olcum_icinde(son)),
         }
+    takvim_disi = int((~tk.acik_mi(zaman)).sum()) if zaman.size else 0
 
     kisa_maske = m1 < 60
     kisa_saatler: dict[str, int] = {}
@@ -481,6 +495,7 @@ def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
         "kaynak": "fxcm-candledata-m1",
         "veri_sha256": manifesto.get("sha256"),
         "bitis_gun": manifesto.get("bitis_gun"),
+        "takvim": {"kimlik": tk.kimlik, "icerik_hash": tk.icerik_hash, "surum": tk.surum},
         "dosya": {
             "hafta": len(sirali),
             "var": len(var_idx),
@@ -493,6 +508,8 @@ def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
             "eksik": len(eksik),
             "eksik_orani": (len(eksik) / beklenen_toplam) if beklenen_toplam else 0.0,
             "eksik_saatler": [utc_str(t) for t in eksik[:KALITE_LISTE_SINIRI]],
+            "kapali_saat": kapali_toplam,
+            "takvim_disi_bar": takvim_disi,
             "kisa_saat": int(kisa_maske.sum()),
             "kisa_saat_dagilimi": {k: kisa_saatler[k] for k in sorted(kisa_saatler)},
         },
@@ -500,8 +517,8 @@ def fx_kalite(depo: FxDepo, pair: str) -> dict[str, Any]:
             "acilis_saati_utc": {k: acilis_saat[k] for k in sorted(acilis_saat)},
             "kapanis_saati_utc": {k: kapanis_saat[k] for k in sorted(kapanis_saat)},
             "hafta_uzunlugu_saat": {k: uzunluk[k] for k in sorted(uzunluk, key=int)},
-            "not": "hafta sonu (Cuma kapanış → Pazar açılış) beklenen ızgaranın dışında; "
-            "açılış/kapanış saati ABD yaz saatiyle kayar (K-088 ölçümü)",
+            "not": "beklenen ızgara takvimden (NY 17:00 dönümlü 5/7 + ölçülmüş kapalı dönemler); "
+            "hafta sonu ve kapalı dönem gap değil; açılış/kapanış UTC saati DST ile kayar (K-089)",
         },
         "haftalar": hafta_raporu,
     }

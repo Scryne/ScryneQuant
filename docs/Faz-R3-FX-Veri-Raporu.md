@@ -54,8 +54,19 @@ beklenen ızgaranın dışında; rapor bunu gap saymıyor, eksik **dosya** ile e
   2023 h52/53'te 5.415/5.356 satır) için **tatil tablosu** ister → R3 Paket 1(d)'de yıl sonu haftaları
   ayrıca ölçülmeden takvim yazılmaz (K-083/U15).
 
+## 4b. Paket 1(d) ölçümü ve `fx-5x24` (K-089)
+
+55 hafta (2023-11-19 → 2024-12-13): 53 hafta 120/120; Noel 2023 (h52) 28 saat kapalı
+(2023-12-25 01:00 → 12-26 05:00 UTC), Yılbaşı 2024 (h53) 29 saat kapalı (2024-01-01 00:00 →
+01-02 05:00 UTC); Şükran Günü, Good Friday, Easter Monday, May Day, Memorial Day, 4 Temmuz, Labor
+Day, Veterans Day haftaları **120/120** (kapanış yok). Kısa saatlerin NY yerel dağılımı: 17:00 →
+257/447 (rollover). Sağlayıcı m1 boşlukları: 2024 h35, h51-53, 2025 h2 (21 çiftte; `H1` katmanında
+2024/52 var) — Noel/Yılbaşı 2024 ölçülemedi. Takvim + 2 ölçülmüş kapanış gerçek depoyu bar bar
+açıklıyor: beklenen 6.663 = 6.543 + 120 (h35 dosyası); takvim dışı bar 0.
+
 ## 5. Açık
 
 - Hayatta kalma yanlılığı (1e): 21 çift sabit; PIT tablosu "hangi çiftin hangi haftadan itibaren
   dosyası var" ile kurulacak (2012 h1'de 21/21 var → sıfır beklenir, ölçülecek).
 - Spread/mid (R4), kalibrasyon (K-021 kalıbı bid/ask ile), canlı akış yok (K-087/2).
+- Noel/Yılbaşı 2024 ve diğer yıllar: m1 kapsamı genişleyince `kapali` yeni sürümle ölçülüp eklenir.
