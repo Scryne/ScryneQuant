@@ -150,7 +150,7 @@ class TestVarsayilan:
         assert e.finansman_modeli_id is None
 
     def test_kumeler_bugunku_gercekle_sinirli(self):
-        assert frozenset({"kripto"}) == VARLIK_SINIFLARI
+        assert frozenset({"kripto", "fx"}) == VARLIK_SINIFLARI  # fx: K-087 (R3), yalnız araştırma
         assert ENSTRUMAN_TIPLERI == ("spot", "vadeli", "cfd", "etf")
 
 
@@ -217,7 +217,7 @@ class TestEnstrumanTipi:
         for tip in ENSTRUMAN_TIPLERI:
             assert _kur(tip, asset_class="kripto")
         with pytest.raises(KimlikHatasi, match="bilinmeyen varlık sınıfı"):
-            _kur("spot", asset_class="fx")
+            _kur("spot", asset_class="endeks")  # karar yok (Threshold-Policy §3)
         with pytest.raises(KimlikHatasi, match="bilinmeyen varlık sınıfı"):
             dataclasses.replace(_v1(), asset_class="spot")  # tip adı sınıf değil
 
@@ -259,7 +259,7 @@ class TestKanonikKimlik:
 
     @pytest.mark.parametrize("tip", ["vadeli", "cfd", "etf"])
     def test_binance_spot_venue_yalniz_spot(self, tip):
-        assert VENUE_TIPLERI == {"binance-spot": "spot"}
+        assert VENUE_TIPLERI == {"binance-spot": "spot", "histdata-fx": "cfd"}
         with pytest.raises(KimlikHatasi, match="yalnız 'spot' taşır"):
             _kur(tip, venue="binance-spot")
 

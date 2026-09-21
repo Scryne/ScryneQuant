@@ -110,6 +110,31 @@ SOZLESMELER: Final[dict[str, VeriSozlesmesi]] = {
             lisans=_LISANS_ACIK,
             kanit="Spike 5",
         ),
+        VeriSozlesmesi(
+            ad="histdata-fx-m1",
+            kaynak="https://www.histdata.com/download-free-forex-data/ (aylık zip, GENERIC ASCII "
+            "M1; toplu/otomatik indirme için FTP, tek seferlik ücret)",
+            sema=_BAR_SEMASI,
+            cadence="M1 bar (dosya aylık); 1h katmanı M1'den türetilir; 5/7 takvim "
+            "(Pazar ~22:00 UTC açılış, Cuma ~22:00 UTC kapanış), hafta içi boşluk normal",
+            zaman_semantigi="kaynak damgası `YYYYMMDD HHMMSS`, **EST (UTC−5) yaz saati yok**; "
+            "UTC'ye sabit +5 saatle çevrilir (K-087); open_time bar açılışı (K-005)",
+            available_time_kaynagi="bar kapanışı; aylık dosya ay bitince yayımlanır — canlı "
+            "akış yok, yalnız araştırma (R3)",
+            tamlik="bar fiyatları **yalnız bid** (spike: `Bar OPEN/HIGH/LOW/CLOSE Bid Quote`); "
+            "ask yok → spread ayrı bileşen (R4), o güne kadar maliyet aleyhte varsayımla; "
+            "`Volume` kaynakta tanımsız (tick sayısı?) → `trades`e yazılmaz, 0; gap ölçülür",
+            revizyon="sağlayıcı beyanı yok; her zip SHA-256'sı manifestoya yazılır, değişen "
+            "dosya yakalanır",
+            lisans="sağlayıcı lisans metni **yok**; beyan: 'Since it's free data, you'll not get "
+            "from us any kind of warranty or certification. Use the data at your own will and "
+            "risk.' (kaynak: histdata.com/f-a-q, 2026-09-21 okundu). Yeniden dağıtım/ticari "
+            "kullanım/otomasyon için "
+            "açık yasak yok; toplu erişim sağlayıcının kendi FTP hizmetiyle. Kullanım: kendi "
+            "hesabı, araştırma (K-014). Kaynak akışı adsız → provenans zayıf, canlı için yetmez",
+            kanit="K-087 (kaynak taraması 2026-09-21: Dukascopy otomasyon yasağı, Tiingo kalıcı "
+            "depolama yasağı → elendi); veri raporu R3 Paket 1'de",
+        ),
     )
 }
 

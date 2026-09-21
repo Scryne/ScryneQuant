@@ -4384,3 +4384,57 @@ CFD/ETF ayrımı tip düzeyinde testle; U13-U17 K olarak yazılı. Kripto yolu h
 kırılma "eksik bar"/`bar_yili`/canlı bayatlığa bağlanması ve bunun motor tarafında bit-aynı
 kripto kanıtı; spread ayrı maliyet bileşeni. R3'e bağlı: yeni `(venue, tip, id)` kalibrasyonu ve
 kripto-dışı takvim içeriği. Bunlar R2'yi açık tutmaz; R4 satırı zaten bunları sayıyor.
+
+---
+
+## K-087 — R3 ilk kripto-dışı sınıf: FX (HistData M1 → 1h), yalnız araştırma; Dukascopy ve Tiingo elendi
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne ("R3'ün ilk işi: kaynak/lisans ve
+kripto-dışı veri kapsamı kararı") · **Tabi:** K-005, K-007, K-014, K-021, K-052, K-079, K-080,
+K-083/U13-U17, K-084 · **Kaynak:** sağlayıcı sayfaları 2026-09-21'de okundu (aşağıda), Threshold-
+Policy §3, `docs/audit/W7` §5, `src/scryne_quant/data/sozlesme.py:histdata-fx-m1`
+
+### Bulgu — kaynak taraması (2026-09-21, sayfalar doğrudan okundu)
+
+| Kaynak | Veri | Lisans/koşul (alıntı) | Sonuç |
+| --- | --- | --- | --- |
+| **Dukascopy** Historical Data Export | FX/emtia/endeks, tick→aylık, ücretsiz, anahtarsız | Terms of Use: "solely for your own non-commercial use"; "You shall not use … any 'scraper,' 'robot,' 'bot,' … or any other automate device … without the prior express written consent" | **Elendi** — idempotent/checksum'lu indirici bir "automated device"; yazılı izin olmadan K-009 hattı kurulamaz |
+| **Tiingo** (ücretsiz Individual) | EOD hisse/ETF 110k sembol, 30+ yıl; intraday yok; 50 istek/saat, 500 sembol/ay; `supported_tickers.zip` | ToS §1.6(a): "you may not write, save, archive, back up, or otherwise retain Tiingo Data in any persistent or durable storage … remove … immediately after the calculation"; §5.3 sistematik derleme yasağı; §7.3 "internal consumption only" | **Elendi** — Parquet depo + `veri_sha256` + K-080 geri sarım kalıcı depolama ister; ToS ile uzlaşmaz |
+| **HistData.com** | 66 FX çifti + endeks CFD (SPX/NDX/DAX/…) + XAU/XAG + WTI/BCO; tick ve **M1** (bid); aylık zip; ücretsiz web indirme, toplu/otomatik için FTP tek seferlik 27 USD ("traffic cost", veri satışı değil) | Lisans metni **yok**; tek beyan: "Since it's free data, you'll not get from us any kind of warranty or certification. Use the data at your own will and risk." Yeniden dağıtım/ticari/otomasyon yasağı yazılı değil | **Seçildi** (araştırma). Provenans zayıf: kaynak akışı adsız, bar'lar yalnız bid, zaman damgası EST (UTC−5) yaz saatsiz |
+| Stooq | (sayfa boş döndü, değerlendirilemedi) | — | açık |
+| FRED/ALFRED | makro (mevcut hat, K-060) | kaynak atıfla serbest | varlık sınıfı değil |
+
+### Karar
+
+1. **İlk kripto-dışı sınıf `fx`**, venue `histdata-fx`, `instrument_type="cfd"` (perakende marjlı
+   FX: swap = finansman → U17 `finansman_modeli_id` zorunlu; spot değil — dürüst sınıflama).
+   `VARLIK_SINIFLARI = {kripto, fx}`, `VENUE_TIPLERI[histdata-fx] = cfd` (koda dokunma = karar,
+   K-083). Endeks/emtia için karar **yok** (`endeks` reddedilir, testli).
+2. **Kapsam: yalnız araştırma.** Canlı akış yok (R3 satırı "isteğe bağlı"); K-079 (kaldıraçlı
+   ürün hesabı) ve W7 §5 (FX/CFD aracı kurum = lisans + yargı alanı) bu sınıf için canlıya giden
+   yolu **kapalı** tutuyor; açılması ayrı K + compliance.
+3. **Veri sözleşmesi `histdata-fx-m1`** (`data/sozlesme.py`): şema aynı bar şeması; 1h katmanı
+   M1'den türetilir; EST→UTC **sabit +5 saat** (yaz saati yok, kaynak beyanı); fiyatlar bid —
+   ask yok → spread R4'te ayrı bileşen, o güne kadar aleyhte varsayım (K-007); `Volume` tanımsız
+   → `trades` 0; her zip SHA-256 manifestoya; lisans alanı sağlayıcı beyanını **alıntıyla** taşır,
+   ad uydurmaz.
+4. **Edinim:** ücretsiz web indirme elle (aylık zip → `data/fx/_gelen/`) **ya da** FTP (27 USD,
+   Scryne'ın ödeme kararı). İndirici her iki yolda aynı: dosya-gelen, idempotent, checksum'lu,
+   `--bitis-gun` ile veri sonu sabit (K-080). Web formuna otomatik POST **yapılmaz** (yazılı izin
+   yok; Dukascopy ile aynı gerekçe).
+5. **Takvim:** 5/7 (Pazar ~22:00 UTC açılış, Cuma ~22:00 UTC kapanış) — R3 "takvim doğrulama
+   testi" bu veriyle ölçülür ve `data/takvim.py`ye ikinci katalog satırı (`fx-5x24`, içerik-hash'li)
+   **ölçümden sonra** girer (K-083/U15: kripto-dışı takvim R3 verisi olmadan tanımlanmaz).
+6. **Hayatta kalma yanlılığı:** sabit çift listesi; ölçüm yine yapılır (hangi çiftlerin hangi
+   aydan itibaren dosyası var — PIT evren tablosu aynı kalıpla), sonuç raporlanır.
+7. **Eşik/kalibrasyon:** yeni `(histdata-fx, cfd, <id>)` → kendi `SlippageKalibrasyonu`
+   (M1 bid bar-to-bar, K-021 kalıbı) ve kendi null dağılımı (U17); 1,04 taşınmaz.
+
+### R3 Paket 1 (uygulama sırası)
+
+(a) `data/fx.py`: zip → M1 CSV → UTC 1h Parquet (`data/fx/<PAIR>/1h.parquet` + `1h.kaynak.json`
+SHA'lı manifesto), idempotent, `--bitis-gun`; (b) `sq data fx-al` CLI (gelen dizinden);
+(c) `sq data quality` FX'te (gap 5/7 farkında değil — R4'e kadar hafta sonu boşlukları
+raporlanır, `suspect` değil); (d) takvim ölçümü + `fx-5x24` satırı; (e) PIT evren tablosu (çift
+listesi) + hayatta kalma ölçümü; (f) `docs/Faz-R3-FX-Veri-Raporu.md`. Kanıt: `test_fx.py`
+(format, EST→UTC, bid, idempotency, checksum, K-080).
