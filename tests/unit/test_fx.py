@@ -78,6 +78,15 @@ class TestHaftaNo:
             (dt.date(2024, 3, 10), (2024, 11)),
             (dt.date(2024, 10, 27), (2024, 44)),
             (dt.date(2024, 11, 3), (2024, 45)),
+            # K-091: kayma 1 Ocak'ın gününe bağlı (dosya 10 başlangıçları 2012-2026'dan ölçüldü)
+            (dt.date(2012, 3, 4), (2012, 10)),  # 1 Ocak Pazar → kayma 0
+            (dt.date(2013, 3, 3), (2013, 10)),  # Salı → 1
+            (dt.date(2015, 3, 8), (2015, 10)),  # Perşembe → 0
+            (dt.date(2015, 12, 27), (2015, 52)),  # 2015/53 kaynakta yok
+            (dt.date(2016, 1, 3), (2016, 1)),  # Cuma → 0; dosya 2016/1 = 3 Ocak
+            (dt.date(2022, 1, 2), (2022, 1)),  # Cumartesi → 0
+            (dt.date(2025, 7, 6), (2025, 28)),  # Çarşamba → 1
+            (dt.date(2026, 9, 13), (2026, 37)),  # Perşembe → 0
         ],
     )
     def test_olculen_anahtarlar(self, pazar, beklenen):
@@ -379,3 +388,38 @@ class TestFxKalite:
         assert r.exit_code == 0, r.output
         govde = json.loads(r.output)
         assert govde["kalite"]["pair"] == "EURUSD" and govde["kalite"]["bar"]["eksik"] == 1
+
+
+class TestYilSiniriAlternatifAnahtar:
+    """K-091: sağlayıcı yıl geçişinde tutarsız (2017-12-31 → 2018/1, 2023-12-31 → 2023/53)."""
+
+    def test_alternatif_yalniz_yil_geciren_haftada(self):
+        assert fx.hafta_anahtarlari(dt.date(2017, 12, 31)) == ((2017, 53), (2018, 1))
+        assert fx.hafta_anahtarlari(dt.date(2023, 12, 31)) == ((2023, 53), (2024, 1))
+        assert fx.hafta_anahtarlari(dt.date(2015, 12, 27)) == ((2015, 52), (2016, 1))
+        assert fx.hafta_anahtarlari(dt.date(2024, 3, 3)) == ((2024, 10),)
+
+    def test_kesfet_alternatifi_dener_ve_kaydeder(self):
+        soruldu = []
+
+        def var_mi(url: str) -> bool:
+            soruldu.append(url.rsplit("/", 2)[1] + "/" + url.rsplit("/", 1)[1].split(".")[0])
+            return url.endswith("/2018/1.csv.gz")
+
+        r = fx.kesfet("EURUSD", "2017-12-31", "2018-01-06", var_mi=var_mi)
+        assert soruldu == ["2017/53", "2018/1"]
+        assert r["haftalar"]["2017-53"] == {
+            "pazar": "2017-12-31", "var": True, "kaynak_anahtar": "2018/1"
+        }
+
+    def test_fx_al_alternatif_anahtarla_indirir_kanonik_adla_saklar(self, tmp_path):
+        dosya = _hafta(dt.date(2017, 12, 31), dakika=120)
+        k = SahteKaynak({(2018, 1): dosya}, yok={(2017, 53)})
+        depo = FxDepo(tmp_path)
+        kayit = fx_al("EURUSD", "2017-12-31", "2018-01-05", depo=depo, indirici=k)
+        assert kayit.bar_sayisi == 2 and kayit.haftalar["2017-53"]["durum"] == "var"
+        assert (tmp_path / "_gelen" / "EURUSD" / "2017-53.csv.gz").exists()
+        istekler = [u.rsplit("/", 2)[1:] for u in k.cagri]
+        assert istekler == [["2017", "53.csv.gz"], ["2018", "1.csv.gz"]]
+        fx_al("EURUSD", "2017-12-31", "2018-01-05", depo=depo, indirici=k)
+        assert len(k.cagri) == 2  # ikinci koşuda istek yok

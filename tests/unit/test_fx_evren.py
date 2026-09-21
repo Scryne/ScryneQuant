@@ -61,13 +61,16 @@ class TestKural:
 
 class TestHaftaAnahtari:
     @pytest.mark.parametrize("hafta,pazar", [("2023-53", "2023-12-31"), ("2024-2", "2024-01-07"),
-                                             ("2012-1", "2012-01-01"), ("2026-37", "2026-09-06")])
+                                             ("2012-1", "2012-01-01"), ("2026-37", "2026-09-13"),
+                                             ("2016-1", "2016-01-03"), ("2015-52", "2015-12-27")])
     def test_pazar_cozumu(self, hafta, pazar):
         assert fx_evren._pazar(hafta) == dt.date.fromisoformat(pazar)
 
     def test_olmayan_anahtar(self):
         with pytest.raises(FxEvrenHatasi, match="çözülemedi"):
             fx_evren._pazar("2024-1")  # 2024/1 yok (1 Ocak haftası 2023/53)
+        with pytest.raises(FxEvrenHatasi, match="çözülemedi"):
+            fx_evren._pazar("2015-53")  # kayma 0 yılında 53 yok (K-091)
 
 
 class TestKanitVeTablo:
@@ -170,10 +173,15 @@ class TestKapsamVeYazma:
 
 @pytest.mark.skipif(not (KOK / "data" / "fx" / "EURUSD").exists(), reason="gerçek FX deposu yok")
 class TestGercekKanit:
-    def test_mevcut_kanit_kismi_ve_olcum_yok(self):
+    def test_tam_kanit_ve_olcum(self):
+        """K-091 ölçümü (2026-09-21): 21 çift × 773 hafta HEAD; 2012 h1 21/21; medyan 0."""
         varlik, _ = kanit_topla(FxDepo(KOK / "data" / "fx"), fx.FXCM_CIFTLER)
         kp = kapsam(varlik, FxEvrenKurali())
-        assert kp["durum"] == "kismi" and "EURUSD" in varlik
-        assert varlik["EURUSD"]["2012-1"] is True and varlik["EURUSD"]["2011-53"] is False
+        if kp["durum"] != "tam":
+            pytest.skip("tam HEAD kanıtı yerelde yok")
+        assert all(varlik[p]["2012-1"] for p in fx.FXCM_CIFTLER)  # varsayım değil, ölçüm
+        assert all(not varlik[p]["2011-52"] for p in fx.FXCM_CIFTLER)  # kaynak öncesi
         h = hayatta_kalma(pit_tablo(FxEvrenKurali(), varlik), FxEvrenKurali())
-        assert h["olculen_hafta"] == 0  # 21 çiftin kanıtı yok → ölçüm yok, uydurma yok
+        assert h["kismi_kanit_hafta"] == 0 and h["olculen_hafta"] >= 700
+        assert h["medyan"] == 0.0 and h["sifir_olmayan_hafta"] <= 10
+        assert "2011-52" in h["saglayici_boslugu"]

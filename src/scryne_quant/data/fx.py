@@ -105,17 +105,20 @@ class FxHatasi(ValueError):
 
 
 def hafta_no(pazar: dt.date) -> tuple[int, int]:
-    """FXCM dosya anahtarı `(yıl, hafta)`: yıl Pazar'ın yılı; 1 Ocak'ı içeren hafta 1.
+    """FXCM dosya anahtarı `(yıl, hafta)`: yıl Pazar'ın yılı; hafta = `%U(Pazar) + kayma`.
 
-    `%U` Pazar'dan başlayan hafta sayısıdır ve 1 Ocak'tan önceki günleri hafta 0 sayar; yıl
-    Pazar'la başlamıyorsa o "hafta 0" FXCM'de hafta 1'dir (2024-01-07 → 2, 2024-03-03 → 10;
-    2023-12-31 → 2023/53 — ölçüldü, K-088).
+    `%U` Pazar'dan başlayan hafta sayısıdır (1 Ocak'tan önceki günler hafta 0). Kayma **1 Ocak'ın
+    gününe** bağlı (K-091, 15 yılın 10. dosyasının başlangıç tarihinden ölçüldü): 1 Ocak
+    Pazartesi/Salı/Çarşamba ise 1 (o hafta yılın çoğunluğunu taşır → hafta 1), aksi hâlde 0.
+    Örnek: 2024 (Pzt) 01-07 → 2, 03-03 → 10; 2016 (Cum) 01-03 → 1; 2015 (Per) 12-27 → 52;
+    2023 (Paz) 12-31 → 53; 2026 (Per) 09-13 → 37. K-088'deki ilk formül (`%U(1 Ocak)==0` → +1)
+    Per/Cum/Cmt yıllarında bir hafta kaydırıyordu — o yıllardaki "h53 sağlayıcı boşluğu" artefakttı.
     """
     if pazar.weekday() != 6:
         raise FxHatasi(f"{pazar}: Pazar değil")
     u = int(pazar.strftime("%U"))
-    ocak_u = int(dt.date(pazar.year, 1, 1).strftime("%U"))
-    return pazar.year, u + (1 if ocak_u == 0 else 0)
+    kayma = 1 if dt.date(pazar.year, 1, 1).weekday() in (0, 1, 2) else 0
+    return pazar.year, u + kayma
 
 
 def pazarlar(bas: dt.date, bit: dt.date) -> Iterator[dt.date]:
@@ -131,6 +134,19 @@ def pazarlar(bas: dt.date, bit: dt.date) -> Iterator[dt.date]:
 
 def dosya_url(pair: str, yil: int, hafta: int) -> str:
     return f"{KAYNAK_KOK}/m1/{pair}/{yil}/{hafta}.csv.gz"
+
+
+def hafta_anahtarlari(pazar: dt.date) -> tuple[tuple[int, int], ...]:
+    """Kanonik anahtar + sağlayıcının yıl sınırında kullanabildiği alternatif (K-091).
+
+    Ölçüldü: 31 Aralık 2017 haftası `2018/1` (2017/53 404), 31 Aralık 2023 haftası `2023/53`
+    (2024/1 404) — sağlayıcı yıl geçişinde tutarsız. Pazar'ın haftası bir sonraki yılın 1 Ocak'ını
+    içeriyorsa `(yıl+1, 1)` alternatif olarak denenir; depo anahtarı hep kanonik kalır.
+    """
+    kanonik = hafta_no(pazar)
+    if pazar + dt.timedelta(days=6) >= dt.date(pazar.year + 1, 1, 1):
+        return kanonik, (pazar.year + 1, 1)
+    return (kanonik,)
 
 
 # ------------------------------------------------------------------ okuma / dönüşüm
@@ -321,16 +337,25 @@ def _gun(metin: str) -> dt.date:
     return dt.date.fromisoformat(metin)
 
 
-def _gelen_al(depo: FxDepo, pair: str, yil: int, hafta: int, indirici: Indirici
+def _gelen_al(depo: FxDepo, pair: str, pazar: dt.date, indirici: Indirici
               ) -> tuple[Path | None, bool]:
-    """Haftalık dosyayı `_gelen`e getirir. Döner: (yol | None=404, yeni_indirildi)."""
+    """Haftalık dosyayı `_gelen`e getirir (kanonik ad); yıl sınırında alternatif anahtar denenir.
+
+    Döner: (yol | None=hiçbir anahtarda yok, yeni_indirildi).
+    """
+    anahtarlar = hafta_anahtarlari(pazar)
+    yil, hafta = anahtarlar[0]
     yol = depo.gelen_yolu(pair, yil, hafta)
     yok = yol.parent / f"{yil}-{hafta}.yok"
     if yol.exists() and yol.stat().st_size > 0:
         return yol, False
     if yok.exists():
         return None, False
-    govde = indirici(dosya_url(pair, yil, hafta))
+    govde = None
+    for y, w in anahtarlar:
+        govde = indirici(dosya_url(pair, y, w))
+        if govde is not None:
+            break
     yol.parent.mkdir(parents=True, exist_ok=True)
     if govde is None:
         yok.write_text("404\n", encoding="utf-8")
@@ -373,7 +398,7 @@ def fx_al(
     for pazar in pazarlar(bas, bit):
         yil, hafta = hafta_no(pazar)
         anahtar = f"{yil}-{hafta}"
-        yol, _ = _gelen_al(depo, pair, yil, hafta, indirici)
+        yol, _ = _gelen_al(depo, pair, pazar, indirici)
         if yol is None:
             haftalar[anahtar] = {"durum": "yok", "pazar": pazar.isoformat()}
             continue
@@ -540,8 +565,14 @@ def kesfet(pair: str, bas_gun: str, bit_gun: str, *, var_mi: Varlik) -> dict[str
     haftalar: dict[str, dict[str, Any]] = {}
     for pazar in pazarlar(bas, bit):
         yil, hafta = hafta_no(pazar)
+        bulunan: str | None = None
+        for y, w in hafta_anahtarlari(pazar):
+            if var_mi(dosya_url(pair, y, w)):
+                bulunan = f"{y}/{w}"
+                break
         haftalar[f"{yil}-{hafta}"] = {
-            "pazar": pazar.isoformat(), "var": bool(var_mi(dosya_url(pair, yil, hafta)))
+            "pazar": pazar.isoformat(), "var": bulunan is not None,
+            **({"kaynak_anahtar": bulunan} if bulunan and bulunan != f"{yil}/{hafta}" else {}),
         }
     varlar = [k for k, v in haftalar.items() if v["var"]]
     return {
@@ -626,6 +657,7 @@ __all__ = [
     "dosya_url",
     "fx_al",
     "fx_kalite",
+    "hafta_anahtarlari",
     "hafta_no",
     "https_indirici",
     "https_var_mi",

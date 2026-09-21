@@ -4583,3 +4583,65 @@ kanonik_id, sembol, uye, kanit`; deterministik), `tablo_hash`, `hayatta_kalma`, 
 hafta anahtarı çözümü (2012-1, 2023-53, 2024-1 yok), kanıt birleşme/çelişki, tablo determinizmi,
 tekdüze → 0, eksik çift → 1/6 medyan 1/3 azami, sağlayıcı boşluğu, kısmi kanıt, kapsam,
 `evren_kur` deterministik, gerçek kanıt → kısmi/ölçüm yok.
+
+---
+
+## K-091 — FXCM hafta numarası düzeltmesi, yıl sınırı alternatif anahtar; FX hayatta kalma ölçümü (21 × 773 hafta)
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (HEAD keşfi onayı) · **Düzeltir:** K-088
+ölçüm notundaki hafta numarası kuralı · **Tabi:** K-052, K-088, K-090 · **Kaynak:**
+`data/fx.py:hafta_no/hafta_anahtarlari`, `data/fx/_evren/6124cf568498.json` (yerel),
+`docs/Faz-R3-FX-Veri-Raporu.md` §5b, `tests/unit/test_fx.py`, `test_fx_evren.py`
+
+### Bulgu
+
+1. **K-088'deki kural yanlıştı.** `%U(Pazar) + (1 if %U(1 Ocak)==0)` 2024 için doğru, 2015/2016/
+   2021/2022/2026 için bir hafta kaydırıyordu (h53 "sağlayıcı boşluğu" artefakt). 15 yılın 10.
+   dosyasının başlangıç tarihi okunarak ölçüldü: **kayma 1 yalnız 1 Ocak Pazartesi/Salı/Çarşamba
+   ise** (2013, 2014, 2018, 2019, 2020, 2024, 2025), aksi hâlde 0. Kanonik anahtar yıl = Pazar'ın yılı.
+2. **Sağlayıcı yıl sınırında tutarsız:** 31 Aralık 2017 haftası `2018/1` (2017/53 404), 31 Aralık
+   2023 haftası `2023/53` (2024/1 404). `hafta_anahtarlari()` yıl geçiren hafta için `(yıl+1, 1)`
+   alternatifini dener; depo/manifesto/kesif anahtarı kanonik kalır, kesif `kaynak_anahtar` yazar.
+3. Yanlış anahtarla üretilmiş keşif dosyaları (2011, 2015, 2016, 2017, 2018, 2021, 2022, 2026)
+   silinip yeniden tarandı; çelişkiyi `fx_evren` fail-closed yakaladı (2017-53: eski 2018 taraması
+   "yok", yeni 2017 taraması "var") — kanıt sessizce düzeltilmedi, kaynak yeniden ölçüldü.
+
+### Ölçüm (HEAD, 21 çift × 773 hafta, 2011-49 → 2026-38; indirme yok, ödeme yok)
+
+| Ölçüm | Sonuç |
+| --- | --- |
+| Kapsam | **tam** — 21/21 çift, 773 hafta, kısmi kanıtlı hafta 0 |
+| İlk üye haftası | **2012 h1 (2012-01-01): 21/21** — varsayım değil, ölçüm; 2011 h49-52 21/21 yok (kaynak öncesi) |
+| Son üye haftası | 2026 h37 (2026-09-13); h38 henüz yok |
+| Sağlayıcı boşluğu (21/21 yok) | 2011 h49-52; **2025 h29-30** (13-25 Tem 2025); **2026 h18-31** (3 May – 8 Ağu 2026, 14 hafta); 2026 h38 |
+| Hayatta kalma | 752 ölçülen hafta; **medyan 0,0**; sıfır olmayan **5 hafta** (%0,66); azami 0,952 |
+| Sıfır olmayan haftalar | 2024 h35 (yalnız AUDCAD), h51 (AUDCAD), h52 (AUDCAD, AUDCHF), h53 ve 2025 h2 (AUDCAD, AUDCHF, AUDJPY, AUDNZD) |
+
+**Yorum.** Sözleşme sabit 21 çift olduğundan enstrüman giriş/çıkışı yok; sıfır olmayan 5 hafta
+sağlayıcının **kısmi** yayın haftaları (alfabetik ilk çiftler var → yarım kalmış toplu iş izi),
+delist değil. Kripto evreniyle kıyas: ayda medyan %16,7-18 (K-056) → FX'te **0**. Kural sonucu:
+`dosya-var` kuralı o 5 haftada 1-4 üyeli evren verir; araştırma kuralı bu haftalar için **asgari
+üye eşiği** ister (örn. "üye < 21 → evren yok") — bu bir kural sürümü kararıdır (R5/R6, K ile),
+burada uygulanmadı. Sağlayıcı boşlukları (2025 h29-30, 2026 h18-31) araştırma penceresinden
+adıyla dışlanır; canlı yok.
+
+---
+
+## K-092 — R3 kapandı: kripto-dışı ilk sınıf (FX, FXCM) veri katmanı
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne ("Paket 1(f) ile R3 raporunu kapat")
+· **Tabi:** K-087…K-091 · **Kaynak:** `docs/ROADMAP-RESET.md` R3, `docs/Faz-R3-FX-Veri-Raporu.md`
+
+**R3 bitti kriteri, madde madde:** kaynak seçilmiş + lisans kaydı (`fxcm-candledata-m1`,
+`VeriSozlesmesi.lisans` alıntılı, K-088) ✅; tarihsel indirici idempotent + checksum + `veri_sonu`
+(`data/fx.py`, `--bitis-gun`, manifesto SHA, bayt-aynı ölçüldü, K-088) ✅; takvim doğrulama testi
+(`fx-5x24`, gerçek 55 haftayı bar bar açıklıyor, K-089) ✅; hayatta kalma yanlılığı ölçümü
+(21 × 773 hafta, medyan 0, K-091) ✅; `sq data quality fx` raporu (K-089) ✅; canlı akış
+isteğe bağlıydı, **yok** (K-087/2). Compliance: yalnız araştırma, kendi hesabı (K-014); FX/CFD
+canlı yolu kapalı (K-079, W7 §5).
+
+**R3'ten devredilen:** spread/mid modeli ve motorun bid/ask'i tüketmesi (R4); takvimin
+`izgara`/`gap`/`bar_yili`/bayatlığa bağlanması (R4); `fx-5x24` `kapali` tablosunun 2023-24
+ölçüm kapsamı dışına genişletilmesi (veri indirildikçe, yeni sürüm); asgari üye eşiği kuralı ve
+FX null kalibrasyonu (R5/U17); FX slippage/spread kalibrasyonu (K-021 kalıbı, bid/ask); tam veri
+indirme yalnız kullanılacak pencere kadar (K-090/5).
