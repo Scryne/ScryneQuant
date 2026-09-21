@@ -198,6 +198,12 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   sembollü `backtest/motor.py` bunun sarmalayıcısıdır; kendi döngüsü yok ve bu statik testle
   korunuyor. Evren `ctx`i `strategy/evren.py`, hedef portföy sözleşmesi `strategy/hedef.py`,
   portföy kurma `strategy/kurma.py`de.
+- `src/scryne_quant/backtest/fill.py` — **bid/ask fill + spread bileşeni (K-094, R4 Paket 2).**
+  Barlarda `bid_open`+`ask_open` varsa alış `ask×(1+s)`, satış `bid×(1−s)` (K-007 üstüne);
+  `Emir.kotasyon_fiyat`/`spread_maliyeti`; `Islem.spread`, `Metrikler.toplam_spread`,
+  `Sonuc.takvim` (seanslı takvimde `{id, icerik_hash}`) **yalnız varsa** kayda girer — kripto
+  yolu bit-aynı (HEAD kıyası K-094'te). FX Parquet → görünüm adaptörü ve FX kalite bayrağı
+  **yok** (R4 kalan).
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

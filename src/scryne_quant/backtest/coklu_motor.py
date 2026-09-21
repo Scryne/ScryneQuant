@@ -44,7 +44,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -62,7 +62,7 @@ from scryne_quant.common.maliyet import (
 )
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import KaliteDurumu
-from scryne_quant.data.takvim import Takvim
+from scryne_quant.data.takvim import TAKVIM_24X7, Takvim
 from scryne_quant.features.indikator import atr as atr_hesapla
 from scryne_quant.portfolio.durum import CokluPortfoy
 from scryne_quant.risk.motor import RISK_ATR_PENCERESI, PiyasaOlcumu, RiskMotoru
@@ -109,9 +109,9 @@ class CokluBacktest:
             None if maliyetler is None else {s: em.model for s, em in maliyetler.items()}
         )
         self.takvim = takvim
-        """Yıllıklandırma takvimi (R4 Paket 1). `None` = 24x7, `hesapla` bit-aynı; kayda girmez —
-        seanslı takvim kayda `{"takvim": {id, icerik_hash}}` ile R4'ün sonraki paketinde girer
-        (K-083/U16: yalnız 24x7 değilse)."""
+        """Yıllıklandırma takvimi (R4 Paket 1). `None` = 24x7, `hesapla` bit-aynı ve kayda girmez.
+        Seanslı takvim kayda `{"takvim": {id, icerik_hash}}` ile girer (`takvim_kaydi`, K-094;
+        K-083/U16: yalnız 24x7 değilse)."""
         self.baslangic_sermaye = baslangic_sermaye
         self.seed = seed
         self.kalite_esigi = kalite_esigi
@@ -181,15 +181,40 @@ class CokluBacktest:
             olcum_baslangici=olcum_baslangici,
             veri_sha256=dict(veri_sha256 or {}),
             tekil_sembol=tekil_sembol,
+            spread_bileseni=bool(girdi.kotasyon),
         )
+
+    def takvim_kaydi(self) -> dict[str, str] | None:
+        """Kayda giren takvim bloğu: seanslıysa `{"id", "icerik_hash"}`, 24x7/`None` ise `None`.
+
+        Deterministik: `icerik_hash` katalog içeriğinin `nesne_hash`i (K-083/U15); aynı takvim
+        aynı blok. 24x7 kayda girmez ki kripto kayıtlarının `config_hash`i değişmesin (K-094).
+        """
+        if self.takvim is None or self.takvim.kimlik == TAKVIM_24X7:
+            return None
+        return {"id": self.takvim.kimlik, "icerik_hash": self.takvim.icerik_hash}
 
     def girdi_kur(self, gorunum: EvrenGorunumu) -> AdimGirdisi:
         """Bir görünümün adım girdisi: bar dizilerine kısayollar + önceden hesaplananlar.
 
         Backtest bunu koşu başına bir kez kurar; canlı motor her yeni pencerede yeniden.
+
+        Kotasyon (K-094): barlarında **hem** `bid_open` **hem** `ask_open` olan semboller
+        `(bid, ask)` çiftiyle dolar; yalnız biri olan sembol hata — tek fiyata sessizce düşmek
+        spread'i sıfır saymak olurdu. İkisi de yoksa tek fiyat (kripto), bugünkü yol.
         """
         semboller = gorunum.semboller
         adim = timeframe_ms(gorunum.timeframe)
+        kotasyon: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        for s in semboller:
+            barlar = gorunum.gorunumler[s].barlar
+            var = ("bid_open" in barlar, "ask_open" in barlar)
+            if all(var):
+                kotasyon[s] = (barlar["bid_open"], barlar["ask_open"])
+            elif any(var):
+                raise CokluBacktestHatasi(
+                    f"{s}: bid_open/ask_open'dan yalnız biri var; kotasyon ikisini ister (K-094)"
+                )
         return AdimGirdisi(
             gorunum=gorunum,
             zamanlar=np.asarray(gorunum.zamanlar, dtype="int64"),
@@ -203,6 +228,7 @@ class CokluBacktest:
                 s: gunluk_hacim(gorunum.gorunumler[s].barlar["quote_volume"], adim)
                 for s in semboller
             },
+            kotasyon=kotasyon,
         )
 
     # ------------------------------------------------------------------ yardımcılar
@@ -308,6 +334,7 @@ class CokluBacktest:
         olcum_baslangici: int,
         veri_sha256: dict[str, str],
         tekil_sembol: str | None,
+        spread_bileseni: bool = False,
     ) -> Sonuc:
         ozkaynak = ozkaynak[olcum_baslangici:]
         brut = brut[olcum_baslangici:]
@@ -357,6 +384,7 @@ class CokluBacktest:
                 self.baslangic_sermaye,
                 kapasite_oranlari=kapasite_oranlari,
                 takvim=self.takvim,
+                spread_bileseni=spread_bileseni,
             ),
             islemler=islemler,
             ozkaynak=ozkaynak,
@@ -368,6 +396,7 @@ class CokluBacktest:
             acik_pozisyon_sonda=portfoy.acik,
             kalite_esigi=self.kalite_esigi,
             evren=evren,
+            takvim=self.takvim_kaydi(),
             risk=None if self.risk is None else self.risk.ozet(),
         )
 
@@ -439,6 +468,9 @@ class AdimGirdisi:
     kalite: dict[str, np.ndarray]
     risk_atr: dict[str, np.ndarray]
     adv: dict[str, np.ndarray]
+    kotasyon: dict[str, tuple[np.ndarray, np.ndarray]] = field(default_factory=dict)
+    """Sembol → `(bid_open, ask_open)` dizileri; yalnız bid/ask'i olan semboller (K-094). Boş =
+    tek fiyat."""
 
 
 class CokluAdimci:
@@ -515,9 +547,17 @@ class CokluAdimci:
                 fiyatlar_a = motor._fiyatlar(
                     (*portfoy.sirali_semboller, *uygun), self.son_acilis, i, silinen
                 )
+                # Kotasyon yalnız bu barda barı olan (uygun) semboller için okunur; `son_acilis`
+                # gibi "son bilinen" kotasyon yok — olmayan bara kotasyon uydurulmaz.
+                kotasyonlar = {
+                    s: (float(girdi.kotasyon[s][0][i]), float(girdi.kotasyon[s][1][i]))
+                    for s in uygun
+                    if s in girdi.kotasyon
+                }
                 emirler, atlama = emirleri_hazirla(
                     uygun, portfoy, fiyatlar_a, int(girdi.zamanlar[i]), motor.maliyet,
                     maliyetler=motor.fill_maliyetleri,
+                    kotasyonlar=kotasyonlar or None,
                 )
                 for s in sorted(atlama):
                     self.atlanan.append(atlama[s])

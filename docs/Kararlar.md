@@ -4689,3 +4689,58 @@ K-057 (kanıt kalıbı), K-083/U15-U16, K-089 · **Kaynak:** `data/takvim.py`, `
 - **Seanslı davranış (fx-5x24, beklenen fark):** iki haftalık FX serisinde hafta sonu gap
   değil (24x7: 2 gap/48 eksik → fx: 1 gap/1 eksik, beklenen 240), kırılma boşluğu yalnız hafta
   içi, Cumartesi damgası `IzgaraHatasi`, Cumartesi sessizliği bayat değil / Pazar açılışı bayat.
+
+## K-094 — R4 Paket 2: bid/ask fill + spread ayrı bileşen + kayda seanslı takvim; kripto yolu bit-aynı
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R4 Paket 2 talimatı) · **Tabi:**
+K-004, K-007, K-009, K-057 (kanıt kalıbı), K-083/U16, K-089, K-093 · **Kaynak:** `backtest/fill.py`,
+`backtest/defter.py`, `backtest/metrikler.py`, `backtest/sonuc.py`, `backtest/coklu_motor.py`,
+`tests/unit/test_fx_fill_spread.py`
+
+### Karar
+
+1. **Fill fiyatı yönün kotasyonundan:** `emir_hazirla_genel(kotasyon=(bid, ask))` verilirse alış
+   `ask × (1 + s)`, satış `bid × (1 − s)` — K-007'nin kayması kotasyonun **üstüne** biner, yön
+   yine aleyhte. Boyutlandırma ve yön kararı tek fiyattan (`open` = orta) verilir; kotasyon yalnız
+   fill fiyatını değiştirir. `bid ≤ orta ≤ ask` ve `bid > 0` zorunlu, aksi `ValueError`.
+   `kotasyon=None` (kripto) = bugünkü ifade, bit-aynı.
+2. **Spread ayrı bileşen:** `Emir.kotasyon_fiyat` (yönün kotasyonu, kayma öncesi);
+   `Emir.spread_maliyeti = |kotasyon − orta| × miktar`, `slippage_maliyeti = |fiyat − kotasyon| ×
+   miktar` — iki sayı birbirine karışmaz. `Islem.spread` ve `Metrikler.toplam_spread` **yalnız
+   varsa** (`None` = ölçülmedi) sözlüğe girer (`sembol`/`risk`/`maliyetler` kalıbı); kotasyonsuz
+   fill `Islem.spread`e dokunmaz — "ölçülmeyen sıfır sayılmaz, eksik sayılır". Fiyata gömülü
+   olduğu için `net_pnl`e zaten dahil, yalnız ayrı raporlanır. `_maliyet_govdesi`/`MaliyetModeli`
+   değişmedi: spread bir **konfigürasyon** değil, veriden okunan bir **ölçüm**.
+3. **Motor kotasyonu barlardan okur:** `bid_open` + `ask_open` sütunları olan sembol `(bid, ask)`
+   ile dolar; yalnız biri varsa `CokluBacktestHatasi` (tek fiyata sessiz düşüş yok); ikisi de
+   yoksa tek fiyat. Kotasyon yalnız fill barında barı olan sembol için okunur — "son bilinen
+   kotasyon" yok. `AdimGirdisi.kotasyon` canlı adımcıya da aynı yoldan gider (K-001: tek gövde).
+4. **Kayda takvim bloğu:** `CokluBacktest.takvim_kaydi()` → seanslı takvimde
+   `{"id", "icerik_hash"}` (K-083/U16), 24x7 ve `None`da `None`. `Sonuc.takvim` `config_hash`e ve
+   `config`e **yalnız varsa** girer; `sonuc_hash`e girmez (girdi, çıktı değil). `sonuc.py` takvimi
+   import etmez (K-093/4 AST testi korunur) — blok sözlük olarak gelir.
+5. **Kapsam dışı ve bilinçli bırakılan:** FX Parquet'inden `PiyasaGorunumu` kuran adaptör ve FX
+   kalite bayrağı (`quality_status`) — `data/fx.py` `ok` üretmiyor, motor `ok` olmayan barda
+   doldurmuyor; bu R4'ün sonraki adımı (Paket 3 finansman bacağıyla birlikte ya da ayrı K).
+   `research/tekrar.py` `takvim` bloğunu henüz yorumlamıyor (FX kaydı yok). Spread tahmin modeli,
+   yeni takvim, alfa, canlı emir yolu yok.
+
+### Bit-aynı kanıtı (K-057 kalıbı)
+
+- **Statik:** `kotasyon`/`kotasyonlar`/`spread_bileseni`/`Emir.kotasyon_fiyat`/`Islem.spread`/
+  `Metrikler.toplam_spread`/`Sonuc.takvim` varsayılanları "yok"; kripto kaydında `spread`,
+  `toplam_spread`, `takvim` anahtarı yok (test).
+- **Referans (HEAD `96933a8` vs bu değişiklik, aynı betik):** `coklu_referans.json` iki senaryo
+  `sonuc_hash` `d5a74d90…`/`5a21ba21…`, `config_hash` `25bc4854…`/`f3ffa934…` SAME; maliyet
+  kataloğu senaryosu tam kayıt (git/ortam alanları dışında) SHA `0dddec77…` SAME. `takvim=None` vs
+  `takvim("24x7")` tam kayıt birebir. `(mid, mid)` kotasyonu tek fiyat yoluyla özkaynak eğrisi,
+  işlem satırları ve metrikler sayı sayıya aynı; tek fark `spread: 0.0` anahtarları.
+  `test_backtest_referans`/`test_coklu_referans` dokunulmadan geçiyor; `_maliyet_govdesi` SAME.
+- **FX (elle doğrulanmış fixture, EURUSD 6 bar, bar bar farklı spread):** `Decimal`(50) referansla
+  alış fiyatı `ask[2] × (1 + s)`, satış `bid[4] × (1 − s)`, miktar, komisyon, spread, slippage,
+  bitiş özkaynağı ≤ 1e-12; kaymasız modelde fill tam `ask`/`bid`, slippage 0, spread > 0; spread
+  sıfırken slippage > 0 (bileşenler bağımsız); K-007: alış > ask > orta, satış < bid < orta.
+- **Takvim:** `fx-5x24` bloğu `{"id": "fx-5x24", "icerik_hash": "16bafe19…"}` (K-089 hash'i),
+  iki koşuda aynı `config_hash`, takvimsiz koşudan farklı; 24x7/`None` kayda girmiyor.
+- **Gerçek veri (R1(b), `tools/r1b_kayit_durumu.py`, ana depoya dokunmadan):** 26 kayıt; 2026-09-20 durumuyla kıyaslanan 23 kaydın sınıfı ve fark listesi birebir (ayni 2, yalniz_sonuc_hash 3, semantik 10, veri_geri_getirilemedi 3, tekrar_edilemez 5); `sq lab yenile` ile üretilmiş 3 yeni tarama kaydı `ayni`.
+- **Suite:** ağ dışı 2.205 test yeşil (19 yeni).

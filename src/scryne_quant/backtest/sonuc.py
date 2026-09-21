@@ -123,6 +123,14 @@ class Sonuc:
     (eski kayıt biçimi); çok modelde herhangi biri geçiciyse `True` (K-084/6). Hash'e
     girmez — `promotion_engelleri` okur."""
 
+    takvim: dict[str, Any] | None = None
+    """Seanslı takvimin kimliği `{"id", "icerik_hash"}`; 24x7 (ve takvimsiz) koşuda `None`.
+    (R4 Paket 2, K-094; K-083/U16)
+
+    `maliyetler` ile aynı kural: `config_hash`e ve kayda **yalnız varsa** girer — kripto
+    kayıtlarının kimliği değişmez. Motor `data/takvim`i bilir, bu modül bilmez: buraya yalnız
+    sözlük gelir (K-093/4: `sonuc` takvimi import etmez)."""
+
     risk: dict[str, Any] | None = None
     """Risk motoru özeti (`RiskMotoru.ozet()`); motor devre dışıysa `None`. (Faz 5)
 
@@ -138,6 +146,7 @@ class Sonuc:
         """Girdiyi özetler: strateji + parametreler + maliyet + sermaye + seed.
 
         `maliyetler` yalnız varsa girer (K-084): tek modelli kayıtların hash'i değişmez.
+        `takvim` de öyle (K-094): seanslı takvim bir deney girdisidir, 24x7 ise varsayılan.
         """
         govde: dict[str, Any] = {
             "strateji": self.strateji,
@@ -149,6 +158,8 @@ class Sonuc:
         }
         if self.maliyetler is not None:
             govde["maliyetler"] = self.maliyetler
+        if self.takvim is not None:
+            govde["takvim"] = self.takvim
         return nesne_hash(govde)
 
     @property
@@ -245,6 +256,8 @@ class Sonuc:
                 "kalite_esigi": self.kalite_esigi,
                 # Yalnız çok modelde (K-084): tek modelli kaydın biçimi Faz 3-16 ile aynı.
                 **({"maliyetler": self.maliyetler} if self.maliyetler is not None else {}),
+                # Yalnız seanslı takvimde (K-094): 24x7 kaydın biçimi aynı.
+                **({"takvim": self.takvim} if self.takvim is not None else {}),
             },
             "metrikler": self.metrikler.sozluk(),
             "akis": {

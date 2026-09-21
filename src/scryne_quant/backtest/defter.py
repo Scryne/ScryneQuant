@@ -57,6 +57,7 @@ def uygula(
 
     acik.komisyon += emir.komisyon
     acik.slippage += emir.slippage_maliyeti
+    _spread_isle(acik, emir)
     acik.fill_sayisi += 1
 
     kapanan: Islem | None = None
@@ -112,6 +113,7 @@ def uygula_coklu(
 
     tur.komisyon += emir.komisyon
     tur.slippage += emir.slippage_maliyeti
+    _spread_isle(tur, emir)
     tur.fill_sayisi += 1
 
     kapanan: Islem | None = None
@@ -122,6 +124,19 @@ def uygula_coklu(
         kapanan = tur
         acik.pop(sembol, None)
     return portfoy, kapanan
+
+
+def _spread_isle(tur: Islem, emir: Emir) -> None:
+    """Spread bileşeni tura **yalnız kotasyonlu fill'de** yazılır (K-094).
+
+    Kotasyonsuz (tek fiyatlı) fill `Islem.spread`i `None` bırakır; böylece kripto turunun
+    `sozluk()`ü ve `sonuc_hash`i Faz 3-16 ile bit düzeyinde aynı kalır. Bir turda kotasyonlu
+    ve kotasyonsuz fill karışırsa toplam yalnız kotasyonluları içerir — ölçülmeyen sıfır
+    sayılmaz, eksik sayılır.
+    """
+    if emir.kotasyon_fiyat is None:
+        return
+    tur.spread = (0.0 if tur.spread is None else tur.spread) + emir.spread_maliyeti
 
 
 __all__ = ["DefterHatasi", "uygula", "uygula_coklu"]

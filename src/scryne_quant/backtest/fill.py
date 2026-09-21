@@ -17,6 +17,13 @@ belli olur. İkisini ayırmak, sizing'in hangi fiyata göre yapıldığını bel
 **Yön kararı ham açılıştan, işlem kayan fiyattan.** Önce ham `open` ile "almalı mıyım
 satmalı mıyım" sorusu cevaplanır, sonra o yönün aleyhte fiyatı uygulanır. Ters sıra
 döngüsel olurdu: kayma yönünü bilmek için yönü, yönü bilmek için kaymayı bilmek gerekirdi.
+
+**Bid/ask varsa (R4 Paket 2, K-094):** yönün kotasyonu referans olur — alış `ask_open`dan,
+satış `bid_open`dan dolar — ve K-007'nin kayması **onun üstüne** biner: `ask × (1 + s)`,
+`bid × (1 − s)`. Boyutlandırma ve yön kararı yine tek fiyattan (`open` = orta fiyat) verilir;
+kotasyon yalnız fill fiyatını değiştirir. Spread bileşeni `|kotasyon − orta| × miktar`,
+slippage bileşeni `|fiyat − kotasyon| × miktar` — iki ayrı sayı, ikisi de ≥ 0. Kotasyon
+verilmeyen (tek fiyatlı, kripto) yol bu paketten önceki ifadelerle bit düzeyinde aynıdır.
 """
 
 from __future__ import annotations
@@ -112,14 +119,30 @@ class Emir:
     """Hangi enstrüman. Tek sembollü koşuda boş: sembol kaydın kimliğinde (`veri.sembol`)
     zaten var ve emri taşıyan her kod yolu onu biliyor. Çok enstrümanlı koşuda zorunlu."""
 
+    kotasyon_fiyat: float | None = None
+    """Yönün kotasyonu, slippage **öncesi**: alışta `ask_open`, satışta `bid_open` (K-094).
+
+    `None` = tek fiyatlı piyasa (kripto): fill referansı `referans_fiyat`ın kendisi, spread
+    bileşeni yok — Faz 3'ten beri olan yol, ifade ve sayı aynı."""
+
     @property
     def notional(self) -> float:
         return self.miktar * self.fiyat
 
     @property
     def slippage_maliyeti(self) -> float:
-        """Slippage'ın quote cinsinden bedeli. Her zaman ≥ 0 — aleyhte olduğu için."""
-        return abs(self.fiyat - self.referans_fiyat) * self.miktar
+        """Slippage'ın quote cinsinden bedeli: fill ile **kaymanın uygulandığı** fiyat arasındaki
+        fark. Kotasyon varsa taban kotasyondur (spread buraya karışmaz). Her zaman ≥ 0."""
+        taban = self.referans_fiyat if self.kotasyon_fiyat is None else self.kotasyon_fiyat
+        return abs(self.fiyat - taban) * self.miktar
+
+    @property
+    def spread_maliyeti(self) -> float:
+        """Spread'in quote cinsinden bedeli: kotasyon ile orta fiyat arasındaki yarım spread ×
+        miktar. Kotasyon yoksa **0** — tek fiyatlı piyasada spread ölçülmemiştir (K-094)."""
+        if self.kotasyon_fiyat is None:
+            return 0.0
+        return abs(self.kotasyon_fiyat - self.referans_fiyat) * self.miktar
 
 
 def fill_fiyati(referans: float, yon: IslemYonu, maliyet: MaliyetModeli) -> float:
@@ -180,6 +203,7 @@ def emir_hazirla_genel(
     ozkaynak: float,
     hedef_maruziyet: float | None = None,
     sembol: str = "",
+    kotasyon: tuple[float, float] | None = None,
 ) -> Emir | AtlamaSebebi:
     """Boyutlandırmanın çekirdeği: portföy tipinden bağımsız hâli. (Faz 10, K-001)
 
@@ -188,9 +212,21 @@ def emir_hazirla_genel(
     çok enstrümanlı portföyde özkaynak tek bir sembolden okunamaz — ve barın içindeki her
     hedef **aynı** özkaynağa göre hesaplanmalı: birinci satış ikinci alımın hedefini
     büyütseydi, ağırlıklar sembollerin işlenme sırasına bağlı olurdu.
+
+    `kotasyon` (K-094): `(bid, ask)` — `t+1` açılışının iki yanı. Verilirse alış `ask`ten,
+    satış `bid`den dolar (K-007 kayması üstüne biner); `acilis` orta fiyat olarak **yalnız**
+    boyutlandırma ve yön kararında kullanılır ve `bid ≤ acilis ≤ ask` olmak zorunda. `None` =
+    tek fiyat, bugünkü yol.
     """
     if acilis <= 0.0:
         raise ValueError(f"geçersiz açılış fiyatı: {acilis}")
+    if kotasyon is not None:
+        satis_kotasyonu, alis_kotasyonu = kotasyon
+        if not 0.0 < satis_kotasyonu <= acilis <= alis_kotasyonu:
+            raise ValueError(
+                f"kotasyon tutarsız: bid={satis_kotasyonu} ≤ orta={acilis} ≤ ask={alis_kotasyonu} "
+                "sağlanmalı (K-094)"
+            )
 
     hedef = sinyal.target_exposure if hedef_maruziyet is None else hedef_maruziyet
     if not 0.0 <= hedef <= sinyal.target_exposure:
@@ -208,7 +244,8 @@ def emir_hazirla_genel(
 
     if fark > 0.0:
         yon = IslemYonu.AL
-        fiyat = fill_fiyati(acilis, yon, maliyet)
+        kotasyon_fiyat = None if kotasyon is None else kotasyon[1]
+        fiyat = fill_fiyati(acilis if kotasyon_fiyat is None else kotasyon_fiyat, yon, maliyet)
         # Notional N'i almak N + N·fee nakit ister; harcanabilir tavan bu yüzden
         # nakit/(1+fee). Tavanı aşmak, olmayan parayla işlem yapmak olurdu.
         notional = min(fark, nakit / (1.0 + fee))
@@ -216,7 +253,8 @@ def emir_hazirla_genel(
             return AtlamaSebebi.NAKIT_YOK
     else:
         yon = IslemYonu.SAT
-        fiyat = fill_fiyati(acilis, yon, maliyet)
+        kotasyon_fiyat = None if kotasyon is None else kotasyon[0]
+        fiyat = fill_fiyati(acilis if kotasyon_fiyat is None else kotasyon_fiyat, yon, maliyet)
         # Tavan elde olan: `FLAT` sinyalinde bu tavan devreye girer ve pozisyonu tam
         # kapatır — hedef ham `open`den, satış kaymış fiyattan hesaplandığı için
         # tavansız bir çıkış elde olandan fazlasını satmaya çalışırdı.
@@ -232,6 +270,7 @@ def emir_hazirla_genel(
         komisyon=notional * fee,
         zaman_ms=zaman_ms,
         sembol=sembol,
+        kotasyon_fiyat=kotasyon_fiyat,
     )
 
 
@@ -242,8 +281,13 @@ def emirleri_hazirla(
     zaman_ms: int,
     maliyet: MaliyetModeli,
     maliyetler: Mapping[str, MaliyetModeli] | None = None,
+    kotasyonlar: Mapping[str, tuple[float, float]] | None = None,
 ) -> tuple[list[Emir], dict[str, AtlamaSebebi]]:
     """Onaylanmış hedefleri `t+1` açılışında emir listesine çevirir. (Faz 10)
+
+    `kotasyonlar` (K-094): sembol → `(bid, ask)`. Yalnız bid/ask'i olan semboller için verilir;
+    sözlükte olmayan sembol tek fiyattan (`acilislar`) dolar. `None` = hiçbirinde kotasyon yok,
+    bugünkü yol bit-aynı.
 
     `maliyetler` (K-084/U14): sembol → model. `None` ise her sembol `maliyet`i kullanır —
     bugünkü tek-model yolu, bit-aynı. Verilmişse **her** sembol için bir model olmak zorunda;
@@ -285,6 +329,7 @@ def emirleri_hazirla(
                 ozkaynak=ozkaynak,
                 hedef_maruziyet=hedef,
                 sembol=sembol,
+                kotasyon=None if kotasyonlar is None else kotasyonlar.get(sembol),
             )
             if isinstance(sonuc, AtlamaSebebi):
                 atlanan[sembol] = sonuc

@@ -84,6 +84,14 @@ class Islem:
 
     fill_sayisi: int = 0
 
+    spread: float | None = None
+    """Turun spread bileşeni (quote birimi): fill'lerin `|kotasyon − orta| × miktar` toplamı.
+    (R4 Paket 2, K-094)
+
+    `None` = bu turda kotasyonlu fill yok (tek fiyatlı piyasa) ve `sozluk()`e **yazılmaz** —
+    `sembol` ile aynı gerekçe: yazılsaydı kripto kayıtlarının `sonuc_hash`i değişirdi. Fiyata
+    gömülü olduğu için `net_pnl`e zaten dahil; burada yalnız ayrı raporlanır."""
+
     sembol: str = ""
     """Turun enstrümanı. Tek sembollü koşuda boş bırakılır ve `sozluk()`e **yazılmaz**.
 
@@ -129,7 +137,7 @@ class Islem:
             "getiri": self.getiri,
             "sure_ms": self.sure_ms,
             "fill_sayisi": self.fill_sayisi,
-        }
+        } | ({} if self.spread is None else {"spread": self.spread})
 
 
 @dataclass(frozen=True, slots=True)
@@ -203,6 +211,10 @@ class Metrikler:
     ortalama_maruziyet: float
     azami_maruziyet: float
 
+    toplam_spread: float | None = None
+    """Kotasyonlu fill'lerin spread bileşeni toplamı (K-094). `None` = koşuda bid/ask yoktu;
+    `sozluk()`e yalnız varsa girer (`Islem.spread` ile aynı kural, `sonuc_hash` korunur)."""
+
     def sozluk(self) -> dict[str, Any]:
         return {
             alan: getattr(self, alan)
@@ -244,7 +256,7 @@ class Metrikler:
                 "ortalama_maruziyet",
                 "azami_maruziyet",
             )
-        }
+        } | ({} if self.toplam_spread is None else {"toplam_spread": self.toplam_spread})
 
 
 @dataclass(frozen=True, slots=True)
@@ -360,12 +372,16 @@ def hesapla(
     *,
     kapasite_oranlari: Sequence[float] = (),
     takvim: Takvim | None = None,
+    spread_bileseni: bool = False,
 ) -> Metrikler:
     """Equity eğrisi + işlem defterinden metrikleri üretir.
 
     `kapasite_oranlari`: fill başına `notional / ADV` oranları. Motor hesaplar, çünkü hacim
     serisi metrik katmanında yok — ve olmamalı: metrikler equity eğrisi ile işlem
     defterinden türer, bar verisinden değil.
+
+    `spread_bileseni` (K-094): koşuda bid/ask kotasyonu **vardı** — `toplam_spread` sayılır
+    (kotasyonsuz turlar 0 katkı). `False` = `None`, sözlüğe girmez; bugünkü yol bit-aynı.
     """
     if ozkaynak.size == 0:
         raise ValueError("boş equity eğrisi")
@@ -455,4 +471,9 @@ def hesapla(
         turnover=_bolum(hacim, baslangic_sermaye),
         ortalama_maruziyet=float(maruziyet.mean()),
         azami_maruziyet=float(maruziyet.max()),
+        toplam_spread=(
+            sum(0.0 if i.spread is None else i.spread for i in islemler)
+            if spread_bileseni
+            else None
+        ),
     )
