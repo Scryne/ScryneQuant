@@ -237,3 +237,27 @@ class TestTamDegerlendirmeFx:
     def test_rejim_kiyasi_evrende_olmali(self, veri):
         with pytest.raises(ed.EvrenDegerlendirmeHatasi):
             ed.degerlendir(KesitselGuc, IZGARA, MALIYET, veri, isinma_bar=ISINMA)  # BTCUSDT yok
+
+
+# ----------------------------------------------------------- K-103: alt evren, haftalık kesim
+
+
+class TestAltEvrenVeHaftalikKesim:
+    def test_semboller_alt_kume_meta_ve_hata(self):
+        v = evren_kosu.fx_veri_kur(TABLO, depo_kok=FIXTURE, semboller=["EURUSD", "GBPUSD"])
+        assert sorted(v.diziler) == ["EURUSD", "GBPUSD"]
+        assert v.meta["alt_evren"] == ["EURUSD", "GBPUSD"]
+        ayar = ed.motor_ayarlari(v)
+        assert ayar.coklu_model and set(ayar.finansmanlar) == {"EURUSD", "GBPUSD"}
+        tam = evren_kosu.fx_veri_kur(TABLO, depo_kok=FIXTURE, semboller=list(CIFTLER))
+        assert "alt_evren" not in tam.meta  # tam küme alt evren değil
+        with pytest.raises(evren_kosu.EvrenKosuHatasi):
+            evren_kosu.fx_veri_kur(TABLO, depo_kok=FIXTURE, semboller=["EURUSD", "YOKUSD"])
+
+    def test_bitis_pazar_son_haftayi_keser(self, veri):
+        # Fixture EURUSD 2024-2..2024-8 haftaları; Pazar 2024-01-21 ile kes: 3 hafta kalır.
+        kesik = evren_kosu.fx_veri_kur(TABLO, depo_kok=FIXTURE, bitis_pazar="2024-01-21")
+        ust = int(np.datetime64("2024-01-28", "D").astype("datetime64[ms]").astype("int64"))
+        assert int(kesik.zamanlar[-1]) < ust <= int(veri.zamanlar[-1])
+        assert kesik.meta["pencere"]["bitis_pazar"] == "2024-01-21"
+        assert len(kesik) < len(veri)

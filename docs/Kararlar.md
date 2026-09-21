@@ -5186,3 +5186,47 @@ mutlak engel) · **Kaynak:** `docs/research/records/2026-09-21-R5-fx-alpha-1.md`
 - Gerçek koşu: `tools/r5_fx_kos.py kos` × 3, çekiliş başına ~4 s; OOS hash'leri `a5c33f50fe06` /
   `28c5d102ee06` / `7cca05b02bae`, kontrol OOS `5689acde9405`; seçilen noktanın OOS/IS tekrarı
   kayıtla aynı hash (koşucu aksi hâlde durur).
+
+## K-103 — R6: h54 (`fx_kesitsel_ters` 240/n10) doğrulama turu — iki yeni pencerede OOS negatif, **elendi**
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R6 talimatı: "sadece h54'ü doğrulama
+turuna al; parametre arama yok, promotion yok, yeni katman yok") · **Tabi:** K-039 (ölçüt koşudan
+önce), K-099 (kontrol), K-101 (aralıklar aynen), K-102 · **Kaynak:**
+`docs/research/records/2026-09-21-R6-h54-tekrar.md`, `tools/r6_h54_tekrar.py`,
+`research/evren_kosu.py` (`bitis_pazar`, `semboller`), `tests/unit/test_fx_arastirma.py`
+
+### Karar
+
+1. **Pencereler K-101'den türetilir, elle seçilmez.** Bir pencerenin evreni, finansman modeli
+   pencerenin sonuna kadar geçerli çiftlerdir (dosyalardan okunur). Elde: W1 21 çift 2023-12-04..
+   2024-02-29 (h54'ün kendisi, referans), W2 10 çift 2024-03-01..05-31, W3 4 çift 2024-06-02..07-26
+   (haftalık kesim). W3 zayıf: 4 çiftlik kesit, IS bile `yillik_anlamli=False`; yine de koşuldu ve
+   öyle etiketlendi. Daha uzun/geniş pencere yok (21 proxy'nin ortak aralığı Mart'ta bitiyor).
+2. **Sabit nokta; tek sapma `n`nin oranla ölçeklenmesi** (`round(10/21 × U)`: W2 5, W3 2). n=10'u
+   10 çiftte tutmak kontrolün kendisi olurdu. Sinyal (240 bar), dengeleme (120), brüt (0,2), eşit
+   ağırlık, seçim payı sabit. Izgara yalnız PBO/pertürbasyon **teşhisi** için koşuldu.
+3. **Ölçüt koşudan önce:** yeni pencerede hem IS hem OOS net benchmark farkı > 0 = "aynı yön";
+   W2 ve W3'te aynı yön → devam adayı, aksi → elendi. Sharpe ölçüt değil.
+4. **Sonuç: elendi.** W2 IS +31,58 USD / **OOS −15,42 USD** (h54 −0,082 % vs kontrol +0,072 %, 5 tur);
+   W3 IS +3,15 / **OOS −26,67** (−0,192 % vs +0,075 %, 2 tur). Kalıp: IS'te geçiyor, OOS'ta
+   kaybediyor. Kapılar: `asgari_islem` her pencerede kaldı (11/5/2), `pbo` W1 0,428 / W2 0,795
+   kaldı, W3 ölçülemedi; pertürbasyon W1 0,475 kaldı, W2/W3 ölçülemedi (IS'te 30 tura ulaşan aday
+   yok); wf/rejim ölçülemedi; `gecici_finansman_modeli` mutlak engel. Yeni çekiliş harcanmadı
+   (defter 55). h54'ün K-102'deki "tekrar gereksinimi" bu turla **kapandı**: tekrar yapıldı, geçmedi.
+5. **Yan bulgu (K-059 görünür):** W2 tam penceresinde NZDCAD'ın sağlayıcı boşluğu haftası (120 bar)
+   48 bar sonra sıfır değerlenip `max_drawdown` %4,1 üretti; piyasa kaybı değil, pozisyon çift
+   dönünce geri geldi. Politika doğru çalıştı; alt evren koşularında bu kalem raporda taşınmalı.
+6. **Kod:** `fx_veri_kur(bitis_pazar=, semboller=)` (araştırma için gerekli, 2 test); koşucu
+   `tools/r6_h54_tekrar.py`. Refactor, yeni katman yok.
+7. **Defter fotoğrafı yenilendi (K-081 bekçisi):** K-102 defteri 52→55 büyütmüş, fotoğraf
+   (`docs/research/coklu-test-olcum.json`) güncellenmemişti — `TestEsigiDefteBagla` kırmızıydı ve
+   R5 Paket 5 commit'inde görülmedi (bu paketin düzeltmesi). `tools/faz12_coklu_test.py --deneme 500
+   --seed 0 --birlestir` önbellekten yeniden birleştirildi: ölçülebilir 45 aynı, %5 sınırı 1,0039 aynı,
+   h53-h55 **ölçülemez** (FX çekilişi kripto null'una girmez; FX null'u açık kalem, K-102/6).
+
+### Kanıt
+
+- W1 koşusu K-102'nin h54 kaydıyla birebir aynı hash (OOS `28c5d102ee06`, kontrol `5689acde9405`);
+  IS ızgarasındaki sabit noktanın hash'i tek koşuyla aynı (koşucu `assert`).
+- Testler: alt evren meta/hata, tam küme alt evren değil, `bitis_pazar` üst sınırı; FX/araştırma
+  testleri geçti.

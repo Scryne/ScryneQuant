@@ -239,6 +239,9 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   **kapalı** (3/3, h53-h55): 0/3 promotion; h54 tekrar gereksinimi taşıyor (yeni finansman aralığı
   gelince aynı nokta, yeni çekiliş harcamadan). Rapor `docs/research/records/2026-09-21-R5-fx-alpha-1.md`.
   Açık: `oos_sharpe` kapısı `yillik_anlamli`yı okumuyor (OOS 21,5 gün → Sharpe 6 anlamsız).
+  **h54 doğrulama (K-103, R6): elendi** — `tools/r6_h54_tekrar.py`, pencereler K-101 aralıklarından
+  (`fx_veri_kur(bitis_pazar=, semboller=)`), W2/W3 OOS negatif; rapor
+  `docs/research/records/2026-09-21-R6-h54-tekrar.md`.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

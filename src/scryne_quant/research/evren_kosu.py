@@ -342,8 +342,16 @@ def fx_veri_kur(
     baslangic_ay: str | None = None,
     bitis_ay: str | None = None,
     azami_sembol: int | None = None,
+    bitis_pazar: str | None = None,
+    semboller: Sequence[str] | None = None,
 ) -> EvrenVerisi:
     """FX PIT tablosu (`fx_evren`) + `FxDepo` → `EvrenVerisi`; kripto `veri_kur`un FX ikizi.
+
+    `bitis_pazar` (`YYYY-MM-DD`, bir Pazar): pencerenin **son haftası** o Pazar'la başlayan hafta;
+    `bitis_ay`dan sonra uygulanır ve üst sınırı o Pazar + 7 güne çeker (K-103: finansman aralığı
+    ay ortasında biten çiftlerle haftalık çözünürlük). `semboller`: evrenin **alt kümesi** — bir
+    pencerede yalnız finansman modeli geçerli olan çiftleri taşımak için (K-101 aralıkları);
+    üye olmayan sembol istemek hata, kırpma sessiz değil (`meta["alt_evren"]`).
 
     Farklar, hepsi bilerek: kalite bayrağı `fx_gorunum.fx_dogrula` (takvimli, hata sınıfları
     kripto ile aynı şema), ızgara `ortak_izgara(..., takvim=fx-5x24)` (seans dışı damga hata),
@@ -362,11 +370,22 @@ def fx_veri_kur(
         pencere = pencere[pencere["pazar"].astype(str).str[:7] >= baslangic_ay]
     if bitis_ay:
         pencere = pencere[pencere["pazar"].astype(str).str[:7] <= bitis_ay]
+    if bitis_pazar:
+        pencere = pencere[pencere["pazar"].astype(str) <= bitis_pazar]
     if pencere.empty:
         raise EvrenKosuHatasi(
             f"pencerede ({baslangic_ay or 'başı'}…{bitis_ay or 'sonu'}) hiç üyelik yok"
         )
-    semboller = sorted(set(pencere["sembol"].astype(str)))
+    uyeler = sorted(set(pencere["sembol"].astype(str)))
+    alt_evren: list[str] | None = None
+    if semboller is not None:
+        eksik = sorted(set(semboller) - set(uyeler))
+        if eksik:
+            raise EvrenKosuHatasi(f"alt evren pencerede üye olmayan çift istiyor: {eksik}")
+        if len(set(semboller)) < len(uyeler):
+            alt_evren = sorted(set(semboller))
+            uyeler = alt_evren
+    semboller = uyeler
     if azami_sembol is not None and len(semboller) > azami_sembol:
         raise EvrenKosuHatasi(
             f"pencerede {len(semboller)} çift üye olmuş, tavan {azami_sembol}; kırpmak evreni "
@@ -375,6 +394,10 @@ def fx_veri_kur(
 
     adim = timeframe_ms(timeframe)
     alt_ms, ust_ms = _pencere_sinirlari(baslangic_ay, bitis_ay)
+    if bitis_pazar:
+        pazar_ms = int(np.datetime64(bitis_pazar, "D").astype("datetime64[ms]").astype("int64"))
+        hafta_ust = pazar_ms + 7 * 86_400_000
+        ust_ms = hafta_ust if ust_ms is None else min(ust_ms, hafta_ust)
     yukleme_alt = None if alt_ms is None else alt_ms - max(0, isinma_bar) * adim
 
     depo = fx_mod.FxDepo(depo_kok)
@@ -422,12 +445,14 @@ def fx_veri_kur(
             "kural": meta.get("kural"),
             "kural_kimlik": meta.get("kural_kimlik"),
             "takvim": {"id": tk.kimlik, "icerik_hash": tk.icerik_hash},
-            "pencere": {"baslangic_ay": baslangic_ay, "bitis_ay": bitis_ay},
+            "pencere": {"baslangic_ay": baslangic_ay, "bitis_ay": bitis_ay,
+                        **({"bitis_pazar": bitis_pazar} if bitis_pazar else {})},
             "sembol_sayisi": len(semboller),
             "bar_sayisi": int(len(izgara)),
             "isinma_bar": int(olcum_baslangici),
             "uye_bar_toplami": int(sum(int(u.sum()) for u in uyelik.values())),
             "bar_yok_uyelik": dict(sorted(bar_yok_uyelik.items())),
+            **({"alt_evren": alt_evren} if alt_evren is not None else {}),
             "kalite": {s: kalite[s] for s in sorted(kalite)},
         },
         olcum_baslangici=olcum_baslangici,
