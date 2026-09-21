@@ -231,6 +231,31 @@ class TestFxAl:
         with pytest.raises(FxHatasi, match="çakışan dakika"):
             fx_al("EURUSD", "2024-01-07", "2024-01-20", depo=FxDepo(tmp_path), indirici=k)
 
+    def test_bozuk_govde_isaretlenir_bar_uretmez_yeniden_istenmez(self, tmp_path):
+        """K-100/4: sağlayıcı 200 + NUL gövde (ölçüldü: AUDCAD 2024-35). `bozuk` sınıfı: kanıt
+        `.bozuk.bin`, işaret `.bozuk`, manifestoda `durum: bozuk` + sha; bar yok; ikinci çağrı
+        indirmez; evren kanıtı `var` (dosya-var kuralı), kesif ile çelişmez."""
+        from scryne_quant.data import fx_evren
+
+        kaynak = SahteKaynak(
+            {(2024, 2): _hafta(dt.date(2024, 1, 7)), (2024, 3): bytes(4096)},
+        )
+        depo = FxDepo(tmp_path)
+        k1 = fx_al("EURUSD", "2024-01-07", "2024-01-19", depo=depo, indirici=kaynak)
+        assert k1.bar_sayisi == 3 and set(k1.haftalar) == {"2024-2", "2024-3"}
+        b = k1.haftalar["2024-3"]
+        assert b["durum"] == "bozuk" and b["bayt"] == 4096 and len(b["sha256"]) == 64
+        assert "çözülemedi" in b["neden"]
+        gelen = tmp_path / "_gelen" / "EURUSD"
+        assert (gelen / "2024-3.bozuk").exists() and (gelen / "2024-3.csv.gz.bozuk.bin").exists()
+        assert not (gelen / "2024-3.csv.gz").exists()
+        n = len(kaynak.cagri)
+        k2 = fx_al("EURUSD", "2024-01-07", "2024-01-19", depo=depo, indirici=kaynak)
+        assert len(kaynak.cagri) == n and k2.sha256 == k1.sha256
+        assert k2.haftalar["2024-3"]["durum"] == "bozuk" and k2.haftalar["2024-3"]["bayt"] == 4096
+        varlik, _ = fx_evren.kanit_topla(depo, ("EURUSD",))
+        assert varlik["EURUSD"] == {"2024-2": True, "2024-3": True}
+
     def test_parquet_semasi_ve_hacim_yok(self, tmp_path, kaynak):
         import pyarrow.parquet as pq
 

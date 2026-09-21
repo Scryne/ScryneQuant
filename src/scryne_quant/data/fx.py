@@ -243,7 +243,8 @@ class FxKaydi:
     son_ms: int | None
     sha256: str | None
     haftalar: dict[str, dict[str, Any]]
-    """`"YYYY-W"` → `{sha256, satir, ilk_ms, son_ms}` ya da `{"durum": "yok"}` (404)."""
+    """`"YYYY-W"` → `{sha256, satir, ilk_ms, son_ms}`, `{"durum": "yok"}` (404) ya da
+    `{"durum": "bozuk", sha256, bayt, neden}` (sağlayıcı 200 döndü, gövde çözülemedi; K-100/4)."""
     bitis_gun: str | None
 
     def sozluk(self) -> dict[str, Any]:
@@ -337,20 +338,45 @@ def _gun(metin: str) -> dt.date:
     return dt.date.fromisoformat(metin)
 
 
+def _bozuk_isaretle(yol: Path, neden: str) -> dict[str, Any]:
+    """Çözülemeyen gövdeyi kanıt olarak `<hafta>.bozuk.bin`e taşır, `<hafta>.bozuk` işaretini yazar.
+
+    Sağlayıcı 200 + `Content-Length` döndürüp gövdeyi bozuk veriyor (ölçüldü: AUDCAD 2024-35,
+    98.361 baytın 98.219'u NUL; K-100/4). Bu bir 404 (`yok`) değil, "dosya var ama kullanılamaz":
+    bir daha indirilmez, manifestoya `bozuk` olarak girer, bar üretmez. Uydurma/onarım yok.
+    """
+    kanit = yol.with_name(f"{yol.name}.bozuk.bin")
+    if yol.exists():
+        yol.replace(kanit)
+    kayit = {
+        "durum": "bozuk",
+        "sha256": dosya_hash(kanit) if kanit.exists() else None,
+        "bayt": kanit.stat().st_size if kanit.exists() else 0,
+        "neden": neden,
+    }
+    isaret = yol.parent / (yol.name.removesuffix(".csv.gz") + ".bozuk")
+    isaret.write_text(json.dumps(kayit, ensure_ascii=False) + "\n", encoding="utf-8")
+    return kayit
+
+
 def _gelen_al(depo: FxDepo, pair: str, pazar: dt.date, indirici: Indirici
-              ) -> tuple[Path | None, bool]:
+              ) -> tuple[Path | None, str]:
     """Haftalık dosyayı `_gelen`e getirir (kanonik ad); yıl sınırında alternatif anahtar denenir.
 
-    Döner: (yol | None=hiçbir anahtarda yok, yeni_indirildi).
+    Döner: `(yol | None, durum)`; durum `var` / `yok` (404, `.yok` işareti) / `bozuk` (`.bozuk`
+    işareti, K-100/4).
     """
     anahtarlar = hafta_anahtarlari(pazar)
     yil, hafta = anahtarlar[0]
     yol = depo.gelen_yolu(pair, yil, hafta)
     yok = yol.parent / f"{yil}-{hafta}.yok"
+    bozuk = yol.parent / f"{yil}-{hafta}.bozuk"
+    if bozuk.exists():
+        return None, "bozuk"
     if yol.exists() and yol.stat().st_size > 0:
-        return yol, False
+        return yol, "var"
     if yok.exists():
-        return None, False
+        return None, "yok"
     govde = None
     for y, w in anahtarlar:
         govde = indirici(dosya_url(pair, y, w))
@@ -359,11 +385,11 @@ def _gelen_al(depo: FxDepo, pair: str, pazar: dt.date, indirici: Indirici
     yol.parent.mkdir(parents=True, exist_ok=True)
     if govde is None:
         yok.write_text("404\n", encoding="utf-8")
-        return None, True
+        return None, "yok"
     gecici = yol.with_suffix(".tmp")
     gecici.write_bytes(govde)
     gecici.replace(yol)
-    return yol, True
+    return yol, "var"
 
 
 def fx_al(
@@ -398,11 +424,25 @@ def fx_al(
     for pazar in pazarlar(bas, bit):
         yil, hafta = hafta_no(pazar)
         anahtar = f"{yil}-{hafta}"
-        yol, _ = _gelen_al(depo, pair, pazar, indirici)
+        yol, durum = _gelen_al(depo, pair, pazar, indirici)
         if yol is None:
-            haftalar[anahtar] = {"durum": "yok", "pazar": pazar.isoformat()}
+            haftalar[anahtar] = {"durum": durum, "pazar": pazar.isoformat()}
+            if durum == "bozuk":
+                isaret = depo.gelen_yolu(pair, *hafta_anahtarlari(pazar)[0]).with_suffix("")
+                isaret = isaret.with_name(isaret.name.removesuffix(".csv") + ".bozuk")
+                haftalar[anahtar].update(json.loads(isaret.read_text(encoding="utf-8")))
             continue
-        m1 = m1_oku(yol.read_bytes(), ad=yol.name)
+        try:
+            m1 = m1_oku(yol.read_bytes(), ad=yol.name)
+        except FxHatasi as hata:
+            # Sağlayıcının bozuk dosyası (K-100/4): gövde çözülemiyor (AUDCAD 2024-35, NUL),
+            # yalnız başlık (CADCHF 2024-18, 74 bayt), sırasız/tutarsız satır. Kanıt saklanır,
+            # hafta `bozuk` olur; bar uydurulmaz, koşu durmaz — ama gizlenmez de. **Başlık
+            # değişikliği** bozuk dosya değil şema değişikliğidir: hâlâ hata (sessizce geçilmez).
+            if "başlık beklenen değil" in str(hata):
+                raise
+            haftalar[anahtar] = {"pazar": pazar.isoformat(), **_bozuk_isaretle(yol, str(hata))}
+            continue
         haftalar[anahtar] = {
             "durum": "var", "pazar": pazar.isoformat(), "sha256": dosya_hash(yol),
             "m1_satir": int(len(m1)),

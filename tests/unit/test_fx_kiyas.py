@@ -29,6 +29,7 @@ from scryne_quant.data.fx import FxDepo
 from scryne_quant.data.semalar import KaliteDurumu
 from scryne_quant.data.takvim import TAKVIM_FX_5X24, takvim
 from scryne_quant.research import evren_kosu
+from scryne_quant.strategy.evren import LISTELENMEDI
 from scryne_quant.strategy.kosu import evren_gorunum_kur
 from scryne_quant.strategy.kutuphane import EVREN_KIYAS
 from scryne_quant.strategy.kutuphane.evren_esit_agirlik import (
@@ -116,7 +117,7 @@ class TestGercekFixture:
         assert "gecici_finansman_modeli" in sonuc.promotion_engelleri
         assert sonuc.takvim == {"id": TAKVIM_FX_5X24, "icerik_hash": TFX.icerik_hash}
         k = sonuc.sozluk()
-        assert k["config"]["maliyetler"]["EURUSD"]["id"] == "fxcm-fx"
+        assert k["config"]["maliyetler"]["EURUSD"]["id"] == "fxcm-eurusd"
         assert {k["config"]["finansmanlar"][c]["id"] for c in CIFTLER} == {
             "fxcm-eurusd",
             "fxcm-gbpusd",
@@ -128,9 +129,10 @@ class TestGercekFixture:
         """Dengeleme periyodu koşudan uzun → çift başına tek alış: fiyat `ask_open[t] × (1+s)`."""
         kurulum, sonuc = _kosu(FxEvrenEsitAgirlik(yeniden_dengele_bar=100_000))
         z = kurulum.gorunum.zamanlar
-        model = maliyet_mod.MaliyetKatalogu().coz("fxcm-fx", binance_spot_kripto=False)
-        s = Decimal(str(model.slippage_bps)) / Decimal(10_000)
+        katalog = maliyet_mod.MaliyetKatalogu()
         for tur in sonuc.islemler:
+            model = katalog.coz(f"fxcm-{tur.sembol.lower()}", binance_spot_kripto=False)
+            s = Decimal(str(model.slippage_bps)) / Decimal(10_000)
             assert tur.fill_sayisi == 1 and not tur.kapali  # al-tut: sonda açık (K-030 istisnası)
             bar = int(np.searchsorted(z, tur.acilis_ms))
             assert bar == ATR_PENCERESI + 1  # ATR 14. barda hazır → hedef; fill `t+1` (K-004)
@@ -139,7 +141,8 @@ class TestGercekFixture:
             fiyat = Decimal(tur.giris_notional) / Decimal(tur.giris_miktar)
             assert abs(fiyat - ask * (1 + s)) <= Decimal(TOLERANS) * ask
             assert tur.giris_notional == pytest.approx(3000.0, rel=1e-9)  # 0,30 × 10.000
-            assert tur.spread > 0 and tur.komisyon == pytest.approx(3000.0 * 0.26e-4, rel=1e-9)
+            assert tur.spread > 0
+            assert tur.komisyon == pytest.approx(3000.0 * model.fee_taker_bps * 1e-4, rel=1e-9)
         # Rollover: proxy modelde EURUSD/GBPUSD bedel > 0, USDJPY 0 (lehte carry tabanı, K-098).
         fin = {i.sembol: i.finansman for i in sonuc.islemler}
         assert fin["EURUSD"] > fin["GBPUSD"] > 0 and fin["USDJPY"] == 0.0
@@ -222,6 +225,50 @@ class TestPitCikisi:
         assert abs(son_fiyat - bid * (1 - s)) <= Decimal(TOLERANS) * bid
         assert bb.finansman > 0 and turlar["AAAUSD"].finansman > 0
         assert sonuc.atlanan.get(str(AtlamaSebebi.RISK_REDDETTI), 0) == 0
+
+
+class TestTakiliPozisyon:
+    def test_bari_olmayan_pozisyon_brut_hedeften_dusulur(self):
+        """K-100/3: B ikinci hafta bar üretmez (bozuk/sağlayıcı boşluğu kalıbı) ama pozisyon
+        açık. Hedef 0,98 kalan çiftlere olduğu gibi dağıtılsaydı brüt > 1 → nakit 0 → rollover
+        K-095 ile koşuyu durdururdu (ölçüldü: CADCHF 2024-18). FX kıyası takılı payı düşer."""
+        n, hafta1 = 238, 118
+        a = _sentetik("AAAUSD", n, 1.10)
+        b = _sentetik("BBBUSD", n, 1.30)
+        for k in ("open", "high", "low", "close", "bid_open", "ask_open"):
+            b[k] = b[k].copy()
+            b[k][hafta1:] = np.nan
+        b["quality_status"] = b["quality_status"].copy()
+        b["quality_status"][hafta1:] = LISTELENMEDI
+        uyelik_b = np.ones(n, dtype=bool)
+        uyelik_b[hafta1:] = False
+        strateji = FxEvrenEsitAgirlik(yeniden_dengele_bar=24, azami_agirlik=0.6)
+        g = evren_gorunum_kur(
+            "1h",
+            {"AAAUSD": a, "BBBUSD": b},
+            {"AAAUSD": np.ones(n, dtype=bool), "BBBUSD": uyelik_b},
+            strateji,
+        )
+        m = MaliyetModeli(fee_taker_bps=0.26, slippage_bps=1.0)
+        fin = fin_mod.FinansmanModeli(uzun_gunluk_bps=1.0)
+        sonuc = CokluBacktest(
+            strateji,
+            m,
+            takvim=TFX,
+            maliyetler={s: SembolMaliyeti("fxcm-fx", m) for s in ("AAAUSD", "BBBUSD")},
+            finansmanlar={
+                s: SembolFinansmani(f"fxcm-{s.lower()}", fin) for s in ("AAAUSD", "BBBUSD")
+            },
+        ).calistir(g)
+        # Koşu durmadı; B kapanamadı (barı yok); A hedefi 0,98 − B payı → brüt ≈ 0,98.
+        turlar = {i.sembol: i for i in sonuc.islemler}
+        assert not turlar["BBBUSD"].kapali and sonuc.atlanan["bayat_degerleme"] == n - hafta1
+        assert float(sonuc.maruziyet[hafta1 + 30 :].max()) <= 0.985
+        assert sonuc.metrikler.toplam_finansman > 0
+
+    def test_kripto_kiyasi_ayarlari_sabit(self):
+        k = EvrenEsitAgirlik()
+        assert k._ayarlar_icin(None) is k._ayarlar  # kanca kimlik: Faz 10 davranışı
 
 
 # ------------------------------------------------------------------ sq

@@ -25,9 +25,9 @@ arasındaki **tek** çeviridir ve üç şeyi açıkça yapar:
    bar, UTC tarihini içeren Pazar-başlı haftanın satırına bakar; kanıtı olmayan hafta üye değil.
 
 **Kimlik:** tablodaki kanonik kimlik (`fxcm-fx:cfd:<PAIR>@2012-01-01`, `fx_evren`) aynen; FX'te
-kırılma tespiti uygulanmadı (tek segment). `maliyet_modeli_id = "fxcm-fx"`,
-`finansman_modeli_id = "fxcm-<pair>"` — **referans**, dosya değil: `config/maliyet/fxcm-fx.json`
-ve `config/finansman/fxcm-<pair>.json` yoksa koşu katalogda durur (K-084, K-095; oran uydurulmaz).
+kırılma tespiti uygulanmadı (tek segment). `maliyet_modeli_id = "fxcm-<pair>"` (K-100/5),
+`finansman_modeli_id = "fxcm-<pair>"` — **referans**: `config/maliyet/fxcm-<pair>.json` ve
+`config/finansman/fxcm-<pair>.json` yoksa koşu katalogda durur (K-084, K-095; oran uydurulmaz).
 """
 
 from __future__ import annotations
@@ -50,11 +50,18 @@ from scryne_quant.data.takvim import TAKVIM_FX_5X24, Takvim
 from scryne_quant.strategy.evren import LISTELENMEDI
 
 TIP_CFD: Final = "cfd"
+#: K-098 venue modeli `fxcm-fx` 3 çiftte geçerliydi; 21 çiftte p75 oranı 2,39 ≥ 1,5 ölçüldü → çift
+#: başına model (K-100/5). Kimlik referans; dosya `config/maliyet/fxcm-<pair>.json`.
 MALIYET_MODELI_FX: Final = "fxcm-fx"
 #: Bid/ask OHLC + `m1_sayisi`: motora **aynen** taşınan FX sütunları.
 FX_EK_SUTUNLAR: Final[tuple[str, ...]] = tuple(s for s in FX_BAR_SUTUNLARI if s != "open_time")
 _YANLAR: Final = ("bid", "ask")
 _ALANLAR: Final = ("open", "high", "low", "close")
+
+
+#: Kapanış artığı sayılacak azami `m1_sayisi`: kapanış anındaki tek tük son tick. Ölçülen iki
+#: vakada 1; beşten büyüğü artık değil, takvimin yanlışlandığı yerdir (hata).
+KAPANIS_ARTIGI_DK: Final = 5
 
 
 class FxGorunumHatasi(ValueError):
@@ -66,7 +73,26 @@ def finansman_modeli_id(pair: str) -> str:
     return f"fxcm-{pair.lower()}"
 
 
+def maliyet_modeli_id(pair: str) -> str:
+    """Çiftin maliyet modeli kimliği (K-100/5: çift başına; dosya `config/maliyet/<id>.json`)."""
+    return f"fxcm-{pair.lower()}"
+
+
 # ------------------------------------------------------------------ kalite
+
+
+def _kapanis_ani(zaman: np.ndarray, tk: Takvim) -> np.ndarray:
+    """Damga yerel seans kapanış gününün kapanış saatinde mi (`kapanis_gun` `kapanis_saat`:00)?"""
+    if tk.seans is None:
+        return np.zeros(zaman.size, dtype=bool)
+    yerel = pd.to_datetime(np.asarray(zaman, dtype="int64"), unit="ms", utc=True).tz_convert(
+        tk.seans.zaman_dilimi
+    )
+    return (
+        (yerel.weekday.to_numpy() == tk.seans.kapanis_gun)
+        & (yerel.hour.to_numpy() == tk.seans.kapanis_saat)
+        & (yerel.minute.to_numpy() == 0)
+    )
 
 
 def fx_dogrula(
@@ -101,12 +127,23 @@ def fx_dogrula(
     if (np.diff(zaman) <= 0).any():
         raise FxGorunumHatasi(f"{pair}: open_time sıralı ve tekil değil")
     disari = ~takvim.acik_mi(zaman)
-    if disari.any():
-        ornek = int(zaman[disari][0])
+    # Kapanış artığı (K-100/2, ölçüldü: NZDUSD 2024-02-02 22:00, USDCHF 2024-01-12 22:00 — Cuma
+    # NY 17:00 kapanış anında `m1_sayisi` 1): seans kapanış anında açılan ve ≤ KAPANIS_ARTIGI_DK
+    # dakikası olan bar. Seans dışıdır, karar/fill'e girmez, ızgaraya konmaz; **sayılarak** atılır
+    # (rapor `kapanis_artigi`), sessizce değil. Kapalı dönemin derinindeki bar hâlâ hata.
+    artik = disari & _kapanis_ani(zaman, takvim) & (
+        calisma["m1_sayisi"].to_numpy(dtype="int64") <= KAPANIS_ARTIGI_DK
+    )
+    if (disari & ~artik).any():
+        ornek = int(zaman[disari & ~artik][0])
         raise FxGorunumHatasi(
-            f"{pair}: {int(disari.sum())} bar takvimin kapalı saydığı anda ({utc_str(ornek)}); "
-            "takvim ya da veri yanlış — sessizce atılmaz (K-089)"
+            f"{pair}: {int((disari & ~artik).sum())} bar takvimin kapalı saydığı anda "
+            f"({utc_str(ornek)}); takvim ya da veri yanlış — sessizce atılmaz (K-089)"
         )
+    kapanis_artiklari = [utc_str(int(t)) for t in zaman[artik].tolist()]
+    if artik.any():
+        calisma = calisma.loc[~artik].reset_index(drop=True)
+        zaman = calisma["open_time"].to_numpy(dtype="int64")
 
     n = zaman.size
     yan = {
@@ -168,6 +205,7 @@ def fx_dogrula(
         "bayraklar": {str(k): int(v) for k, v in sorted(sayim.items())},
         "suspect_nedenleri": {ad: int(m.sum()) for ad, m in kurallar.items() if m.any()},
         "kisa_saat": int((m1 < 60).sum()),
+        "kapanis_artigi": kapanis_artiklari,
     }
     return calisma, rapor
 
@@ -271,7 +309,7 @@ def fx_enstruman(pair: str, son_ms: int, bar_sayisi: int) -> Enstruman:
         asset_class=VARLIK_FX,
         instrument_type=TIP_CFD,
         takvim_id=TAKVIM_FX_5X24,
-        maliyet_modeli_id=MALIYET_MODELI_FX,
+        maliyet_modeli_id=maliyet_modeli_id(pair),
         finansman_modeli_id=finansman_modeli_id(pair),
     )
 
@@ -282,6 +320,7 @@ __all__ = [
     "TIP_CFD",
     "FxGorunumHatasi",
     "finansman_modeli_id",
+    "maliyet_modeli_id",
     "fx_barlar",
     "fx_dogrula",
     "fx_enstruman",

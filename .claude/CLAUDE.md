@@ -218,12 +218,15 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   Fixture `tests/fixtures/fx/` gerçek EURUSD 2024 h2-h8 (`tools/fx_fixture_uret.py`).
 - `src/scryne_quant/data/fx_kalibrasyon.py` + `sq data fx-kalibre` — **FX maliyet kalibrasyonu
   (K-098, R5 Paket 1).** Kripto `kalibre_et` kalıbı, M1 orta fiyat; spread modele girmez (K-094),
-  rollover ±15 dk ayrı raporlu. `config/maliyet/fxcm-fx.json` **ölçülmüş** (Active Trader koşulu,
-  fee 0,26); `config/finansman/fxcm-<pair>.json` **proxy** (`tur=proxy` → gecici, promotion
+  rollover ±15 dk ayrı raporlu. `config/maliyet/fxcm-<pair>.json` **ölçülmüş** (21 çift, K-100/5; Active Trader koşulu); `config/finansman/fxcm-<pair>.json` **proxy** (`tur=proxy` → gecici, promotion
   engeli; `tools/fx_finansman_proxy_yaz.py`). Rapor `docs/research/records/2026-09-21-R5-fx-kalibrasyon.json`.
 - `strategy/kutuphane/evren_esit_agirlik.py:FxEvrenEsitAgirlik` — **hacimsiz FX kıyası (K-099).**
   PIT üyelerinin tamamı eşit ağırlık, 120 bar dengeleme, skor yok, hacim NaN kalır; kripto kıyası
   iki kancayla aynı davranış. `sq evren backtest --strateji fx_evren_esit_agirlik --yeniden-dengele 120`.
+- **FX depo 21 çift × 55 hafta (K-100).** `data/fx/` pencere 2023-11-19..2024-12-13; `tools/
+  fx_depo_durumu.py` durum tablosu (tam/kısmi/sağlayıcı boşluğu/`bozuk`); `bozuk` = sağlayıcı 200
+  ama gövde kullanılamaz (kanıt `.bozuk.bin`, bar yok, evrende `var`). Maliyet **çift başına**
+  `config/maliyet/fxcm-<pair>.json` (21, ölçülmüş), finansman proxy 21 dosya (gecici).
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

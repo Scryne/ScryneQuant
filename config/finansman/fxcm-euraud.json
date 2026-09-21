@@ -1,0 +1,12 @@
+{
+  "kaynak": {
+    "aralik": "2023-11-08..2024-06-12",
+    "gerekce": "PROXY — merkez bankası politika faizi farkı, broker oranı değil. Uzun EURAUD: EUR tutulur (alınan faiz aralığın altı 4.0%), AUD borçlanılır (ödenen faiz aralığın üstü 4.35%); ham = (quote_üst − taban_alt)/365×100 = 0.0959 bps/gün; uzun_gunluk_bps = max(ham, 0) = 0.0959 (K-095/1, K-007: lehte carry modellenmez; ham kayıtta). Broker marjı bilinmiyor, eklenmedi. FXCM tarihli rollover arşivi yok (yalnız platform, bir gün önceden; fxcm.com help 'Where is rollover shown', 2026-09-21). Kaynaklar: ECB deposit facility rate 4.00% from 2023-09-20; cut to 3.75% effective 2024-06-12; https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html | Reserve Bank of Australia cash rate target 4.35% from 2023-11-08 (decision 2023-11-07) until the 2025-02-18 cut to 4.10%; https://www.rba.gov.au/statistics/cash-rate/",
+    "ham_gunluk_bps": 0.09589041095890401,
+    "saglayici": "merkez-bankasi-politika-faizi (proxy)",
+    "tarih": "2026-09-21",
+    "tur": "proxy"
+  },
+  "uclu_swap_gunu": 2,
+  "uzun_gunluk_bps": 0.09589041095890401
+}

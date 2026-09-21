@@ -1,0 +1,448 @@
+{
+  "ciftler": {
+    "AUDCAD": {
+      "bar_sayisi": 6538,
+      "bozuk": [
+        "2024-35"
+      ],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 56,
+      "saglayici_yok": [],
+      "sha256": "7a579e13cb95fe21f11640d0e517d6fd470f769c603c7e7d8415bfb2f84ab325",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "AUDCHF": {
+      "bar_sayisi": 6538,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "99b734e8b98f055f3c52dd0e3379ee4bef647e3a28b0c591985d8d3dce8a7132",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "AUDJPY": {
+      "bar_sayisi": 6538,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "e5a608474c378bbd08f766300f1d4d6f3efbc3145d5e31181c1afc982c5a0854",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "AUDNZD": {
+      "bar_sayisi": 6538,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "dd208abe9818e52153173360c3bea2f79628a4c47ea64c7ee7c0cda9d24892ea",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "CADCHF": {
+      "bar_sayisi": 6417,
+      "bozuk": [
+        "2024-18"
+      ],
+      "depoda_var": 54,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "fbc5516a4a0f3f17fcdc633f5e14566b8d6fad7eac5c49b4f2cc0b17712b65d2",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "EURAUD": {
+      "bar_sayisi": 6539,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "3d66fe9aaf9dac0b887a889955000cfb28988f99080ddd6493b22616f33cea7b",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "EURCHF": {
+      "bar_sayisi": 6539,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "65b218e64f45aa40dd067b9da2803ceaea46a6943619703fab8f463f1439a01d",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "EURGBP": {
+      "bar_sayisi": 6541,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "a36c7e36e4bff74242912263527a367626dfd3688a428e70b02d506367ea89af",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "EURJPY": {
+      "bar_sayisi": 6539,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "f4dc20b095313aebe9e2dac01e2d441604c341b8cb5019e3ca919b8ede7128f7",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "EURUSD": {
+      "bar_sayisi": 6543,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "9dee3e07e4669de4223178c2a50fd0e9f19aee93197ea06755862f8b00be02e9",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "GBPCHF": {
+      "bar_sayisi": 6536,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "7072a231e7f0e45c000c58676a48d9a0ef8a0c5b48171e0430502a87aaa2a8d8",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "GBPJPY": {
+      "bar_sayisi": 6538,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "32293fadda23ba24623141970422e02ba67140971cae41444675f86c4f0aac78",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "GBPNZD": {
+      "bar_sayisi": 6537,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "c5ca302e57425c549f14b892ecaac96e2d9b10c6b9ff2329655dccfc6e873dc2",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "GBPUSD": {
+      "bar_sayisi": 6543,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "77b3b320358d07ff1f846884e0f5e61445fb20c36d3dda0dd5ade65ad40405c5",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "NZDCAD": {
+      "bar_sayisi": 6418,
+      "bozuk": [
+        "2024-18"
+      ],
+      "depoda_var": 54,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "45561b6116e88658344db851e586a6f4c6eb3cf1a1d97a3dfaf25326ade405db",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "NZDCHF": {
+      "bar_sayisi": 6419,
+      "bozuk": [
+        "2024-18"
+      ],
+      "depoda_var": 54,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "bec856daeec9490c73ce27947cee456fddc7b0ada8bb5a303aea13fdf4a93a3d",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "NZDJPY": {
+      "bar_sayisi": 6537,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "001772721b42c64a24dd00f23eac70ec68f51d086f50a0921fe0827c13224aa9",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "NZDUSD": {
+      "bar_sayisi": 6543,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "874e2361f15cb40b4368e2a7b175eff517932b647cc237fa8311aa2ff4f9d7b8",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "USDCAD": {
+      "bar_sayisi": 6540,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "b756e732ac46e9c4c25c9bc4a76847513c1b89598c34b0884f7514c628441518",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "USDCHF": {
+      "bar_sayisi": 6540,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "ee75abb668f98933d4e6c1eefac8486327edb59899e155d1b19dbf8247e7c542",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    },
+    "USDJPY": {
+      "bar_sayisi": 6540,
+      "bozuk": [],
+      "depoda_var": 55,
+      "eksik_indirme": [],
+      "ilk": "2023-11-19 22:00:00 UTC",
+      "kanit_yok": [],
+      "pencere_hafta": 56,
+      "saglayici_var": 55,
+      "saglayici_yok": [
+        "2024-35"
+      ],
+      "sha256": "0769052e1fe96aa2172d164a8e5d827372fa5b51701c5ae9c2ea6ba8d5f00c48",
+      "sinif": "tam",
+      "son": "2024-12-13 21:00:00 UTC"
+    }
+  },
+  "kanit_kaynaklari": {
+    "AUDCAD": {
+      "hafta": 773,
+      "var": 752
+    },
+    "AUDCHF": {
+      "hafta": 773,
+      "var": 750
+    },
+    "AUDJPY": {
+      "hafta": 773,
+      "var": 749
+    },
+    "AUDNZD": {
+      "hafta": 773,
+      "var": 749
+    },
+    "CADCHF": {
+      "hafta": 773,
+      "var": 747
+    },
+    "EURAUD": {
+      "hafta": 773,
+      "var": 747
+    },
+    "EURCHF": {
+      "hafta": 773,
+      "var": 747
+    },
+    "EURGBP": {
+      "hafta": 773,
+      "var": 747
+    },
+    "EURJPY": {
+      "hafta": 773,
+      "var": 747
+    },
+    "EURUSD": {
+      "hafta": 773,
+      "var": 747
+    },
+    "GBPCHF": {
+      "hafta": 773,
+      "var": 747
+    },
+    "GBPJPY": {
+      "hafta": 773,
+      "var": 747
+    },
+    "GBPNZD": {
+      "hafta": 773,
+      "var": 747
+    },
+    "GBPUSD": {
+      "hafta": 773,
+      "var": 747
+    },
+    "NZDCAD": {
+      "hafta": 773,
+      "var": 747
+    },
+    "NZDCHF": {
+      "hafta": 773,
+      "var": 747
+    },
+    "NZDJPY": {
+      "hafta": 773,
+      "var": 747
+    },
+    "NZDUSD": {
+      "hafta": 773,
+      "var": 747
+    },
+    "USDCAD": {
+      "hafta": 773,
+      "var": 747
+    },
+    "USDCHF": {
+      "hafta": 773,
+      "var": 747
+    },
+    "USDJPY": {
+      "hafta": 773,
+      "var": 747
+    }
+  },
+  "ozet": {
+    "bozuk_hafta": 4,
+    "depoda_yok": 0,
+    "kanit_yok_hafta": 0,
+    "kismi": 0,
+    "saglayici_yok_hafta": 20,
+    "tam": 21
+  },
+  "pencere": {
+    "bas": "2023-11-19",
+    "bit": "2024-12-13",
+    "hafta": 56,
+    "ilk_hafta": "2023-47",
+    "son_hafta": "2024-50"
+  },
+  "uretildi": "2026-09-21 15:27:37 UTC"
+}

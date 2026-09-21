@@ -151,7 +151,7 @@ class TestAdaptor:
         tablo = pd.read_parquet(TABLO)
         assert e.kanonik_id == tablo["kanonik_id"].iloc[0] == "fxcm-fx:cfd:EURUSD@2012-01-01"
         assert e.instrument_type == "cfd" and e.takvim_id == TAKVIM_FX_5X24
-        assert e.maliyet_modeli_id == "fxcm-fx" and e.finansman_modeli_id == "fxcm-eurusd"
+        assert e.maliyet_modeli_id == "fxcm-eurusd" and e.finansman_modeli_id == "fxcm-eurusd"
 
 
 # ------------------------------------------------------------------ kalite: fail closed
@@ -215,6 +215,25 @@ class TestKalite:
             fxg.fx_dogrula(ham, takvim(TAKVIM_24X7))
         with pytest.raises(fxg.FxGorunumHatasi, match="tekil"):
             fxg.fx_dogrula(pd.concat([ham, ham.iloc[[3]]]).sort_values("open_time"), TFX)
+
+    def test_kapanis_artigi_sayilarak_atilir_derin_kapali_hata(self):
+        """K-100/2: Cuma NY 17:00 kapanış anında `m1_sayisi ≤ 5` bar = kapanış artığı (ölçüldü:
+        USDCHF 2024-01-12, NZDUSD 2024-02-02). Sayılarak atılır; aynı anda 6+ dakika ya da kapalı
+        dönemin derinindeki bar hâlâ hata."""
+        ham = _ham()
+        artik = ham.iloc[[0]].copy()
+        artik["open_time"] = _ms("2024-01-12 22:00")  # Cuma 17:00 NY = kapanış anı
+        artik["m1_sayisi"] = 1
+        df = pd.concat([ham, artik]).sort_values("open_time").reset_index(drop=True)
+        bayrakli, rapor = fxg.fx_dogrula(df, TFX, pair="EURUSD")
+        assert rapor["kapanis_artigi"] == ["2024-01-12 22:00:00 UTC"]
+        assert len(bayrakli) == len(ham) and rapor["bar_sayisi"] == len(ham)
+        assert _ms("2024-01-12 22:00") not in set(bayrakli["open_time"].tolist())
+        artik["m1_sayisi"] = fxg.KAPANIS_ARTIGI_DK + 1
+        df = pd.concat([ham, artik]).sort_values("open_time").reset_index(drop=True)
+        with pytest.raises(fxg.FxGorunumHatasi, match="kapalı saydığı"):
+            fxg.fx_dogrula(df, TFX)
+        assert fxg.fx_dogrula(ham, TFX)[1]["kapanis_artigi"] == []
 
     def test_ortak_izgara_seans_disi_damgayi_reddeder(self):
         z = np.append(_ham()["open_time"].to_numpy(), _ms("2024-01-13 12:00"))
@@ -339,13 +358,15 @@ class TestCli:
         monkeypatch.setattr(fin_mod, "VARSAYILAN_KATALOG_DIZINI", tmp_path / "f")
         r = self._cli()
         assert r.exit_code != 0
-        assert "fxcm-fx" in str(r.exception or r.output) and "dosya yok" in str(
+        assert "fxcm-eurusd" in str(r.exception or r.output) and "dosya yok" in str(
             r.exception or r.output
         )
 
     def test_finansman_dosyasi_yoksa_baslamaz(self, tmp_path, monkeypatch):
         (tmp_path / "m").mkdir()
-        (tmp_path / "m" / "fxcm-fx.json").write_text(MALIYET.model_dump_json(), encoding="utf-8")
+        (tmp_path / "m" / "fxcm-eurusd.json").write_text(
+            MALIYET.model_dump_json(), encoding="utf-8"
+        )
         monkeypatch.setattr(maliyet_mod, "VARSAYILAN_KATALOG_DIZINI", tmp_path / "m")
         monkeypatch.setattr(fin_mod, "VARSAYILAN_KATALOG_DIZINI", tmp_path / "f")
         r = self._cli()
@@ -354,7 +375,9 @@ class TestCli:
     def test_modeller_varsa_kosar_takvim_ve_bloklar_kayitta(self, tmp_path, monkeypatch):
         (tmp_path / "m").mkdir()
         (tmp_path / "f").mkdir()
-        (tmp_path / "m" / "fxcm-fx.json").write_text(MALIYET.model_dump_json(), encoding="utf-8")
+        (tmp_path / "m" / "fxcm-eurusd.json").write_text(
+            MALIYET.model_dump_json(), encoding="utf-8"
+        )
         (tmp_path / "f" / "fxcm-eurusd.json").write_text(
             FINANSMAN.model_dump_json(), encoding="utf-8"
         )

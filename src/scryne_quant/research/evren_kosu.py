@@ -393,7 +393,8 @@ def fx_veri_kur(
         kimlikler[pair] = [fxg_mod.fx_enstruman(pair, int(df["open_time"].iloc[-1]), len(df))]
         bayrakli, rapor = fxg_mod.fx_dogrula(_kirp(df, yukleme_alt, ust_ms), tk, pair=pair)
         kalite[pair] = {k: rapor[k] for k in ("bar_sayisi", "bayraklar", "suspect_nedenleri",
-                                              "bosluk_sayisi", "eksik_bar", "kisa_saat")}
+                                              "bosluk_sayisi", "eksik_bar", "kisa_saat",
+                                              "kapanis_artigi")}
         if not bayrakli.empty:
             barlar[pair] = fxg_mod.fx_barlar(bayrakli)
     if not barlar:

@@ -2,9 +2,10 @@
 
 Kanıt: (1) sentetik M1 deposunda spread/slippage/rollover penceresi/gap ayrımı sayıyla;
 (2) `fee_bps`, `finansman_proxy_bps`, `venue_karari` aritmetiği; (3) yazılmış gerçek dosyalar —
-`config/maliyet/fxcm-fx.json` ölçülmüş (gecici değil, fee 0,26, değer üç çiftin en büyük p75'i)
-ve `config/finansman/fxcm-*.json` **proxy** (gecici, aralık + ham değer kayıtlı) — rapor
-`docs/research/records/2026-09-21-R5-fx-kalibrasyon.json` ile tutarlı.
+`config/maliyet/fxcm-<pair>.json` ölçülmüş (21 çift, gecici değil; K-100/5 çift başına: p75 oranı
+2,39 ≥ 1,5; komisyon taban para birimine göre) ve `config/finansman/fxcm-*.json` **proxy** (gecici,
+aralık + ham değer kayıtlı) — 21 çiftlik rapor `2026-09-21-R5-fx-kalibrasyon-21cift.json` ile
+tutarlı; 3 çiftlik K-098 raporu tarihsel.
 """
 
 from __future__ import annotations
@@ -26,6 +27,9 @@ from scryne_quant.data.takvim import TAKVIM_FX_5X24, takvim
 
 KOK = Path(__file__).resolve().parents[2]
 RAPOR = KOK / "docs" / "research" / "records" / "2026-09-21-R5-fx-kalibrasyon.json"
+RAPOR_21 = KOK / "docs" / "research" / "records" / "2026-09-21-R5-fx-kalibrasyon-21cift.json"
+#: Taban para birimi → komisyon bps (K-100/5): £2/100K taban, tabanın USD değeri (pencere ort.).
+FEE_TABAN = {"AUD": 0.39, "CAD": 0.35, "EUR": 0.24, "GBP": 0.20, "NZD": 0.43, "USD": 0.26}
 TFX = takvim(TAKVIM_FX_5X24)
 CIFTLER = ("EURUSD", "GBPUSD", "USDJPY")
 
@@ -87,9 +91,10 @@ class TestOlcum:
 
 class TestAritmetik:
     def test_fee_bps_yukari_yuvarlar(self):
-        assert fk.fee_bps(1.27, 1.0, False) == 0.26  # USDJPY: 2×1,27 / 100k = 0,254 → 0,26
-        assert fk.fee_bps(1.27, 1.09, True) == 0.24  # EURUSD: 0,233 → 0,24
-        assert fk.fee_bps(1.0, 1.0, False) == 0.2
+        assert fk.fee_bps(1.27, 1.0) == 0.26  # USD tabanlı: 2×1,27 / 100k = 0,254 → 0,26
+        assert fk.fee_bps(1.27, 1.09) == 0.24  # EUR tabanlı: 0,233 → 0,24
+        assert fk.fee_bps(1.27, 0.61) == 0.42  # NZD tabanlı: 0,416 → 0,42
+        assert fk.fee_bps(1.0, 1.0) == 0.2
 
     def test_finansman_proxy_taban_ve_ham(self):
         ham, deger = fk.finansman_proxy_bps((4.00, 4.00), (5.25, 5.50))  # EURUSD
@@ -122,33 +127,36 @@ class TestKaynakSemasi:
 
 
 class TestYazilanDosyalar:
-    def test_maliyet_modeli_olculmus(self):
-        m = maliyet_mod.MaliyetKatalogu().coz("fxcm-fx", binance_spot_kripto=False)
-        assert not m.gecici and m.fee_taker_bps == 0.26
-        k = m.kalibrasyon
-        assert k is not None and k.sembol == "EURUSD,GBPUSD,USDJPY" and k.timeframe == "1m"
-        p75 = {c: k.dagilim_bps[f"{c}_p75"] for c in CIFTLER}
-        assert m.slippage_bps == max(p75.values()) == k.deger_bps
-        assert max(p75.values()) / min(p75.values()) < fk.VENUE_ORAN_ESIGI
-        assert "Active Trader" in k.gerekce and "0 DEGIL" in k.gerekce
-        assert k.aralik_baslangic_ms >= _ms("2024-01-07 00:00")
-        assert k.aralik_bitis_ms < _ms("2024-02-03 00:00")
-
-    def test_rapor_ile_tutarli(self):
-        rapor = json.loads(RAPOR.read_text(encoding="utf-8"))
-        m = maliyet_mod.MaliyetKatalogu().coz("fxcm-fx", binance_spot_kripto=False)
-        assert rapor["venue_karari"]["model"] == "fxcm-fx"
-        assert rapor["fee"]["fee_taker_bps"] == m.fee_taker_bps
-        for c in CIFTLER:
+    def test_maliyet_modelleri_cift_basina_olculmus(self):
+        katalog = maliyet_mod.MaliyetKatalogu()
+        rapor = json.loads(RAPOR_21.read_text(encoding="utf-8"))
+        assert rapor["venue_karari"]["model"] == "cift-basi"
+        assert rapor["venue_karari"]["oran"] >= fk.VENUE_ORAN_ESIGI
+        assert not katalog.yol("fxcm-fx").exists()  # 3 çiftlik venue modeli kaldırıldı (K-100/5)
+        for c in fx_mod.FXCM_CIFTLER:
+            m = katalog.coz(f"fxcm-{c.lower()}", binance_spot_kripto=False)
+            k = m.kalibrasyon
+            assert not m.gecici and k is not None and k.sembol == c and k.timeframe == "1m"
+            assert m.fee_taker_bps == FEE_TABAN[c[:3]] == rapor["fee"]["adaylar_bps"][c]
             o = rapor["olcumler"][c]
-            assert o["slippage"]["deger_bps"] == m.kalibrasyon.dagilim_bps[f"{c}_p75"]
-            # Rollover penceresi spread'i ayrı ve belirgin: p50 genişleme ≥ 3×.
-            assert o["spread"]["genisleme_orani_p50"] >= 3.0
+            assert m.slippage_bps == k.deger_bps == o["slippage"]["deger_bps"]
+            assert k.bar_sayisi == o["slippage"]["kullanilan_bar"] > 380_000
+            assert "Active Trader" in k.gerekce and "cift basina" in k.gerekce
+            assert k.aralik_baslangic_ms >= _ms("2023-11-19 00:00")
+            assert k.aralik_bitis_ms < _ms("2024-12-14 00:00")
+            # Rollover penceresi spread'i ayrı ve belirgin: p50 genişleme ≥ 2×, p50 > dışı p95.
+            assert o["spread"]["genisleme_orani_p50"] >= 2.0
             assert o["spread"]["rollover_penceresi"]["p50"] > o["spread"]["rollover_disi"]["p95"]
+
+    def test_uc_ciftlik_k098_raporu_tarihsel_ve_tutarli(self):
+        rapor = json.loads(RAPOR.read_text(encoding="utf-8"))
+        assert rapor["venue_karari"]["model"] == "fxcm-fx" and rapor["fee"]["fee_taker_bps"] == 0.26
+        for c in CIFTLER:
+            assert rapor["olcumler"][c]["spread"]["genisleme_orani_p50"] >= 3.0
 
     def test_finansman_dosyalari_proxy_ve_gecici(self):
         katalog = fin_mod.FinansmanKatalogu()
-        for c in CIFTLER:
+        for c in fx_mod.FXCM_CIFTLER:  # K-100: 21 çiftin tamamı, hepsi proxy
             m = katalog.coz(f"fxcm-{c.lower()}")
             assert m.gecici and m.kaynak is not None and m.kaynak.tur == "proxy"
             assert ".." in m.kaynak.aralik and m.kaynak.ham_gunluk_bps is not None

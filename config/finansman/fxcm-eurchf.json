@@ -1,0 +1,12 @@
+{
+  "kaynak": {
+    "aralik": "2023-09-20..2024-03-21",
+    "gerekce": "PROXY — merkez bankası politika faizi farkı, broker oranı değil. Uzun EURCHF: EUR tutulur (alınan faiz aralığın altı 4.0%), CHF borçlanılır (ödenen faiz aralığın üstü 1.75%); ham = (quote_üst − taban_alt)/365×100 = -0.6164 bps/gün; uzun_gunluk_bps = max(ham, 0) = 0.0000 (K-095/1, K-007: lehte carry modellenmez; ham kayıtta). Broker marjı bilinmiyor, eklenmedi. FXCM tarihli rollover arşivi yok (yalnız platform, bir gün önceden; fxcm.com help 'Where is rollover shown', 2026-09-21). Kaynaklar: ECB deposit facility rate 4.00% from 2023-09-20; cut to 3.75% effective 2024-06-12; https://www.ecb.europa.eu/stats/policy_and_exchange_rates/key_ecb_interest_rates/html/index.en.html | Swiss National Bank policy rate 1.75% from 2023-06-23 until the 2024-03-21 cut to 1.50%; https://www.snb.ch/en/the-snb/mandates-goals/monetary-policy/monetary-policy-decisions",
+    "ham_gunluk_bps": -0.6164383561643836,
+    "saglayici": "merkez-bankasi-politika-faizi (proxy)",
+    "tarih": "2026-09-21",
+    "tur": "proxy"
+  },
+  "uclu_swap_gunu": 2,
+  "uzun_gunluk_bps": 0.0
+}

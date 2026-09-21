@@ -100,7 +100,10 @@ def kanit_topla(depo: fx_mod.FxDepo, ciftler: tuple[str, ...]) -> tuple[Varlik, 
         m = depo.manifesto(pair)
         if m is not None:
             for hafta, h in m.get("haftalar", {}).items():
-                _yaz(hucre, neden, pair, hafta, h.get("durum") == "var", "manifesto")
+                # `bozuk` = sağlayıcıda dosya **var** (200) ama gövde kullanılamaz (K-100/4): kural
+                # `dosya-var` olduğu için üyelik kanıtı `var`; barı olmadığından üyelik saatleri
+                # `uyeligi_barlara_kis` ile düşer ve sayılır — sessiz değil.
+                _yaz(hucre, neden, pair, hafta, h.get("durum") in ("var", "bozuk"), "manifesto")
         if hucre:
             varlik[pair] = hucre
             kaynaklar[pair] = {"hafta": len(hucre), "var": sum(hucre.values())}

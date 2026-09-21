@@ -57,7 +57,7 @@ FEE_KAYNAGI: Final = (
     "Koşul: aylık ≥ 50M hacim ve ≥ £25.000 özkaynak; altında standart hesap = komisyonsuz ama "
     "daha geniş spread (bu veride yok, ölçülmedi)."
 )
-#: £2 / 100K taban birim → bps: `0.2 × GBPUSD / (quote USD ise çift fiyatı, taban USD ise 1)`.
+#: £2 / 100K taban birim → bps: `0.2 × GBPUSD / taban_USD` (`fee_bps`).
 _FEE_GBP_PER_100K: Final = 2.0
 
 
@@ -194,15 +194,16 @@ def fx_kalibre(
     }
 
 
-def fee_bps(gbpusd_orta: float, cift_fiyati: float, quote_usd: bool) -> float:
-    """£2 / 100K taban → quote bps; K-007: iki ondalığa **yukarı** yuvarlanır.
+def fee_bps(gbpusd_orta: float, taban_usd: float) -> float:
+    """£2 / 100K **taban** birim → notional bps; K-007: iki ondalığa **yukarı** yuvarlanır.
 
-    Quote USD olan çiftte (EURUSD, GBPUSD) notional = 100K × fiyat USD; taban USD olan çiftte
-    (USDJPY) notional = 100K USD (JPY'ye çevirince oran değişmez).
+    `taban_usd` = tabanın USD değeri (EURUSD, GBPUSD, NZDUSD; AUD = EURUSD/EURAUD; CAD/CHF =
+    1/USDCAD, 1/USDCHF; USD = 1). Komisyon lot başına sabit, notional taban değeriyle ölçekli:
+    NZD tabanlı çiftte (~0,61 USD) 0,42, EUR tabanlıda (~1,09) 0,23 bps (K-100/5).
     """
-    fee_usd = _FEE_GBP_PER_100K * gbpusd_orta
-    notional_usd = 100_000.0 * (cift_fiyati if quote_usd else 1.0)
-    ham = fee_usd / notional_usd * 10_000
+    if taban_usd <= 0.0 or gbpusd_orta <= 0.0:
+        raise FxKalibrasyonHatasi("fiyatlar pozitif olmalı")
+    ham = _FEE_GBP_PER_100K * gbpusd_orta / (100_000.0 * taban_usd) * 10_000
     return float(np.ceil(ham * 100) / 100)
 
 

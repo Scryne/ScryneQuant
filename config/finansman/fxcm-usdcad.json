@@ -1,0 +1,12 @@
+{
+  "kaynak": {
+    "aralik": "2023-07-27..2024-06-05",
+    "gerekce": "PROXY — merkez bankası politika faizi farkı, broker oranı değil. Uzun USDCAD: USD tutulur (alınan faiz aralığın altı 5.25%), CAD borçlanılır (ödenen faiz aralığın üstü 5.0%); ham = (quote_üst − taban_alt)/365×100 = -0.0685 bps/gün; uzun_gunluk_bps = max(ham, 0) = 0.0000 (K-095/1, K-007: lehte carry modellenmez; ham kayıtta). Broker marjı bilinmiyor, eklenmedi. FXCM tarihli rollover arşivi yok (yalnız platform, bir gün önceden; fxcm.com help 'Where is rollover shown', 2026-09-21). Kaynaklar: Federal Reserve, FOMC statements 2023-07-26 (target range 5-1/4 to 5-1/2) … 2024-09-18 (cut to 4-3/4 to 5); https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm | Bank of Canada policy interest rate 5.00% from 2023-07-12 until the 2024-06-05 cut to 4.75%; https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+    "ham_gunluk_bps": -0.0684931506849315,
+    "saglayici": "merkez-bankasi-politika-faizi (proxy)",
+    "tarih": "2026-09-21",
+    "tur": "proxy"
+  },
+  "uclu_swap_gunu": 2,
+  "uzun_gunluk_bps": 0.0
+}

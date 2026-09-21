@@ -1,0 +1,12 @@
+{
+  "kaynak": {
+    "aralik": "2023-08-03..2024-03-19",
+    "gerekce": "PROXY — merkez bankası politika faizi farkı, broker oranı değil. Uzun GBPJPY: GBP tutulur (alınan faiz aralığın altı 5.25%), JPY borçlanılır (ödenen faiz aralığın üstü -0.1%); ham = (quote_üst − taban_alt)/365×100 = -1.4658 bps/gün; uzun_gunluk_bps = max(ham, 0) = 0.0000 (K-095/1, K-007: lehte carry modellenmez; ham kayıtta). Broker marjı bilinmiyor, eklenmedi. FXCM tarihli rollover arşivi yok (yalnız platform, bir gün önceden; fxcm.com help 'Where is rollover shown', 2026-09-21). Kaynaklar: Bank of England Bank Rate 5.25% from 2023-08-03; cut to 5.00% on 2024-08-01; https://www.bankofengland.co.uk/monetary-policy/the-interest-rate-bank-rate | Bank of Japan policy rate −0.10% (negative interest rate policy) until the 2024-03-19 decision (0 to 0.1%); https://www.boj.or.jp/en/mopo/mpmdeci/index.htm",
+    "ham_gunluk_bps": -1.465753424657534,
+    "saglayici": "merkez-bankasi-politika-faizi (proxy)",
+    "tarih": "2026-09-21",
+    "tur": "proxy"
+  },
+  "uclu_swap_gunu": 2,
+  "uzun_gunluk_bps": 0.0
+}

@@ -437,13 +437,14 @@ def data_fx_kalibre(
     karar = fk_mod.venue_karari({c: o["slippage"]["deger_bps"] for c, o in olcumler.items()})
 
     # Komisyon: £2/100K → bps, pencere orta fiyatlarından; çiftler arası en büyüğü (K-007).
-    gbpusd = _fx_orta_ortalama(depo, "GBPUSD", bas_ms, bit_ms) if "GBPUSD" in secilen else None
     fee_adaylari: dict[str, float] = {}
-    if gbpusd is not None:
+    gbpusd: float | None = None
+    try:
+        gbpusd = _fx_orta_ortalama(depo, "GBPUSD", bas_ms, bit_ms)
         for c in secilen:
-            quote_usd = c.endswith("USD")
-            fiyat = _fx_orta_ortalama(depo, c, bas_ms, bit_ms) if quote_usd else 1.0
-            fee_adaylari[c] = fk_mod.fee_bps(gbpusd, fiyat, quote_usd)
+            fee_adaylari[c] = fk_mod.fee_bps(gbpusd, _fx_taban_usd(depo, c[:3], bas_ms, bit_ms))
+    except fk_mod.FxKalibrasyonHatasi:
+        fee_adaylari = {}  # dönüşüm çifti depoda yok → komisyon türetilemez, --yaz reddeder
     fee = max(fee_adaylari.values()) if fee_adaylari else None
 
     govde: dict[str, Any] = {
@@ -465,7 +466,7 @@ def data_fx_kalibre(
             raise typer.BadParameter("--yaz için --gerekce zorunlu (K-021)")
         if fee is None:
             raise typer.BadParameter("--yaz için GBPUSD ölçümü gerekli (komisyon türetimi)")
-        govde["yazildi"] = _fx_maliyet_yaz(olcumler, karar, fee, persentil, gerekce)
+        govde["yazildi"] = _fx_maliyet_yaz(olcumler, karar, fee_adaylari, persentil, gerekce)
     if rapor is not None:
         fk_mod.yol_yaz(rapor, govde)
         govde["rapor"] = str(rapor)
@@ -500,14 +501,34 @@ def _fx_orta_ortalama(
     return float(m1["close"].mean())
 
 
+def _fx_taban_usd(
+    depo: fx_mod.FxDepo, taban: str, bas_ms: int | None, bit_ms: int | None
+) -> float:
+    """Taban para biriminin pencere ortalaması USD değeri, depodaki çiftlerden (K-100/5)."""
+    orta = lambda pair: _fx_orta_ortalama(depo, pair, bas_ms, bit_ms)  # noqa: E731
+    if taban == "USD":
+        return 1.0
+    if taban in ("EUR", "GBP", "NZD"):
+        return orta(f"{taban}USD")
+    if taban == "AUD":
+        return orta("EURUSD") / orta("EURAUD")
+    if taban in ("CAD", "CHF", "JPY"):
+        return 1.0 / orta(f"USD{taban}")
+    raise fx_mod.FxHatasi(f"{taban}: taban para birimi için USD dönüşümü tanımsız")
+
+
 def _fx_maliyet_yaz(
     olcumler: dict[str, dict[str, Any]],
     karar: dict[str, Any],
-    fee: float,
+    fee_adaylari: dict[str, float],
     persentil: float,
     gerekce: str,
 ) -> list[str]:
-    """Venue ya da çift başına `MaliyetModeli` dosyaları (K-084 kataloğu, K-021 şeması)."""
+    """Venue ya da çift başına `MaliyetModeli` dosyaları (K-084 kataloğu, K-021 şeması).
+
+    Komisyon: venue modelinde çiftler arası en büyüğü (K-007); çift başına modelde çiftin kendi
+    türetimi (£2/100K taban → tabanın USD değeri; NZD tabanlı 0,42, EUR tabanlı 0,24 — K-100/5).
+    """
     from scryne_quant.common.hash import nesne_hash
     from scryne_quant.data import fx_kalibrasyon as fk_mod
 
@@ -515,6 +536,7 @@ def _fx_maliyet_yaz(
     yazilan: list[str] = []
 
     def _model(kimlik: str, ciftler: list[str], deger: float, dagilim: dict[str, float]) -> None:
+        fee = max(fee_adaylari[c] for c in ciftler)
         ilk = min(int(olcumler[c]["slippage"]["ilk_ms"]) for c in ciftler)
         son = max(int(olcumler[c]["slippage"]["son_ms"]) for c in ciftler)
         kal = maliyet_mod.SlippageKalibrasyonu(

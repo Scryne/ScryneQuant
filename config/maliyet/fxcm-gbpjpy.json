@@ -1,0 +1,26 @@
+{
+  "fee_taker_bps": 0.2,
+  "kalibrasyon": {
+    "aralik_baslangic_ms": 1700431500000,
+    "aralik_bitis_ms": 1734127020000,
+    "bar_sayisi": 389986,
+    "dagilim_bps": {
+      "max": 87.8948764912127,
+      "ort": 1.0621607034504341,
+      "p50": 0.7038927878185823,
+      "p75": 1.3842176328363567,
+      "p90": 2.352698598176625,
+      "p95": 3.2004281943158315,
+      "p99": 5.800287898846931
+    },
+    "deger_bps": 1.3842176328363567,
+    "gerekce": "K-098 yontemi aynen (1 dk orta fiyat bar-to-bar hareketi, p75); 21 cift, pencere 2023-11-19..2024-12-13 (55 hafta, ~387-391k dk/cift). K-098/3'te olcumden once yazilan esik: p75 orani 2,39 >= 1,5 (EURGBP 0,643 .. AUDJPY 1,536) -> cift basina model; 3 ciftlik fxcm-fx venue modeli kaldirildi (K-100/5). Komisyon ciftin kendi turetimi: 2 GBP/100K taban -> tabanin USD degeri (GBPUSD ort. 1,2767; AUD = EURUSD/EURAUD, CAD/CHF = 1/USDxxx), yukari yuvarlanmis (K-007). Spread modele girmez (K-094); rollover +-15 dk spread genislemesi raporda. Veri Active Trader spread'i; model yalniz o hesap kosulu icin gecerli (K-098/4). | fee: FXCM Active Trader (UK): '£2.00 per side per 100K traded volume for monthly volumes above 50 million' (https://www.fxcm.com/uk/accounts/active-trader/, okundu 2026-09-21); MarketData README: veri 'lowest spreads available exclusively on Active Trader accounts' (https://raw.githubusercontent.com/fxcm/MarketData/master/README.md, okundu 2026-09-21). Koşul: aylık ≥ 50M hacim ve ≥ £25.000 özkaynak; altında standart hesap = komisyonsuz ama daha geniş spread (bu veride yok, ölçülmedi).",
+    "persentil": 75.0,
+    "sembol": "GBPJPY",
+    "tarih": "2026-09-21",
+    "timeframe": "1m",
+    "veri_sha256": "8b028e7a3fe309315691a62a3898e7926b381ce7a04557877f3f0ff2ba58e8d8",
+    "yontem": "1 dakikalık bar-to-bar kapanış hareketi: |close[t] - close[t-1]| / close[t-1] * 10000 (bps). Yürütme penceresinin (bar kapanışı → emrin dolması, ölçülen p50 ~300 ms) muhafazakâr üst sınırı: gerçek pencere 1 dakikadan onlarca kat kısa. Girdi: M1 orta fiyat ((bid+ask)/2), FXCM candledata (Active Trader spread)."
+  },
+  "slippage_bps": 1.3842176328363567
+}

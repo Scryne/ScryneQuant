@@ -26,6 +26,7 @@ import json
 from pathlib import Path
 
 from scryne_quant.common.finansman import FinansmanKaynagi, FinansmanModeli
+from scryne_quant.data import fx as fx_mod
 from scryne_quant.data.fx_kalibrasyon import finansman_proxy_bps
 
 #: Para birimi → (alt, üst) yıllık %, geçerlilik `(başlangıç, bitiş)` (dahil..hariç), kaynak.
@@ -56,9 +57,38 @@ ORANLAR: dict[str, dict[str, object]] = {
         "kaynak": "Bank of Japan policy rate −0.10% (negative interest rate policy) until the "
         "2024-03-19 decision (0 to 0.1%); https://www.boj.or.jp/en/mopo/mpmdeci/index.htm",
     },
+    # K-100 (R5 Paket 3): 21 çiftin kalan dört para birimi.
+    "AUD": {
+        "aralik_yuzde": (4.35, 4.35),
+        "gecerli": ("2023-11-08", "2025-02-18"),
+        "kaynak": "Reserve Bank of Australia cash rate target 4.35% from 2023-11-08 (decision "
+        "2023-11-07) until the 2025-02-18 cut to 4.10%; https://www.rba.gov.au/statistics/"
+        "cash-rate/",
+    },
+    "CAD": {
+        "aralik_yuzde": (5.00, 5.00),
+        "gecerli": ("2023-07-13", "2024-06-05"),
+        "kaynak": "Bank of Canada policy interest rate 5.00% from 2023-07-12 until the 2024-06-05 "
+        "cut to 4.75%; https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+    },
+    "CHF": {
+        "aralik_yuzde": (1.75, 1.75),
+        "gecerli": ("2023-06-23", "2024-03-21"),
+        "kaynak": "Swiss National Bank policy rate 1.75% from 2023-06-23 until the 2024-03-21 cut "
+        "to 1.50%; https://www.snb.ch/en/the-snb/mandates-goals/monetary-policy/"
+        "monetary-policy-decisions",
+    },
+    "NZD": {
+        "aralik_yuzde": (5.50, 5.50),
+        "gecerli": ("2023-05-25", "2024-08-14"),
+        "kaynak": "Reserve Bank of New Zealand OCR 5.50% from 2023-05-24 until the 2024-08-14 cut "
+        "to 5.25%; https://www.rbnz.govt.nz/monetary-policy/about-monetary-policy/"
+        "official-cash-rate-decisions",
+    },
 }
 
-CIFTLER: tuple[str, ...] = ("EURUSD", "GBPUSD", "USDJPY")
+#: FXCM sözleşmesindeki 21 çift (`fx.FXCM_CIFTLER`); her çift için bir proxy dosyası.
+CIFTLER: tuple[str, ...] = fx_mod.FXCM_CIFTLER
 
 
 def ortak_aralik(taban: str, quote: str) -> str:

@@ -25,6 +25,7 @@ maliyetini ödemek demek. Bu sayının iştahı Faz 12'nin ölçeceği şey.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import Any
 
 from scryne_quant.features.motor import OzellikTanimi
@@ -138,9 +139,13 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
         return kur(
             ctx.zaman,
             adaylar,
-            self._ayarlar,
+            self._ayarlar_icin(ctx),
             acik_pozisyonlar=tuple(s for s in ctx.acik_pozisyonlar() if s in ctx.gorunur()),
         )
+
+    def _ayarlar_icin(self, ctx: EvrenBaglam) -> KurmaAyarlari:
+        """Bu barın kurma ayarları. Kripto: sabit (Faz 10 davranışı, bit-aynı)."""
+        return self._ayarlar
 
     def _hazirlik_ozellikleri(self) -> tuple[str, ...]:
         """Adayın ısınmış olması gereken özellikler. Kripto: ATR **ve** kote hacim."""
@@ -185,12 +190,17 @@ class FxEvrenEsitAgirlik(EvrenEsitAgirlik):
 
     ad = "fx_evren_esit_agirlik"
 
+    #: Varsayılan brüt hedef (K-100/3): %2 nakit payı rollover bedeli için. Kaldıraçsız portföyde
+    #: borç yok (K-095); %100 yatırılmış kıyas ilk rollover'da durur (ölçüldü: 21 çift, AUDCAD bar
+    #: 138). Pay ölçülmüş en yüksek proxy bedeline göre: 0,411 bps/gün × 365 ≈ %1,5/yıl (K-098).
+    HEDEF_BRUT_FX = 0.98
+
     def __init__(
         self,
         yeniden_dengele_bar: int = 120,
         azami_enstruman: int = 21,
         azami_agirlik: float = 0.30,
-        hedef_brut: float = 1.0,
+        hedef_brut: float = HEDEF_BRUT_FX,
         esit_agirlik: bool = True,
     ) -> None:
         super().__init__(
@@ -212,6 +222,23 @@ class FxEvrenEsitAgirlik(EvrenEsitAgirlik):
 
     def _skor(self, baglam: Any) -> float:
         return 0.0
+
+    def _ayarlar_icin(self, ctx: EvrenBaglam) -> KurmaAyarlari:
+        """Barı olmayan (satılamayan) açık pozisyonların payı brüt hedeften düşülür (K-100/3).
+
+        Ölçüldü: CADCHF'nin `bozuk` haftasında (2024-18) çift görünmezken hedef 0,98 geri kalan 20
+        çifte dağıtılıyor, satılamayan %4,7 üstüne binince nakit sıfırlanıyor ve rollover K-095 ile
+        koşuyu durduruyordu. Kıyasın tanımı "brüt ≤ 0,98"dir; görünmeyen pozisyon da brütün parçası.
+        Kripto kıyasına dokunulmadı (Faz 12'nin `bayat_degerleme` ölçümü aynı kalsın).
+        """
+        gorunur = set(ctx.gorunur())
+        takili = sum(
+            ctx.pozisyon(s).exposure for s in ctx.acik_pozisyonlar() if s not in gorunur
+        )
+        if takili <= 0.0:
+            return self._ayarlar
+        hedef = max(self._ayarlar.hedef_brut - takili, 1e-9)
+        return replace(self._ayarlar, hedef_brut=hedef)
 
     def sozluk(self) -> dict[str, Any]:
         return super().sozluk() | {"hacimsiz": True}

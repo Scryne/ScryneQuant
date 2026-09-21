@@ -5024,3 +5024,63 @@ K-095, K-096, K-098 · **Kaynak:** `strategy/kutuphane/evren_esit_agirlik.py`
 **Not:** fixture'da GBPUSD/USDJPY h6-h8'de **barı yok** (indirilmedi) → pozisyon son fiyattan
 değerlenir (`bayat_degerleme` 720, K-057) ve kapanamaz; bu üyelik çıkışı değil veri yokluğu.
 Gerçek koşuda 21 çift pencere kadar indirilir (K-090/5).
+
+## K-100 — R5 Paket 3: FX veri kapsamı tamamlandı — 21 çift × 55 hafta, gerçek kıyas koşuyor
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R5 Paket 3 talimatı) · **Tabi:**
+K-007, K-088, K-089, K-090/5 (pencere kadar indirme), K-091, K-094, K-095, K-096, K-098, K-099 ·
+**Kaynak:** `data/fx.py` (`bozuk`), `data/fx_evren.py`, `data/fx_gorunum.py` (kapanış artığı,
+çift başına maliyet kimliği), `data/fx_kalibrasyon.py` (`fee_bps` taban USD), `cli/main.py`,
+`strategy/kutuphane/evren_esit_agirlik.py` (`HEDEF_BRUT_FX`, `_ayarlar_icin`),
+`tools/fx_depo_durumu.py`, `tools/fx_finansman_proxy_yaz.py` (21 çift), `config/maliyet/fxcm-<pair>.json`
+(21), `config/finansman/fxcm-<pair>.json` (21), `docs/research/records/2026-09-21-R5-fx-depo-durumu.{json,md}`,
+`docs/research/records/2026-09-21-R5-fx-kalibrasyon-21cift.json`
+
+### Kapsam kararı ve depo durumu
+
+1. **Pencere = kullanılacak pencere (K-090/5):** 2023-11-19..2024-12-13 (56 hafta anahtarı, 55 var),
+   EURUSD'nin mevcut deposuyla aynı; 2012'ye kadar tam tarihçe **indirilmedi** (≈16k dosya, ~1,5 GB;
+   ihtiyaç doğunca aynı komut). Önce 18 eksik çift 4 haftalık pencereyle (2024 h2-h5) doğrulandı,
+   sonra `sq data fx-al --hepsi --bas 2023-11-19 --bit 2024-12-13` ile tamamlandı; önbellek/
+   checksum/idempotency aynen (EURUSD deposu bayt-aynı `9dee3e07…`). `_gelen` 1.152 dosya, 122 MB.
+2. **Durum tablosu (`tools/fx_depo_durumu.py`):** **21 çift `tam`, 0 kısmi, 0 depoda yok.**
+   Sağlayıcı boşluğu 20 hafta (2024-35, 20 çift — K-089 ile aynı), **bozuk 4 hafta** (aşağıda),
+   kanıt-yok 0. Çift başına 6.417-6.543 bar.
+3. **Yeni sınıf `bozuk` (sağlayıcı 200, gövde kullanılamaz):** ölçüldü — AUDCAD 2024-35 (98.361
+   baytın 98.219'u NUL), CADCHF 2024-18, NZDCAD ve NZDCHF (yalnız başlık, 74 bayt). 404 (`yok`)
+   değil, hata da değil: kanıt `<hafta>.csv.gz.bozuk.bin`, işaret `<hafta>.bozuk`, manifestoda
+   `durum: bozuk` + sha + neden; bir daha indirilmez; bar üretmez. Evren kanıtı **`var`**
+   (`dosya-var` kuralı yayımla ilgilidir; kesif ile çelişmez); barı olmadığı için üyelik saatleri
+   `uyeligi_barlara_kis` ile düşer ve sayılır (`bar_yok_uyelik` 460). Başlık değişikliği bozuk
+   dosya değil şema değişikliğidir → hâlâ hata.
+4. **Kapanış artığı (`fx_dogrula`):** USDCHF 2024-01-12 22:00 ve NZDUSD 2024-02-02 22:00 (Cuma
+   NY 17:00 kapanış anı, `m1_sayisi` 1) K-096'nın "takvim dışı bar = hata" kuralını yanlışladı.
+   Karar: seans kapanış anında açılan ve `m1_sayisi ≤ 5` bar **kapanış artığı** — sayılarak atılır
+   (`kapanis_artigi` raporda, koşu meta'sında), ızgaraya girmez; başka takvim dışı bar hâlâ hata.
+   55 haftada 21 çiftte 18 artık. Ayrıca gerçek veride **çapraz kotasyon** var (AUDNZD 11, GBPJPY 2,
+   EURAUD 1, USDCHF 1 bar → `suspect`, fill yok) — K-096 bayrağı işini yapıyor.
+5. **Maliyet çift başına (K-098/3'ün kendi kuralı):** 21 çift, 55 hafta yeniden ölçüldü: p75 oranı
+   **2,39 ≥ 1,5** (EURGBP 0,643 … AUDJPY 1,536 bps) → `fxcm-fx` venue modeli **kaldırıldı**,
+   `config/maliyet/fxcm-<pair>.json` (21, ölçülmüş, gecici değil). Komisyon türetimi düzeltildi:
+   £2/100K **taban** → tabanın USD değeri (AUD = EURUSD/EURAUD, CAD/CHF = 1/USDxxx): AUD 0,39, CAD
+   0,35, EUR 0,24, GBP 0,20, NZD 0,43, USD 0,26 bps (K-098'in 0,26'sı yalnız USD tabanlı için doğruydu).
+   `fx_enstruman.maliyet_modeli_id = "fxcm-<pair>"`. Rollover spread genişlemesi 21 çiftte ≥ ×2.
+6. **Finansman proxy 21 çifte:** AUD (RBA 4,35), CAD (BoC 5,00), CHF (SNB 1,75), NZD (RBNZ 5,50)
+   eklendi, K-098 türetimi ve `tur=proxy`/`gecici` aynen; lehte carry olan 12 çift 0 (ham kayıtlı).
+   Fail-closed korunur: dosyası olmayan çift koşuya giremez (hepsinin var, hepsi geçici).
+7. **Kıyas 21 çiftte:** iki ölçülmüş düzeltme — (a) `HEDEF_BRUT_FX = 0,98`: %100 yatırılmış kıyas
+   ilk rollover'da K-095 ile duruyordu (AUDCAD bar 138); %2 nakit payı ölçülmüş en yüksek proxy
+   bedeline göre (0,411 bps/gün × 365 ≈ %1,5/yıl); (b) `_ayarlar_icin`: barı olmayan (satılamayan)
+   açık pozisyonun payı brüt hedeften düşülür — CADCHF'nin bozuk haftasında hedef 0,98 kalan 20
+   çifte dağıtılıp %4,7 takılı pozisyona binince nakit sıfırlanıyordu (bar 2775). Kripto kıyasına
+   dokunulmadı (kanca kimlik; sentetik evrende HEAD ile SAME).
+
+### Kanıt
+
+- Gerçek koşu `sq evren backtest data/fx/_evren/6124cf568498.parquet --strateji fx_evren_esit_agirlik
+  --yeniden-dengele 120 --azami-enstruman 21 --baslangic 2023-11 --bitis 2024-12`: 21 çift, 6.543
+  bar, 136.943 üye bar, 1.152 fill, brüt ort. 0,978; spread 1,36, slippage 1,46, komisyon 0,40,
+  finansman 27,18 (proxy); getiri −0,29 %, Sharpe −0,06; `config_hash 7fc528c0…`, `sonuc_hash
+  33cc0a32…` iki koşuda aynı; `gecici_finansman_modeli` engeli duruyor. Kurulum 0,4 s, koşu 0,6 s.
+- Kripto: `coklu_referans` + katalog senaryosu `96933a8` ile SAME; kripto kıyası sentetik evrende
+  HEAD ile SAME; ağ dışı 2.268 test (fixture testleri çift başına kimliğe güncellendi).

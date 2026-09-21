@@ -1,0 +1,12 @@
+{
+  "kaynak": {
+    "aralik": "2023-11-08..2024-06-05",
+    "gerekce": "PROXY — merkez bankası politika faizi farkı, broker oranı değil. Uzun AUDCAD: AUD tutulur (alınan faiz aralığın altı 4.35%), CAD borçlanılır (ödenen faiz aralığın üstü 5.0%); ham = (quote_üst − taban_alt)/365×100 = 0.1781 bps/gün; uzun_gunluk_bps = max(ham, 0) = 0.1781 (K-095/1, K-007: lehte carry modellenmez; ham kayıtta). Broker marjı bilinmiyor, eklenmedi. FXCM tarihli rollover arşivi yok (yalnız platform, bir gün önceden; fxcm.com help 'Where is rollover shown', 2026-09-21). Kaynaklar: Reserve Bank of Australia cash rate target 4.35% from 2023-11-08 (decision 2023-11-07) until the 2025-02-18 cut to 4.10%; https://www.rba.gov.au/statistics/cash-rate/ | Bank of Canada policy interest rate 5.00% from 2023-07-12 until the 2024-06-05 cut to 4.75%; https://www.bankofcanada.ca/core-functions/monetary-policy/key-interest-rate/",
+    "ham_gunluk_bps": 0.17808219178082202,
+    "saglayici": "merkez-bankasi-politika-faizi (proxy)",
+    "tarih": "2026-09-21",
+    "tur": "proxy"
+  },
+  "uclu_swap_gunu": 2,
+  "uzun_gunluk_bps": 0.17808219178082202
+}

@@ -1,0 +1,12 @@
+{
+  "kaynak": {
+    "aralik": "2023-06-23..2024-03-21",
+    "gerekce": "PROXY — merkez bankası politika faizi farkı, broker oranı değil. Uzun NZDCHF: NZD tutulur (alınan faiz aralığın altı 5.5%), CHF borçlanılır (ödenen faiz aralığın üstü 1.75%); ham = (quote_üst − taban_alt)/365×100 = -1.0274 bps/gün; uzun_gunluk_bps = max(ham, 0) = 0.0000 (K-095/1, K-007: lehte carry modellenmez; ham kayıtta). Broker marjı bilinmiyor, eklenmedi. FXCM tarihli rollover arşivi yok (yalnız platform, bir gün önceden; fxcm.com help 'Where is rollover shown', 2026-09-21). Kaynaklar: Reserve Bank of New Zealand OCR 5.50% from 2023-05-24 until the 2024-08-14 cut to 5.25%; https://www.rbnz.govt.nz/monetary-policy/about-monetary-policy/official-cash-rate-decisions | Swiss National Bank policy rate 1.75% from 2023-06-23 until the 2024-03-21 cut to 1.50%; https://www.snb.ch/en/the-snb/mandates-goals/monetary-policy/monetary-policy-decisions",
+    "ham_gunluk_bps": -1.0273972602739725,
+    "saglayici": "merkez-bankasi-politika-faizi (proxy)",
+    "tarih": "2026-09-21",
+    "tur": "proxy"
+  },
+  "uclu_swap_gunu": 2,
+  "uzun_gunluk_bps": 0.0
+}
