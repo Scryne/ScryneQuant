@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from scryne_quant.common.zaman import utc_str
 from scryne_quant.data.izgara import (
     IzgaraHatasi,
     hizala,
@@ -22,7 +23,7 @@ from scryne_quant.data.izgara import (
     uyeligi_barlara_kis,
     uyelik_matrisi,
 )
-from scryne_quant.data.kimlik import Enstruman
+from scryne_quant.data.kimlik import Enstruman, kanonik_kimlik
 from scryne_quant.strategy.evren import LISTELENMEDI
 from tests.conftest import bar_uret
 
@@ -30,10 +31,11 @@ SAAT = 3_600_000
 BASLANGIC = 1_699_999_200_000
 
 
-def _enstruman(sembol: str, bas: int, bit: int, kanonik: str | None = None) -> Enstruman:
+def _enstruman(sembol: str, bas: int, bit: int) -> Enstruman:
+    # K-083/U13: kanonik kimlik alanlardan türer; segmentler başlangıç tarihiyle zaten ayrışır.
     return Enstruman(
-        kanonik_id=kanonik or f"binance:{sembol}:1",
-        venue="binance",
+        kanonik_id=kanonik_kimlik("binance-spot", "spot", sembol, utc_str(bas)[:10]),
+        venue="binance-spot",
         sembol=sembol,
         gecerli_baslangic_ms=bas,
         gecerli_bitis_ms=bit,
@@ -135,10 +137,10 @@ class TestUyelikMatrisi:
         kirilma = int(np.datetime64("2024-03-16T00", "ms").astype("int64"))
         son = int(np.datetime64("2024-04-01T00", "ms").astype("int64"))
         zamanlar = np.array([bas, kirilma, son - SAAT], dtype="int64")
-        eski = _enstruman("LUNAUSDT", bas, kirilma, "binance:LUNAUSDT:1")
-        yeni = _enstruman("LUNAUSDT", kirilma, son, "binance:LUNAUSDT:2")
+        eski = _enstruman("LUNAUSDT", bas, kirilma)
+        yeni = _enstruman("LUNAUSDT", kirilma, son)
         # Tabloda **yalnızca eski kimlik** üye.
-        tablo = self._tablo([("binance:LUNAUSDT:1", "2024-03")])
+        tablo = self._tablo([(eski.kanonik_id, "2024-03")])
         maske = uyelik_matrisi(tablo, zamanlar, {"LUNAUSDT": [eski, yeni]})
         assert list(maske["LUNAUSDT"]) == [True, False, False]
 
@@ -159,8 +161,8 @@ class TestUyelikMatrisi:
 
     def test_sirasiz_segment_reddediliyor(self):
         bas = BASLANGIC
-        a = _enstruman("AAAUSDT", bas + 5 * SAAT, bas + 10 * SAAT, "id:2")
-        b = _enstruman("AAAUSDT", bas, bas + 5 * SAAT, "id:1")
+        a = _enstruman("AAAUSDT", bas + 5 * SAAT, bas + 10 * SAAT)
+        b = _enstruman("AAAUSDT", bas, bas + 5 * SAAT)
         with pytest.raises(IzgaraHatasi, match="sıralı değil"):
             uyelik_matrisi(
                 pd.DataFrame(), np.array([bas], dtype="int64"), {"AAAUSDT": [a, b]}

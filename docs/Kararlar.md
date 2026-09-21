@@ -4109,13 +4109,13 @@ olay, paper bozuk/audit'siz/karşılıksız açılmaz, doğrulanmış açılır,
 
 ---
 
-## K-083 — Enstrüman v2: sözleşme alanları kimlikten ayrıştırıldı; U13/U16/U17 kural metinleri (TASLAK)
+## K-083 — Enstrüman v2: sözleşme alanları kimlikten ayrıştırıldı; U13/U15/U16/U17 çok varlık değişmezleri
 
-**Durum:** açık — uygulanan kısım ölçüldü, karar maddeleri **ONAY BEKLİYOR** · **Tarih:** 2026-09-20 ·
-**Onay:** Scryne (R2 ilk iş paketi talimatı; yalnız uygulama kapsamı onaylı, kural maddeleri değil) ·
-**Tabi:** K-007, K-009, K-052, K-057/6, K-079, K-080, K-081 · **Kaynak:** `docs/ROADMAP-RESET.md` R2,
+**Durum:** kabul · **Tarih:** 2026-09-20 (Paket 1, taslak) → **2026-09-21 kabul** (Decision Memo) ·
+**Onay:** Scryne (R2 Paket 1 talimatı; U13/U15/U16/U17 Decision Gate onayı, 2026-09-21) ·
+**Tabi:** K-007, K-009, K-039, K-052, K-057/6, K-079, K-080, K-081 · **Kaynak:** `docs/ROADMAP-RESET.md` R2,
 `docs/audit/W1-Architecture.md` §6, `docs/research/Threshold-Policy.md` §1 (U13-U17) ve §3,
-`tests/unit/test_enstruman_v2.py`
+`tests/unit/test_enstruman_v2.py`, `tests/unit/test_takvim.py`
 
 ### Bulgu
 
@@ -4161,18 +4161,87 @@ finansman modeli için alan yoktu (W1 §6). Threshold-Policy §1 beş çok-varl�
    ≈600 s/kayıt) bu ölçüme alınmadı: sınıfı zaten `semantik`, bu paketin değişmezine girmiyor.
    Tam test: 1.930 → 1.980 geçti (+50 = yeni dosya), 1 skip, 3 deselected; `ruff` temiz.
 
-### Karar maddeleri — ONAY BEKLİYOR (hiçbiri bu pakette uygulanmadı)
+### Uygulandı ve ölçüldü — Paket 2 (2026-09-21)
 
-| # | Aday kural (Threshold-Policy §1) | Bugünkü uygulama | Onay gerektiren nokta |
-| --- | --- | --- | --- |
-| U13 | Enstrüman = `(venue, instrument_type, sembol, geçerlilik)`; spot/vadeli/CFD/ETF/endeks verisi karıştırılmaz | Alanlar var, kapalı küme testli; **kanonik kimlik hâlâ `(venue, sembol, tarih)`** | `instrument_type` kanonik kimliğe girsin mi (`binance-spot:BTCUSDT@2017-08-17` → tip eklenirse mevcut 761 kimlik ve PIT tablosu değişir) — **ONAY BEKLİYOR** |
-| U14 | Maliyet enstrüman başına; global maliyet reddedilir | `maliyet_modeli_id="global"` yalnız etiket; motor tek nesne alıyor | R2 sonraki paket; bu K'da karar yok |
-| U15 | Takvim enstrüman özelliği; "eksik bar" takvime göre | `takvim_id="24x7"` yalnız etiket; ızgara 24/7 | Takvim kaynağı (`exchange_calendars` / elle) — **ONAY BEKLİYOR**, Threshold-Policy §3 |
-| U16 | Veri seti kimliği = içerik hash **+ bitiş tarihi**; kayıt `veri_sonu` taşır | K-080: kimlik = içerik hash; `veri_son_ms` kayıtta **ama kimliğe girmiyor** (`deney.py`: "kimliğe girmez — geri dönmenin adresi") | U16 metni K-080'e hizalanacak mı ("kimlik = hash; bitiş tarihi = adres") yoksa kimliğe tarih eklenecek mi — **ONAY BEKLİYOR**; öneri: K-080 yürürlükte, U16 metni düzeltilir |
-| U17 | Yeni evren/varlık sınıfı = yeni null dağılım = yeni `oos_sharpe` eşiği; eşik taşınmaz | K-058/K-081 kalıbı (eşik ızgara/evren şekline bağlı, 45 çekiliş 1,04 yalnız Binance spot için) | Kural cümlesi olarak kabul — **ONAY BEKLİYOR** (uygulama gerektirmez; `kalibrasyon_v2` zaten evren-bağımlı) |
+1. **U13:** `kanonik_kimlik(venue, tip, sembol, tarih)` (`data/kimlik.py`); `kimlikleri_kur(...,
+   instrument_type="spot")`; `Enstruman.__post_init__` kimliği alanlardan türetip karşılaştırır
+   (tutarsız → `KimlikHatasi`), `VENUE_TIPLERI={"binance-spot": "spot"}` ile venue/tip
+   tutarsızlığını reddeder. Spot kodlaması bayt-aynı: gerçek depodan PIT tablosu **yeniden
+   üretildi** → `tablo_hash` `b06857c0…` (meta ile aynı), 761 kimlik, v1 katalog alt kümesi
+   hash'i ve kimlik listesi öncesi/sonrası aynı; kural kimliği `27b7a16ed0ed…` aynı; 14 evren
+   çekilişinin `veri_sha256` girdileri (tablo_hash + kural + pencere + sembol sha) değişmedi.
+2. **U15:** `data/takvim.py` — `Takvim(kimlik, surekli, surum, aciklama)`, `KATALOG={"24x7"}`,
+   `izgara()` = `np.arange` (eleman-eleman `ortak_izgara` ile aynı, 4 timeframe),
+   `beklenen_bar()` = `dogrulama` formülü (boşluklu seride sayı sayıya), `icerik_hash`
+   deterministik; seanslı takvim kurucuda reddedilir. Hiçbir çağıran bağlanmadı (R4).
+3. **U16:** `depo.py`/`deney.py`/`sonuc.py`/`hash.py`/`izgara.py`/`dogrulama.py`/`metrikler.py`
+   `takvim` import etmiyor (AST testi); `ParquetDepo.kirp` imzası `(sembol, timeframe, bitis_ms)`;
+   `veri_son_ms` kimliğe girmiyor (`test_geri_sarim`, değişmedi). `_maliyet_govdesi` SHA
+   `fe9f73bb…`, `MaliyetModeli.sozluk()` hash `5022dec9…` aynı; R1(b) 9 kayıt (monte_carlo/stres/
+   tarama) sınıf + fark listesi birebir.
+4. **U17:** `__post_init__`: `vadeli`/`cfd` → `finansman_modeli_id` zorunlu; `spot`/`etf` →
+   `contract_size` dolu olamaz; `maliyet_modeli_id="global"` yalnız `binance_spot_kripto`.
+   `Enstruman.islem_icin_dogrula()` (fail closed: tick/lot her tipte, contract finansmanlıda) —
+   **çağrı noktası bağlanmadı** (paper/live yolu `Enstruman` görmüyor; İz G, K-046 kalıbı).
+   `EvrenKurali(venue, instrument_type)`: sözlüğe/kimliğe yalnız Binance spot dışında girer;
+   gerçek kural literal testi `27b7a16ed0ed…`; aynı sembollerle vadeli evren farklı kimlik;
+   `EvrenKurali(**sozluk)` gidiş-dönüş.
+5. Testler: `test_enstruman_v2.py` 71 → 102, `test_takvim.py` 20 (yeni); `test_izgara.py`
+   fixture'ı kanonik kimliğe uyarlandı (`binance:AAA:1` biçimi artık geçersiz — davranış değil,
+   fixture). Tam suite 2.001 → 2.052 geçti, 1 skip, 3 deselected; ruff temiz.
+
+### Kararlar — KABUL (2026-09-21, Scryne; Decision Memo sonrası)
+
+Kanıt zinciri (U13 kodlamasının belirleyicisi): `kanonik_id` → PIT tablo sütunu → `tablo_hash`
+(`data/evren.py`) → `evren_degerlendirme.veri_kimligi` → defterdeki **14 evren çekilişinin**
+`veri_sha256`sı (hepsi kural `27b7a16ed0ed…`, 5 farklı veri kimliği). Kodlama değişseydi aynı veri
++ aynı kural yeni hipotez görünür (K-039) ve K-081 bekçisi kırılırdı. `sonuc_hash`/`config_hash`/
+deney kimliği/tek-sembol hipotez kimliği `kanonik_id`yi **görmüyor** (ölçüldü, 2026-09-21).
+
+**U13 — kabul.** Kanonik kimlik `(venue, instrument_type, sembol, geçerlilik)`in fonksiyonudur.
+Kodlama: `spot` → `<venue>:<TICKER>@<tarih>` (**mevcut, değişmez**); spot dışı →
+`<venue>:<tip>:<TICKER>@<tarih>`. Aynı venue + sembol + tarih farklı tiple **farklı `kanonik_id`**
+zorunlu (`Enstruman.__post_init__` kimliği alanlardan türetip karşılaştırır; uyumsuz kimlik red).
+`kimlikleri_kur()` `instrument_type` alır (varsayılan `spot`). Venue/tip tutarsızlığı reddedilir
+(`binance-spot` + `vadeli` → `KimlikHatasi`; bilinen venue'lerin tipi `VENUE_TIPLERI`). Spot dışı
+veri ayrı depo kökünde tutulur (`data/evren/` yalnız Binance spot; `data/turev/` zaten ayrı).
+Korunanlar: 761 spot kimlik, PIT tablo/`tablo_hash` `b06857c0…`, 14 çekilişin `veri_sha256`sı.
+
+**U14 — bu kararda uygulanmaz.** R2 Paket 3. Enstrüman-başı `MaliyetModeli` ve `_maliyet_govdesi`
+değişikliği ayrı K ile (sabit `fe9f73bb…` bilerek değişir, istemeden değil).
+
+**U15 — kabul.** Takvim kod içi, sürümlü ve içerik-hash'li bir katalog soyutlamasıdır
+(`data/takvim.py`); minimum arayüz `izgara(baslangic_ms, bitis_ms, timeframe) -> int64[]` ve
+`beklenen_bar(ilk_ms, son_ms, timeframe) -> int`. R2 Paket 2'de yalnız `24x7` uygulanır ve mevcut
+davranışla **bit-aynı** olmak zorundadır (`np.arange` ızgarası, `dogrulama.beklenen_bar` formülü).
+Kripto-dışı gerçek takvim içeriği R3 gerçek veri spike'ı olmadan tanımlanmaz. Sağlayıcı
+metadata'sı tek başına kanonik takvim kaynağı değildir. `gap`/kırılma/`bar_yili`/canlı bayatlık
+takvime **R4'te** bağlanır; Paket 2 yalnız seam.
+
+**U16 — kabul.** K-080 yürürlüktedir. `veri_son_ms` kimlik **değildir**, geri sarma adresidir
+(`deney.py`). Takvim veri sonunu değil beklenen ızgarayı belirler; `ParquetDepo.kirp` bar zamanıyla
+keser, takvimsiz kalır. `24x7` dışı takvim ileride deney girdisine `{"takvim": {id, icerik_hash}}`
+ile girer — **yalnız `24x7` değilse** (`risk`/`evren` bloğu kalıbı) — böylece mevcut kayıtların
+`girdi_hash`/`sonuc_hash`i Paket 2 nedeniyle değişmez (ölçüldü: R1(b) 9 kayıt birebir).
+
+**U17 — kabul.** Binance spot kripto dışı enstrümanlarda alanlar açıkça sağlanır:
+`asset_class`, `instrument_type`, `takvim_id`, `maliyet_modeli_id` zorunlu (`global` yasak);
+`finansman_modeli_id` `vadeli`/`cfd`de zorunlu, `spot`/`etf`te `None` olabilir; `tick_size`,
+`lot_size`, `contract_size`: `None` = **bilinmiyor** — araştırmada izinli, paper/live'da gerekli alan
+`None` ise **reddedilir** (`Enstruman.islem_icin_dogrula()`, fail closed); `contract_size` yalnız
+`vadeli`/`cfd`de anlamlı, `spot`/`etf`te dolu olması red. Evren kuralı `venue` + `instrument_type`
+taşır (sözlüğe/kimliğe **yalnız Binance spot dışında** girer → `27b7a16ed0ed…` korunur; bir evren tek
+tip). Yeni `(venue, instrument_type, takvim)` kombinasyonu yeni null kalibrasyonu gerektirir; 1,04
+ve `kapilar_v2` sabitleri otomatik taşınmaz (`esikler.json` R5'te sınıf anahtarlı).
+
+**Açık kalan (K değil, TODO):** paper/live kurulum yolunda `islem_icin_dogrula()` çağrısı — bugün o
+yol `Enstruman` nesnesi görmüyor (`SembolKurallari` + PIT sembol listesiyle çalışıyor); bağlama İz G
+(`--mod paper` kurulumu) paketinde, K-046 kalıbıyla.
 
 ### Kanıt
 
+**Paket 2:** `test_enstruman_v2.py` (102: +kanonik kimlik 7 grup, U17 sözleşme 6, evren kuralı 4,
+gerçek depo regresyonu 2 — yerelde koşar, CI'da atlanır), `test_takvim.py` (20). **Paket 1:**
 `tests/unit/test_enstruman_v2.py` (50): varsayılan/açık/donmuş; tip kümesi (4 geçerli, 6 red, 4 çift
 ayrımı, sınıf≠tip); serileştirme A/B/C (sıra, altın hash, tam şema, determinizm, eski⊂yeni);
 hash sınırı D (5 modül statik, `tablo_hash`/`uyelik_matrisi` davranışsal, `Sonuc` alanları);

@@ -27,10 +27,11 @@ from scryne_quant.cli.main import _maliyet_govdesi
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.hash import nesne_hash
 from scryne_quant.common.maliyet import MaliyetModeli, SlippageKalibrasyonu
-from scryne_quant.data.evren import EvrenKurali, aylik_ozet, evren_tablosu, tablo_hash
+from scryne_quant.data.evren import EvrenHatasi, EvrenKurali, aylik_ozet, evren_tablosu, tablo_hash
 from scryne_quant.data.izgara import uyelik_matrisi
 from scryne_quant.data.kimlik import (
     ENSTRUMAN_TIPLERI,
+    FINANSMANLI_TIPLER,
     KIRILMA_ASGARI_EKSIK_BAR,
     KIRILMA_ASGARI_LOG_ORAN,
     MALIYET_MODELI_GLOBAL,
@@ -38,8 +39,10 @@ from scryne_quant.data.kimlik import (
     TIP_SPOT,
     VARLIK_KRIPTO,
     VARLIK_SINIFLARI,
+    VENUE_TIPLERI,
     Enstruman,
     KimlikHatasi,
+    kanonik_kimlik,
     kimlikleri_kur,
     kirilmalar,
 )
@@ -89,17 +92,37 @@ def _v1() -> Enstruman:
     )
 
 
+#: Bilinmeyen (tip kısıtı olmayan) test venue'su — `VENUE_TIPLERI`de yok, uydurma sözleşmeler için.
+TEST_VENUE = "test-venue"
+TARIH = "2017-08-17"  # `_v1()` başlangıcının UTC günü
+
+
+def _kur(tip: str, venue: str = TEST_VENUE, **ek) -> Enstruman:
+    """Alanlardan **tutarlı** kanonik kimlikle enstrüman; U17 tip-koşullu zorunlulukları dolu."""
+    alanlar = dict(
+        kanonik_id=kanonik_kimlik(venue, tip, "BTCUSDT", TARIH),
+        venue=venue,
+        sembol="BTCUSDT",
+        gecerli_baslangic_ms=1502942400000,
+        gecerli_bitis_ms=1502946000000,
+        bar_sayisi=1,
+        kirilma_ile_basladi=False,
+        instrument_type=tip,
+        maliyet_modeli_id="test-maliyet",
+        finansman_modeli_id="test-finansman" if tip in FINANSMANLI_TIPLER else None,
+    )
+    alanlar.update(ek)
+    return Enstruman(**alanlar)
+
+
 def _v2_acik() -> Enstruman:
     """Varsayılan olmayan v2 değerleri — geçerli ama bugünkü depoda **olmayan** bir sözleşme."""
-    return dataclasses.replace(
-        _v1(),
-        instrument_type="vadeli",
+    return _kur(
+        "vadeli",
         takvim_id="test-takvim",
         tick_size=0.1,
         lot_size=0.001,
         contract_size=100.0,
-        maliyet_modeli_id="test-maliyet",
-        finansman_modeli_id="test-finansman",
     )
 
 
@@ -154,7 +177,9 @@ class TestAcik:
     @pytest.mark.parametrize("ad", ["tick_size", "lot_size", "contract_size"])
     @pytest.mark.parametrize("iyi", [1e-9, 0.01, 1, 100.0])
     def test_sonlu_pozitif_buyukluk_kabul_ve_json_sonlu(self, ad, iyi):
-        e = dataclasses.replace(_v1(), **{ad: iyi})
+        # `contract_size` spot'ta tanımsız (U17) — dolu değer için finansmanlı tip gerekir.
+        taban = _kur("vadeli") if ad == "contract_size" else _v1()
+        e = dataclasses.replace(taban, **{ad: iyi})
         assert getattr(e, ad) == iyi
         json.dumps(e.sozluk(), allow_nan=False)  # NaN/Infinity üretemez
 
@@ -170,7 +195,7 @@ class TestAcik:
 class TestEnstrumanTipi:
     @pytest.mark.parametrize("tip", ENSTRUMAN_TIPLERI)
     def test_gecerli_tipler_kabul(self, tip):
-        assert dataclasses.replace(_v1(), instrument_type=tip).instrument_type == tip
+        assert _kur(tip).instrument_type == tip
 
     @pytest.mark.parametrize("tip", ["perp", "SPOT", "futures", "", "option", None])
     def test_bilinmeyen_tip_red(self, tip):
@@ -181,20 +206,119 @@ class TestEnstrumanTipi:
         ("a", "b"), [("spot", "vadeli"), ("vadeli", "cfd"), ("cfd", "etf"), ("spot", "etf")]
     )
     def test_tipler_ayni_dayanakta_farkli_enstruman(self, a, b):
-        ea = dataclasses.replace(_v1(), instrument_type=a)
-        eb = dataclasses.replace(_v1(), instrument_type=b)
+        """Aynı venue + sembol + tarih, farklı tip → farklı **kanonik kimlik** (K-083/U13)."""
+        ea, eb = _kur(a), _kur(b)
+        assert ea.kanonik_id != eb.kanonik_id
         assert ea != eb
-        assert ea.sozluk() != eb.sozluk()
         assert nesne_hash(ea.sozluk()) != nesne_hash(eb.sozluk())
 
     def test_sinif_ve_tip_ayri_eksen(self):
         """Kripto her tiple birleşebilir; bilinmeyen sınıf geçerli tiple de reddedilir."""
         for tip in ENSTRUMAN_TIPLERI:
-            assert dataclasses.replace(_v1(), asset_class="kripto", instrument_type=tip)
+            assert _kur(tip, asset_class="kripto")
         with pytest.raises(KimlikHatasi, match="bilinmeyen varlık sınıfı"):
-            dataclasses.replace(_v1(), asset_class="fx", instrument_type="spot")
+            _kur("spot", asset_class="fx")
         with pytest.raises(KimlikHatasi, match="bilinmeyen varlık sınıfı"):
             dataclasses.replace(_v1(), asset_class="spot")  # tip adı sınıf değil
+
+
+# ------------------------------------------------------------------ kanonik kimlik (U13)
+
+
+class TestKanonikKimlik:
+    def test_spot_kodlamasi_faz9_ile_ayni(self):
+        """Altın: 761 gerçek kimlik bu biçimde; `kanonik_kimlik` spot için onu üretmek zorunda."""
+        assert kanonik_kimlik("binance-spot", "spot", "btcusdt", "2017-08-17") == (
+            "binance-spot:BTCUSDT@2017-08-17"
+        )
+        assert _v1().kanonik_id == kanonik_kimlik("binance-spot", "spot", "BTCUSDT", TARIH)
+
+    @pytest.mark.parametrize("tip", ["vadeli", "cfd", "etf"])
+    def test_spot_disi_kodlama_tip_tasiyor(self, tip):
+        beklenen = f"{TEST_VENUE}:{tip}:BTCUSDT@{TARIH}"
+        assert kanonik_kimlik(TEST_VENUE, tip, "btcusdt", TARIH) == beklenen
+        assert _kur(tip).kanonik_id == beklenen
+
+    def test_tum_tipler_ayni_venue_sembol_tarihte_birbirinden_farkli(self):
+        kimlikler = {kanonik_kimlik(TEST_VENUE, t, "BTCUSDT", TARIH) for t in ENSTRUMAN_TIPLERI}
+        assert len(kimlikler) == len(ENSTRUMAN_TIPLERI)
+
+    @pytest.mark.parametrize(
+        "kotu_kimlik",
+        ["binance-spot:BTCUSDT@2017-08-18", "binance-spot:ETHUSDT@2017-08-17",
+         "binance:BTCUSDT@2017-08-17", "binance-spot:vadeli:BTCUSDT@2017-08-17", "BTCUSDT"],
+    )
+    def test_alanlarla_tutarsiz_kimlik_red(self, kotu_kimlik):
+        with pytest.raises(KimlikHatasi, match="tutarsız"):
+            dataclasses.replace(_v1(), kanonik_id=kotu_kimlik)
+
+    def test_tip_degisince_eski_kimlik_gecersiz(self):
+        """Paket 1'in gizli çakışması kapandı: tipi değiştirip kimliği tutmak reddedilir."""
+        with pytest.raises(KimlikHatasi):
+            dataclasses.replace(_kur("spot"), instrument_type="etf")
+
+    @pytest.mark.parametrize("tip", ["vadeli", "cfd", "etf"])
+    def test_binance_spot_venue_yalniz_spot(self, tip):
+        assert VENUE_TIPLERI == {"binance-spot": "spot"}
+        with pytest.raises(KimlikHatasi, match="yalnız 'spot' taşır"):
+            _kur(tip, venue="binance-spot")
+
+    def test_kimlikleri_kur_tip_aliyor_spot_varsayilan_bayt_ayni(self):
+        df = bar_uret(200)
+        kir = kirilmalar(df, "1h", **ESIK)
+        (spot,) = kimlikleri_kur(df, "1h", "btcusdt", kir)
+        (acik,) = kimlikleri_kur(df, "1h", "btcusdt", kir, instrument_type="spot")
+        assert spot == acik and spot.kanonik_id == "binance-spot:BTCUSDT@2023-11-14"
+        # Spot dışı: kimlik segmenti üretilir ama sözleşme (global maliyet) U17'de reddedilir —
+        # `kimlikleri_kur` maliyet/finansman uydurmaz.
+        with pytest.raises(KimlikHatasi, match="global maliyet"):
+            kimlikleri_kur(df, "1h", "btcusdt", kir, venue=TEST_VENUE, instrument_type="etf")
+        with pytest.raises(KimlikHatasi, match="yalnız 'spot' taşır"):
+            kimlikleri_kur(df, "1h", "btcusdt", kir, instrument_type="vadeli")
+
+
+# ------------------------------------------------------------------ U17 sözleşme kuralları
+
+
+class TestU17Sozlesme:
+    @pytest.mark.parametrize("tip", sorted(FINANSMANLI_TIPLER))
+    def test_finansmanli_tipte_finansman_zorunlu(self, tip):
+        with pytest.raises(KimlikHatasi, match="finansman_modeli_id zorunlu"):
+            _kur(tip, finansman_modeli_id=None)
+        assert _kur(tip).finansman_modeli_id == "test-finansman"
+
+    @pytest.mark.parametrize("tip", ["spot", "etf"])
+    def test_finansmansiz_tipte_finansman_none_olabilir(self, tip):
+        assert _kur(tip).finansman_modeli_id is None
+        assert _kur(tip, finansman_modeli_id="opsiyonel").finansman_modeli_id == "opsiyonel"
+
+    @pytest.mark.parametrize("tip", ["spot", "etf"])
+    def test_contract_size_spot_ve_etfte_dolu_olamaz(self, tip):
+        with pytest.raises(KimlikHatasi, match="contract_size tanımsız"):
+            _kur(tip, contract_size=1.0)
+
+    @pytest.mark.parametrize("tip", sorted(FINANSMANLI_TIPLER))
+    def test_contract_size_finansmanli_tipte_none_bilinmiyor_ya_da_dolu(self, tip):
+        assert _kur(tip).contract_size is None
+        assert _kur(tip, contract_size=10.0).contract_size == 10.0
+
+    def test_global_maliyet_yalniz_binance_spot_kripto(self):
+        assert _v1().binance_spot_kripto and _v1().maliyet_modeli_id == "global"
+        with pytest.raises(KimlikHatasi, match="global maliyet"):
+            _kur("spot", maliyet_modeli_id="global")  # venue farklı → enstrüman-başı model şart
+        with pytest.raises(KimlikHatasi, match="global maliyet"):
+            _kur("etf", maliyet_modeli_id="global")
+        assert not _kur("spot").binance_spot_kripto
+
+    def test_islem_icin_dogrula_fail_closed(self):
+        """None = bilinmiyor araştırmada geçer; paper/live ön koşulunda reddedilir."""
+        with pytest.raises(KimlikHatasi, match=r"\['tick_size', 'lot_size'\]"):
+            _v1().islem_icin_dogrula()
+        dataclasses.replace(_v1(), tick_size=0.01, lot_size=0.001).islem_icin_dogrula()
+        with pytest.raises(KimlikHatasi, match=r"\['contract_size'\]"):
+            _kur("vadeli", tick_size=0.1, lot_size=1.0).islem_icin_dogrula()
+        _kur("vadeli", tick_size=0.1, lot_size=1.0, contract_size=100.0).islem_icin_dogrula()
+        _kur("etf", tick_size=0.01, lot_size=1.0).islem_icin_dogrula()  # kontrat tanımsız, istenmez
 
 
 # ------------------------------------------------------------------ serileştirme
@@ -269,10 +393,11 @@ class TestHashSiniri:
         df = bar_uret(24 * 31 * 3, baslangic_ms=1_704_067_200_000)  # 2024-01-01, 3 ay
         kir = kirilmalar(df, "1h", **ESIK)
         v1 = kimlikleri_kur(df, "1h", "AAAUSDT", kir)
+        # Kimliğe girmeyen v2 alanları değiştirilir (tip kimliğe girer — U13, o ayrı test).
         v2 = [
             dataclasses.replace(
-                e, instrument_type="cfd", takvim_id="x", tick_size=1.0, lot_size=1.0,
-                contract_size=1.0, maliyet_modeli_id="m", finansman_modeli_id="f",
+                e, takvim_id="x", tick_size=1.0, lot_size=1.0, maliyet_modeli_id="m",
+                finansman_modeli_id="f",
             )
             for e in v1
         ]
@@ -344,3 +469,76 @@ class TestMaliyetGovdesiSabiti:
     def test_gecici_model_govdesi(self):
         govde = _maliyet_govdesi(MaliyetModeli(fee_taker_bps=10.0, slippage_bps=5.0))
         assert _kanonik(govde) == '{"fee_taker_bps":10.0,"kalibrasyon":null,"slippage_bps":5.0}'
+
+
+# ------------------------------------------------------------ evren kuralı + regresyon (U13/U17)
+
+#: `data/evren/_evren/27b7a16ed0ed.json` → `kural` (gerçek Faz 9 kuralı, 14 evren çekilişinin
+#: `evren` alanı). Kimliği aşağıdaki literal; `venue`/`instrument_type` eklenmesi bunu değiştirmez.
+GERCEK_KURAL = {
+    "asgari_quote_hacim": 30000000.0,
+    "ay_sonu_tolerans_saat": 24,
+    "haric_desenler": ["(UP|DOWN|BULL|BEAR)USDT$"],
+    "haric_tabanlar": [
+        "AEUR", "AUD", "BIDR", "BRL", "BUSD", "BVND", "DAI", "EUR", "EURI", "FDUSD", "GBP",
+        "IDRT", "NGN", "PAX", "RUB", "SUSD", "TRY", "TUSD", "UAH", "USD1", "USDC", "USDP",
+        "USDS", "USDSB", "UST", "ZAR",
+    ],
+    "kote": "USDT",
+    "ust_n": 50,
+}
+GERCEK_KURAL_KIMLIK = "27b7a16ed0ed972580af62eee34c145387d74260c7e4bc79d505cf59335d2ac0"
+EVREN_META = KOK / "data" / "evren" / "_evren" / "27b7a16ed0ed.json"
+KATALOG_YOLU = KOK / "data" / "evren" / "_evren" / "kimlik-katalogu.json"
+
+
+class TestEvrenKuraliKimligi:
+    def test_gercek_spot_kurali_ayni_kimlik(self):
+        kural = EvrenKurali(**GERCEK_KURAL)
+        assert kural.kimlik == GERCEK_KURAL_KIMLIK
+        assert "venue" not in kural.sozluk() and "instrument_type" not in kural.sozluk()
+        assert (kural.venue, kural.instrument_type) == ("binance-spot", "spot")
+
+    def test_spot_disi_evren_ayni_sembollerle_farkli_kimlik(self):
+        spot = EvrenKurali(**GERCEK_KURAL)
+        vadeli = EvrenKurali(**GERCEK_KURAL, venue=TEST_VENUE, instrument_type="vadeli")
+        assert vadeli.kimlik != spot.kimlik
+        assert vadeli.sozluk()["venue"] == TEST_VENUE
+        assert vadeli.sozluk()["instrument_type"] == "vadeli"
+        # Sözlük → kural gidiş-dönüş (canlı yenileme `EvrenKurali(**meta["kural"])` yapıyor).
+        assert EvrenKurali(**vadeli.sozluk()).kimlik == vadeli.kimlik
+        assert EvrenKurali(**spot.sozluk()).kimlik == spot.kimlik
+
+    def test_evren_kurali_venue_tip_tutarsizligi_red(self):
+        with pytest.raises(EvrenHatasi, match="yalnız 'spot' taşır"):
+            EvrenKurali(ust_n=5, asgari_quote_hacim=0.0, instrument_type="vadeli")
+        with pytest.raises(EvrenHatasi, match="bilinmeyen enstrüman tipi"):
+            EvrenKurali(ust_n=5, asgari_quote_hacim=0.0, venue=TEST_VENUE, instrument_type="perp")
+
+    def test_farkli_venue_ayni_tip_farkli_kimlik(self):
+        a = EvrenKurali(ust_n=5, asgari_quote_hacim=0.0)
+        b = EvrenKurali(ust_n=5, asgari_quote_hacim=0.0, venue=TEST_VENUE, instrument_type="spot")
+        assert a.kimlik != b.kimlik
+
+
+@pytest.mark.skipif(not EVREN_META.exists(), reason="gerçek evren deposu yok (gitignore)")
+class TestGercekDepoRegresyonu:
+    """Yerel çapalar: PIT tablo hash'i ve katalog v1 alt kümesi. CI'da veri yok → atlanır."""
+
+    def test_meta_kural_kimligi_ve_tablo_hash(self):
+        import pandas as pd
+
+        meta = json.loads(EVREN_META.read_text(encoding="utf-8"))
+        assert EvrenKurali(**meta["kural"]).kimlik == meta["kural_kimlik"] == GERCEK_KURAL_KIMLIK
+        tablo = pd.read_parquet(EVREN_META.with_suffix(".parquet"))
+        assert tablo_hash(tablo) == meta["tablo_hash"]
+
+    def test_katalog_v1_alt_kumesi_v2_modeliyle_bayt_ayni(self):
+        kat = json.loads(KATALOG_YOLU.read_text(encoding="utf-8"))["enstrumanlar"]
+        v1_alan = [k for k in V1_ANAHTARLAR if k not in ("gecerli_baslangic", "gecerli_bitis")]
+        yeniden = [Enstruman(**{k: e[k] for k in v1_alan}).sozluk() for e in kat]
+        assert [{k: s[k] for k in V1_ANAHTARLAR} for s in yeniden] == [
+            {k: e[k] for k in V1_ANAHTARLAR} for e in kat
+        ]
+        assert all(s["instrument_type"] == "spot" and s["venue"] == "binance-spot" for s in yeniden)
+        assert len(yeniden) == 761

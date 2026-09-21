@@ -33,7 +33,13 @@ import numpy as np
 import pandas as pd
 
 from scryne_quant.common.hash import nesne_hash
-from scryne_quant.data.kimlik import Enstruman
+from scryne_quant.data.kimlik import (
+    ENSTRUMAN_TIPLERI,
+    TIP_SPOT,
+    VENUE_BINANCE_SPOT,
+    VENUE_TIPLERI,
+    Enstruman,
+)
 from scryne_quant.data.semalar import KaliteDurumu
 
 #: Kaldıraçlı token'lar: fiyatları bir türevin günlük yeniden dengelenmiş getirisi, kendi
@@ -91,6 +97,12 @@ class EvrenKurali:
     haric_tabanlar: tuple[str, ...] = STABIL_FIAT_TABANLAR
     ay_sonu_tolerans_saat: int = 24
     """Enstrümanın M−1'deki son barı ay sonundan en fazla bu kadar önce olabilir."""
+    venue: str = VENUE_BINANCE_SPOT
+    """Evrenin venue'su (K-083/U17). Bir evren tek venue, tek tip taşır."""
+    instrument_type: str = TIP_SPOT
+    """Evrenin enstrüman tipi (K-083/U13/U17). Spot evrenle aynı sembol adı kullanan bir vadeli
+    evren farklı kural kimliği alır — `sozluk()`a **yalnız Binance spot dışında** girer ki mevcut
+    kuralın kimliği (`27b7a16ed0ed…`, 14 çekilişin `veri_sha256` girdisi) değişmesin."""
     _derlenmis: tuple[re.Pattern[str], ...] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -100,6 +112,17 @@ class EvrenKurali:
             raise EvrenHatasi("asgari_quote_hacim negatif olamaz")
         if self.ay_sonu_tolerans_saat < 1:
             raise EvrenHatasi("ay_sonu_tolerans_saat ≥ 1 olmalı")
+        if self.instrument_type not in ENSTRUMAN_TIPLERI:
+            raise EvrenHatasi(
+                f"bilinmeyen enstrüman tipi {self.instrument_type!r}; "
+                f"geçerli: {list(ENSTRUMAN_TIPLERI)}"
+            )
+        beklenen_tip = VENUE_TIPLERI.get(self.venue)
+        if beklenen_tip is not None and beklenen_tip != self.instrument_type:
+            raise EvrenHatasi(
+                f"venue {self.venue!r} yalnız {beklenen_tip!r} taşır, "
+                f"{self.instrument_type!r} verildi"
+            )
         object.__setattr__(self, "_derlenmis", tuple(re.compile(d) for d in self.haric_desenler))
 
     def sozluk(self) -> dict[str, Any]:
@@ -110,6 +133,13 @@ class EvrenKurali:
             "haric_desenler": list(self.haric_desenler),
             "haric_tabanlar": sorted(self.haric_tabanlar),
             "ay_sonu_tolerans_saat": self.ay_sonu_tolerans_saat,
+            # Binance spot dışında venue + tip kimliğe girer; spot için sözlük Faz 9 ile aynı
+            # kalır (`risk`/`evren` bloğu kalıbı: "hash'e yalnız varsa girer").
+            **(
+                {"venue": self.venue, "instrument_type": self.instrument_type}
+                if (self.venue, self.instrument_type) != (VENUE_BINANCE_SPOT, TIP_SPOT)
+                else {}
+            ),
         }
 
     @property

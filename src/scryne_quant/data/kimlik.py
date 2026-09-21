@@ -60,7 +60,7 @@ from scryne_quant.common.zaman import timeframe_ms, utc_str
 
 VENUE_BINANCE_SPOT: Final = "binance-spot"
 
-# --- Enstrüman v2 alanları (ROADMAP-RESET R2, K-083 taslağı) -------------------------------
+# --- Enstrüman v2 alanları (ROADMAP-RESET R2, K-083) ----------------------------------------
 #
 # Aşağıdaki kümeler ve varsayılanlar **bugün depoda olan tek gerçeği** kodlar: Binance spot
 # kripto, 7/24, tek global maliyet modeli (K-007), finansman yok. Yeni bir sınıf/tip/takvim
@@ -79,11 +79,20 @@ VARLIK_KRIPTO: Final = "kripto"
 ENSTRUMAN_TIPLERI: Final[tuple[str, ...]] = ("spot", "vadeli", "cfd", "etf")
 TIP_SPOT: Final = "spot"
 
-#: Takvim kimliği. Yalnız bir etiket: takvim soyutlaması (seans, tatil, eksik-bar tanımı)
-#: bu pakette yok, `data/izgara.py` 24/7 ızgara varsayımıyla çalışmaya devam ediyor.
+#: Bilinen venue → tek tip (K-083/U13). Bir venue tek sözleşme tipi taşır; `binance-spot` +
+#: `vadeli` tutarsızlıktır ve reddedilir. Listede olmayan venue için tip kısıtı yok (bilinmiyor,
+#: uydurulmaz) — spot dışı ilk venue R3'te kaynak kararıyla buraya girer.
+VENUE_TIPLERI: Final[dict[str, str]] = {VENUE_BINANCE_SPOT: TIP_SPOT}
+
+#: Finansman bacağı olan tipler: `finansman_modeli_id` zorunlu, `contract_size` anlamlı (U17).
+FINANSMANLI_TIPLER: Final[frozenset[str]] = frozenset({"vadeli", "cfd"})
+
+#: Takvim kimliği — `data/takvim.KATALOG` anahtarı (K-083/U15). Enstrüman yalnız referans taşır;
+#: `data/izgara.py`/`dogrulama`/`metrikler` takvime R4'te bağlanır, bugün 24/7 varsayımıyla çalışır.
 TAKVIM_24X7: Final = "24x7"
 
-#: Maliyet modeli kimliği. `global` = `config/maliyet.json`'daki tek model (K-007, U14 açık).
+#: Maliyet modeli kimliği. `global` = `config/maliyet.json`'daki tek model (K-007); yalnız Binance
+#: spot kripto için izinli (U17), enstrüman-başı model U14/R2 Paket 3.
 MALIYET_MODELI_GLOBAL: Final = "global"
 
 #: Kimlik kırılması: asgari eksik bar (1h serileri için). Ölçülen yanlış-pozitif bölgesi
@@ -97,6 +106,18 @@ KIRILMA_ASGARI_LOG_ORAN: Final = 2.302585092994046
 
 class KimlikHatasi(ValueError):
     """Kimlik sözleşmesinin ihlali."""
+
+
+def kanonik_kimlik(venue: str, instrument_type: str, sembol: str, tarih: str) -> str:
+    """Kanonik kimlik dizesi — `(venue, instrument_type, sembol, geçerlilik)`in fonksiyonu (K-083).
+
+    `spot` → `<venue>:<TICKER>@<tarih>` (Faz 9'dan beri üretilen biçim, **bayt-aynı**: 761 kimlik,
+    PIT tablosu ve 14 evren çekilişinin `veri_sha256`sı buna bağlı); diğer tipler →
+    `<venue>:<tip>:<TICKER>@<tarih>`. Aynı venue/sembol/tarih farklı tiple farklı dize verir.
+    """
+    if instrument_type == TIP_SPOT:
+        return f"{venue}:{sembol.upper()}@{tarih}"
+    return f"{venue}:{instrument_type}:{sembol.upper()}@{tarih}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,10 +165,10 @@ class Enstruman:
     **v2 (R2):** kimlik alanlarına sözleşme alanları eklendi — varlık sınıfı, enstrüman tipi,
     takvim, tick/lot/kontrat, maliyet ve finansman modeli kimlikleri. Hepsi varsayılanlı ve
     varsayılanlar bugünkü tek gerçeği (Binance spot kripto) kodlar; `kimlikleri_kur` yalnız
-    v1 alanlarını verir. Kanonik kimlik (`kanonik_id`) **değişmedi**: kimlik hâlâ
-    `<venue>:<ticker>@<tarih>`; tip/sınıf kimliğe girmiyor, çünkü bugün tek venue tek tip.
-    U13'ün `(venue, instrument_type, sembol, geçerlilik)` dörtlüsü ONAY BEKLİYOR — kabul
-    edilirse kanonik kimlik biçimi ayrı bir K ile değişir, bu pakette değil.
+    v1 alanlarını doldurur, tipi çağırandan alır. Kanonik kimlik `(venue, instrument_type,
+    sembol, geçerlilik)`in fonksiyonudur (K-083/U13, `kanonik_kimlik`): spot kodlaması
+    `<venue>:<TICKER>@<tarih>` **değişmedi**, spot dışı `<venue>:<tip>:<TICKER>@<tarih>`;
+    `__post_init__` verilen `kanonik_id`yi alanlardan türetilenle karşılaştırır.
     """
 
     kanonik_id: str
@@ -165,7 +186,7 @@ class Enstruman:
     instrument_type: str = TIP_SPOT
     """`ENSTRUMAN_TIPLERI`den biri. Sınıfla karıştırılmaz: kripto spot ≠ kripto vadeli."""
     takvim_id: str = TAKVIM_24X7
-    """Takvim etiketi. Davranışı yok (U15 açık); ızgara hâlâ sürekli 24/7 varsayıyor."""
+    """`data/takvim.KATALOG` anahtarı (U15). Motor okumuyor; ızgara hâlâ 24/7 varsayıyor (R4)."""
     tick_size: float | None = None
     """Fiyat adımı. `None` = **bilinmiyor**: arşiv verisi taşımıyor, `exchange/kurallar.py`
     (`SembolKurallari`) borsadan canlı okuyor ve bu katman ona bağlanmadı. Uydurulmaz."""
@@ -192,6 +213,35 @@ class Enstruman:
             )
         if not self.takvim_id or not self.maliyet_modeli_id:
             raise KimlikHatasi(f"{self.kanonik_id}: takvim_id ve maliyet_modeli_id boş olamaz")
+        beklenen_tip = VENUE_TIPLERI.get(self.venue)
+        if beklenen_tip is not None and beklenen_tip != self.instrument_type:
+            raise KimlikHatasi(
+                f"{self.kanonik_id}: venue {self.venue!r} yalnız {beklenen_tip!r} taşır, "
+                f"{self.instrument_type!r} verildi (K-083/U13)"
+            )
+        beklenen_kimlik = kanonik_kimlik(
+            self.venue, self.instrument_type, self.sembol, utc_str(self.gecerli_baslangic_ms)[:10]
+        )
+        if self.kanonik_id != beklenen_kimlik:
+            raise KimlikHatasi(
+                f"kanonik_id {self.kanonik_id!r} alanlarla tutarsız; beklenen {beklenen_kimlik!r}"
+            )
+        # U17 — tip-koşullu sözleşme kuralları.
+        if self.instrument_type in FINANSMANLI_TIPLER:
+            if self.finansman_modeli_id is None:
+                raise KimlikHatasi(
+                    f"{self.kanonik_id}: {self.instrument_type} için finansman_modeli_id zorunlu"
+                )
+        elif self.contract_size is not None:
+            raise KimlikHatasi(
+                f"{self.kanonik_id}: {self.instrument_type} için contract_size tanımsız, "
+                "None olmalı"
+            )
+        if self.maliyet_modeli_id == MALIYET_MODELI_GLOBAL and not self.binance_spot_kripto:
+            raise KimlikHatasi(
+                f"{self.kanonik_id}: global maliyet modeli yalnız Binance spot kripto için; "
+                "enstrüman-başı model gerekir (K-083/U17, U14)"
+            )
         for ad in ("tick_size", "lot_size", "contract_size"):
             deger = getattr(self, ad)
             if deger is not None and (
@@ -203,6 +253,31 @@ class Enstruman:
                 raise KimlikHatasi(
                     f"{self.kanonik_id}: {ad} sonlu pozitif sayı ya da None olmalı"
                 )
+
+    @property
+    def binance_spot_kripto(self) -> bool:
+        """Varsayılanların (global maliyet, 24x7) izinli olduğu tek sözleşme (K-083/U17)."""
+        return (
+            self.venue == VENUE_BINANCE_SPOT
+            and self.instrument_type == TIP_SPOT
+            and self.asset_class == VARLIK_KRIPTO
+        )
+
+    def islem_icin_dogrula(self) -> None:
+        """Paper/live ön koşulu: `None` = bilinmiyor araştırmada geçer, işlemde geçmez (U17).
+
+        `tick_size` ve `lot_size` her tipte, `contract_size` finansmanlı tiplerde dolu olmalı;
+        eksikse `KimlikHatasi` — fail closed. Bugün paper/live kurulum yolu `Enstruman`
+        görmüyor (bkz. K-083 "Açık kalan"); çağrı noktası İz G'de bağlanır.
+        """
+        eksik = [ad for ad in ("tick_size", "lot_size") if getattr(self, ad) is None]
+        if self.instrument_type in FINANSMANLI_TIPLER and self.contract_size is None:
+            eksik.append("contract_size")
+        if eksik:
+            raise KimlikHatasi(
+                f"{self.kanonik_id}: işlem için bilinmeyen alan {eksik} — borsadan doldurulmadan "
+                "paper/live açılamaz (K-083/U17)"
+            )
 
     def sozluk(self) -> dict[str, Any]:
         """Katalog kaydı. v1 anahtarları **aynı sırada ve aynı değerle** önce; v2 alanları
@@ -288,8 +363,15 @@ def kimlikleri_kur(
     kirilma_listesi: list[KimlikKirilmasi],
     *,
     venue: str = VENUE_BINANCE_SPOT,
+    instrument_type: str = TIP_SPOT,
 ) -> list[Enstruman]:
-    """Seriyi kırılma noktalarından bölüp kanonik enstrümanları üretir."""
+    """Seriyi kırılma noktalarından bölüp kanonik enstrümanları üretir.
+
+    `instrument_type` kimliğe girer (K-083/U13); varsayılan `spot` → kodlama Faz 9 ile aynı.
+    Spot dışı tip için `maliyet_modeli_id`/`finansman_modeli_id` çağırandan gelmek zorunda
+    (U17) — bu fonksiyon yalnız kimlik segmentlerini üretir, sözleşmeyi uydurmaz; o yüzden spot
+    dışı çağrı bugün `Enstruman.__post_init__`te reddedilir (global maliyet yasak).
+    """
     if df.empty:
         return []
     adim = timeframe_ms(timeframe)
@@ -308,13 +390,14 @@ def kimlikleri_kur(
         tarih = utc_str(int(parca[0]))[:10]
         out.append(
             Enstruman(
-                kanonik_id=f"{venue}:{sembol.upper()}@{tarih}",
+                kanonik_id=kanonik_kimlik(venue, instrument_type, sembol, tarih),
                 venue=venue,
                 sembol=sembol.upper(),
                 gecerli_baslangic_ms=int(parca[0]),
                 gecerli_bitis_ms=int(parca[-1]) + adim,
                 bar_sayisi=int(parca.size),
                 kirilma_ile_basladi=j > 0,
+                instrument_type=instrument_type,
             )
         )
     return out
@@ -322,6 +405,7 @@ def kimlikleri_kur(
 
 __all__ = [
     "ENSTRUMAN_TIPLERI",
+    "FINANSMANLI_TIPLER",
     "KIRILMA_ASGARI_EKSIK_BAR",
     "KIRILMA_ASGARI_LOG_ORAN",
     "MALIYET_MODELI_GLOBAL",
@@ -330,10 +414,12 @@ __all__ = [
     "VARLIK_KRIPTO",
     "VARLIK_SINIFLARI",
     "VENUE_BINANCE_SPOT",
+    "VENUE_TIPLERI",
     "Enstruman",
     "KimlikHatasi",
     "KimlikKirilmasi",
     "bosluklar",
+    "kanonik_kimlik",
     "kimlikleri_kur",
     "kirilmalar",
 ]
