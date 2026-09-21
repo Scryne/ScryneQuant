@@ -2656,6 +2656,7 @@ def paper_evren_baslat(
     from scryne_quant.data.alfred import AlfredMakroKaynagi, anahtar_oku
     from scryne_quant.exchange.coklu_akis import BinanceCokluBarAkisi
     from scryne_quant.exchange.turev_rest import BinanceTurevRest
+    from scryne_quant.live import evren_enstruman as ee_mod
     from scryne_quant.live import evren_kosturucu as ek_mod
     from scryne_quant.strategy.kutuphane import EVREN_AILELER
 
@@ -2673,6 +2674,17 @@ def paper_evren_baslat(
     kok.mkdir(parents=True, exist_ok=True)
     kosu_yolu = _paper_yolu(kosu_adi, kok)
     tablo = ek_mod.EvrenTablosu.oku(evren_tablo)
+    rest = BinanceAdaptoru()
+    # K-085 (İz G): enstrüman kimliği tablonun yanındaki katalogdan, tick/lot borsadan, U17
+    # `islem_icin_dogrula` — en son ayın üyeleri (işlem görebilecek küme) için, fail closed.
+    # Sonraki aylarda evrene giren üyeler `enstruman_dogrulayici` ile aynı yoldan geçer.
+    katalog = ee_mod.katalogu_oku(ee_mod.katalog_yolu(evren_tablo))
+    son_uyelik = tablo.uyelik(tablo.aylar()[-1])
+    if son_uyelik is None:
+        raise typer.BadParameter(f"{evren_tablo}: son ayın üyeliği yok")
+    kimlikler = ee_mod.enstrumanlari_kur(katalog, son_uyelik.semboller, rest.sembol_kurallari)
+    # K-084/U14: her üyenin `maliyet_modeli_id`si katalogdan çözümlenir; hepsi global → None.
+    maliyetler = evren_kosu_mod.enstruman_maliyetleri(maliyet_mod.MaliyetKatalogu(), kimlikler)
     risk = RiskMotoru(limitler, "1h", mod="gozlem", defter=SqliteDefter(kosu_yolu))
     kimlik = {
         "kosu_adi": kosu_adi,
@@ -2689,8 +2701,13 @@ def paper_evren_baslat(
         # Yalnızca açıksa: türevsiz koşuların kimliği değişmesin.
         **({"turev": True} if turev else {}),
         **({"makro": sorted(makro)} if makro else {}),
+        # Yalnız çok modelde (K-084): tek modelli koşunun kimliği Faz 14 ile aynı kalır.
+        **(
+            {"maliyetler": maliyet_mod.maliyetler_govdesi(maliyetler)}
+            if maliyetler is not None
+            else {}
+        ),
     }
-    rest = BinanceAdaptoru()
     kosucu: ek_mod.EvrenKosucu
 
     def akis(semboller, son_teslim):
@@ -2705,7 +2722,8 @@ def paper_evren_baslat(
         kimlik=kimlik,
         kurulum={"strateji": strateji, "maliyet": maliyet, "baslangic_sermaye": sermaye,
                  "risk": risk, "timeframe": "1h", "sifira_yaz_bar": sifira_yaz_bar,
-                 "turev": turev, "makro": tuple(sorted(makro or ()))},
+                 "turev": turev, "makro": tuple(sorted(makro or ())),
+                 **({"maliyetler": maliyetler} if maliyetler is not None else {})},
         tablo=tablo,
         rest=rest,
         akis_fabrikasi=akis,
@@ -2713,9 +2731,13 @@ def paper_evren_baslat(
         gunluk=lambda satir: typer.echo(satir),
         turev=BinanceTurevRest() if turev else None,
         makro=AlfredMakroKaynagi(anahtar_oku(Path(".env"))) if makro else None,
+        enstruman_dogrulayici=lambda u: ee_mod.enstrumanlari_kur(
+            katalog, u.semboller, rest.sembol_kurallari
+        ),
     )
     typer.echo(f"evren koşusu : {kosu_adi} (gozlem) · {strateji_adi} {kwargs or ''}")
     typer.echo(f"evren tablosu: {evren_tablo} ({tablo.tablo_hash[:12]})")
+    typer.echo(f"enstrümanlar : {son_uyelik.ay} {ee_mod.ozet(kimlikler)}")
     try:
         asyncio.run(ek_mod.kos(kosucu))
     except KilitAlinamadi as hata:

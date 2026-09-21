@@ -133,6 +133,11 @@ class EvrenKosucu:
     saat: Callable[[], int] = simdi_ms
     bekleme_ms: int = VARSAYILAN_BEKLEME_MS
     gunluk: Callable[[str], None] = print
+    enstruman_dogrulayici: Callable[[AyUyeligi], Any] | None = None
+    """Aylık yenilemede evrene **yeni giren** üyelik için U17 işlem sözleşmesi doğrulaması
+    (`live/evren_enstruman.enstrumanlari_kur`, K-085). Açılıştaki doğrulamayı giriş noktası
+    (`sq paper evren-baslat`) yapar; burası ısınma sonrası eklenen aylar için. Hata → olay
+    yazılır ve yükselir: koşu **durur** (fail closed, K-038 kalıbı), yeni üye sessizce alınmaz."""
     makro: Any = None
     """Makro kaynağı (`data/alfred.AlfredMakroKaynagi` arayüzü: `gunluk(kisa, gunler)`);
     yalnızca `kurulum["makro"]` doluysa kullanılır."""
@@ -174,7 +179,20 @@ class EvrenKosucu:
                 if u is not None and motor.uyelik_ekle(u):
                     motor.depo.olay_yaz("uyelik", ayrinti={"ay": ay, "sembol": len(u.semboller)})
                     if motor.adim_sayisi:  # ısınmada `baslat` bütün sembolleri zaten çeker
+                        self._yeni_uyeleri_dogrula(motor, u)
                         self._yeni_uyeleri_doldur(motor, u, bit)
+
+    def _yeni_uyeleri_dogrula(self, motor: EvrenPaperMotoru, u: AyUyeligi) -> None:
+        if self.enstruman_dogrulayici is None:
+            return
+        try:
+            self.enstruman_dogrulayici(u)
+        except Exception as hata:
+            motor.depo.olay_yaz("enstruman_dogrulama_hatasi",
+                                ayrinti={"ay": u.ay, "hata": str(hata)[:500]})
+            raise
+        motor.depo.olay_yaz("enstruman_dogrulandi",
+                            ayrinti={"ay": u.ay, "sembol": len(u.semboller)})
 
     def _yeni_uyeleri_doldur(self, motor: EvrenPaperMotoru, u: AyUyeligi, bit: int) -> None:
         """Evrene yeni giren sembollerin geçmişini REST'ten tamamlar (`bit` dahil).

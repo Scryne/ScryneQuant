@@ -4234,8 +4234,8 @@ taşır (sözlüğe/kimliğe **yalnız Binance spot dışında** girer → `27b7
 tip). Yeni `(venue, instrument_type, takvim)` kombinasyonu yeni null kalibrasyonu gerektirir; 1,04
 ve `kapilar_v2` sabitleri otomatik taşınmaz (`esikler.json` R5'te sınıf anahtarlı).
 
-**Açık kalan (K değil, TODO):** paper/live kurulum yolunda `islem_icin_dogrula()` çağrısı — bugün o
-yol `Enstruman` nesnesi görmüyor (`SembolKurallari` + PIT sembol listesiyle çalışıyor); bağlama İz G
+**Açık kalan (K değil, TODO) — 2026-09-21'de K-085 ile kapandı:** paper/live kurulum yolunda
+`islem_icin_dogrula()` çağrısı — bugün o yol `Enstruman` nesnesi görmüyor (`SembolKurallari` + PIT sembol listesiyle çalışıyor); bağlama İz G
 (`--mod paper` kurulumu) paketinde, K-046 kalıbıyla.
 
 ### Kanıt
@@ -4322,3 +4322,46 @@ metadata idi, tüketicisi yoktu. Maliyet üç kimlik zincirine giriyor: deney `g
   gidiş-dönüş, tekrar reddi), geçici yayılımı + promotion engeli, paper toparlanma (tek model
   doğrulanır, çok model katalogla, dosya değişince/eksikte fail closed, gerçek gözlem sqlite'ları).
   Tam ağ dışı suite 2.052 → 2.083, 1 skip, 3 deselected; ruff temiz.
+
+---
+
+## K-085 — Canlı evren girişinde enstrüman kimliği katalogdan, işlem sözleşmesi borsadan; U17 fail-closed (İz G)
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne ("R2'de sıradaki gerçek işi belirle ve
+ilerle" talimatı; İz G) · **Tabi:** K-038, K-046, K-083/U13-U17, K-084 · **Kaynak:**
+`src/scryne_quant/live/evren_enstruman.py`, `tests/unit/test_evren_enstruman.py`
+
+### Bulgu
+
+K-083 ve K-084/9 açık bırakmıştı: canlı evren yolu (`sq paper evren-baslat` → `EvrenKosucu`)
+barları REST/akıştan alıyor, `Enstruman` nesnesi görmüyordu; `islem_icin_dogrula()` çağrısız,
+`maliyet_modeli_id` canlı kimliğe girmiyordu.
+
+### Karar
+
+1. **Kimlik kaynağı katalogdur, uydurulmaz.** Canlı yol `Enstruman`ı `sq evren tablo`nun PIT
+   tablosuyla birlikte ürettiği `kimlik-katalogu.json`dan okur (`katalogu_oku`, tablonun yanında).
+   v1 ve v2 kayıtları okunur; bilinmeyen anahtar / tutarsız `kanonik_id` → hata. Tabloda üye olup
+   katalogda olmayan sembol → hata (K-083/U13).
+2. **Sözleşme borsadan (K-046 kalıbı):** `tick_size`/`lot_size` `SembolKurallari`nden
+   (`tick_size`, `step_size`) yazılır; `TRADING` dışı sembol reddedilir; her segment
+   `islem_icin_dogrula()`dan geçer. Kısmi sonuç yok — **fail closed** (`EvrenEnstrumanHatasi`).
+3. **Doğrulama noktaları:** (a) açılış — en son ayın üyeleri (işlem görebilecek küme); geçmiş
+   ayların artık üye olmayan sembolleri ısınma verisidir, borsada kuralı olmayabilir (delist),
+   doğrulanmaz; (b) aylık yenileme — `EvrenKosucu.enstruman_dogrulayici` yeni giren üyeliği aynı
+   yoldan geçirir; hata → `enstruman_dogrulama_hatasi` olayı + koşu **durur** (K-038); geçince
+   `enstruman_dogrulandi` olayı.
+4. **Maliyet bağı (K-084):** `enstruman_maliyetleri(katalog, kimlikler)` canlı girişte de çalışır;
+   hepsi `global` → `None` → kimlik/kurulum **aynen** (Faz 14 biçimi); çok modelde `maliyetler`
+   bloğu kimliğe ve kuruluma girer, toparlanma onu katalogla doğrular (K-084/9).
+5. **Değişmeyen:** `EvrenTablosu`, `EvrenPaperMotoru`, `evren_kurulum_kimlikten`, tek sembollü
+   `PaperMotoru`, execution/OMS/risk. `ozet()` yalnız sayım (günlüğe), kimliğe girmez.
+
+### Kanıt
+
+`test_evren_enstruman.py` (13): katalog okuma (v1+v2, segment sırası, yol, eksik/bozuk×2, geçersiz
+kayıt×2), kurulum (tick/lot her segmente, katalog değişmez, özet; katalog dışı üye, `BREAK`, tick 0 →
+U17 reddi; spot zinciri `None`), gerçek katalog (761 kimlik, son ayın 50 üyesi kurulur, `None` —
+yerelde), koşucu (yeni üyelik doğrulanır + olay; hata → olay + koşu durur; doğrulayıcı yoksa eski
+davranış). Mevcut `test_evren_kosturucu.py`/`test_evren_pano.py`/`test_paper_dongu.py` değişmeden
+geçiyor; host-1 gözlem koşuları etkilenmez (kod dokunulmadı, K-069).
