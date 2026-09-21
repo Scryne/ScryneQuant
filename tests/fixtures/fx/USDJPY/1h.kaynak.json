@@ -1,0 +1,47 @@
+{
+  "bar_sayisi": 479,
+  "bitis_gun": null,
+  "haftalar": {
+    "2024-2": {
+      "durum": "var",
+      "ilk_ms": 1704666300000,
+      "m1_satir": 7152,
+      "pazar": "2024-01-07",
+      "sha256": "d0f84f36bc8eea9ff26251810c9b6462c98fd4eafbd2eacbef29f322ed48592f",
+      "son_ms": 1705096740000
+    },
+    "2024-3": {
+      "durum": "var",
+      "ilk_ms": 1705271820000,
+      "m1_satir": 7133,
+      "pazar": "2024-01-14",
+      "sha256": "9aeaaac201b9c2d96aa9cfcd3ea6593f66a72c32bbee5e40619f5df21db39ea6",
+      "son_ms": 1705701480000
+    },
+    "2024-4": {
+      "durum": "var",
+      "ilk_ms": 1705874520000,
+      "m1_satir": 7155,
+      "pazar": "2024-01-21",
+      "sha256": "c9ea6ae0b04d3ee0513cc1e7375eb9a12d0562acb9035935253eb4ff866e22de",
+      "son_ms": 1706306280000
+    },
+    "2024-5": {
+      "durum": "var",
+      "ilk_ms": 1706479320000,
+      "m1_satir": 7157,
+      "pazar": "2024-01-28",
+      "sha256": "29d3bc8bf71a2f7fc1ce2dfe468ff2820a4a78e35c71911f4275f2b47f684195",
+      "son_ms": 1706911080000
+    }
+  },
+  "ilk": "2024-01-07 23:00:00 UTC",
+  "ilk_ms": 1704668400000,
+  "kaynak": "fxcm-candledata-m1",
+  "pair": "USDJPY",
+  "sha256": "4438ba1a74812a8ddbff8495188e5ade533befed07a5f8a6360b170a0bbe3a2b",
+  "son": "2024-02-02 21:00:00 UTC",
+  "son_ms": 1706907600000,
+  "timeframe": "1h",
+  "veri_sonu": "2024-02-02 21:00:00 UTC"
+}

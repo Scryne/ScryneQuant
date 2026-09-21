@@ -18,7 +18,10 @@ from scryne_quant.strategy.kutuphane.al_tut import AlTut
 from scryne_quant.strategy.kutuphane.breakout import DonchianKirilim
 from scryne_quant.strategy.kutuphane.cok_faktor import CokFaktor
 from scryne_quant.strategy.kutuphane.ema_kesisim import EmaKesisim
-from scryne_quant.strategy.kutuphane.evren_esit_agirlik import EvrenEsitAgirlik
+from scryne_quant.strategy.kutuphane.evren_esit_agirlik import (
+    EvrenEsitAgirlik,
+    FxEvrenEsitAgirlik,
+)
 from scryne_quant.strategy.kutuphane.evren_funding import (
     EvrenBasis,
     EvrenFundingBasis,
@@ -77,7 +80,9 @@ KIYAS: Final[dict[str, type[Strateji]]] = {AlTut.ad: AlTut}
 #: Evren kıyası da bir **kıyastır**, aile değil (K-030): hipotez defterine çekiliş olarak
 #: girmez, K-045'in "yeni çekiliş yok" kuralının kapsamında değildir.
 EVREN_KIYAS: Final[dict[str, type[PortfoyStratejisi]]] = {
-    EvrenEsitAgirlik.ad: EvrenEsitAgirlik
+    EvrenEsitAgirlik.ad: EvrenEsitAgirlik,
+    # FX: hacimsiz kıyas (K-099) — aynı kur/dengeleme, sıralama yok (evren kuralında da yok).
+    FxEvrenEsitAgirlik.ad: FxEvrenEsitAgirlik,
 }
 
 #: Çok enstrümanlı **aileler** (Faz 12, `kesitsel_fiyat` programı). `EVREN_KIYAS`tan ayrı:
@@ -157,6 +162,7 @@ __all__ = [
     "EmaKesisim",
     "EvrenBasis",
     "EvrenEsitAgirlik",
+    "FxEvrenEsitAgirlik",
     "EvrenFundingBasis",
     "EvrenFundingBirikim",
     "EvrenFundingKesit",

@@ -99,7 +99,7 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
         adaylar: list[Aday] = []
         for sembol in self._aday_uyeler(ctx):
             baglam = ctx.enstruman(sembol)
-            if not baglam.hazir("atr", "kote_hacim"):
+            if not baglam.hazir(*self._hazirlik_ozellikleri()):
                 # Isınmamış bir enstrümanda boyut hesaplanmaz. Eşit ağırlık varyantında
                 # oynaklık kullanılmıyor ama aday yine de dışarıda kalıyor: iki varyantın
                 # **aynı** evreni görmesi, farkın yalnızca boyutlandırmadan gelmesini
@@ -123,7 +123,7 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
                     # sembol adına düşürürdü — yani tavan bağladığında kıyas, evrenin
                     # alfabetik ilk N'ini taşıyan keyfi bir alt küme olurdu. Ölçüldü:
                     # 205 sembollü pencerede tavan gerçekten bağlıyor (Faz 10 raporu §5).
-                    skor=baglam.ozellik("kote_hacim"),
+                    skor=self._skor(baglam),
                     oynaklik=oynaklik,
                     mevcut_agirlik=ctx.pozisyon(sembol).exposure,
                     reason="EVREN_KIYASI",
@@ -142,6 +142,14 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
             acik_pozisyonlar=tuple(s for s in ctx.acik_pozisyonlar() if s in ctx.gorunur()),
         )
 
+    def _hazirlik_ozellikleri(self) -> tuple[str, ...]:
+        """Adayın ısınmış olması gereken özellikler. Kripto: ATR **ve** kote hacim."""
+        return ("atr", "kote_hacim")
+
+    def _skor(self, baglam: Any) -> float:
+        """Sıralama skoru: evren kuralının kendi ölçütü (kripto: 30 günlük kote hacim)."""
+        return float(baglam.ozellik("kote_hacim"))
+
     def _aday_uyeler(self, ctx: EvrenBaglam) -> tuple[str, ...]:
         """Sıralamaya girecek üyeler. Kıyasta hepsi; alt sınıf yalnızca **daraltabilir**.
 
@@ -155,4 +163,58 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
         return super().sozluk() | {"kiyas": True}
 
 
-__all__ = ["ATR_PENCERESI", "HACIM_PENCERESI", "EvrenEsitAgirlik"]
+class FxEvrenEsitAgirlik(EvrenEsitAgirlik):
+    """FX evren kıyası: hacimsiz. (K-099, R5 Paket 2; K-030)
+
+    **Tanım:** her yeniden dengeleme anında (`yeniden_dengele_bar`, 1h'te 120 = bir seans
+    haftası) `t`de PIT üyesi olan (`dosya-var` kuralı, `fx_evren`) ve barı `ok` olan **tüm**
+    çiftler eşit ağırlıkla tutulur (`hedef_brut` toplam, `azami_agirlik` tavanı); üyelikten
+    düşen çift bir sonraki dengelemede kapatılır. Giriş/çıkış yalnız üyelik + dengeleme
+    periyodundan gelir — fiyat, momentum, hacim yok. Fill/spread/slippage/finansman mevcut
+    motor hattından (K-094/K-095/K-096).
+
+    **Neden hacim gerektirmiyor:** FXCM hacim vermiyor (K-088) ve FX evren kuralı hacimle
+    sıralamıyor — `dosya-var` bir varlık kuralı. Kripto kıyasının sıralaması evren kuralının
+    ölçütünü (kote hacim) yansıtır; burada evren kuralında sıralama **yok**, dolayısıyla
+    kıyasta da yok: skor sabit 0, tavan bağlarsa sıra sembol adına düşer (`kur` sözleşmesi,
+    `(-skor, sembol)`). Bu yüzden `azami_enstruman` varsayılanı sözleşmedeki çift sayısı
+    (21): tavan bağlamaz, "evrenin tamamını taşıyorum" cümlesi doğru kalır. Daha küçük bir
+    tavan alfabetik bir alt küme demektir — uydurma değil, ama kıyas da değil; parametre
+    kayda giriyor. Hacim **uydurulmaz**: `volume`/`quote_volume` NaN kalır, ısınma yalnız ATR.
+    """
+
+    ad = "fx_evren_esit_agirlik"
+
+    def __init__(
+        self,
+        yeniden_dengele_bar: int = 120,
+        azami_enstruman: int = 21,
+        azami_agirlik: float = 0.30,
+        hedef_brut: float = 1.0,
+        esit_agirlik: bool = True,
+    ) -> None:
+        super().__init__(
+            yeniden_dengele_bar=yeniden_dengele_bar,
+            azami_enstruman=azami_enstruman,
+            azami_agirlik=azami_agirlik,
+            hedef_brut=hedef_brut,
+            esit_agirlik=esit_agirlik,
+        )
+
+    def ozellikler(self) -> Sequence[OzellikTanimi]:
+        return (OzellikTanimi("atr", "atr", {"pencere": ATR_PENCERESI}),)
+
+    def isinma_bar(self) -> int:
+        return ATR_PENCERESI + 2
+
+    def _hazirlik_ozellikleri(self) -> tuple[str, ...]:
+        return ("atr",)
+
+    def _skor(self, baglam: Any) -> float:
+        return 0.0
+
+    def sozluk(self) -> dict[str, Any]:
+        return super().sozluk() | {"hacimsiz": True}
+
+
+__all__ = ["ATR_PENCERESI", "HACIM_PENCERESI", "EvrenEsitAgirlik", "FxEvrenEsitAgirlik"]

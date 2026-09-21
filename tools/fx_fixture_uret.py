@@ -1,6 +1,6 @@
 """Gerçek FXCM deposundan küçük, deterministik FX test fixture'ı üretir. (K-096, R4 Paket 4)
 
-    uv run python tools/fx_fixture_uret.py [--depo data/fx] [--pair EURUSD] [--haftalar 2024-2,…]
+    uv run python tools/fx_fixture_uret.py [--depo data/fx] [--secim EURUSD=2024-2,… GBPUSD=…]
 
 Çıktı `tests/fixtures/fx/`: `<PAIR>/1h.parquet` + `1h.kaynak.json` (`FxDepo` ile aynı yazım —
 zstd/3, sabit row group, sıralı; iki koşu bayt-aynı), `_evren/<kural12>.parquet` + `.json`
@@ -26,28 +26,39 @@ HEDEF = KOK / "tests" / "fixtures" / "fx"
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--depo", default=str(fx_mod.VARSAYILAN_DEPO))
-    ap.add_argument("--pair", default="EURUSD")
-    ap.add_argument("--haftalar", default=",".join(f"2024-{h}" for h in range(2, 9)))
+    ap.add_argument(
+        "--secim",
+        nargs="+",
+        default=["EURUSD=" + ",".join(f"2024-{h}" for h in range(2, 9))],
+        help="PAIR=hafta,hafta,… (her çift için); tablo bu çiftlerden kurulur",
+    )
     args = ap.parse_args()
 
-    haftalar = tuple(args.haftalar.split(","))
     kaynak = fx_mod.FxDepo(args.depo)
-    manifesto = kaynak.manifesto(args.pair)
-    if manifesto is None:
-        raise SystemExit(f"{args.pair}: kaynak depoda manifesto yok")
-    eksik = [h for h in haftalar if manifesto["haftalar"].get(h, {}).get("durum") != "var"]
-    if eksik:
-        raise SystemExit(f"{args.pair}: kaynak depoda olmayan hafta(lar): {eksik}")
-    df = kaynak.oku(args.pair)
-    secilen = {h: dict(manifesto["haftalar"][h]) for h in haftalar}
-    alt = min(int(h["ilk_ms"]) for h in secilen.values())
-    ust = max(int(h["son_ms"]) for h in secilen.values())
-    dilim = df[(df["open_time"] >= alt) & (df["open_time"] <= ust)]
-
     hedef = fx_mod.FxDepo(HEDEF)
-    kayit = hedef._yaz(args.pair, dilim, secilen, None)
-    kural = fx_evren.FxEvrenKurali(ciftler=(args.pair,))
-    tablo = fx_evren.pit_tablo(kural, {args.pair: dict.fromkeys(haftalar, True)})
+    varlik: dict[str, dict[str, bool]] = {}
+    kaynak_depo: dict[str, dict[str, object]] = {}
+    for secim in args.secim:
+        pair, _, haftalar_metin = secim.partition("=")
+        haftalar = tuple(haftalar_metin.split(","))
+        manifesto = kaynak.manifesto(pair)
+        if manifesto is None:
+            raise SystemExit(f"{pair}: kaynak depoda manifesto yok")
+        eksik = [h for h in haftalar if manifesto["haftalar"].get(h, {}).get("durum") != "var"]
+        if eksik:
+            raise SystemExit(f"{pair}: kaynak depoda olmayan hafta(lar): {eksik}")
+        df = kaynak.oku(pair)
+        secilen = {h: dict(manifesto["haftalar"][h]) for h in haftalar}
+        alt = min(int(h["ilk_ms"]) for h in secilen.values())
+        ust = max(int(h["son_ms"]) for h in secilen.values())
+        dilim = df[(df["open_time"] >= alt) & (df["open_time"] <= ust)]
+        kayit = hedef._yaz(pair, dilim, secilen, None)
+        varlik[pair] = dict.fromkeys(haftalar, True)
+        kaynak_depo[pair] = {"sha256": manifesto.get("sha256"), "haftalar": list(haftalar)}
+        print(json.dumps({"pair": pair, "bar": kayit.bar_sayisi, "sha256": kayit.sha256}))
+
+    kural = fx_evren.FxEvrenKurali(ciftler=tuple(sorted(varlik)))
+    tablo = fx_evren.pit_tablo(kural, varlik)
     dizin = HEDEF / fx_evren.EVREN_DIZINI
     dizin.mkdir(parents=True, exist_ok=True)
     ad = kural.kimlik[:12]
@@ -59,13 +70,14 @@ def main() -> None:
         "tablo_hash": fx_evren.tablo_hash(tablo),
         "satir": int(len(tablo)),
         "uye_satir": int(tablo["uye"].sum()),
-        "kaynak_depo": {"pair": args.pair, "sha256": manifesto.get("sha256"), "haftalar": haftalar},
+        "kaynak_depo": kaynak_depo,
     }
     (dizin / f"{ad}.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8", newline="\n",
+        encoding="utf-8",
+        newline="\n",
     )
-    print(json.dumps({"bar": kayit.bar_sayisi, "sha256": kayit.sha256, "tablo": ad}, indent=1))
+    print(json.dumps({"tablo": ad, "satir": len(tablo)}))
 
 
 if __name__ == "__main__":

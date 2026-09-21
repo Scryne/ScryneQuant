@@ -221,6 +221,9 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   rollover ±15 dk ayrı raporlu. `config/maliyet/fxcm-fx.json` **ölçülmüş** (Active Trader koşulu,
   fee 0,26); `config/finansman/fxcm-<pair>.json` **proxy** (`tur=proxy` → gecici, promotion
   engeli; `tools/fx_finansman_proxy_yaz.py`). Rapor `docs/research/records/2026-09-21-R5-fx-kalibrasyon.json`.
+- `strategy/kutuphane/evren_esit_agirlik.py:FxEvrenEsitAgirlik` — **hacimsiz FX kıyası (K-099).**
+  PIT üyelerinin tamamı eşit ağırlık, 120 bar dengeleme, skor yok, hacim NaN kalır; kripto kıyası
+  iki kancayla aynı davranış. `sq evren backtest --strateji fx_evren_esit_agirlik --yeniden-dengele 120`.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

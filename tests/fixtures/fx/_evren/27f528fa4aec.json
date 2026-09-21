@@ -1,0 +1,49 @@
+{
+  "kaynak_depo": {
+    "EURUSD": {
+      "haftalar": [
+        "2024-2",
+        "2024-3",
+        "2024-4",
+        "2024-5",
+        "2024-6",
+        "2024-7",
+        "2024-8"
+      ],
+      "sha256": "9dee3e07e4669de4223178c2a50fd0e9f19aee93197ea06755862f8b00be02e9"
+    },
+    "GBPUSD": {
+      "haftalar": [
+        "2024-2",
+        "2024-3",
+        "2024-4",
+        "2024-5"
+      ],
+      "sha256": "872bf17bcb5363b573a83aa7e0538d8eb7d1abc60eba7159cb128f516667ff69"
+    },
+    "USDJPY": {
+      "haftalar": [
+        "2024-2",
+        "2024-3",
+        "2024-4",
+        "2024-5"
+      ],
+      "sha256": "588889c9cd8b624cd330ab920f85115227891ccd2f412fc7bbfbc07abc8c085b"
+    }
+  },
+  "kural": {
+    "ciftler": [
+      "EURUSD",
+      "GBPUSD",
+      "USDJPY"
+    ],
+    "kaynak": "fxcm-candledata-m1",
+    "kural": "dosya-var",
+    "takvim": "fx-5x24"
+  },
+  "kural_kimlik": "27f528fa4aec0f01df6e1676ab90c31e762137d57c04c344843d2234284f40c2",
+  "satir": 15,
+  "tablo": "tests/fixtures/fx/_evren/27f528fa4aec.parquet",
+  "tablo_hash": "00f914dae4314cdfe5ebe48e3b92fa8cc4a296297f14e8fcce99ef571a09f82d",
+  "uye_satir": 15
+}

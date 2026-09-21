@@ -105,7 +105,7 @@ class TestAdaptor:
             == "ced350678333d309685ff493b9c574a0b1b41054b40d76f39e1dc428f4db5f2c"
         )
         meta = json.loads(TABLO.with_suffix(".json").read_text(encoding="utf-8"))
-        assert evren_kosu.fx_tablo_mu(meta) and meta["kaynak_depo"]["pair"] == "EURUSD"
+        assert evren_kosu.fx_tablo_mu(meta) and list(meta["kaynak_depo"]) == ["EURUSD"]
 
     def test_gercek_dilim_kalite_239_ok(self):
         bayrakli, rapor = fxg.fx_dogrula(_ham(), TFX, pair="EURUSD")

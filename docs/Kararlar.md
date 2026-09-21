@@ -4972,3 +4972,55 @@ EURUSD tam 55 hafta (390.935 dk): slippage p75 0,849, spread p50 0,185 — ortak
 - Sentetik M1: rollover penceresi n=30/30, spread ×4, gap sonrası iki hareket atıldı (K-021 kuralı).
 - Kripto: `coklu_referans` + katalog senaryosu `96933a8` ile SAME; `_maliyet_govdesi` SAME
   (`MaliyetModeli` şeması değişmedi); ağ dışı 2.257 test (9 yeni).
+
+## K-099 — R5 Paket 2: hacimsiz FX evren kıyası `fx_evren_esit_agirlik` (K-030 çözümü)
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R5 Paket 2 talimatı) · **Tabi:**
+K-030 (kıyas zorunlu, aynı yoldan geçer), K-088 (hacim yok), K-090 (`dosya-var` kuralı), K-094,
+K-095, K-096, K-098 · **Kaynak:** `strategy/kutuphane/evren_esit_agirlik.py`
+(`FxEvrenEsitAgirlik`), `strategy/kutuphane/__init__.py` (`EVREN_KIYAS`), `tools/fx_fixture_uret.py`
+(çoklu çift), `tests/fixtures/fx/{GBPUSD,USDJPY,_evren/27f528fa4aec.*}`, `tests/unit/test_fx_kiyas.py`
+
+### Karar
+
+1. **Tanım (ekonomik):** her yeniden dengeleme anında (`yeniden_dengele_bar`, 1h'te varsayılan
+   120 = bir seans haftası) `t`de PIT üyesi (`dosya-var`, haftalık tablo) ve barı `ok` olan **tüm**
+   çiftler eşit ağırlıkla tutulur (`hedef_brut` 1,0; `azami_agirlik` 0,30 tavanı → 3 çiftle %90
+   brüt, kalan nakit rollover için); üyelikten düşen çift bir sonraki dengelemede kapatılır;
+   giriş/çıkış yalnız üyelik + dengeleme periyodundan gelir — fiyat, momentum, hacim yok. Al-tut
+   kalıbı: pozisyon pencerenin sonunda açık kalır (K-030 istisnası 2).
+2. **Neden hacim gerektirmiyor:** FXCM hacim vermiyor ve FX evren kuralı hacimle sıralamıyor
+   (`dosya-var` bir varlık kuralı). Kripto kıyasının sıralaması evren kuralının ölçütünü (30 günlük
+   kote hacim) yansıtır; FX kuralında sıralama **yok**, dolayısıyla kıyasta da yok: skor sabit 0,
+   tavan bağlarsa sıra `kur` sözleşmesiyle sembol adına düşer. Bu yüzden `azami_enstruman`
+   varsayılanı sözleşmedeki çift sayısı (21): tavan bağlamaz, "evrenin tamamı" cümlesi doğru
+   kalır. Daha küçük tavan alfabetik alt küme = kıyas değil (parametre kayda giriyor).
+   `volume`/`quote_volume` **NaN kalır**, ısınma yalnız ATR (14 + 2 bar).
+3. **En küçük değişiklik:** `EvrenEsitAgirlik`e iki kanca (`_hazirlik_ozellikleri`, `_skor`);
+   varsayılanlar eski davranışın kendisi (`("atr","kote_hacim")`, kote hacim skoru). `on_bar`ın
+   seçim/kurma/dengeleme gövdesi ortak; FX sınıfı yalnız özellik listesi, ısınma, kancalar ve
+   varsayılan parametreleri değiştirir. `EVREN_KIYAS`e kayıtlı; kıyas olduğu için hipotez defterine
+   girmez (K-030/K-039), alfa değildir.
+4. **Kripto kıyası değişmedi:** `sozluk()` (config_hash girdisi) aynı; sentetik 3 sembollü evrende
+   (tavan bağlıyor, geç listelenen sembol) HEAD vs değişiklik `sonuc_hash`/`config_hash` iki
+   varyantta SAME; kripto referans senaryoları `96933a8` ile SAME.
+5. **Promotion engeli aynen:** FX koşusu `gecici_finansman_modeli` taşır (K-098 proxy); bu paket
+   kaldırmaz.
+
+### Kanıt (gerçek fixture: EURUSD h2-h8, GBPUSD/USDJPY h2-h5, tablo `27f528fa4aec`, gerçek model dosyaları)
+
+- Kıyas **işlem üretiyor**: 15 fill, üç çift aynı dengeleme barında açılıyor; brüt maruziyet ort.
+  > 0,85, azami ≤ 0,92; spread 0,103, slippage 1,239, komisyon 0,238, finansman 7,06 (EURUSD 6,05,
+  GBPUSD 1,01, USDJPY 0 — proxy tabanı) — hepsi motor hattından; `gecici_finansman_modeli` duruyor.
+- Tek dengeleme (periyot > koşu): çift başına tek alış, fiyat Parquet `ask_open[15] × (1+s)` (`Decimal`
+  ≤ 1e-12), notional 3.000 = 0,30 × 10.000, komisyon 0,26 bps.
+- PIT çıkışı (sentetik, barı olan çift üyelikten düşer): sonraki dengelemede **tek satış**
+  `bid_open × (1−s)` (`Decimal`), geri girmez; %100 yatırımlı hâl rollover'da `FinansmanHatasi`
+  (K-095 fail-closed) — kıyas tavanı bu yüzden nakit bırakır.
+- Hacim isteyen kripto kıyası FX'te hâlâ 0 sinyal (hacim uydurulmadı).
+- `sq evren backtest --strateji fx_evren_esit_agirlik` koşuyor (CLI varsayılan `--yeniden-dengele`
+  720; FX için 120 verilir). Ağ dışı 2.264 test (7 yeni).
+
+**Not:** fixture'da GBPUSD/USDJPY h6-h8'de **barı yok** (indirilmedi) → pozisyon son fiyattan
+değerlenir (`bayat_degerleme` 720, K-057) ve kapanamaz; bu üyelik çıkışı değil veri yokluğu.
+Gerçek koşuda 21 çift pencere kadar indirilir (K-090/5).
