@@ -36,6 +36,7 @@ from scryne_quant.common.zaman import simdi_ms, utc_str
 from scryne_quant.data import arsiv_indirici as arsiv_mod
 from scryne_quant.data import evren as evren_mod
 from scryne_quant.data import funding as funding_mod
+from scryne_quant.data import fx as fx_mod
 from scryne_quant.data import kimlik as kimlik_mod
 from scryne_quant.data import sozlesme as sozlesme_mod
 from scryne_quant.data.depo import ParquetDepo
@@ -247,6 +248,49 @@ def data_indir(
 
 
 # -------------------------------------------------------------- data quality
+
+
+@data_app.command("fx-al")
+def data_fx_al(
+    pair: Annotated[str, typer.Argument(help="Örn. EURUSD (FXCM MarketData, K-088)")],
+    bas_gun: Annotated[str, typer.Option("--bas", help="İlk gün YYYY-MM-DD (o hafta dahil)")],
+    bit_gun: Annotated[str, typer.Option("--bit", help="Son gün YYYY-MM-DD (o hafta dahil)")],
+    depo_kok: Annotated[Path, typer.Option("--depo", help="FX depo kökü")] = fx_mod.VARSAYILAN_DEPO,
+    bitis_gun: Annotated[
+        str | None,
+        typer.Option(
+            "--bitis-gun",
+            help="Depoyu bu güne sabitle (UTC, dahil): sonraki haftalar istenmez, barlar kırpılır "
+            "(K-080).",
+        ),
+    ] = None,
+    json_cikti: JsonCikti = False,
+) -> None:
+    """FXCM MarketData haftalık M1 (bid+ask) → 1h Parquet + SHA manifesto. (R3 Paket 1(a), K-088)
+
+    Doğrudan HTTPS, hesap yok; gelen dosyalar `data/fx/_gelen/<PAIR>/` altında bir kez indirilir
+    (404 hatırlanır), depo gelen kümeden **baştan** kurulur — aynı komut iki kez → aynı baytlar.
+    Yalnız araştırma verisi (K-087/2); mid/spread üretilmez (R4).
+    """
+    try:
+        kayit = fx_mod.fx_al(
+            pair.upper(), bas_gun, bit_gun, depo=fx_mod.FxDepo(depo_kok),
+            indirici=fx_mod.https_indirici(), bitis_gun=bitis_gun,
+        )
+    except fx_mod.FxHatasi as hata:
+        raise typer.BadParameter(str(hata)) from hata
+    if json_cikti:
+        _yaz_json(kayit.sozluk())
+        return
+    var = sum(1 for h in kayit.haftalar.values() if h.get("durum") == "var")
+    yok = len(kayit.haftalar) - var
+    typer.echo(f"{kayit.pair} 1h · {kayit.bar_sayisi:,} bar · hafta {var} var / {yok} yok")
+    if kayit.bar_sayisi:
+        typer.echo(f"  aralık : {utc_str(kayit.ilk_ms)} → {utc_str(kayit.son_ms)}")
+        typer.echo(f"  sha256 : {kayit.sha256}")
+    if bitis_gun:
+        typer.echo(f"  veri sonu sabit: {bitis_gun} (K-080)")
+    typer.echo(f"  dosya  : {kayit.yol}")
 
 
 @data_app.command("quality")

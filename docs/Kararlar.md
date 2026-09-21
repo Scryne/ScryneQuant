@@ -4389,7 +4389,7 @@ kripto-dışı takvim içeriği. Bunlar R2'yi açık tutmaz; R4 satırı zaten b
 
 ## K-087 — R3 ilk kripto-dışı sınıf: FX (HistData M1 → 1h), yalnız araştırma; Dukascopy ve Tiingo elendi
 
-**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne ("R3'ün ilk işi: kaynak/lisans ve
+**Durum:** değiştirildi → K-088 (sağlayıcı: HistData yerine FXCM MarketData; sınıf/kapsam/takvim/eşik maddeleri yürürlükte) · **Tarih:** 2026-09-21 · **Onay:** Scryne ("R3'ün ilk işi: kaynak/lisans ve
 kripto-dışı veri kapsamı kararı") · **Tabi:** K-005, K-007, K-014, K-021, K-052, K-079, K-080,
 K-083/U13-U17, K-084 · **Kaynak:** sağlayıcı sayfaları 2026-09-21'de okundu (aşağıda), Threshold-
 Policy §3, `docs/audit/W7` §5, `src/scryne_quant/data/sozlesme.py:histdata-fx-m1`
@@ -4438,3 +4438,59 @@ SHA'lı manifesto), idempotent, `--bitis-gun`; (b) `sq data fx-al` CLI (gelen di
 raporlanır, `suspect` değil); (d) takvim ölçümü + `fx-5x24` satırı; (e) PIT evren tablosu (çift
 listesi) + hayatta kalma ölçümü; (f) `docs/Faz-R3-FX-Veri-Raporu.md`. Kanıt: `test_fx.py`
 (format, EST→UTC, bid, idempotency, checksum, K-080).
+
+---
+
+## K-088 — R3 FX kaynağı FXCM MarketData (doğrudan HTTPS haftalık M1 bid+ask); HistData terk edildi
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne ("FXCM MarketData bulgusunu kabul et")
+· **Değiştirir:** K-087'nin sağlayıcı kararı (K-087/1, /3, /4 → bu K; K-087/2, /5-7 kapsam,
+takvim, hayatta kalma, eşik maddeleri yürürlükte) · **Tabi:** K-005, K-007, K-009, K-014, K-080,
+K-083/U13-U17, K-084 · **Kaynak:** `github.com/fxcm/MarketData` README (2026-09-21 okundu),
+gerçek dosya ölçümü (aşağıda), `src/scryne_quant/data/fx.py`, `tests/unit/test_fx.py`
+
+### Neden HistData terk edildi
+
+Ücretsiz indirme yalnız tarayıcı içinde çalışıyor: `POST /get.php` formunun `tk` alanı ham HTML'de
+**boş**, sayfa JavaScript'iyle dolduruluyor, dosya gizli iframe'e iniyor; API/örnek dosya/doğrudan
+URL yok; toplu erişim yalnız ücretli FTP/Google Drive. Token'ı taklit eden otomatik POST K-087/4'te
+zaten yasaktı. Ayrıca veri yalnız bid ve kaynak akışı adsızdı. FTP için ödeme **yapılmadı**.
+
+### FXCM MarketData — ölçüm (2026-09-21, gerçek dosyalar)
+
+- README doğrudan URL kalıbı veriyor: `https://candledata.fxcorporate.com/{m1|H1|D1}/{PAIR}/{yıl}/{hafta}.csv.gz`,
+  hesap/anahtar yok; "This is for personal use and abides by our EULA". 21 çift.
+- Biçim: başlık `DateTime,BidOpen,BidHigh,BidLow,BidClose,AskOpen,AskHigh,AskLow,AskClose`;
+  damga `MM/DD/YYYY HH:MM:SS.000` (03/08/2024 = 8 Mart, Cuma); **volume yok**.
+- **Zaman damgası UTC** (varsayılmadı, ölçüldü): kış haftaları Pazar 22:0x açılış / Cuma 21:59
+  kapanış (2024 h2, h10, h45; 2023 h51-53), ABD yaz saati haftaları Pazar 21:0x / Cuma 20:59
+  (2024 h11 = 10 Mart DST başlangıcı, h12, h30, h31, h44) — NY 17:00 açılışının UTC karşılığı
+  tam olarak böyle kayar; yerel/sabit-ofset damga olsaydı kaymazdı.
+- Hafta dosyası Pazar→Cuma; satır 7.172–7.188 / 7.200 dakika (tick'siz dakikalar yok); yılbaşı
+  haftaları kısa (2023 h52 5.415, h53 5.356).
+- **Hafta numarası**: yıl = haftanın **Pazar**ının yılı; `w = %U(Pazar) + (1 if %U(1 Ocak)==0 else 0)`
+  — yani 1 Ocak'ı içeren hafta 1 (Pazar'dan başlayan haftalar). Doğrulandı: 2023-12-31 → 2023/53,
+  2024-01-07 → 2024/2, 2024-03-03 → 2024/10, 2024-10-27 → 2024/44; 2024/1 ve 2024/53 **404**.
+- Kapsam: 2012'den 2026 h35'e kadar 200 döndü (EURUSD).
+
+### Karar
+
+1. Venue **`fxcm-fx`**, `instrument_type="cfd"` (FXCM perakende CFD/marjlı FX; swap = finansman,
+   U17), `asset_class="fx"`. `VENUE_TIPLERI[fxcm-fx] = cfd`. `histdata-fx` venue'su ve
+   `histdata-fx-m1` sözleşmesi hiç veri taşımadan **kaldırıldı** (K-087 metni tarihsel).
+2. Veri sözleşmesi **`fxcm-candledata-m1`**: M1 bid+ask OHLC, volume yok (`trades` üretilmez),
+   damga UTC (ölçüm yukarıda), haftalık `.csv.gz`, 5/7 seans (Pazar 21/22:00 UTC → Cuma
+   20:59/21:59 UTC, DST'ye göre). Lisans alanı: "personal use / EULA" **alıntıyla**; yeniden
+   dağıtım yok; kullanım kendi hesabı/araştırma (K-014). Canlı yok (K-087/2 aynen).
+3. **`data/fx.py` (Paket 1(a)):** haftalık dosyalar `data/fx/_gelen/<PAIR>/<yıl>-<w>.csv.gz`e
+   indirilir (varsa yeniden indirilmez; 404 manifestoya `yok` yazılır), SHA-256'ları manifestoda;
+   M1 → **1h** (bar = saat başı, `open_time` UTC epoch ms, K-005): bid ve ask OHLC ayrı ayrı
+   (ilk/maks/min/son), `m1_sayisi`; **mid/tek fiyat üretilmez** — motorun hangi fiyatı kullanacağı
+   ve spread bileşeni R4 kararı (K-007 "aleyhte" orada uygulanır). Parquet `data/fx/<PAIR>/1h.parquet`
+   deterministik (depo ile aynı yazım parametreleri, pandas metadata'sız), manifesto
+   `1h.kaynak.json` (dosya başına sha/satır/ilk/son, `veri_sonu`, `bitis_gun`).
+4. **`--bitis-gun` (K-080):** o günden sonraki haftalar indirilmez, depodaki barlar `open_time <
+   gün+1 00:00 UTC` ile kırpılır; aynı komut iki kez → bayt-aynı; uzatmak da geri sarmak da aynı
+   komut. Kripto yolu (`ParquetDepo`, `data/market`, `data/evren`) **değişmedi**.
+5. Takvim (`fx-5x24`), kalite raporu, hayatta kalma ölçümü, kalibrasyon: K-087/5-7 aynen, sonraki
+   paketler.

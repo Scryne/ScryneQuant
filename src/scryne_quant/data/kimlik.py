@@ -69,16 +69,16 @@ VENUE_BINANCE_SPOT: Final = "binance-spot"
 # yalnızca **kimlik** taşır: motor/fill/live bunları okumaz (R4'ün işi), `sozluk()` çıktısı
 # hiçbir deney/sonuç hash'ine girmez (`tests/unit/test_enstruman_v2.py` bunu tarıyor).
 
-#: Varlık sınıfları. `kripto` (Binance spot, Faz 1-16) ve `fx` (K-087: HistData M1 → 1h, R3;
+#: Varlık sınıfları. `kripto` (Binance spot, Faz 1-16) ve `fx` (K-087/K-088: FXCM M1 → 1h, R3;
 #: yalnız araştırma, canlı yok). Yeni sınıf = kaynak + lisans kararı + K; buraya "geçiyor" diye
 #: desteklenmiş sayılmaz (endeks/emtia için karar yok).
 VARLIK_SINIFLARI: Final[frozenset[str]] = frozenset({"kripto", "fx"})
 VARLIK_KRIPTO: Final = "kripto"
 VARLIK_FX: Final = "fx"
 
-#: HistData FX verisinin venue etiketi (K-087). Sağlayıcı bir borsa değil, adı verilmeyen bir
-#: perakende FX kotasyon akışı; `instrument_type` `cfd` (marjlı FX, swap = finansman, U17).
-VENUE_HISTDATA_FX: Final = "histdata-fx"
+#: FXCM MarketData FX verisinin venue etiketi (K-088). Perakende CFD/marjlı FX kotasyonu (bid+ask);
+#: `instrument_type` `cfd` (swap = finansman, U17). Yalnız araştırma.
+VENUE_FXCM_FX: Final = "fxcm-fx"
 
 #: Enstrüman tipleri — kapalı küme (U13). Spot ≠ vadeli ≠ CFD ≠ ETF: aynı dayanağın farklı
 #: sözleşmeleri farklı enstrümandır; verileri karıştırılmaz. Bugün yalnız `spot` üretiliyor;
@@ -89,7 +89,7 @@ TIP_SPOT: Final = "spot"
 #: Bilinen venue → tek tip (K-083/U13). Bir venue tek sözleşme tipi taşır; `binance-spot` +
 #: `vadeli` tutarsızlıktır ve reddedilir. Listede olmayan venue için tip kısıtı yok (bilinmiyor,
 #: uydurulmaz) — spot dışı ilk venue R3'te kaynak kararıyla buraya girer.
-VENUE_TIPLERI: Final[dict[str, str]] = {VENUE_BINANCE_SPOT: TIP_SPOT, VENUE_HISTDATA_FX: "cfd"}
+VENUE_TIPLERI: Final[dict[str, str]] = {VENUE_BINANCE_SPOT: TIP_SPOT, VENUE_FXCM_FX: "cfd"}
 
 #: Finansman bacağı olan tipler: `finansman_modeli_id` zorunlu, `contract_size` anlamlı (U17).
 FINANSMANLI_TIPLER: Final[frozenset[str]] = frozenset({"vadeli", "cfd"})
@@ -422,7 +422,7 @@ __all__ = [
     "VARLIK_KRIPTO",
     "VARLIK_SINIFLARI",
     "VENUE_BINANCE_SPOT",
-    "VENUE_HISTDATA_FX",
+    "VENUE_FXCM_FX",
     "VENUE_TIPLERI",
     "Enstruman",
     "KimlikHatasi",
