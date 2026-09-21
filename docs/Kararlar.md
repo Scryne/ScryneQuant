@@ -4867,3 +4867,41 @@ K-095 · **Kaynak:** `data/fx_gorunum.py`, `research/evren_kosu.py` (`fx_veri_ku
   `fxcm-eurusd` ile başlamaz; geçici kataloglarla koşar: `evren.takvim.id = fx-5x24`, kalite
   839 ok, kıyas 0 işlem, `toplam_finansman`/`toplam_spread` kayıtta.
 - **Suite:** ağ dışı 2.248 test yeşil (21 yeni).
+
+## K-097 — R4 kapandı: araştırma motoru genelleştirme (takvim, bid/ask, spread, finansman, FX adaptörü)
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne ("R4'ü kapat; K-096 kanıtlarını kullan,
+yeni audit yok") · **Tabi:** K-093…K-096 · **Kaynak:** `docs/ROADMAP-RESET.md` R4/R5
+
+**Paketler:** (1) K-093 takvim → `bar_yili`/gap/kırılma/ızgara/bayatlık, 24x7 bit-aynı ✅;
+(2) K-094 bid/ask fill (K-007 üstüne) + spread ayrı bileşen + kayda `takvim` bloğu ✅;
+(3) K-095 finansman/rollover (`finansman_modeli_id` → katalog, rollover anları takvimden, bedel bir
+kez nakitten, fail-closed) ✅; (4) K-096 FXCM Parquet → `PiyasaGorunumu` adaptörü, FX kalite
+bayrağı, `sq evren backtest` FX akışı, gerçek EURUSD fixture uçtan uca ✅.
+
+**R4 bitti kriteri, madde madde (mevcut kanıtlarla):**
+- Motor takvim-farkında, seans boşluğu "kırılma" değil → K-093 (fx-5x24 seride hafta sonu gap
+  değil: 24x7 2 gap/48 eksik → fx 1 gap/1 eksik; kırılma boşluğu yalnız hafta içi) ✅
+- Yıllıklandırma takvimden → K-093 (`Takvim.yillik_bar`, fx-5x24 1h 6.261,43; 24x7 aynı ifade) ✅
+- Finansman/rollover bacağı fill'de → K-095 (bedel adım döngüsünde bir kez nakitten + tura;
+  FX fixture `Decimal` ≤ 1e-12, 3 rollover/5 gün; kısa tur 0.0; K-096 uçtan uca 2 rollover) ✅
+- Kripto koşusu R2 öncesiyle **bit düzeyinde aynı** (referans fixture) → her pakette HEAD ve
+  `96933a8` (R4 öncesi) kıyası: `coklu_referans` 2 senaryo + katalog senaryosu tam kayıt SAME;
+  R1(b) 23 gerçek kayıt sınıf + fark listesi birebir (K-094); `test_backtest_referans`/
+  `test_coklu_referans` dokunulmadan ✅
+- Spread ayrı maliyet bileşeni → K-094 (`Emir.spread_maliyeti`, `Islem.spread`, `toplam_spread`
+  yalnız varsa; K-096 gerçek yarım spread ≤ 1e-12) ✅
+
+**R4'te kalan — sınıflandırıldı ve taşındı (R4'e geri doldurulmaz):**
+1. **R5 kalibrasyon:** ölçülmüş FX maliyet (`config/maliyet/fxcm-fx.json`, K-021 kalıbı,
+   bid/ask'ten) ve swap oranları (`config/finansman/fxcm-<pair>.json`, kaynaklı). Bugün ikisi de
+   yok; FX koşusu katalogda durur (bilerek).
+2. **R5/araştırma:** hacimsiz FX kıyasının tanımı (K-030; varsayılan kıyas kote hacim ister,
+   FX'te hacim yok → sinyal üretmez).
+3. **Veri kapsamı (R5 ön koşulu, K-090/5):** 21 çiftin tamamı HEAD'de var (K-091) ama yalnız 3'ü
+   indirildi; gerçek tablo tüm üyeleri ister (`AUDCAD: FX deposunda yok` ile durur). İndirme
+   yalnız kullanılacak pencere kadar.
+4. **Araştırma altyapısı (R5/R6):** FX kırılma tespiti (bugün tek segment) ve
+   `research/tekrar.py`nin `takvim`/`finansmanlar` bloklarını yorumlaması (FX kaydı tekrarı).
+
+**R5 ilk paket önerisi:** ölçülmüş FX maliyet + finansman — ayrı öneri (Scryne kararı).

@@ -120,7 +120,7 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   K-051'in program kaydı + arama bütçesiyle açılır, serbest çekilişle değil.
 - `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
 - `docs/ROADMAP-RESET.md` — **kanonik yol haritası (2026-09-20, denetim döngüsü kabulü):**
-  R0-R12 + 10 paralel iz; hook bunu okur. `docs/Roadmap.md` — Faz 0-16, **tarihsel**.
+  R0-R12 + 10 paralel iz; hook bunu okur. R0-R4 kapalı (R4: K-093…K-097); sırada R5. `docs/Roadmap.md` — Faz 0-16, **tarihsel**.
 - `docs/audit/00-08` — denetim döngüsü (W0-W8 + Executive Summary); `docs/research/
   Threshold-Policy.md` — eşik politikası (ölçülmüş / iştah / `DECISION REQUIRED`).
 - `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri (tarihsel). Faz 0-8 v1 (8'i kapalı),
