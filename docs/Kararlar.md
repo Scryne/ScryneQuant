@@ -4365,3 +4365,22 @@ U17 reddi; spot zinciri `None`), gerçek katalog (761 kimlik, son ayın 50 üyes
 yerelde), koşucu (yeni üyelik doğrulanır + olay; hata → olay + koşu durur; doğrulayıcı yoksa eski
 davranış). Mevcut `test_evren_kosturucu.py`/`test_evren_pano.py`/`test_paper_dongu.py` değişmeden
 geçiyor; host-1 gözlem koşuları etkilenmez (kod dokunulmadı, K-069).
+
+---
+
+## K-086 — R2 kapandı: enstrüman & çok varlık alan modeli; R4 sınırı takvim bağlaması R4'te
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne ("push sonrası R2'yi kapat") ·
+**Tabi:** K-083, K-084, K-085 · **Kaynak:** `docs/ROADMAP-RESET.md` R2
+
+**Karar.** R2'nin "bitti" kriteri karşılandı: `Enstruman` v2 alanları (K-083 Paket 1), U13 kanonik
+kimlik + U15 `24x7` takvim seam'i + U16/U17 sözleşme kuralları (K-083 Paket 2), enstrüman-başı
+maliyet kataloğu (K-084), canlı evren girişinde kimlik + U17 fail-closed (K-085); spot/vadeli/
+CFD/ETF ayrımı tip düzeyinde testle; U13-U17 K olarak yazılı. Kripto yolu her pakette bit-aynı
+ölçüldü (`_maliyet_govdesi` `fe9f73bb…`, PIT `b06857c0…`, kural `27b7a16ed0ed…`, 14 evren
+çekilişi, R1(b) 9 kayıt, 5 evren kaydı `config_hash`; ağ dışı suite 2.096).
+
+**R2'den R4'e devredilen (R2'nin değil R4'ün kriteri):** takvim seam'inin `izgara`/`gap`/
+kırılma "eksik bar"/`bar_yili`/canlı bayatlığa bağlanması ve bunun motor tarafında bit-aynı
+kripto kanıtı; spread ayrı maliyet bileşeni. R3'e bağlı: yeni `(venue, tip, id)` kalibrasyonu ve
+kripto-dışı takvim içeriği. Bunlar R2'yi açık tutmaz; R4 satırı zaten bunları sayıyor.

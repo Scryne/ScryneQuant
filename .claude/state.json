@@ -1,7 +1,7 @@
 {
   "proje_adi": "ScryneQuant",
   "asama": "uygulama",
-  "guncellendi": "2026-09-20",
+  "guncellendi": "2026-09-21",
   "surum": 2,
-  "not": "Kanonik yol haritasi docs/ROADMAP-RESET.md (R0-R12; hook okur). Durum: R0 kapali; R1 (a)-(g) kapali (K-080 veri sonu, K-081 esik 45 cekilis / 1,04 korundu, K-082 promotion zinciri+audit, R1(f) bagimlilik, R1(g) dokuman). Kararlar docs/Kararlar.md (K-001..K-082). Operasyon: host-1 K-069 penceresi 2026-09-25'e kadar (hosta dokunulmaz). Ayrinti bu dosyada tutulmaz; ROADMAP-RESET ve Kararlar tek kaynaktir."
+  "not": "Kanonik yol haritasi docs/ROADMAP-RESET.md (R0-R12; hook okur). Durum: R0, R1, R2 kapali (R2: K-083 Enstruman v2 + U13-U17, K-084 maliyet katalogu, K-085 canli evren kimligi, K-086 kapanis). Sirada R3 (kripto-disi veri katmani: kaynak/lisans karari). Kararlar docs/Kararlar.md (K-001..K-086). Operasyon: host-1 K-069 penceresi 2026-09-25'e kadar (hosta dokunulmaz). Ayrinti bu dosyada tutulmaz."
 }
