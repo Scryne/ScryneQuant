@@ -49,7 +49,13 @@ MALIYET = MaliyetModeli(fee_taker_bps=10.0, slippage_bps=5.0)
 KAYMASIZ = MaliyetModeli(fee_taker_bps=10.0, slippage_bps=0.0)
 FINANSMAN = FinansmanModeli(
     uzun_gunluk_bps=2.5,
-    kaynak=FinansmanKaynagi(saglayici="test", tarih="2026-09-21", gerekce="fixture"),
+    kaynak=FinansmanKaynagi(
+        saglayici="test",
+        tarih="2026-09-21",
+        gerekce="fixture",
+        aralik="2024-01-01..2024-12-31",
+        tur="broker",
+    ),
 )
 
 

@@ -216,6 +216,11 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   (`maliyet fxcm-fx`, `finansman fxcm-<pair>` — dosyaları **yok**, uydurulmaz).
   `evren_kosu.fx_kur`; `sq evren backtest` FX tablosunu meta'dan tanır (`--fx-depo`).
   Fixture `tests/fixtures/fx/` gerçek EURUSD 2024 h2-h8 (`tools/fx_fixture_uret.py`).
+- `src/scryne_quant/data/fx_kalibrasyon.py` + `sq data fx-kalibre` — **FX maliyet kalibrasyonu
+  (K-098, R5 Paket 1).** Kripto `kalibre_et` kalıbı, M1 orta fiyat; spread modele girmez (K-094),
+  rollover ±15 dk ayrı raporlu. `config/maliyet/fxcm-fx.json` **ölçülmüş** (Active Trader koşulu,
+  fee 0,26); `config/finansman/fxcm-<pair>.json` **proxy** (`tur=proxy` → gecici, promotion
+  engeli; `tools/fx_finansman_proxy_yaz.py`). Rapor `docs/research/records/2026-09-21-R5-fx-kalibrasyon.json`.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

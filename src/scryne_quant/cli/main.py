@@ -390,6 +390,172 @@ def data_fx_evren(
     )
 
 
+@data_app.command("fx-kalibre")
+def data_fx_kalibre(
+    ciftler: Annotated[
+        list[str] | None, typer.Argument(help="Çiftler (varsayılan: depoda M1'i olanlar).")
+    ] = None,
+    baslangic: Annotated[str, typer.Option("--baslangic", help="YYYY-MM-DD (dahil)")] = "",
+    bitis: Annotated[str, typer.Option("--bitis", help="YYYY-MM-DD (hariç)")] = "",
+    persentil: Annotated[float, typer.Option("--persentil")] = VARSAYILAN_PERSENTIL,
+    depo_kok: Annotated[Path, typer.Option("--depo", help="FX depo kökü")] = fx_mod.VARSAYILAN_DEPO,
+    rapor: Annotated[Path | None, typer.Option("--rapor", help="Rapor JSON yolu")] = None,
+    yaz: Annotated[bool, typer.Option("--yaz", help="Maliyet modelini kataloğa yaz")] = False,
+    gerekce: Annotated[str, typer.Option("--gerekce", help="Persentil/karar gerekçesi")] = "",
+    json_cikti: JsonCikti = False,
+) -> None:
+    """FX spread dağılımı + slippage kalibrasyonu (kripto K-021 kalıbı, M1 orta fiyat). (K-098)
+
+    Spread modele **yazılmaz** (K-094 fill'i gerçek bid/ask'ten alır; iki kez sayım yok); rollover
+    penceresi ayrı raporlanır. `--yaz`: çiftler arası p75 oranı `VENUE_ORAN_ESIGI` altındaysa tek
+    `config/maliyet/fxcm-fx.json` (değer = en büyük p75, K-007), değilse çift başına dosya.
+    `fee_taker_bps` Active Trader tarifesinden türetilir (kaynak kayıtta), 0 değil.
+    """
+    from scryne_quant.data import fx_kalibrasyon as fk_mod
+
+    depo = fx_mod.FxDepo(depo_kok)
+    secilen = list(ciftler or [])
+    if not secilen:
+        gelen = depo.kok / fx_mod.GELEN_DIZINI
+        if gelen.is_dir():
+            secilen = sorted(
+                d.name for d in gelen.iterdir() if d.is_dir() and any(d.glob("*.csv.gz"))
+            )
+    if not secilen:
+        raise typer.BadParameter("M1 dosyası olan çift yok")
+    bas_ms = fk_mod.gun_ms(dt.date.fromisoformat(baslangic)) if baslangic else None
+    bit_ms = fk_mod.gun_ms(dt.date.fromisoformat(bitis)) if bitis else None
+    try:
+        olcumler = {
+            c: fk_mod.fx_kalibre(
+                depo, c, persentil=persentil, baslangic_ms=bas_ms, bitis_ms=bit_ms
+            )
+            for c in secilen
+        }
+    except (fk_mod.FxKalibrasyonHatasi, fx_mod.FxHatasi) as hata:
+        raise typer.BadParameter(str(hata)) from hata
+    karar = fk_mod.venue_karari({c: o["slippage"]["deger_bps"] for c, o in olcumler.items()})
+
+    # Komisyon: £2/100K → bps, pencere orta fiyatlarından; çiftler arası en büyüğü (K-007).
+    gbpusd = _fx_orta_ortalama(depo, "GBPUSD", bas_ms, bit_ms) if "GBPUSD" in secilen else None
+    fee_adaylari: dict[str, float] = {}
+    if gbpusd is not None:
+        for c in secilen:
+            quote_usd = c.endswith("USD")
+            fiyat = _fx_orta_ortalama(depo, c, bas_ms, bit_ms) if quote_usd else 1.0
+            fee_adaylari[c] = fk_mod.fee_bps(gbpusd, fiyat, quote_usd)
+    fee = max(fee_adaylari.values()) if fee_adaylari else None
+
+    govde: dict[str, Any] = {
+        "uretildi": dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "pencere": {"baslangic": baslangic or None, "bitis": bitis or None},
+        "persentil": persentil,
+        "olcumler": olcumler,
+        "venue_karari": karar,
+        "fee": {
+            "kaynak": fk_mod.FEE_KAYNAGI,
+            "gbpusd_orta": gbpusd,
+            "adaylar_bps": fee_adaylari,
+            "fee_taker_bps": fee,
+        },
+        "yazildi": [],
+    }
+    if yaz:
+        if not gerekce.strip():
+            raise typer.BadParameter("--yaz için --gerekce zorunlu (K-021)")
+        if fee is None:
+            raise typer.BadParameter("--yaz için GBPUSD ölçümü gerekli (komisyon türetimi)")
+        govde["yazildi"] = _fx_maliyet_yaz(olcumler, karar, fee, persentil, gerekce)
+    if rapor is not None:
+        fk_mod.yol_yaz(rapor, govde)
+        govde["rapor"] = str(rapor)
+    if json_cikti:
+        _yaz_json(govde)
+        return
+    for c, o in olcumler.items():
+        sp, sl = o["spread"], o["slippage"]["dagilim_bps"]
+        typer.echo(
+            f"{c}: M1 {o['m1']['satir']:,} · spread p50 {sp['tum']['p50']:.3f} / rollover "
+            f"p50 {sp['rollover_penceresi']['p50']:.3f} (×{sp['genisleme_orani_p50']:.1f}) bps · "
+            f"slippage p50 {sl['p50']:.3f} p75 {sl['p75']:.3f} p95 {sl['p95']:.3f} bps"
+        )
+    typer.echo(
+        f"karar: {karar['model']} (p75 oranı {karar['oran']:.3f}, eşik {karar['esik']}) · "
+        f"fee_taker_bps {fee}"
+    )
+    for y in govde["yazildi"]:
+        typer.echo(f"yazıldı: {y}")
+
+
+def _fx_orta_ortalama(
+    depo: fx_mod.FxDepo, pair: str, bas_ms: int | None, bit_ms: int | None
+) -> float:
+    from scryne_quant.data import fx_kalibrasyon as fk_mod
+
+    m1, _ = fk_mod.m1_cerceve(depo, pair)
+    if bas_ms is not None:
+        m1 = m1[m1["open_time"] >= bas_ms]
+    if bit_ms is not None:
+        m1 = m1[m1["open_time"] < bit_ms]
+    return float(m1["close"].mean())
+
+
+def _fx_maliyet_yaz(
+    olcumler: dict[str, dict[str, Any]],
+    karar: dict[str, Any],
+    fee: float,
+    persentil: float,
+    gerekce: str,
+) -> list[str]:
+    """Venue ya da çift başına `MaliyetModeli` dosyaları (K-084 kataloğu, K-021 şeması)."""
+    from scryne_quant.common.hash import nesne_hash
+    from scryne_quant.data import fx_kalibrasyon as fk_mod
+
+    tarih = dt.date.today().isoformat()
+    yazilan: list[str] = []
+
+    def _model(kimlik: str, ciftler: list[str], deger: float, dagilim: dict[str, float]) -> None:
+        ilk = min(int(olcumler[c]["slippage"]["ilk_ms"]) for c in ciftler)
+        son = max(int(olcumler[c]["slippage"]["son_ms"]) for c in ciftler)
+        kal = maliyet_mod.SlippageKalibrasyonu(
+            yontem=olcumler[ciftler[0]]["slippage"]["yontem"]
+            + " Girdi: M1 orta fiyat ((bid+ask)/2), FXCM candledata (Active Trader spread).",
+            persentil=persentil,
+            deger_bps=deger,
+            sembol=",".join(ciftler),
+            timeframe="1m",
+            aralik_baslangic_ms=ilk,
+            aralik_bitis_ms=son,
+            bar_sayisi=sum(int(olcumler[c]["slippage"]["kullanilan_bar"]) for c in ciftler),
+            veri_sha256=nesne_hash({c: olcumler[c]["m1"]["dosya_sha256"] for c in ciftler}),
+            dagilim_bps=dagilim,
+            tarih=tarih,
+            gerekce=gerekce + " | fee: " + fk_mod.FEE_KAYNAGI,
+        )
+        model = maliyet_mod.MaliyetModeli(fee_taker_bps=fee, slippage_bps=deger, kalibrasyon=kal)
+        yol = maliyet_mod.MaliyetKatalogu().yol(kimlik)
+        maliyet_mod.yaz(model, yol)
+        yazilan.append(str(yol))
+
+    if karar["model"] == "fxcm-fx":
+        ciftler = sorted(olcumler)
+        secilen = max(ciftler, key=lambda c: olcumler[c]["slippage"]["deger_bps"])
+        dagilim = dict(olcumler[secilen]["slippage"]["dagilim_bps"])
+        dagilim.update(
+            {f"{c}_p{int(persentil)}": olcumler[c]["slippage"]["deger_bps"] for c in ciftler}
+        )
+        _model("fxcm-fx", ciftler, olcumler[secilen]["slippage"]["deger_bps"], dagilim)
+    else:
+        for c in sorted(olcumler):
+            _model(
+                f"fxcm-{c.lower()}",
+                [c],
+                olcumler[c]["slippage"]["deger_bps"],
+                dict(olcumler[c]["slippage"]["dagilim_bps"]),
+            )
+    return yazilan
+
+
 @data_app.command("quality")
 def data_quality(
     sembol: Annotated[str, typer.Argument(help="Örn. BTCUSDT")],

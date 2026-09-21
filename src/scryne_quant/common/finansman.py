@@ -23,7 +23,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -42,14 +42,25 @@ class FinansmanHatasi(ValueError):
 
 
 class FinansmanKaynagi(BaseModel):
-    """Bir `uzun_gunluk_bps` değerinin nereden geldiğinin kaydı (K-021 kalıbı)."""
+    """Bir `uzun_gunluk_bps` değerinin nereden geldiğinin kaydı (K-021 kalıbı).
+
+    `tur` (K-098): **`broker`** = brokerın yayımladığı tarihli rollover oranı (gerçek);
+    **`proxy`** = türetilmiş (ör. merkez bankası faiz farkı) — gerçek broker oranı **gibi
+    kaydedilmez**, model `gecici` sayılır ve promotion'a giremez. `aralik` zorunlu: sabit oran
+    yalnız o dönem için geçerlidir. `ham_gunluk_bps` türetimin işaretli hâli (negatif = carry
+    lehte); K-095/K-007 tabanı (`uzun_gunluk_bps ≥ 0`) uygulanmadan önceki sayı görünür kalsın.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    saglayici: str = Field(min_length=1, description="Swap oranını yayımlayan kaynak")
+    saglayici: str = Field(min_length=1, description="Oranı yayımlayan kaynak (URL/belge)")
     tarih: str = Field(min_length=1, description="Oranın okunduğu gün (UTC)")
     gerekce: str = Field(min_length=1)
-    aralik: str | None = Field(default=None, description="Oranın geçerli sayıldığı dönem")
+    aralik: str = Field(min_length=1, description="Geçerlilik dönemi, `YYYY-MM-DD..YYYY-MM-DD`")
+    tur: Literal["broker", "proxy"]
+    ham_gunluk_bps: float | None = Field(
+        default=None, description="Türetimin işaretli değeri, taban uygulanmadan (proxy'de zorunlu)"
+    )
 
 
 class FinansmanModeli(BaseModel):
@@ -67,8 +78,8 @@ class FinansmanModeli(BaseModel):
 
     @property
     def gecici(self) -> bool:
-        """Kaynağı yazılmamış model. Bu bayrak taşıyan sonuç promotion'a giremez (K-021, K-095)."""
-        return self.kaynak is None
+        """Kaynağı yazılmamış **ya da proxy** model; promotion'a giremez (K-021, K-095, K-098)."""
+        return self.kaynak is None or self.kaynak.tur == "proxy"
 
     def gun_bedeli(self, notional: float, gun: int) -> float:
         """`gun` günlük rollover bedeli, quote biriminde; her zaman ≥ 0 (K-007)."""

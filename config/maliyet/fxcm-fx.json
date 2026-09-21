@@ -1,0 +1,29 @@
+{
+  "fee_taker_bps": 0.26,
+  "kalibrasyon": {
+    "aralik_baslangic_ms": 1704665100000,
+    "aralik_bitis_ms": 1706911140000,
+    "bar_sayisi": 85625,
+    "dagilim_bps": {
+      "EURUSD_p75": 0.9228029215939482,
+      "GBPUSD_p75": 1.0203510988913602,
+      "USDJPY_p75": 1.3549745351375269,
+      "max": 48.51075725189805,
+      "ort": 0.9946059921518476,
+      "p50": 0.7084207614497043,
+      "p75": 1.3549745351375269,
+      "p90": 2.184243869989442,
+      "p95": 2.9169649791714933,
+      "p99": 4.914755068306774
+    },
+    "deger_bps": 1.3549745351375269,
+    "gerekce": "Kripto K-021 ile ayni buyukluk (1 dk orta fiyat bar-to-bar hareketi, p75; gerekce config/maliyet.json'daki ile ayni). Uc ciftin ortak penceresi 2024 h2-h5 (2024-01-07..2024-02-02, 28.6-28.7k dakika/cift). Venue modeli: p75 orani 1,468 < 1,5 (olcumden once yazilan esik), deger uc ciftin en buyuk p75'i (USDJPY 1,355 bps; K-007). Spread modele girmez: K-094 fill gercek bid_open/ask_open'dan (cift sayim yok); olculen spread p50 0,18/0,39/0,47 bps, rollover penceresinde (NY 17:00 +-15 dk) x5,4/x3,6/x3,4 - rapor docs/research/records/2026-09-21-R5-fx-kalibrasyon.json. fee_taker_bps 0 DEGIL: veri Active Trader spread'i, o hesap komisyonlu; 2 GBP/100K -> en buyuk cift 0,254 bps, yukari yuvarlanmis 0,26 (K-007). Kosul: aylik >=50M hacim + >=25k GBP ozkaynak; altinda standart hesap spread'i bu veride yok - model yalniz Active Trader kosulu icin gecerli. | fee: FXCM Active Trader (UK): '£2.00 per side per 100K traded volume for monthly volumes above 50 million' (https://www.fxcm.com/uk/accounts/active-trader/, okundu 2026-09-21); MarketData README: veri 'lowest spreads available exclusively on Active Trader accounts' (https://raw.githubusercontent.com/fxcm/MarketData/master/README.md, okundu 2026-09-21). Koşul: aylık ≥ 50M hacim ve ≥ £25.000 özkaynak; altında standart hesap = komisyonsuz ama daha geniş spread (bu veride yok, ölçülmedi).",
+    "persentil": 75.0,
+    "sembol": "EURUSD,GBPUSD,USDJPY",
+    "tarih": "2026-09-21",
+    "timeframe": "1m",
+    "veri_sha256": "ba42478079b990b4a919b9a60a1c89203e8c1716e0dfdf11970f48f98bad81a3",
+    "yontem": "1 dakikalık bar-to-bar kapanış hareketi: |close[t] - close[t-1]| / close[t-1] * 10000 (bps). Yürütme penceresinin (bar kapanışı → emrin dolması, ölçülen p50 ~300 ms) muhafazakâr üst sınırı: gerçek pencere 1 dakikadan onlarca kat kısa. Girdi: M1 orta fiyat ((bid+ask)/2), FXCM candledata (Active Trader spread)."
+  },
+  "slippage_bps": 1.3549745351375269
+}

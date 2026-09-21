@@ -4905,3 +4905,70 @@ bayrağı, `sq evren backtest` FX akışı, gerçek EURUSD fixture uçtan uca �
    `research/tekrar.py`nin `takvim`/`finansmanlar` bloklarını yorumlaması (FX kaydı tekrarı).
 
 **R5 ilk paket önerisi:** ölçülmüş FX maliyet + finansman — ayrı öneri (Scryne kararı).
+
+## K-098 — R5 Paket 1: ölçülmüş FX maliyet (`fxcm-fx`) ve **proxy** finansman modelleri
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R5 Paket 1 talimatı) · **Tabi:**
+K-007, K-021 (kalibrasyon kalıbı), K-084 (katalog), K-088, K-094, K-095, K-096, K-097 · **Kaynak:**
+`data/fx_kalibrasyon.py`, `cli/main.py` (`sq data fx-kalibre`), `tools/fx_finansman_proxy_yaz.py`,
+`config/maliyet/fxcm-fx.json`, `config/finansman/fxcm-{eurusd,gbpusd,usdjpy}.json`,
+`docs/research/records/2026-09-21-R5-fx-kalibrasyon.json`, `tests/unit/test_fx_kalibrasyon.py`
+
+### Ölçüm (3 çift, ortak pencere 2024 h2-h5 = 2024-01-07..2024-02-02, M1 28,6-28,7k dk/çift)
+
+| | spread p50 / p95 (bps) | rollover ±15 dk p50 (bps), genişleme | slippage p50 / p75 / p95 (bps) |
+|---|---|---|---|
+| EURUSD | 0,184 / 0,459 | 1,004 (×5,4) | 0,460 / **0,923** / 2,123 |
+| GBPUSD | 0,393 / 0,864 | 1,411 (×3,6) | 0,551 / **1,020** / 2,318 |
+| USDJPY | 0,474 / 0,944 | 1,627 (×3,4) | 0,708 / **1,355** / 2,917 |
+
+EURUSD tam 55 hafta (390.935 dk): slippage p75 0,849, spread p50 0,185 — ortak pencereyle uyumlu.
+
+### Karar
+
+1. **Slippage kripto kalıbıyla:** `data/kalibrasyon.kalibre_et` (1 dk bar-to-bar kapanış hareketi,
+   p75, K-021 gerekçesi aynen) — girdi M1 **orta** fiyat; boşluk/hafta sonu sonrası dakika `gap`,
+   iki ucu temiz olmayan hareket atılır. Yeni kalibrasyon sistemi yok; `data/fx_kalibrasyon.py`
+   yalnız M1 birleştirme + spread dağılımı + proxy aritmetiği ekler.
+2. **Spread modele yazılmaz** (çift sayım yok): K-094 fill bar bar gerçek `bid_open`/`ask_open`dan;
+   ölçülen dağılım kanıt/kıyas (rapor). **Rollover penceresi ayrı:** NY 17:00 ±15 dk'da spread p50
+   ×3,4-5,4 genişliyor, p95 6-13 bps — tek slippage sayısına gizlenmedi (rapor + gerekçe).
+   Sonuç: rollover saatinde fill K-094 ile zaten o genişlemiş spread'i öder.
+3. **Venue modeli `fxcm-fx`:** p75 oranı 1,468 < 1,5 (eşik ölçümden **önce** yazıldı,
+   `VENUE_ORAN_ESIGI`); değer üç çiftin **en büyük** p75'i (USDJPY 1,355 bps, K-007); üç çiftin
+   p75'i `dagilim_bps`te ayrı ayrı kayıtlı. Eşik sınıra yakın; 21 çift indirilince yeniden ölçüm
+   ister (oran ≥ 1,5 çıkarsa çift başına dosya, `sq data fx-kalibre --yaz` bunu kendisi yapar).
+4. **`fee_taker_bps` = 0,26, 0 DEĞİL.** Kaynak: MarketData README "lowest spreads available
+   exclusively on Active Trader accounts" → veri komisyonlu hesabın spread'i; Active Trader UK
+   tarifesi "£2.00 per side per 100K … above 50 million" → £2 × GBPUSD(ort. 1,27) / notional:
+   EURUSD 0,233, GBPUSD 0,254, USDJPY 0,254 bps → en büyüğü yukarı yuvarlanmış 0,26 (K-007).
+   **Koşul:** aylık ≥ 50M hacim + ≥ £25.000 özkaynak; altında standart hesap komisyonsuz ama daha
+   geniş spread — bu veride **yok**, ölçülmedi. Model yalnız Active Trader koşulu için geçerli;
+   `gerekce` bunu taşır. Kalibrasyon gerçek ölçüm → `gecici=False`.
+5. **Finansman proxy:** FXCM rollover oranı yalnız platformda (Roll S/Roll B, 1k lot, bir gün
+   önceden; help "Where is rollover shown", "Rollover" — 2026-09-21), **tarihli herkese açık arşiv
+   yok**. Bu yüzden `config/finansman/fxcm-<pair>.json` merkez bankası politika faizi farkından
+   türetildi ve `tur="proxy"` ile işaretlendi: `FinansmanKaynagi.tur ∈ {broker, proxy}` zorunlu,
+   `aralik` zorunlu, `ham_gunluk_bps` (işaretli) kayıtlı; `FinansmanModeli.gecici` = kaynak yok
+   **ya da** proxy → `gecici_finansman_modeli` promotion engeli. Türetim K-007 aleyhte: alınan faiz
+   aralığın altı, ödenen üstü; broker marjı bilinmiyor → eklenmedi (proxy gerçekten **düşük**
+   olabilir, bir sebep daha geçici). Sabit model, zaman serisi yok (ayrı karar).
+   - EURUSD: (5,50 − 4,00)/365 → **0,4110** bps/gün, aralık 2023-09-20..2024-06-12
+   - GBPUSD: (5,50 − 5,25)/365 → **0,0685** bps/gün, aralık 2023-08-03..2024-08-01
+   - USDJPY: ham (−0,10 − 5,25)/365 = **−1,4658** (lehte carry) → **0** — K-095/1
+     (`uzun_gunluk_bps ≥ 0`, K-007: lehte carry modellenmez) **korundu**, otomatik sıfırlama değil:
+     ham değer dosyada, kural kaynaklı. Aralık 2023-07-27..2024-03-19 (BoJ 19 Mar 2024).
+   - Kaynaklar: Fed FOMC (5,25-5,50, 2023-07-27..2024-09-18), ECB deposit 4,00 (2023-09-20..
+     2024-06-12), BoE 5,25 (2023-08-03..2024-08-01), BoJ −0,10 (..2024-03-19) — URL'ler dosyada.
+6. **Güven seviyesi:** maliyet modeli **ölçülmüş** (Active Trader koşuluyla); finansman **proxy,
+   geçici** — gerçek broker oranı (tarihli) gelmeden FX sonucu promotion'a giremez. Motor `aralik`
+   denetlemiyor (koşu penceresi aralığın dışına taşarsa sessiz) — R5 açık madde.
+
+### Kanıt
+
+- `sq evren backtest` fixture'da gerçek dosyalarla koşuyor; PlanliHedef tur: fill 1,09497 (ask),
+  spread 0,114, slippage 1,355 bps, komisyon 0,26 bps, finansman 0,411 → `promotion_engelleri`
+  `gecici_finansman_modeli` (maliyet geçici değil).
+- Sentetik M1: rollover penceresi n=30/30, spread ×4, gap sonrası iki hareket atıldı (K-021 kuralı).
+- Kripto: `coklu_referans` + katalog senaryosu `96933a8` ile SAME; `_maliyet_govdesi` SAME
+  (`MaliyetModeli` şeması değişmedi); ağ dışı 2.257 test (9 yeni).

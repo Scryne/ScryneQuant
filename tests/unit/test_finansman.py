@@ -46,7 +46,13 @@ TFX = takvim(TAKVIM_FX_5X24)
 SAAT = 3_600_000
 TOLERANS = 1e-12
 MALIYET = MaliyetModeli(fee_taker_bps=10.0, slippage_bps=5.0)
-KAYNAK = FinansmanKaynagi(saglayici="test", tarih="2026-09-21", gerekce="fixture")
+KAYNAK = FinansmanKaynagi(
+    saglayici="test",
+    tarih="2026-09-21",
+    gerekce="fixture",
+    aralik="2024-01-01..2024-12-31",
+    tur="broker",
+)
 MODEL = FinansmanModeli(uzun_gunluk_bps=2.5, kaynak=KAYNAK)
 
 
