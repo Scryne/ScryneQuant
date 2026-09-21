@@ -204,6 +204,12 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   `Sonuc.takvim` (seanslı takvimde `{id, icerik_hash}`) **yalnız varsa** kayda girer — kripto
   yolu bit-aynı (HEAD kıyası K-094'te). FX Parquet → görünüm adaptörü ve FX kalite bayrağı
   **yok** (R4 kalan).
+- `src/scryne_quant/common/finansman.py` — **finansman/rollover (K-095, R4 Paket 3).**
+  `Enstruman.finansman_modeli_id` → `config/finansman/<id>.json` (global yok, dosya yoksa hata;
+  bugün **dosya yok**, ölçülmüş swap oranı gelince yazılır). Rollover anları takvimden
+  (`Takvim.rollover_anlari`), bedel `CokluAdimci._finansman_isle`te bir kez nakitten; kayda
+  `finansmanlar`/`Islem.finansman`/`toplam_finansman` yalnız varsa. Finansman seanslı takvim
+  ister; nakit yetmezse koşu durur.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

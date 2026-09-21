@@ -302,6 +302,17 @@ class CokluPortfoy:
             pozisyonlar={**self.pozisyonlar, sembol: yeni},
         )
 
+    def nakit_dus(self, tutar: float) -> CokluPortfoy:
+        """Pozisyona dokunmadan nakitten düşer (finansman/rollover bedeli, K-095).
+
+        Nakit yetmezse `PortfoyHatasi` — kaldıraçsız portföyde borç yoktur; bedeli sessizce
+        kırpmak (`max(…, 0)`) maliyeti yok saymak olurdu.
+        """
+        if tutar < 0.0:
+            raise PortfoyHatasi(f"düşülecek tutar negatif olamaz: {tutar}")
+        _nakit_yeter(tutar, self.nakit)
+        return CokluPortfoy(nakit=max(self.nakit - tutar, 0.0), pozisyonlar=dict(self.pozisyonlar))
+
     def sat(
         self, sembol: str, miktar: float, fiyat: float, komisyon: float
     ) -> tuple[CokluPortfoy, float]:

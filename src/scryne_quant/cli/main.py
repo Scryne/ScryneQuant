@@ -30,6 +30,7 @@ from scryne_quant.cli.izle import izle_app
 from scryne_quant.cli.jev import jev_app
 from scryne_quant.cli.kill import kill_app
 from scryne_quant.cli.testnet import testnet_app
+from scryne_quant.common import finansman as finansman_mod
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.hash import git_durumu, ortam_kaydi
 from scryne_quant.common.zaman import simdi_ms, utc_str
@@ -3745,9 +3746,20 @@ def evren_backtest(
     maliyetler = evren_kosu_mod.enstruman_maliyetleri(
         maliyet_mod.MaliyetKatalogu(), kurulum.kimlikler
     )
+    # K-095: `finansman_modeli_id` taşıyan (cfd/vadeli) üye varsa modeli katalogdan çözülür
+    # (dosya yoksa hata); spot evreninde hepsi `None` → motor finansmansız yolda. Bu komut
+    # takvim geçirmediği için finansmanlı üye bugün burada koşmaz — motor reddeder (seanslı
+    # takvim ister); FX evren koşusu R4'ün kalan adımı.
+    finansmanlar = evren_kosu_mod.enstruman_finansmanlari(
+        finansman_mod.FinansmanKatalogu(), kurulum.kimlikler
+    )
     basladi = time.perf_counter()
     sonuc = CokluBacktest(
-        nesne, maliyet_mod.yukle(), baslangic_sermaye=sermaye, maliyetler=maliyetler
+        nesne,
+        maliyet_mod.yukle(),
+        baslangic_sermaye=sermaye,
+        maliyetler=maliyetler,
+        finansmanlar=finansmanlar,
     ).calistir(
         kurulum.gorunum,
         veri_sha256=kurulum.veri_sha256,

@@ -123,6 +123,14 @@ class Sonuc:
     (eski kayıt biçimi); çok modelde herhangi biri geçiciyse `True` (K-084/6). Hash'e
     girmez — `promotion_engelleri` okur."""
 
+    finansmanlar: dict[str, Any] | None = None
+    """Enstrüman-başı finansman bloğu `{sembol: {"id", "govde"}}`; finansmansız koşuda `None`.
+    (K-095) `maliyetler` kuralı: `config_hash`e ve kayda **yalnız varsa** girer."""
+
+    finansman_gecici: bool | None = None
+    """Finansman modellerinden biri geçici mi (kaynaksız). `None` = finansman yok. Hash'e girmez;
+    `promotion_engelleri` okur (K-021 kalıbı)."""
+
     takvim: dict[str, Any] | None = None
     """Seanslı takvimin kimliği `{"id", "icerik_hash"}`; 24x7 (ve takvimsiz) koşuda `None`.
     (R4 Paket 2, K-094; K-083/U16)
@@ -158,6 +166,8 @@ class Sonuc:
         }
         if self.maliyetler is not None:
             govde["maliyetler"] = self.maliyetler
+        if self.finansmanlar is not None:
+            govde["finansmanlar"] = self.finansmanlar
         if self.takvim is not None:
             govde["takvim"] = self.takvim
         return nesne_hash(govde)
@@ -216,6 +226,8 @@ class Sonuc:
         gecici = self.maliyet.get("gecici") if self.gecici is None else self.gecici
         if gecici:
             engeller.append("gecici_maliyet_modeli")  # K-021, K-084/6
+        if self.finansman_gecici:
+            engeller.append("gecici_finansman_modeli")  # K-095
         if self.leak_riski:
             engeller.append("leak_riski")  # K-049/4, K-054
         return engeller
@@ -256,6 +268,8 @@ class Sonuc:
                 "kalite_esigi": self.kalite_esigi,
                 # Yalnız çok modelde (K-084): tek modelli kaydın biçimi Faz 3-16 ile aynı.
                 **({"maliyetler": self.maliyetler} if self.maliyetler is not None else {}),
+                # Yalnız finansmanlı enstrüman varsa (K-095).
+                **({"finansmanlar": self.finansmanlar} if self.finansmanlar is not None else {}),
                 # Yalnız seanslı takvimde (K-094): 24x7 kaydın biçimi aynı.
                 **({"takvim": self.takvim} if self.takvim is not None else {}),
             },

@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
+from scryne_quant.common import finansman as finansman_mod
 from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data import funding as funding_mod
@@ -349,6 +350,34 @@ def enstruman_maliyetleri(
     if all(em.kimlik == maliyet_mod.GLOBAL_KIMLIK for em in out.values()):
         return None
     return out
+
+
+def enstruman_finansmanlari(
+    katalog: finansman_mod.FinansmanKatalogu,
+    kimlikler: Mapping[str, Sequence[kimlik_mod.Enstruman]],
+) -> dict[str, finansman_mod.SembolFinansmani] | None:
+    """`Enstruman.finansman_modeli_id` → katalog → model, sembol başına. (K-095)
+
+    Kimliği `None` olan sembol (spot) modele girmez; **hepsi** `None` ise `None` döner (motor
+    finansmansız yolda, kayıt bugünkü biçimde). Kimliği olan sembolün dosyası yoksa hata — sessiz
+    0 yok. Karışık evren (spot + cfd) `None` olmayan alt küme döndürür; motor eksik sembolü
+    reddeder (`CokluBacktestHatasi`), yani karışık evren bugün bilerek **koşmaz**.
+    """
+    out: dict[str, finansman_mod.SembolFinansmani] = {}
+    for sembol in sorted(kimlikler):
+        segmentler = list(kimlikler[sembol])
+        if not segmentler:
+            raise finansman_mod.FinansmanHatasi(f"{sembol}: kimlik segmenti yok")
+        kimlik_kumesi = {seg.finansman_modeli_id for seg in segmentler}
+        if len(kimlik_kumesi) != 1:
+            raise finansman_mod.FinansmanHatasi(
+                f"{sembol}: segmentler farklı finansman modeli taşıyor {sorted(kimlik_kumesi)}"
+            )
+        kimlik = segmentler[0].finansman_modeli_id
+        if kimlik is None:
+            continue
+        out[sembol] = finansman_mod.SembolFinansmani(kimlik, katalog.coz(kimlik))
+    return out or None
 
 
 def _pencere_sinirlari(

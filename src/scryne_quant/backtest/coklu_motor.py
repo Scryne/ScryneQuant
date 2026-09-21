@@ -52,6 +52,13 @@ from scryne_quant.backtest.defter import uygula_coklu
 from scryne_quant.backtest.fill import AtlamaSebebi, emirleri_hazirla
 from scryne_quant.backtest.metrikler import Islem, gunluk_hacim, hesapla
 from scryne_quant.backtest.sonuc import VARSAYILAN_KALITE_ESIGI, Sonuc, VeriKimligi, atlama_sayimi
+from scryne_quant.common.finansman import (
+    FinansmanHatasi,
+    Finansmanlar,
+    SembolFinansmani,
+    finansmanlar_govdesi,
+)
+from scryne_quant.common.finansman import gecici_mi as finansman_gecici_mi
 from scryne_quant.common.hash import nesne_hash
 from scryne_quant.common.maliyet import (
     Maliyetler,
@@ -64,7 +71,7 @@ from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.data.semalar import KaliteDurumu
 from scryne_quant.data.takvim import TAKVIM_24X7, Takvim
 from scryne_quant.features.indikator import atr as atr_hesapla
-from scryne_quant.portfolio.durum import CokluPortfoy
+from scryne_quant.portfolio.durum import CokluPortfoy, PortfoyHatasi
 from scryne_quant.risk.motor import RISK_ATR_PENCERESI, PiyasaOlcumu, RiskMotoru
 from scryne_quant.risk.niyet import OnayliNiyet
 from scryne_quant.strategy.evren import LISTELENMEDI, EvrenGorunumu
@@ -92,6 +99,7 @@ class CokluBacktest:
         sifira_yaz_bar: int | None = None,
         maliyetler: Maliyetler | None = None,
         takvim: Takvim | None = None,
+        finansmanlar: Finansmanlar | None = None,
     ) -> None:
         if baslangic_sermaye <= 0.0:
             raise CokluBacktestHatasi(
@@ -112,6 +120,17 @@ class CokluBacktest:
         """Yıllıklandırma takvimi (R4 Paket 1). `None` = 24x7, `hesapla` bit-aynı ve kayda girmez.
         Seanslı takvim kayda `{"takvim": {id, icerik_hash}}` ile girer (`takvim_kaydi`, K-094;
         K-083/U16: yalnız 24x7 değilse)."""
+        self.finansmanlar: dict[str, SembolFinansmani] | None = (
+            None if finansmanlar is None else dict(finansmanlar)
+        )
+        """Sembol → `SembolFinansmani` (K-095). `None` = finansmansız, bugünkü yol bit-aynı.
+        Verilmişse seanslı takvim **zorunlu** (rollover anları takvimden) ve her sembol için model
+        olmak zorunda; adım döngüsü her barda `(t_i, t_{i+1}]` rollover günlerini nakitten düşer."""
+        if self.finansmanlar is not None and (takvim is None or takvim.surekli):
+            raise CokluBacktestHatasi(
+                "finansman modeli seanslı takvim ister: rollover anları takvimden gelir, sürekli "
+                "takvimde bedel tanımsız — sıfır değil (K-095)"
+            )
         self.baslangic_sermaye = baslangic_sermaye
         self.seed = seed
         self.kalite_esigi = kalite_esigi
@@ -152,6 +171,12 @@ class CokluBacktest:
             if eksik:
                 raise CokluBacktestHatasi(
                     f"enstrüman-başı maliyet modeli olmayan sembol(ler): {eksik} (K-084/U14)"
+                )
+        if self.finansmanlar is not None:
+            eksik = sorted(set(semboller) - set(self.finansmanlar))
+            if eksik:
+                raise CokluBacktestHatasi(
+                    f"finansman modeli olmayan sembol(ler): {eksik} — sessiz 0 yok (K-095)"
                 )
 
         adim = timeframe_ms(gorunum.timeframe)
@@ -202,6 +227,10 @@ class CokluBacktest:
         Kotasyon (K-094): barlarında **hem** `bid_open` **hem** `ask_open` olan semboller
         `(bid, ask)` çiftiyle dolar; yalnız biri olan sembol hata — tek fiyata sessizce düşmek
         spread'i sıfır saymak olurdu. İkisi de yoksa tek fiyat (kripto), bugünkü yol.
+
+        Rollover (K-095): finansmanlı koşuda her bar için `(t_i, t_{i+1}]` aralığındaki rollover gün
+        sayısı takvimden, modelin `uclu_swap_gunu`sü başına bir kez hesaplanır (`rollover_gun`).
+        Canlı motor her pencerede yeniden kurar; aynı aralık tanımı, aynı sayı.
         """
         semboller = gorunum.semboller
         adim = timeframe_ms(gorunum.timeframe)
@@ -229,7 +258,17 @@ class CokluBacktest:
                 for s in semboller
             },
             kotasyon=kotasyon,
+            rollover_gun=self._rollover_gunleri(gorunum),
         )
+
+    def _rollover_gunleri(self, gorunum: EvrenGorunumu) -> dict[int, np.ndarray]:
+        if self.finansmanlar is None or self.takvim is None:
+            return {}
+        zamanlar = np.asarray(gorunum.zamanlar, dtype="int64")
+        return {
+            gun: self.takvim.rollover_gunleri(zamanlar, gun)
+            for gun in sorted({sf.model.uclu_swap_gunu for sf in self.finansmanlar.values()})
+        }
 
     # ------------------------------------------------------------------ yardımcılar
 
@@ -385,6 +424,7 @@ class CokluBacktest:
                 kapasite_oranlari=kapasite_oranlari,
                 takvim=self.takvim,
                 spread_bileseni=spread_bileseni,
+                finansman_bileseni=self.finansmanlar is not None,
             ),
             islemler=islemler,
             ozkaynak=ozkaynak,
@@ -396,6 +436,10 @@ class CokluBacktest:
             acik_pozisyon_sonda=portfoy.acik,
             kalite_esigi=self.kalite_esigi,
             evren=evren,
+            finansmanlar=(
+                None if self.finansmanlar is None else finansmanlar_govdesi(self.finansmanlar)
+            ),
+            finansman_gecici=finansman_gecici_mi(self.finansmanlar),
             takvim=self.takvim_kaydi(),
             risk=None if self.risk is None else self.risk.ozet(),
         )
@@ -471,6 +515,8 @@ class AdimGirdisi:
     kotasyon: dict[str, tuple[np.ndarray, np.ndarray]] = field(default_factory=dict)
     """Sembol → `(bid_open, ask_open)` dizileri; yalnız bid/ask'i olan semboller (K-094). Boş =
     tek fiyat."""
+    rollover_gun: dict[int, np.ndarray] = field(default_factory=dict)
+    """`uclu_swap_gunu` → bar başına rollover gün sayısı (K-095). Boş = finansman yok."""
 
 
 class CokluAdimci:
@@ -570,6 +616,13 @@ class CokluAdimci:
                         self.kapasite_oranlari.append(emir.notional / gunluk)
             self.bekleyen = None
 
+        # 1b) Finansman/rollover — bu barda tutulan pozisyona `(t_i, t_{i+1}]` rollover'ları
+        # işler (K-095). Tek kaynak: bedel burada bir kez nakitten düşülür ve tura yazılır; fill,
+        # metrik ya da kayıt onu yeniden hesaplamaz. Notional bu barın kapanışıyla (K-007: tutulan
+        # pozisyonun bedelidir, fill değil).
+        if motor.finansmanlar is not None:
+            portfoy = self._finansman_isle(girdi, i, portfoy)
+
         fiyatlar_k = motor._fiyatlar(portfoy.sirali_semboller, self.son_kapanis, i, silinen)
         self.bayat_degerleme += sum(1 for s in portfoy.sirali_semboller if not mevcut[s])
         self.sifira_yazilan += sum(1 for s in portfoy.sirali_semboller if s in silinen)
@@ -611,6 +664,39 @@ class CokluAdimci:
         self.portfoy = portfoy
         # 4) Değerleme — bu barın kapanışlarıyla işaretle.
         return portfoy_ozkaynak, portfoy.brut_maruziyet(fiyatlar_k)
+
+    def _finansman_isle(self, girdi: AdimGirdisi, i: int, portfoy: CokluPortfoy) -> CokluPortfoy:
+        """Açık pozisyonlara bu barın rollover bedelini işler; yeni portföyü döner. (K-095)
+
+        Finansmanlı sembolün turu **0.0** ile başlar (ölçülmüş sıfır; `None` "model yok" demek).
+        Nakit yetmezse koşu durur (`FinansmanHatasi`) — borç yok, sessiz kırpma yok.
+        """
+        motor = self.motor
+        assert motor.finansmanlar is not None
+        for sembol in portfoy.sirali_semboller:
+            sf = motor.finansmanlar[sembol]
+            tur = self.acik.get(sembol)
+            if tur is not None and tur.finansman is None:
+                tur.finansman = 0.0
+            gun = int(girdi.rollover_gun[sf.model.uclu_swap_gunu][i])
+            if gun == 0:
+                continue
+            notional = portfoy.pozisyon(sembol).miktar * self.son_kapanis[sembol]
+            bedel = sf.model.gun_bedeli(notional, gun)
+            if bedel == 0.0:
+                continue
+            try:
+                portfoy = portfoy.nakit_dus(bedel)
+            except PortfoyHatasi as hata:
+                raise FinansmanHatasi(
+                    f"bar {i} ({int(girdi.zamanlar[i])}): {sembol} rollover bedeli {bedel:.6f} "
+                    f"için nakit yetersiz ({portfoy.nakit:.6f}) — kaldıraçsız portföyde borç yok "
+                    "(K-095)"
+                ) from hata
+            if tur is not None:
+                tur.finansman = (tur.finansman or 0.0) + bedel
+                tur.net_pnl -= bedel
+        return portfoy
 
 
 __all__ = ["AdimGirdisi", "CokluAdimci", "CokluBacktest", "CokluBacktestHatasi"]

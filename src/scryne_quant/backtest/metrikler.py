@@ -92,6 +92,12 @@ class Islem:
     `sembol` ile aynı gerekçe: yazılsaydı kripto kayıtlarının `sonuc_hash`i değişirdi. Fiyata
     gömülü olduğu için `net_pnl`e zaten dahil; burada yalnız ayrı raporlanır."""
 
+    finansman: float | None = None
+    """Turun finansman/rollover bedeli (quote birimi), K-095. `None` = enstrümanın finansman
+    modeli yok (spot kripto) ve `sozluk()`e yazılmaz; modeli varsa **0.0 ile başlar** (ölçülmüş
+    sıfır: rollover geçmedi). Nakitten düşülür ve `net_pnl`den **düşülmüştür** — fiyata gömülü
+    değil, ayrı bir nakit akışı; iki kez sayılmaz (tek kaynak: `coklu_motor` adımı)."""
+
     sembol: str = ""
     """Turun enstrümanı. Tek sembollü koşuda boş bırakılır ve `sozluk()`e **yazılmaz**.
 
@@ -137,7 +143,10 @@ class Islem:
             "getiri": self.getiri,
             "sure_ms": self.sure_ms,
             "fill_sayisi": self.fill_sayisi,
-        } | ({} if self.spread is None else {"spread": self.spread})
+        } | (
+            ({} if self.spread is None else {"spread": self.spread})
+            | ({} if self.finansman is None else {"finansman": self.finansman})
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,6 +224,10 @@ class Metrikler:
     """Kotasyonlu fill'lerin spread bileşeni toplamı (K-094). `None` = koşuda bid/ask yoktu;
     `sozluk()`e yalnız varsa girer (`Islem.spread` ile aynı kural, `sonuc_hash` korunur)."""
 
+    toplam_finansman: float | None = None
+    """Rollover bedeli toplamı (K-095). `None` = koşuda finansmanlı enstrüman yoktu; sözlüğe
+    yalnız varsa girer."""
+
     def sozluk(self) -> dict[str, Any]:
         return {
             alan: getattr(self, alan)
@@ -256,7 +269,10 @@ class Metrikler:
                 "ortalama_maruziyet",
                 "azami_maruziyet",
             )
-        } | ({} if self.toplam_spread is None else {"toplam_spread": self.toplam_spread})
+        } | (
+            ({} if self.toplam_spread is None else {"toplam_spread": self.toplam_spread})
+            | ({} if self.toplam_finansman is None else {"toplam_finansman": self.toplam_finansman})
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -373,6 +389,7 @@ def hesapla(
     kapasite_oranlari: Sequence[float] = (),
     takvim: Takvim | None = None,
     spread_bileseni: bool = False,
+    finansman_bileseni: bool = False,
 ) -> Metrikler:
     """Equity eğrisi + işlem defterinden metrikleri üretir.
 
@@ -382,6 +399,7 @@ def hesapla(
 
     `spread_bileseni` (K-094): koşuda bid/ask kotasyonu **vardı** — `toplam_spread` sayılır
     (kotasyonsuz turlar 0 katkı). `False` = `None`, sözlüğe girmez; bugünkü yol bit-aynı.
+    `finansman_bileseni` (K-095): aynı kural, `toplam_finansman`.
     """
     if ozkaynak.size == 0:
         raise ValueError("boş equity eğrisi")
@@ -474,6 +492,11 @@ def hesapla(
         toplam_spread=(
             sum(0.0 if i.spread is None else i.spread for i in islemler)
             if spread_bileseni
+            else None
+        ),
+        toplam_finansman=(
+            sum(0.0 if i.finansman is None else i.finansman for i in islemler)
+            if finansman_bileseni
             else None
         ),
     )

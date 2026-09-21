@@ -217,6 +217,67 @@ class Takvim:
             return surekli
         return surekli[self.acik_mi(surekli)]
 
+    def rollover_anlari(self, baslangic_ms: int, bitis_ms: int) -> np.ndarray:
+        """Seanslı takvimin günlük rollover anları `(baslangic_ms, bitis_ms]` içinde, UTC ms, artan.
+        (K-095, R4 Paket 3)
+
+        Rollover = her **hafta içi** günün yerel seans kapanış saati (fx-5x24: NY 17:00; DST ile
+        UTC karşılığı kayar, yerel saat sabit). Hafta içi = açılış gününden **sonraki** günden
+        kapanış gününe kadar (Pazar açılışında Pazar 17:00 rollover değil, açılış). Ölçülmüş kapalı
+        dönemde rollover **atlanmaz** (K-007: bedel yine işler; tatilde swap kesilir). Sürekli
+        takvimde rollover yoktur → `TakvimHatasi`: finansman bedeli bu takvimde tanımsızdır, sıfır
+        değil.
+        """
+        if self.surekli or self.seans is None:
+            raise TakvimHatasi(f"{self.kimlik}: sürekli takvimde rollover anı yok (K-095)")
+        if bitis_ms < baslangic_ms:
+            raise TakvimHatasi(f"{self.kimlik}: bitiş başlangıçtan önce")
+        s = self.seans
+        gunler = {(s.acilis_gun + k) % 7 for k in range(1, (s.kapanis_gun - s.acilis_gun) % 7 + 1)}
+        yerel_bas = pd.Timestamp(baslangic_ms, unit="ms", tz="UTC").tz_convert(s.zaman_dilimi)
+        yerel_bit = pd.Timestamp(bitis_ms, unit="ms", tz="UTC").tz_convert(s.zaman_dilimi)
+        gun_araligi = pd.date_range(
+            yerel_bas.normalize() - pd.Timedelta(days=1), yerel_bit.normalize(), freq="D"
+        )
+        anlar = [
+            g + pd.Timedelta(hours=s.kapanis_saat) for g in gun_araligi if g.weekday() in gunler
+        ]
+        if not anlar:
+            return np.empty(0, dtype="int64")
+        # Birim bağımsız (pandas 3'te aritmetik µs çözünürlük üretebiliyor): ms'e açıkça çevir.
+        utc = (
+            pd.DatetimeIndex(anlar)
+            .tz_convert("UTC")
+            .tz_localize(None)
+            .to_numpy()
+            .astype("datetime64[ms]")
+            .astype("int64")
+        )
+        return utc[(utc > baslangic_ms) & (utc <= bitis_ms)]
+
+    def rollover_gunleri(self, zamanlar: np.ndarray, uclu_swap_gunu: int) -> np.ndarray:
+        """Her bar için `(t_i, t_{i+1}]` aralığındaki rollover **gün** sayısı (bar i'de tutulan
+        pozisyona işleyen). Son bar için aralık `(t_n, t_n + son adım]`. `uclu_swap_gunu` yerel
+        haftanın günü (FX: Çarşamba = 2) 3 gün sayılır, diğerleri 1. (K-095)
+        """
+        z = np.asarray(zamanlar, dtype="int64")
+        if z.size == 0:
+            return np.empty(0, dtype="int64")
+        adim = int(z[-1] - z[-2]) if z.size > 1 else 0
+        bitis = int(z[-1]) + adim
+        anlar = self.rollover_anlari(int(z[0]), bitis)
+        out = np.zeros(z.size, dtype="int64")
+        if anlar.size == 0 or self.seans is None:
+            return out
+        hafta_gunu = (
+            pd.to_datetime(anlar, unit="ms", utc=True).tz_convert(self.seans.zaman_dilimi).weekday
+        )
+        gun = np.where(np.asarray(hafta_gunu) == uclu_swap_gunu, 3, 1)
+        # an ∈ (z[i], z[i+1]]  ⇔  i = searchsorted(z, an, "left") − 1
+        idx = np.searchsorted(z, anlar, side="left") - 1
+        np.add.at(out, idx, gun)
+        return out
+
     def beklenen_bar(self, ilk_ms: int, son_ms: int, timeframe: str) -> int:
         """`ilk_ms` ve `son_ms` açılışlı barlar **dahil** beklenen bar sayısı.
 

@@ -4744,3 +4744,62 @@ K-004, K-007, K-009, K-057 (kanıt kalıbı), K-083/U16, K-089, K-093 · **Kayna
   iki koşuda aynı `config_hash`, takvimsiz koşudan farklı; 24x7/`None` kayda girmiyor.
 - **Gerçek veri (R1(b), `tools/r1b_kayit_durumu.py`, ana depoya dokunmadan):** 26 kayıt; 2026-09-20 durumuyla kıyaslanan 23 kaydın sınıfı ve fark listesi birebir (ayni 2, yalniz_sonuc_hash 3, semantik 10, veri_geri_getirilemedi 3, tekrar_edilemez 5); `sq lab yenile` ile üretilmiş 3 yeni tarama kaydı `ayni`.
 - **Suite:** ağ dışı 2.205 test yeşil (19 yeni).
+
+## K-095 — R4 Paket 3: FX finansman/rollover bacağı maliyet hattında; finansmansız yol bit-aynı
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R4 Paket 3 talimatı) · **Tabi:**
+K-007, K-009, K-021 (geçici model), K-057 (kanıt kalıbı), K-083/U17, K-084 (katalog kalıbı),
+K-089, K-094 · **Kaynak:** `common/finansman.py`, `data/takvim.py`, `portfolio/durum.py`,
+`backtest/coklu_motor.py`, `backtest/metrikler.py`, `backtest/sonuc.py`, `research/evren_kosu.py`,
+`cli/main.py`, `tests/unit/test_finansman.py`
+
+### Karar
+
+1. **Model = `Enstruman.finansman_modeli_id` → `config/finansman/<id>.json`** (`FinansmanKatalogu`,
+   `common/maliyet.MaliyetKatalogu` kalıbı; **global yok**). `FinansmanModeli`: `uzun_gunluk_bps ≥ 0`
+   (uzun pozisyon, gün başına, notional bps), `uclu_swap_gunu` (varsayılan 2 = Çarşamba),
+   `kaynak` (sağlayıcı/tarih/gerekçe; yoksa `gecici` → `promotion_engelleri`
+   `gecici_finansman_modeli`). Kısa bacak alanı **uydurulmadı** (long-only). Eksik/bozuk dosya,
+   fazla alan, biçimsiz kimlik → `FinansmanHatasi`; sessiz 0 yok. Bugün depoda ölçülmüş swap oranı
+   yok, o yüzden `config/finansman/` altında dosya **yok**: FX koşusu model dosyası yazılana kadar
+   fail-closed.
+2. **Rollover anları takvimden** (`Takvim.rollover_anlari`, `rollover_gunleri`): seanslı takvimde
+   her hafta içi günün yerel seans kapanış saati (fx-5x24: NY 17:00; DST'de UTC 22:00↔21:00 kayar);
+   hafta içi = açılış gününden sonraki günden kapanış gününe. `uclu_swap_gunu` 3 gün, diğerleri 1
+   (hafta 7). Bar i'ye `(t_i, t_{i+1}]` aralığındaki anlar işler (hafta sonu boşluğunda Cuma
+   rollover'ı Cuma'nın son barına; son bar `+adım`). Ölçülmüş kapalı dönemde **atlanmaz** (K-007).
+   Sürekli takvimde rollover tanımsız → `TakvimHatasi`; `CokluBacktest(finansmanlar=…)` seanslı
+   takvim ister, `None`/24x7 ile reddeder.
+3. **Tek kaynak, bir kez:** bedel `CokluAdimci._finansman_isle`te (fill'den sonra, risk/karardan
+   önce) `miktar × close[i] × bps × 1e-4 × gün` olarak **nakitten düşülür** (`CokluPortfoy.nakit_dus`)
+   ve açık tura `Islem.finansman` + `net_pnl −= bedel` yazılır. Fill, metrik, kayıt yeniden
+   hesaplamaz; `Metrikler.toplam_finansman` turların toplamı. Nakit yetmezse `FinansmanHatasi`,
+   koşu durur (kaldıraçsız portföyde borç yok, kırpma yok). Finansmanlı sembolün turu **0.0** ile
+   başlar (ölçülmüş sıfır); `None` = model yok.
+4. **Kayıt:** `Sonuc.finansmanlar` `{sembol: {"id", "govde"}}` `config_hash`e ve `config`e **yalnız
+   varsa**; `Islem.finansman`/`Metrikler.toplam_finansman` yalnız varsa; `finansman_gecici` hash
+   dışı. `takvim` bloğu (K-094) aynen. `_maliyet_govdesi`/`MaliyetModeli` değişmedi.
+5. **Bağ:** `research/evren_kosu.enstruman_finansmanlari` (kimliği `None` olanlar atlanır; hepsi
+   `None` → `None`; kimliği olanın dosyası yoksa hata; segmentler farklı kimlik taşıyamaz);
+   `sq evren backtest` bunu geçirir — spot evreninde `None`, bit-aynı. Karışık (spot + cfd) evren
+   motor tarafından reddedilir (bilerek). Canlı/paper yolu FX bilmiyor (K-087/2), bağlanmadı.
+
+### Bit-aynı kanıtı (K-057 kalıbı)
+
+- **Statik:** `finansmanlar`/`finansman_bileseni`/`Islem.finansman`/`Metrikler.toplam_finansman`/
+  `Sonuc.finansmanlar`/`finansman_gecici` varsayılanları "yok"; kripto **ve** finansmansız FX
+  kaydında `finansman`, `toplam_finansman`, `finansmanlar`, `gecici_finansman_modeli` yok (test).
+- **Referans (HEAD `478cc5d` vs bu değişiklik, aynı betik):** `coklu_referans.json` 2 senaryo
+  `sonuc_hash`/`config_hash` SAME; katalog senaryosu tam kayıt `0dddec77…` SAME — ve `96933a8`
+  (R4 Paket 1) ile de SAME. Referans fixture testleri dokunulmadan geçiyor; `_maliyet_govdesi` SAME.
+- **FX (fixture: EURUSD Pzt-Cum 2024-01-08…12, saatlik, bid/ask, 2,5 bps/gün):** tur 1 (Pzt 02:00 →
+  Per 10:00) üç rollover görür (Pzt 1 + Sal 1 + Çar 3 = 5 gün); `Decimal`(50) referans: tur
+  bedeli, `net_pnl` farkı ve özkaynak eğrisinin bar bar birikimli bedel kadar ayrışması ≤ 1e-12;
+  tur 2 (Per 13:00 → 15:00) rollover görmez: `finansman = 0.0`, `net_pnl` yalnız fiyat/komisyon;
+  Çarşamba birim bedeli Salı'nın 3 katı; 0 bps modeli özkaynak eğrisini finansmansızla birebir
+  bırakır ama anahtarlar 0.0 ile var. Rollover anları: kış 22:00 / yaz 21:00 UTC, hafta 7 gün,
+  hafta sonu boşluğunda Cuma barına.
+- **Fail closed (test):** takvimsiz/24x7 + finansman → hata; evrende modeli olmayan sembol → hata;
+  %100 pozisyonda rollover → `nakit yetersiz` hata; katalogda dosya yok / negatif bps / fazla alan
+  (`kisa_gunluk_bps`) / `../x` → hata; cfd `Enstruman` `finansman_modeli_id=None` zaten kurulamaz.
+- **Suite:** ağ dışı 2.227 test yeşil (22 yeni).
