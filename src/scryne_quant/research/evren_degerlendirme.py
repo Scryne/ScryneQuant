@@ -31,6 +31,16 @@ karşılığı; yeni bir kapı, yeni bir eşik veya gevşetilmiş bir ölçü yo
    promotion'a giden sonucun kendisine sorulmalı. Faz 11'in yapısal kalibrasyonu tam
    pencerede koşmuştu — fark kayıtlı (Faz 12 raporu).
 
+## Çok enstrümana özgü dördüncü karar: motor ayarları veriden çözülür (R5, K-102)
+
+`kosu` her koşuda enstrüman başına maliyet (`Enstruman.maliyet_modeli_id`, K-084), finansman
+(`finansman_modeli_id`, K-095) ve takvimi (`veri.meta["takvim"]`, K-096) **veriden** çözer ve
+motora verir. Kripto evreninde üçü de `None`a çıkar (hepsi `global` spot, takvim yok) — Faz 12-16
+kayıtları bit-aynı. FX evreninde ise çözümleme zorunlu: çözülmeden koşan bir FX çekilişi kripto
+komisyonu, 24x7 yıllıklandırma ve **sıfır** finansmanla "neredeyse doğru" bir sayı üretiyordu
+(ölçüldü, K-102). Araştırma hattının motor ayarı `sq evren backtest`in ayarıyla aynı yerden
+(`evren_kosu.enstruman_maliyetleri` / `enstruman_finansmanlari`) gelir; ikinci bir çözümleyici yok.
+
 ## Stres neden seçilen parametreyle
 
 Tek sembollü `degerlendirme.py` stresi stratejinin **varsayılan** parametreleriyle
@@ -49,9 +59,13 @@ import numpy as np
 from scryne_quant.backtest.coklu_motor import CokluBacktest
 from scryne_quant.backtest.metrikler import Islem, bar_yili, hesapla
 from scryne_quant.backtest.sonuc import Sonuc
+from scryne_quant.common import finansman as finansman_mod
+from scryne_quant.common import maliyet as maliyet_mod
 from scryne_quant.common.hash import nesne_hash
-from scryne_quant.common.maliyet import MaliyetModeli
+from scryne_quant.common.maliyet import MaliyetModeli, SembolMaliyeti
 from scryne_quant.common.zaman import timeframe_ms
+from scryne_quant.data.takvim import Takvim
+from scryne_quant.data.takvim import takvim as takvim_al
 from scryne_quant.research import evren_dayaniklilik as day_mod
 from scryne_quant.research import hipotez as hipotez_mod
 from scryne_quant.research import kapilar_v2
@@ -59,9 +73,13 @@ from scryne_quant.research import pbo as pbo_mod
 from scryne_quant.research import perturbasyon as pert_mod
 from scryne_quant.research import rejim as rejim_mod
 from scryne_quant.research.analiz import STRES_SENARYOLARI, StresSonucu
-from scryne_quant.research.bolme import Katman, Pencere, is_oos, walk_forward
+from scryne_quant.research.bolme import BolmeHatasi, Katman, Pencere, is_oos, walk_forward
 from scryne_quant.research.degerlendirme import EGITIM_BAR, TEST_BAR, _kararsizlik
-from scryne_quant.research.evren_kosu import EvrenVerisi
+from scryne_quant.research.evren_kosu import (
+    EvrenVerisi,
+    enstruman_finansmanlari,
+    enstruman_maliyetleri,
+)
 from scryne_quant.research.izgaralar import evren_cekilisi
 from scryne_quant.research.tarama import (
     ASGARI_ISLEM,
@@ -245,6 +263,42 @@ def gorunum(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class MotorAyarlari:
+    """Verinin motora dikte ettiği ayarlar (modül başlığı, dördüncü karar)."""
+
+    maliyetler: dict[str, SembolMaliyeti] | None
+    finansmanlar: dict[str, finansman_mod.SembolFinansmani] | None
+    takvim: Takvim | None
+
+    @property
+    def coklu_model(self) -> bool:
+        return self.maliyetler is not None
+
+
+def motor_ayarlari(veri: EvrenVerisi) -> MotorAyarlari:
+    """`veri.kimlikler` + `veri.meta["takvim"]` → motor ayarları; kripto evreninde hepsi `None`.
+
+    Çözümleme **her koşuda ve her zaman** yapılır (fail closed): kimliği `global` olmayan bir
+    enstrümanın dosyası yoksa `MaliyetHatasi`/`FinansmanHatasi` burada patlar, koşu sessizce
+    kripto modeliyle devam etmez (K-084/U14, K-095).
+    """
+    maliyetler = enstruman_maliyetleri(maliyet_mod.MaliyetKatalogu(), veri.kimlikler)
+    finansmanlar = enstruman_finansmanlari(finansman_mod.FinansmanKatalogu(), veri.kimlikler)
+    takvim_meta = veri.meta.get("takvim")
+    takvim = takvim_al(str(takvim_meta["id"])) if takvim_meta else None
+    return MotorAyarlari(maliyetler=maliyetler, finansmanlar=finansmanlar, takvim=takvim)
+
+
+def _olcekli(model: MaliyetModeli, carpan: Mapping[str, float]) -> MaliyetModeli:
+    """Stres senaryosunun çarpanlarıyla bozulmuş model; bozulmuş model kalibre değildir."""
+    return MaliyetModeli(
+        fee_taker_bps=model.fee_taker_bps * carpan["fee"],
+        slippage_bps=model.slippage_bps * carpan["slippage"],
+        kalibrasyon=None,
+    )
+
+
 def kosu(
     strateji: PortfoyStratejisi,
     maliyet: MaliyetModeli,
@@ -254,11 +308,33 @@ def kosu(
     baslangic_sermaye: float = 10_000.0,
     cikarilanlar: frozenset[str] = frozenset(),
     sifira_yaz_bar: int | None = SIFIRA_YAZ_BAR,
+    maliyet_carpani: Mapping[str, float] | None = None,
 ) -> Sonuc:
-    """Tek bir portföy stratejisini tek bir pencerede koşturur."""
+    """Tek bir portföy stratejisini tek bir pencerede koşturur.
+
+    Enstrüman başına maliyet/finansman/takvim veriden çözülür (`motor_ayarlari`). `maliyet`
+    tek-model yolunun (kripto) modeli; çok modelli evrende motor onu yalnızca kayıt için taşır.
+    `maliyet_carpani` stres içindir: tek modelde `maliyet`e, çok modelde her sembolün modeline
+    aynı çarpan uygulanır.
+    """
+    ayar = motor_ayarlari(veri)
+    maliyetler = ayar.maliyetler
+    if maliyet_carpani is not None:
+        maliyet = _olcekli(maliyet, maliyet_carpani)
+        if maliyetler is not None:
+            maliyetler = {
+                s: SembolMaliyeti(em.kimlik, _olcekli(em.model, maliyet_carpani))
+                for s, em in maliyetler.items()
+            }
     g = gorunum(veri, strateji, pencere, cikarilanlar=cikarilanlar)
     return CokluBacktest(
-        strateji, maliyet, baslangic_sermaye=baslangic_sermaye, sifira_yaz_bar=sifira_yaz_bar
+        strateji,
+        maliyet,
+        baslangic_sermaye=baslangic_sermaye,
+        sifira_yaz_bar=sifira_yaz_bar,
+        maliyetler=maliyetler,
+        finansmanlar=ayar.finansmanlar,
+        takvim=ayar.takvim,
     ).calistir(
         g, veri_sha256=veri.veri_sha256, olcum_baslangici=pencere.olcum_baslangici
     )
@@ -420,14 +496,15 @@ def stres(
     out: dict[str, dict[str, Any]] = {}
     ad = ""
     for senaryo, carpan in senaryolar.items():
-        bozuk = MaliyetModeli(
-            fee_taker_bps=maliyet.fee_taker_bps * carpan["fee"],
-            slippage_bps=maliyet.slippage_bps * carpan["slippage"],
-            kalibrasyon=None,
-        )
+        bozuk = _olcekli(maliyet, carpan)
         strateji = strateji_uret()
         ad = getattr(strateji, "ad", type(strateji).__name__)
-        m = kosu(strateji, bozuk, veri, pencere, baslangic_sermaye=baslangic_sermaye).metrikler
+        # Çarpan `kosu`ya gidiyor: çok modelli evrende (FX) her çiftin kendi modeli bozulur;
+        # tek modelde `bozuk` ile aynı (kripto stres kayıtları bit-aynı).
+        m = kosu(
+            strateji, maliyet, veri, pencere, baslangic_sermaye=baslangic_sermaye,
+            maliyet_carpani=carpan,
+        ).metrikler
         out[senaryo] = {
             "carpanlar": dict(carpan),
             "fee_taker_bps": bozuk.fee_taker_bps,
@@ -451,17 +528,31 @@ def pencereler(
     oos_orani: float = 0.30,
     egitim_bar: int = EGITIM_BAR,
     test_bar: int = TEST_BAR,
+    isinma_bar: int | None = None,
 ) -> tuple[Pencere, Pencere, Pencere, list[Katman]]:
     """`(in_sample, out_of_sample, tam, walk_forward katmanları)`.
 
     Isınma, veride pencere başından önce yüklenmiş barlardır (`veri.olcum_baslangici`):
     her pencere ısınmasını oradan alır. Veri ızgaranın en büyük ısınmasıyla yüklenmeli.
+
+    `isinma_bar` verilirse ısınma en az o kadar olur. Depo pencere başından **geriye gitmiyorsa**
+    (FX deposu 2023-11-19'da başlıyor, K-100) `olcum_baslangici` 0 çıkar ve ısınmasız bir
+    ölçüm, ilk `pencere` barı sinyalsiz geçirip onları ölçüme katardı; taban ısınmayı verinin
+    başından alır, ölçüm oradan başlar.
+
+    Walk-forward katmanları veriye **sığmıyorsa** liste boş döner; `degerlendir` bunu
+    "ölçülemedi" olarak kaydeder ve walk-forward kapıları geçilmez (K-019: görülmemiş dönem,
+    iyi dönem değildir). Katman uzunluklarını veriye göre küçültmek kapının sorusunu
+    değiştirmek olurdu.
     """
     n = len(veri)
-    isinma = veri.olcum_baslangici
+    isinma = max(veri.olcum_baslangici, isinma_bar or 0)
     ins, oos = is_oos(n, isinma, oos_orani)
     tam = Pencere("tam", baslangic=isinma, bitis=n, isinma_baslangic=0)
-    katmanlar = walk_forward(n, isinma, egitim_bar, test_bar, kaydirmali=True)
+    try:
+        katmanlar = walk_forward(n, isinma, egitim_bar, test_bar, kaydirmali=True)
+    except BolmeHatasi:
+        katmanlar = []
     return ins, oos, tam, katmanlar
 
 
@@ -490,6 +581,7 @@ def degerlendir(
     rejim_kiyasi: str = REJIM_KIYASI,
     kosucu: Kosucu | None = None,
     ilerleme: Callable[[str], None] | None = None,
+    isinma_bar: int | None = None,
 ) -> dict[str, Any]:
     """Bir portföy çekilişini 11 kapının tamamına karşı ölçer.
 
@@ -505,7 +597,8 @@ def degerlendir(
     kosucu = kosucu or seri_kosucu(maliyet, veri)
     yil_bar = bar_yili(timeframe_ms(veri.timeframe))
     ins, oos, tam, katmanlar = pencereler(
-        veri, oos_orani=oos_orani, egitim_bar=egitim_bar, test_bar=test_bar
+        veri, oos_orani=oos_orani, egitim_bar=egitim_bar, test_bar=test_bar,
+        isinma_bar=isinma_bar,
     )
     olcumler: dict[str, Any] = {}
     detay: dict[str, Any] = {}
@@ -631,6 +724,11 @@ def degerlendir(
             "walk_forward": {"egitim_bar": egitim_bar, "test_bar": test_bar,
                              "katman": len(katmanlar)},
         },
+        "motor": {
+            "coklu_model": motor_ayarlari(veri).coklu_model,
+            "takvim": veri.meta.get("takvim"),
+            "rejim_kiyasi": rejim_kiyasi,
+        },
         "olcumler": olcumler,
         "detay": detay,
         "kapilar": kapi.sozluk(),
@@ -646,6 +744,8 @@ __all__ = [
     "EvrenDegerlendirmeHatasi",
     "KosuIsi",
     "Kosucu",
+    "MotorAyarlari",
+    "motor_ayarlari",
     "isi_kos",
     "degerlendir",
     "gorunum",

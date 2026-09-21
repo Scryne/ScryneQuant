@@ -251,6 +251,35 @@ KURMA_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
     }),
 }
 
+#: `fx_fiyat` programının çekilişleri (R5, K-102): ilk FX alfa araştırması, üç aile, üç çekiliş.
+#:
+#: Pencereler **FX seans barında** (1h, 5x24 → 120 bar = 1 hafta, K-099): 24 = 1 gün, 48 = 2 gün,
+#: 120 = 1 hafta, 240 = 2 hafta. Kripto ızgarasının 720/1440'ı burada **sığmaz**: K-101'in geçerli
+#: finansman penceresi 2023-11-19..2024-02-29 (1.721 bar); 240 barlık ısınma zaten pencerenin
+#: %14'ü. Yoğunluk (3, 5, 10) — evren 21 çift; kriptonun 20'si evrenin tamamı olur ve çekiliş
+#: kendi kıyasına dönerdi. Biçim 12 nokta (4 × 3), K-058'in `pbo` eşiğinin ölçüldüğü biçim.
+#: `yeniden_dengele_bar` 120 (FX kıyasının haftası, K-099) ve `hedef_brut` 0,2 tek değerli.
+#: Sıra durma kuralının sırası: kesitsel güç, kesitsel ters, zaman serisi trend.
+_FX_PENCERE: Final = (24, 48, 120, 240)
+_FX_YOGUNLUK: Final = (3, 5, 10)
+FX_HAFTALIK: Final = 120
+
+
+def _fx(strateji: str) -> tuple[str, dict[str, Sequence[Any]]]:
+    return (strateji, {
+        "pencere": _FX_PENCERE,
+        "azami_enstruman": _FX_YOGUNLUK,
+        "yeniden_dengele_bar": (FX_HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    })
+
+
+FX_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "fx_kesitsel_guc": _fx("kesitsel_guc"),
+    "fx_kesitsel_ters": _fx("kesitsel_ters"),
+    "fx_zaman_serisi_trend": _fx("zaman_serisi_trend"),
+}
+
 #: Program → çekilişleri. Koşucu çekilişin programını buradan bulur.
 PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "kesitsel_fiyat": tuple(EVREN_CEKILISLERI),
@@ -258,6 +287,7 @@ PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "makro_rejim": tuple(MAKRO_CEKILISLERI),
     "konumlanma_evren": tuple(KONUMLANMA_CEKILISLERI),
     "kurma_evren": tuple(KURMA_CEKILISLERI),
+    "fx_fiyat": tuple(FX_CEKILISLERI),
 }
 
 
@@ -265,7 +295,7 @@ def _TUM_CEKILISLER() -> dict[str, tuple[str, dict[str, Sequence[Any]]]]:
     """Bütün evren çekilişleri tek sözlükte. Yeni bir program eklenince **tek yer**
     değişsin diye ayrı: iki ayrı birleştirme listesi sessizce ayrışabilirdi."""
     return {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
-            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI}
+            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **FX_CEKILISLERI}
 
 
 def evren_cekilisi(ad: str) -> tuple[str, Mapping[str, Sequence[Any]]]:

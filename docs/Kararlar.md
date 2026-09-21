@@ -5124,3 +5124,65 @@ K-095 (semantik değişmedi), K-098/5, K-100/6 · **Kaynak:** `docs/research/rec
 - Testler: aralık dışı pencere → `FinansmanHatasi` (K-101), sınır bitiş günü hariç, kaynaksız
   `gecerli_mi` False, ters aralık hata; fixture koşuları 2024 Ocak-Şubat (aralık içi) aynen.
 - Kripto: `coklu_referans` `96933a8` ile SAME, kripto kıyası SAME; ağ dışı 2.269 test.
+
+## K-102 — R5 Paket 5: ilk FX alfa araştırması — araştırma hattı FX'e açıldı, `fx_fiyat` programı (3/3) koşuldu ve kapandı
+
+**Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R5 Paket 5 talimatı: "altyapı eklemeyi
+bırak, ilk FX alpha araştırmasına geç; motorun hipotez çalıştırabildiğini kanıtla, küçük setle başla")
+· **Tabi:** K-039, K-045 (istisna, ölçümle), K-051, K-054, K-061, K-099 (kontrol), K-101 (pencere,
+mutlak engel) · **Kaynak:** `docs/research/records/2026-09-21-R5-fx-alpha-1.md`,
+`research/evren_degerlendirme.py`, `strategy/kutuphane/zaman_serisi.py`, `research/izgaralar.py`
+(`FX_CEKILISLERI`), `tools/r5_fx_kos.py`, `tests/unit/test_fx_arastirma.py`
+
+### Karar
+
+1. **Araştırma hattı motor ayarlarını veriden çözer.** `evren_degerlendirme.kosu` her koşuda
+   `veri.kimlikler`den çift başına maliyet (K-084) ve finansman (K-095), `veri.meta["takvim"]`den
+   takvimi (K-096) çözüp `CokluBacktest`e verir (`motor_ayarlari`). Kripto evreninde üçü `None`
+   → Faz 12-16 kayıtları bit-aynı (`test_coklu_referans`, `test_evren_degerlendirme`). **Sebep,
+   ölçüldü:** FX verisinde eski `kosu` hata vermeden koşuyordu — kripto komisyonu, 24x7
+   yıllıklandırma, sıfır finansman, bid/ask fill'le: "neredeyse doğru". Stres çarpanı da çok
+   modelli evrende her çiftin modelini bozar (`maliyet_carpani`).
+2. **Sığmayan kapı küçültülmez, "ölçülemedi" olur.** `pencereler(isinma_bar=…)`: depo pencere
+   başından geriye gitmiyorsa ısınma verinin başından alınır; walk-forward katmanları veriye
+   sığmazsa liste boş döner ve `wf_*` kapıları ölçülemez (`degerlendir` → `olculemedi`). Rejim
+   kıyası FX'te `EURUSD`; K-058 eşiği BTC'de kalibre, FX'te **kalibre değil** ve 14 haftalık
+   pencerede ölçülemiyor. Kapı eşiklerine dokunulmadı.
+3. **Yeni aile `zaman_serisi_trend`** (`_Kesitsel` iskeleti, sıralama yerine `roc > 0` eşiği;
+   yükselen yoksa nakit; yalnız uzun — kısa bacak K-095'te yok, sorulmadı). `EVREN_AILELER`e ve
+   `coklu_test_evren.SINYAL_OZELLIKLERI`ne (`skor_ham`) kayıtlı; FX null'u **ölçülmedi**.
+4. **`fx_fiyat` programı (K-051): bütçe 3, açıldı ve kapandı.** Kaynak farkı ölçümü: FX sepet ×
+   BTCUSDT 1h korelasyon −0,006, ortak enstrüman 0, FX çiftleri arası korelasyon medyan +0,076
+   (kesit gerçek). Üç çekiliş — `fx_kesitsel_guc` (h53), `fx_kesitsel_ters` (h54),
+   `fx_zaman_serisi_trend` (h55) — **koşudan önce** deftere yazıldı (gerekçe + karşı argüman +
+   K-061 çıktısı; h53 uyarı 2 / h54 incele 2 kripto aynalarıyla, bilerek; h55 temiz). Izgara 12
+   nokta: `pencere` {24, 48, 120, 240} × `azami_enstruman` {3, 5, 10}; 120 bar dengeleme, 0,2 brüt,
+   plato. Pencere K-101'in ortak geçerli finansman aralığı (`2023-11..2024-02`, 1.721 bar);
+   finansman gevşetilmedi. Kontrol `fx_evren_esit_agirlik` 21 çift / 0,2 brüt, IS-OOS-tam'da
+   ayrı ölçüldü.
+5. **Sonuç: 0/3 promotion, 1/3 durma-kuralı ölçüsünde kontrolü geçti (h54, +4,0 USD, 11 tur,
+   IS negatif).** Hepsinde `asgari_islem` (11-16 < 30), `pbo`, `parametre_perturbasyonu` kaldı;
+   `wf_*` ve `rejim` ölçülemedi; `gecici_finansman_modeli` mutlak engel. Sayılar rapor §3'te
+   (brüt/net, dört maliyet bileşeni, benchmark farkı, IS/OOS). h54 için **tekrar gereksinimi**
+   yazıldı: K-101 dışında geçerli bir finansman aralığı açılınca aynı nokta (240, 10) yeni çekiliş
+   harcamadan ikinci bağımsız OOS'ta koşulur; o güne kadar promotion adayı değildir. "Pozitif
+   sonuç" otomatik promotion değildir (talimat, K-018).
+6. **Açık kalemler (bilerek yapılmadı):** `oos_sharpe` kapısı `yillik_anlamli`yı okumuyor (OOS 21,5
+   gün, Sharpe 6 mertebesi anlamsız — h53/h54'te kapı bu yüzden "geçti"); kapı katmanı değişikliği
+   ayrı karar. `fx_veri_kur` aylık pencere (K-101 aralığının son 2 haftası kullanılmadı). FX çoklu
+   test null'u ölçülmedi; `COKLU_TEST_CEKILIS_SAYISI` 45'te bayat (defter 55). Duman testi
+   açıklaması (K-039): yanlış hatla `kesitsel_guc(120,5)` tam pencerede bir kez görüldü (−2,5),
+   ızgara ondan önce sabitti — program kaydında yazılı.
+
+### Kanıt
+
+- `tests/unit/test_fx_arastirma.py` (14): FX fixture'ında `kosu` çift başına model/finansman/takvim
+  çözüyor ve kayda yazıyor, spread/finansman > 0, `gecici_finansman_modeli` duruyor; stres çarpanı
+  çift modellerini ölçekliyor; kripto verisinde üç ayar `None`; `pencereler` ısınma tabanı + boş
+  katman; `zaman_serisi_trend` yalnız `roc > 0` (fill barı − 1'de) taşıyor, düşen evrende 0 işlem;
+  üç FX çekilişi 12 noktalı/kurulabilir, kayıt ile koşu aynı kimlik; `degerlendir` FX'te 11 kapı,
+  `motor.coklu_model=true`, walk-forward `olculemedi`.
+- Kripto bit-aynı: `test_coklu_referans`, `test_evren_degerlendirme` (39) değişmeden geçti.
+- Gerçek koşu: `tools/r5_fx_kos.py kos` × 3, çekiliş başına ~4 s; OOS hash'leri `a5c33f50fe06` /
+  `28c5d102ee06` / `7cca05b02bae`, kontrol OOS `5689acde9405`; seçilen noktanın OOS/IS tekrarı
+  kayıtla aynı hash (koşucu aksi hâlde durur).

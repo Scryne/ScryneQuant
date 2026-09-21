@@ -50,6 +50,7 @@ from scryne_quant.strategy.kutuphane.kesitsel import (
 from scryne_quant.strategy.kutuphane.momentum import Momentum
 from scryne_quant.strategy.kutuphane.rsi_donus import RsiOrtalamaDonus
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
+from scryne_quant.strategy.kutuphane.zaman_serisi import ZamanSerisiTrend
 from scryne_quant.strategy.temel import PortfoyStratejisi, Strateji
 
 #: Ad → sınıf. Faz 4'ün beş ailesi; `sma_kesisim` ile `ema_kesisim` aynı ailenin
@@ -109,6 +110,9 @@ EVREN_AILELER: Final[dict[str, type[PortfoyStratejisi]]] = {
     # farkı yalnızca `KurmaAyarlari`.
     EvrenOynaklikAgirlik.ad: EvrenOynaklikAgirlik,
     EvrenTurnoverBandi.ad: EvrenTurnoverBandi,
+    # `fx_fiyat` programı (R5, K-102): zaman serisi trend — kesitsel ailelerle aynı iskelet,
+    # sıralama yerine eşik (roc > 0). Kesitsel güç/ters aileleri FX'te de aynen koşuyor.
+    ZamanSerisiTrend.ad: ZamanSerisiTrend,
 }
 
 #: Aile → o ailenin stratejileri. Roadmap "5 aile de aynı veri ve aynı maliyet

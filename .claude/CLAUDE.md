@@ -230,6 +230,15 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - **Finansman geçerlilik aralığı (K-101).** `FinansmanKaynagi.aralik` (`bas..bit`, bitiş hariç)
   motorda denetlenir: ölçüm penceresi dışına taşan sembolde koşu başlamaz. FXCM tarihli rollover
   arşivi yok (`docs/research/records/2026-09-21-R5-fx-rollover-kaynak.md`); 21 proxy geçici.
+- **FX araştırma hattı (K-102, R5 Paket 5).** `research/evren_degerlendirme.py` motor ayarlarını
+  veriden çözer (`motor_ayarlari`: çift başına maliyet/finansman + takvim; kripto `None` → bit-aynı);
+  sığmayan walk-forward/rejim "ölçülemedi" (küçültülmez). `tools/r5_fx_kos.py kaydet|kos|durum`
+  `fx_fiyat` çekilişleri (`izgaralar.FX_CEKILISLERI`, 12 nokta, K-101 penceresi `2023-11..2024-02`,
+  kontrol `fx_evren_esit_agirlik` 21 çift/0,2 brüt, rejim kıyası `EURUSD` kalibre değil).
+  `strategy/kutuphane/zaman_serisi.py:ZamanSerisiTrend` (`roc > 0` eşiği, yalnız uzun). Program
+  **kapalı** (3/3, h53-h55): 0/3 promotion; h54 tekrar gereksinimi taşıyor (yeni finansman aralığı
+  gelince aynı nokta, yeni çekiliş harcamadan). Rapor `docs/research/records/2026-09-21-R5-fx-alpha-1.md`.
+  Açık: `oos_sharpe` kapısı `yillik_anlamli`yı okumuyor (OOS 21,5 gün → Sharpe 6 anlamsız).
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor
