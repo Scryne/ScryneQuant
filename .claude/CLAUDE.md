@@ -255,6 +255,9 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   **R6 kapandı (K-106, 2026-09-22):** `docs/research/records/2026-09-22-R6-kapanis.md` — h53-h59 kapılar 0/7,
   tekrar eden OOS üstünlüğü 0/7; mevcut veri/dönem/hipotez kapsamında doğrulanmış FX alfası yok; dönüş
   koşulları (tarihli finansman, ≥1 yıl veri, FX null, `oos_sharpe`↔`yillik_anlamli`) orada. Yeni çekiliş yok.
+  **R7(0) FX finansman penceresi — BLOCKED (K-107):** `docs/research/records/2026-09-22-R7-fx-finansman-penceresi.md`
+  — proxy ortak pencere 120 gün, en uzun çift 269, promotion'a açık 0 gün; gerçek tarihli rollover yok;
+  FX tetik `config/finansman/fxcm-<pair>.json` `tur=broker` ≥365 gün. R7 kripto evreninde yürür.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

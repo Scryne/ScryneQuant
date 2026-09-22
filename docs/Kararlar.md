@@ -5331,3 +5331,30 @@ K-104, K-105 · **Kaynak:** `docs/research/records/2026-09-22-R6-kapanis.md`
 4. **Açık kalan tek kalem:** h56 tekrar gereksinimi (K-104) — koşulmadı; R6 kapanışında takip edilmiyor,
    dönüş koşulları sağlanınca yeni çekiliş harcamadan koşulur.
 5. Yeni hipotez/ızgara/kod yok; mevcut sonuçlar değiştirilmedi; defter 59.
+
+---
+
+## K-107 — R7 ön koşul: FX finansman/veri penceresi genişletme **BLOCKED**; promotion'a açık FX günü 0; R7 kripto evreninde yürür
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("R7'nin ilk işi FX finansman/veri penceresini
+genişletmek; proxy'yi gerçekmiş gibi kullanma; veri yoksa FAIL/BLOCKED yaz, boşuna altyapı geliştirme") ·
+**Tabi:** K-088, K-090/5, K-091, K-098, K-100, K-101, K-106 · **Kaynak:**
+`docs/research/records/2026-09-22-R7-fx-finansman-penceresi.md`
+
+### Karar
+
+1. **Hazır olan:** fiyat indirici + arşiv (2012→, 21 çift; indirilen 55 hafta), takvim/rollover anları/kalite/PIT,
+   motorda finansman aralık denetimi, çift başına ölçülmüş maliyet. **Eksik olan:** gerçek tarihli finansman
+   kaynağı — 21/21 proxy (`gecici`).
+2. **Mevcut geçerli pencere (proxy):** 21 çiftin ortak aralığı fiilen 2023-11-19..2024-03-18 (120 gün; kullanılan
+   2023-11..2024-02, 1.721 bar); en uzun çift AUDNZD/NZDUSD 269 gün; ≥365 gün **0 çift**; promotion'a açık gün
+   **0** (engel pencereye değil kaynağa bağlı, K-101/2).
+3. **≥1 yıl:** fiyat için evet (yalnız indirme); finansman için yalnız yeni proxy segmentleriyle — bu yalnız
+   araştırma kapılarını ölçülebilir kılar, promotion'a bir gün açmaz → **yapılmadı**. Gerçek tarihli FXCM
+   rollover arşivi K-101'de ve bugünkü yeniden taramada **yok**; uydurulmadı.
+4. **BLOCKED.** Kilit tek: `config/finansman/fxcm-<pair>.json` içinde `tur=broker`, aralık ≥365 gün, en az bir
+   çift. Bilinen tek üretim yolu ileriye dönük (FXCM hesabında günlük `Roll S`/`Roll B` kaydı; geriye doldurmaz;
+   hesap gerektirir) — Scryne kararı, başlatılmadı.
+5. **R7 FX'i beklemez:** portföy kurma kripto evreninde (gerçek funding, proxy yok) yürür; FX tetik sağlanınca
+   sırasıyla fiyat indirme, FX null, `oos_sharpe`↔`yillik_anlamli`, h56 sabit nokta.
+6. Kod, proxy, çekiliş, motor değişikliği **yok**.
