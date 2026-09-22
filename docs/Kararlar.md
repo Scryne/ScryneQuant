@@ -5358,3 +5358,38 @@ genişletmek; proxy'yi gerçekmiş gibi kullanma; veri yoksa FAIL/BLOCKED yaz, b
 5. **R7 FX'i beklemez:** portföy kurma kripto evreninde (gerçek funding, proxy yok) yürür; FX tetik sağlanınca
    sırasıyla fiyat indirme, FX null, `oos_sharpe`↔`yillik_anlamli`, h56 sabit nokta.
 6. Kod, proxy, çekiliş, motor değişikliği **yok**.
+
+---
+
+## K-108 — R7(1): kripto evreninde ilk portföy kurma programı (`portfoy_kurma`, h60-h61) — 0/2, aile kapalı
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("R7'yi kripto evreninde başlat; 2-3 basit portföy
+mekanizması; IS/OOS; kıyas sabit; PBO/pertürbasyon/işlem kapıları; tek OOS başarısıyla promotion yok; negatifse
+kapat") · **Tabi:** K-019, K-033, K-037, K-039, K-044, K-050, K-051/4, K-061, K-070, K-072, K-073, K-079 ·
+**Kaynak:** `docs/research/records/2026-09-22-R7-portfoy-kurma-1.md`, `strategy/kutuphane/evren_portfoy.py`,
+`strategy/kutuphane/evren_esit_agirlik.py` (`_korelasyon_icin`), `research/izgaralar.py` (`PORTFOY_CEKILISLERI`),
+`tools/faz12_evren_kos.py`, `tests/unit/test_evren_portfoy.py`, `runs/faz12/portfoy-kaynak-olcumu.json`
+
+### Karar
+
+1. **Program:** `portfoy_kurma`, bütçe 2, iki mekanizma, ikisi de kıyasın seçimi/sıralaması/takvimi üstüne yalnız
+   kurma değişikliği (Faz 16 iskeleti): korelasyon budaması (`kur(korelasyon=)` — Faz 16'da "var olmayan makine";
+   kıyas kancası `None` → bit-aynı) ve **yalnız düşüren** oynaklık hedefi (K-050; hedefler ölçülen IS dağılımından,
+   getiri okunmadan). Optimizasyon (ERC/min-var) açılmadı. Kripto evreni spot: gerçek funding verisi var ama motorda
+   maliyet değil (K-079), sinyal olarak K-068'de kapalı → bu programda **ne maliyet ne sinyal**, uydurulmadı.
+2. **h60 korelasyon budaması: elendi.** Seçilen (0,5 / n20) OOS Sharpe −1,11 vs kıyas −0,26, net −893,76 USDT, DD
+   31,2 % vs 27,4 %; maruziyet yarıya iniyor (budama dolduramıyor), hayatta kalanlar likiditesi düşük → maliyet ve
+   tur artıyor; `oos_is_orani` −1,93. 4/11 kapı. Ön yazılı karşı argüman gerçekleşti.
+3. **h61 oynaklık hedefi: elendi, Sharpe-nötr.** Seçilen (0,010 / n5) OOS Sharpe 0,4606 vs kıyas 0,4617; DD, getiri
+   ve maruziyet aynı oranda (×0,66) → zaman-değişken kaldıraç düşürmenin mekanik sonucu, σ_t'de zamanlama bilgisi
+   yok. 7/11 kapı (`oos_is_orani` 0,845, walk-forward 0,633, evren dayanıklılığı 1,00; pbo 0,042 defter en düşüğü,
+   eşik 0,0087; pertürbasyon 0,193; rejim 0,124). Durma kuralı (kıyas ∧ 0,333) geçilmedi → doğrulama adımı yok.
+4. **Aile kapalı; yeni portföy kapısı tanımlanmadı.** Faz 16'nın bulgusu ikinci kez ölçüldü: kurma katmanı risk
+   profilini değiştirir, risk-ayarlı getiriyi değil. Oynaklık hedefi bir promotion kapısı değil, risk iştahının
+   (K-033 `azami_brut_maruziyet`) ifadesi olabilir — ayrı karar, bu pakette verilmedi.
+5. **Kod:** iki strateji sınıfı, kıyasta bir kanca (varsayılan `None`, kripto kıyası bit-aynı: `test_evren_kurma`
+   bant testi + `test_coklu_referans`), ızgara/program/sinyal özelliği kayıtları, +13 test. Execution/risk/audit
+   değişmedi; FX işi yok. Araştırma yolu risk motorsuz (K-073 aynen).
+6. **Çoklu test:** h60/h61 null'u ölçüldü (500 deneme, seed 0; 82 + 48 dk), fotoğraf yenilendi: ölçülebilir
+   45 → **47**, %5 sınırı 1,0039 aynı, sabit 1,04 korunuyor; `COKLU_TEST_CEKILIS_SAYISI` 45 → 47 (K-081 kuralı:
+   sabit yalnız karar kaydıyla güncellenir). Defter 61.

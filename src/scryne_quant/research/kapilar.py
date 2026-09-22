@@ -75,9 +75,11 @@ COKLU_TEST_ESIGI: Final = 1.04
 #: yöntemle **yeniden koşuldu** — K-064'ün "sonradan dışlama" yaklaşımı değil.
 #: 2026-09-20'de 45 (K-081, R1(c)): h51/h52 (kurma_evren) eklendi, 31 tek sembollü + 14 evren,
 #: 500 deneme, seed 0; %5 sınırı 1,004 (%90 GA 0,982–1,064); sabit
-#: değişmedi. Bu sayı bir **eşik değil**, eşiğin ölçüldüğü defter fotoğrafıdır ve git'teki
+#: değişmedi. 2026-09-22'de 47 (K-108, R7): h60/h61 (portfoy_kurma) eklendi, 31 tek sembollü +
+#: 16 evren (h53-h59 FX ölçülemez, K-102/6); %5 sınırı 1,004 aynı; sabit değişmedi.
+#: Bu sayı bir **eşik değil**, eşiğin ölçüldüğü defter fotoğrafıdır ve git'teki
 #: `docs/research/coklu-test-olcum.json` ile eşit olmak zorundadır (`coklu_test_fotograf`).
-COKLU_TEST_CEKILIS_SAYISI: Final = 45
+COKLU_TEST_CEKILIS_SAYISI: Final = 47
 
 #: K-019'un eşikleri. Her biri Faz 4'ün ölçümüne dayanıyor; gerekçeler
 #: `docs/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı. `oos_sharpe` ayrıca K-044'ün

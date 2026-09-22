@@ -251,6 +251,33 @@ KURMA_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
     }),
 }
 
+#: `portfoy_kurma` programının çekilişleri (R7, K-108). İskelet `kurma_evren` (Faz 16) ile birebir:
+#: kıyasın seçimi/sıralaması/takvimi, 12 nokta (4 × yoğunluk 3), haftalık, brüt 0,2; **kapalı konum
+#: ızgarada yok** (tavan 1,0 ve hedef ∞ kıyasın kendisi).
+#:
+#: - Korelasyon tavanı {0,5; 0,6; 0,7; 0,8}: 0,5 kripto kesitinde (BTC betası yüksek, çiftler arası
+#:   ρ tipik 0,5-0,8) yoğun budama, 0,8 seyrek; pencere 720 sabit (kıyasın hacim ufku, eksen değil).
+#: - Oynaklık hedefi {0,010; 0,0125; 0,015; 0,020} (1h `atr14/close`, evren medyanı): **ölçülen
+#:   dağılımdan**, getiri okunmadan (`runs/faz12/portfoy-kaynak-olcumu.json`, IS haftalık: q10 0,0099,
+#:   q25 0,0123, q50 0,0165, q75 0,0205, q90 0,0266) — 0,010 haftaların ~%90'ında düşürür, 0,020 ~%25.
+#:   Hedef yalnız düşürür (K-050); 0,2 üstüne çıkaran nokta yok.
+#: Sıra durma kuralının sırası: korelasyon budaması, sonra oynaklık hedefi.
+PORTFOY_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "portfoy_korelasyon": ("evren_korelasyon_budama", {
+        "korelasyon_tavani": (0.5, 0.6, 0.7, 0.8),
+        "pencere": (720,),
+        "azami_enstruman": _YOGUNLUK,
+        "yeniden_dengele_bar": (HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }),
+    "portfoy_oynaklik_hedefi": ("evren_oynaklik_hedefi", {
+        "hedef_oynaklik": (0.010, 0.0125, 0.015, 0.020),
+        "azami_enstruman": _YOGUNLUK,
+        "yeniden_dengele_bar": (HAFTALIK,),
+        "hedef_brut": (SABIT_MARUZIYET,),
+    }),
+}
+
 #: `fx_fiyat` programının çekilişleri (R5, K-102): ilk FX alfa araştırması, üç aile, üç çekiliş.
 #:
 #: Pencereler **FX seans barında** (1h, 5x24 → 120 bar = 1 hafta, K-099): 24 = 1 gün, 48 = 2 gün,
@@ -333,6 +360,7 @@ PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "makro_rejim": tuple(MAKRO_CEKILISLERI),
     "konumlanma_evren": tuple(KONUMLANMA_CEKILISLERI),
     "kurma_evren": tuple(KURMA_CEKILISLERI),
+    "portfoy_kurma": tuple(PORTFOY_CEKILISLERI),
     "fx_fiyat": tuple(FX_CEKILISLERI),
     "fx_ortalama_donus": tuple(FX_DONUS_CEKILISLERI),
     "fx_oynaklik": tuple(FX_OYNAKLIK_CEKILISLERI),
@@ -343,7 +371,7 @@ def _TUM_CEKILISLER() -> dict[str, tuple[str, dict[str, Sequence[Any]]]]:
     """Bütün evren çekilişleri tek sözlükte. Yeni bir program eklenince **tek yer**
     değişsin diye ayrı: iki ayrı birleştirme listesi sessizce ayrışabilirdi."""
     return {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
-            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **FX_CEKILISLERI,
+            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **PORTFOY_CEKILISLERI, **FX_CEKILISLERI,
             **FX_DONUS_CEKILISLERI, **FX_OYNAKLIK_CEKILISLERI}
 
 

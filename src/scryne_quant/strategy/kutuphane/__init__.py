@@ -39,6 +39,10 @@ from scryne_quant.strategy.kutuphane.evren_kurma import (
     EvrenTurnoverBandi,
 )
 from scryne_quant.strategy.kutuphane.evren_makro import EvrenMakroNfci, EvrenMakroVix
+from scryne_quant.strategy.kutuphane.evren_portfoy import (
+    EvrenKorelasyonBudama,
+    EvrenOynaklikHedefi,
+)
 from scryne_quant.strategy.kutuphane.funding_egilim import FundingEgilim
 from scryne_quant.strategy.kutuphane.funding_filtre import FundingFiltre
 from scryne_quant.strategy.kutuphane.funding_ters import FundingTers
@@ -115,6 +119,10 @@ EVREN_AILELER: Final[dict[str, type[PortfoyStratejisi]]] = {
     # farkı yalnızca `KurmaAyarlari`.
     EvrenOynaklikAgirlik.ad: EvrenOynaklikAgirlik,
     EvrenTurnoverBandi.ad: EvrenTurnoverBandi,
+    # `portfoy_kurma` programı (R7, K-108): aynı seçim, portföy düzeyi kurma — korelasyon budaması
+    # (`kur(korelasyon=)`) ve yalnız düşüren oynaklık hedefi.
+    EvrenKorelasyonBudama.ad: EvrenKorelasyonBudama,
+    EvrenOynaklikHedefi.ad: EvrenOynaklikHedefi,
     # `fx_fiyat` programı (R5, K-102): zaman serisi trend — kesitsel ailelerle aynı iskelet,
     # sıralama yerine eşik (roc > 0). Kesitsel güç/ters aileleri FX'te de aynen koşuyor.
     ZamanSerisiTrend.ad: ZamanSerisiTrend,
@@ -187,7 +195,9 @@ __all__ = [
     "EvrenMakroVix",
     "EvrenOiBirikim",
     "EvrenOiTaker",
+    "EvrenKorelasyonBudama",
     "EvrenOynaklikAgirlik",
+    "EvrenOynaklikHedefi",
     "EvrenTakerBaski",
     "EvrenTurnoverBandi",
     "FundingEgilim",

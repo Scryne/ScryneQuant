@@ -24,7 +24,7 @@ maliyetini ödemek demek. Bu sayının iştahı Faz 12'nin ölçeceği şey.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from typing import Any
 
@@ -140,8 +140,16 @@ class EvrenEsitAgirlik(PortfoyStratejisi):
             ctx.zaman,
             adaylar,
             self._ayarlar_icin(ctx),
+            korelasyon=self._korelasyon_icin(ctx, adaylar),
             acik_pozisyonlar=tuple(s for s in ctx.acik_pozisyonlar() if s in ctx.gorunur()),
         )
+
+    def _korelasyon_icin(
+        self, ctx: EvrenBaglam, adaylar: Sequence[Aday]
+    ) -> Mapping[tuple[str, str], float] | None:
+        """Bu barın korelasyon matrisi (`kur(korelasyon=)`). Kıyas: **yok** (`None`) — `sec`
+        budama yapmaz, Faz 10 davranışı bit-aynı. R7 `evren_korelasyon_budama` doldurur."""
+        return None
 
     def _ayarlar_icin(self, ctx: EvrenBaglam) -> KurmaAyarlari:
         """Bu barın kurma ayarları. Kripto: sabit (Faz 10 davranışı, bit-aynı)."""

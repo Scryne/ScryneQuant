@@ -77,6 +77,9 @@ PROGRAM_AYARI = {
     # bu programda değişen şey **portföy yöntemi**, ve K-051 yöntemi hipotez kimliğinin
     # parçası sayıyor. Kıyas seçilen yoğunlukla koşulur — fark yalnızca kurmadan gelmeli.
     "kurma_evren": (False, KURMA_PORTFOY, True),
+    # R7 (K-108): portföy düzeyi kurma — aynı seçim, `KurmaAyarlari`/brüt değişiyor; kurma
+    # programıyla aynı portföy kodu ve seçilen yoğunlukta kıyas.
+    "portfoy_kurma": (False, KURMA_PORTFOY, True),
 }
 #: Ölçüm (24 GB makine): veri yüklü süreç ≈4,5 GB; tek koşunun tepesi in-sample +0,6 GB,
 #: tam pencere +0,9 GB. Ana süreç + 3 işçi in-sample'da ≈20 GB; tam pencere 2 işçiyle.

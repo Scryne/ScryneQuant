@@ -15,12 +15,14 @@
   "4f2b10be2dedd07d63583c3a5c7f88d8f7c33dc509ed9b4346e89f900dfda3d3",
   "501049cf9901befacf1c0567fc3c63b9f39ab8552285619321adef538ab44c5a",
   "5438647da177034a8c94023fe1f69d7a9a3452b505fbc93f56088b992b42771f",
+  "55e9987db54f1658d52814e2da5809ce3803d3693bebdaadd28aef24ae7b86dc",
   "5616538e07ee01d808baf4402ed282f4e540b6b52be58b0725e4a122cdd43ef5",
   "5696e5248eb930404892d284e12df33a3fd732e8f8fdb132e804999c9539392c",
   "587fc8a303228b58903a8e11c373ebb2ab54388613eb7b1ce3371f579b1f32ca",
   "58d43bff62e014d166591d65797e9f398baca93bd16bbabfc15855f38a447afe",
   "5cfa6d8d4c09f8f98dd15ccb09dfe004a67a85e0d91b572f1fa541286d998c42",
   "5d769ffac3beb7dc75bf8b48e3fd23404ee5ae46fbf454af5dc1426945f1afb4",
+  "66922f60b108848936689da5fba66c0ce030b9ce87699ad55d381ff10c12d47f",
   "6e4aad334a0325cd267fbd746e7cfba3e5f72e6819cc3eeb7018917df5c8a2d8",
   "6f00ff6f906191ec14157a7bddddcfdc4ae773e98e801544966cd8e49973a1d5",
   "753752c4ff4dc2d9afe02497eeb5207c783b1f1774c22507979ea0a6e5ef6691",
@@ -46,23 +48,23 @@
   "f845b3fba9cba79654bcc0e89edde06501d3dfbddce5494337ecd440dafbb2dc",
   "fdce091fbfa2d5a639f3a709bf2288856b01d47848c1314cde9a14995bf3b7be"
  ],
- "defter_sayisi": 59,
- "defter_sha256": "2c442d746bb2902e88dddb2ebbc501aee0a3a9efe2863ecea35a2115306e4357",
+ "defter_sayisi": 61,
+ "defter_sha256": "bedb871833a98788701a36c6d9b56b3f8fd2aa36f06367a89ddf6d0ebe12b4bc",
  "deneme": 500,
- "evren": 14,
+ "evren": 16,
  "ga05": [
   0.9818147555388195,
   1.0634610745437818
  ],
  "git": {
-  "commit": "ed0b69423df0b2b7516c11bb603569dfa0abf5c3",
+  "commit": "a9982f60e9a6d117f1681964c3fc213a971d7cd7",
   "dirty": true,
   "git_yok": false
  },
  "kaynak": "runs/faz12/coklu-test-birlesik-500-0.json",
  "mevcut_esigin_yanlis_pozitifi": 0.042,
  "mevcut_esik": 1.04,
- "olculebilir": 45,
+ "olculebilir": 47,
  "olculemez_kimlikleri": [
   "5f215052bc0b3e7fe3fcd70e0750a0c37a63de75b97a4e9c6511d6d4bc8ca244",
   "0d4ee7c2c9f128177d8c87d645ac2bd09e9bff5de0271076ac87d2c1b4f70fca",
@@ -82,5 +84,5 @@
  "p05": 1.0039280761569713,
  "seed": 0,
  "tek_sembollu": 31,
- "uretildi": "2026-09-21 23:54:15 UTC"
+ "uretildi": "2026-09-22 08:14:17 UTC"
 }

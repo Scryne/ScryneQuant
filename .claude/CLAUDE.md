@@ -258,6 +258,10 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   **R7(0) FX finansman penceresi — BLOCKED (K-107):** `docs/research/records/2026-09-22-R7-fx-finansman-penceresi.md`
   — proxy ortak pencere 120 gün, en uzun çift 269, promotion'a açık 0 gün; gerçek tarihli rollover yok;
   FX tetik `config/finansman/fxcm-<pair>.json` `tur=broker` ≥365 gün. R7 kripto evreninde yürür.
+  **R7(1) `portfoy_kurma` (K-108): kapalı, 0/2** — `strategy/kutuphane/evren_portfoy.py` (`evren_korelasyon_budama`:
+  `EvrenEsitAgirlik._korelasyon_icin` kancası + `kur(korelasyon=)`; `evren_oynaklik_hedefi`: yalnız düşüren
+  brüt ölçekleme), `izgaralar.PORTFOY_CEKILISLERI`; h60 elendi (ters çalıştı), h61 Sharpe-nötr elendi (7/11 kapı).
+  Rapor `docs/research/records/2026-09-22-R7-portfoy-kurma-1.md`.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

@@ -103,6 +103,11 @@ SINYAL_OZELLIKLERI: Final[dict[str, tuple[str, ...]]] = {
     # **Bu bir yaklaşımdır ve sınırı yazılı:** bandın kendi etkisi null'da da yaşıyor,
     # dolayısıyla ölçülen düzeltme bu çekiliş için muhafazakâr değil (raporda açık kalem).
     "evren_turnover_bandi": ("kote_hacim",),
+    # R7 `portfoy_kurma`: korelasyon budamasının tahmini yok (bant gibi); doğal sinyal yok, sıralama
+    # ölçüsü kaydırılır — **yaklaşım**, düzeltme muhafazakâr değil (turnover bandıyla aynı sınır).
+    # Oynaklık hedefinin iddiası `atr`'nin evren düzeyinde risk azaltmada işe yaradığı → `atr`.
+    "evren_korelasyon_budama": ("kote_hacim",),
+    "evren_oynaklik_hedefi": ("atr",),
     # Zaman serisi trend (R5, `fx_fiyat`): iddia `roc > 0` eşiği, taşıyıcı alan kesitsel
     # ailelerle aynı (`skor_ham`). Kaydırılan skor eşiği de sıralamayı da rastgele zamanlar.
     "zaman_serisi_trend": ("skor_ham",),
