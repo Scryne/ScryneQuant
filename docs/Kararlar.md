@@ -5457,3 +5457,38 @@ K-109 · **Kaynak:** `docs/research/records/2026-09-22-R7-kapanis-alfa-envanteri
    testi); açılıyorsa Hat B ikinci tavanı mevcut araçla (`tools/faz16_hat1_ikinci_tavan_kismi.py`) ölçülür,
    K-079/6 kuralıyla.
 6. Bu karar hiçbir kapı, eşik, kapsam ya da yetki değiştirmez.
+
+---
+
+## K-111 — Araştırma programı askıda (defter 62); R8 paper/gözlem operasyon koşusu açıldı, kriterleri dondurulmuş
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("K-079/2 korunuyor; R7 kapalı; yeni alfa/hipotez/veri/
+çekiliş yok; programı askıya al, defteri 62'de dondur; R8 paper koşusunu aç ama alfa kanıtı olarak sunma;
+kriterleri önceden tanımla, sonradan eşik değiştirme") · **Tabi:** K-004, K-007, K-009, K-010, K-021, K-035,
+K-037, K-038, K-043, K-050, K-052, K-069, K-079, K-082, K-110 · **Kaynak:**
+`docs/research/records/2026-09-22-R8-paper-protokol.md`, `config/r8_kriterler.json` (SHA-256 `2c3d520e8f3fe5d278ac5bc054363f4e0c34b7b7ed2ad726b793469873d4cdf5`)
+
+### Karar
+
+1. **Araştırma programı askıda.** K-079/2 (vadeli hesap açılmıyor) korunuyor; R7 kapalı (K-110). Hipotez defteri
+   **62'de donar**: yeni çekiliş, hipotez, aile, veri kaynağı, araştırma hattı açılmaz; elenen aileler yeniden
+   açılmaz; kıyas değişmez. Askıdan çıkış yalnız Scryne kararıyla ve K-051 program kaydıyla.
+2. **R8 açıldı — amaç operasyon kanıtı, alfa değil.** Koşu `r8-kiyas`: kıyas `evren_esit_agirlik` n=10 haftalık
+   0,2 brüt, **gözlem modu** (K-035; `paper` promotion ister ve promotion geçmiş strateji olmadığı için her sinyali
+   reddederdi — execution/recovery ölçülemezdi), host-1, **2026-09-25** K-069 kapanışında K-043 planlı durdurma
+   yordamıyla (kod senkronu + testler) başlar, **14 gün** (iki dengeleme + 1 Ekim ay sınırı). Pencere içinde hosta
+   dokunulmaz; ≥ 1 planlı durdur/başlat açık pozisyonla zorunlu.
+3. **Kriterler önceden dondurulmuş** (`config/r8_kriterler.json`, hash yukarıda): 10 alan — veri akışı, PIT evren,
+   sinyal/benchmark üretimi, maliyet, risk kapıları, karar/seal, paper execution, idempotency/recovery, audit
+   trail, monitoring — her biri mevcut araç (`evren-durum`, `izle kontrol`, `evren-tatbikat`, `evren-sapma`,
+   run-içi zincirli risk defteri) ve mevcut eşiklerle (`izleme.ESIKLER`, K-004/007/009/038/043/052/082).
+   **10/10 PASS, biri kalırsa FAIL; eşik pencere içinde ve sonrasında değiştirilmez.** Ölçüm dışı: Sharpe, getiri,
+   benchmark farkı, promotion, `ASGARI_PAPER_GUN` (30, K-069/3 aynen).
+4. **Roadmap R8 satırı düzeltildi:** "kanıt üreten paper" → "operasyon koşusu"; `--mod paper` bayrağı ve
+   `ASGARI_PAPER_GUN` fill koşulu R8'den çıktı (biri ölçülemez, öteki promotion'a ait).
+5. **Başlangıç noktası kaydedildi** (salt okunur SSH, 2026-09-22 09:00 UTC): `evren-kiyas` adım 884, 8 pozisyon
+   (RLUSDUSDT dahil — bilinen kural açığı, koşu ortasında değiştirilmez), 3 kopma (hepsi ≤ 31 s'de bağlandı),
+   3 `toparlandi`; `host-1` 4,81 gün, kesinti 5. Sebepler 25 Eylül'de host günlüğünden okunur; K-069 kararı
+   burada verilmez.
+6. **Kapanış:** pencere sonunda ayrı kayıt (`<tarih>-R8-kapanis.md` + K-112) — ölçülen 10 alan, PASS/FAIL,
+   giderme/R9 kararı. Bu paket kod değiştirmez.

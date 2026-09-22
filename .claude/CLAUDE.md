@@ -268,6 +268,10 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   **R7 kapandı (K-110):** `docs/research/records/2026-09-22-R7-kapanis-alfa-envanteri.md` — R6+R7 ortak bulgu,
   tükenen aileler (tekrar denenmez), K-078/1 null-persentil ölçümüyle desteklendi, test edilmemiş kaynak
   envanteri (A-H) + mimari uygunluk; yeni hat yok; tek adım Scryne'ın K-079/2 kararı (hayır → R8 kıyasla).
+- **Araştırma askıda (K-111): K-079/2 korunuyor, defter 62'de donmuş; yeni hipotez/çekiliş/hat/veri kaynağı yok.**
+  **R8 = operasyon koşusu** (`docs/research/records/2026-09-22-R8-paper-protokol.md`, kriterler
+  `config/r8_kriterler.json` dondurulmuş): `r8-kiyas` gözlem modu, host-1, 25 Eylül'de K-043 yordamıyla açılır,
+  14 gün, 10 alan PASS/FAIL; alfa/promotion kanıtı değil. Kapanış K-112.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

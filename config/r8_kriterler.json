@@ -1,0 +1,89 @@
+{
+  "surum": 1,
+  "karar": "K-111",
+  "tarih": "2026-09-22",
+  "amac": "R8: mevcut sistemin gercek zamanli gozlem/paper operasyonunda uctan uca, kontrollu ve denetlenebilir calistiginin olcumu. Alfa kaniti, strateji dogrulamasi ya da promotion kaniti DEGILDIR (K-035).",
+  "kosu": {
+    "ad": "r8-kiyas",
+    "host": "host-1 (192.168.1.4), ScryneQuant-Evren gorevi kalibi",
+    "komut": "sq paper evren-baslat r8-kiyas --evren-tablo runs/paper/r8-kiyas.evren.parquet --strateji evren_esit_agirlik -p yeniden_dengele_bar=168 -p azami_enstruman=10 -p azami_agirlik=0.02 -p hedef_brut=0.2",
+    "mod": "gozlem",
+    "mod_gerekcesi": "`paper` modu promotion zinciri ister (K-010); promotion gecmis strateji yok -> her sinyal PROMOTION_YOK ile reddedilir ve execution/recovery olculemez. K-035 gozlem modu tam olarak bu olcum icin var: promotion kapisi disindaki butun risk limitleri aynen uygulanir, kanit uretmez.",
+    "strateji": "evren_esit_agirlik (kiyas, K-030) — aday degil, degistirilmez",
+    "baslangic": "K-069 penceresi kapaninca (2026-09-25) K-043 planli durdurma yordamiyla: kod senkronu (bundle) -> testler -> yeni kosu; pencere icinde hosta dokunulmaz",
+    "pencere_gun": 14,
+    "pencere_gerekcesi": "iki haftalik dengeleme (168 bar) + 1 Ekim ay siniri (K-069'un olculmemis birakti kod yolu) tek pencerede",
+    "sermaye": 10000.0
+  },
+  "kriterler": [
+    {
+      "alan": "veri_akisi",
+      "olcum": "sq paper evren-durum + izle kontrol",
+      "kural": "pencere boyunca SON_BAR_GECIKTI (>= 2 saat) alarmi 0 kez kritik; KOPMA sayisi 24 saatte <= 5 (ESIKLER.kopma_24s); her kopma sonrasi yeniden_baglandi olayi var",
+      "esik_kaynagi": "live/izleme.ESIKLER (mevcut politika)"
+    },
+    {
+      "alan": "pit_evren",
+      "olcum": "ScryneQuant-EvrenTablo gunluk yenileme logu + tablo hash",
+      "kural": "1 Ekim ay siniri gecildi: yeni ayin uyeligi yazildi ya da UYELIK_GECIKMESI uyarisi >3. gunden sonra kayitli; gecmis aylarin listesi degismedi (tablo yenileme 'gecmis ay degisti' hatasi 0)",
+      "esik_kaynagi": "K-052, evren-tablo-yenile sozlesmesi"
+    },
+    {
+      "alan": "sinyal_benchmark",
+      "olcum": "kosu adimlari (evren-durum: adim, islem, pozisyonlar)",
+      "kural": ">= 2 yeniden dengeleme adimi hedef portfoy uretti; her dengelemede uye sayisi = azami_enstruman (10) ya da eksik uyeler risk/uygunluk sebebiyle kayitli",
+      "esik_kaynagi": "K-030/K-072 kiyas tanimi"
+    },
+    {
+      "alan": "maliyet",
+      "olcum": "fill defteri (komisyon, slippage) vs config/maliyet global model",
+      "kural": "her fill'de komisyon ve slippage sifirdan buyuk ve modelin bps'iyle tutarli (fill notional x bps, tolerans 1e-9); K-007 yonu (aleyhte) her fill'de",
+      "esik_kaynagi": "K-021, K-084"
+    },
+    {
+      "alan": "risk_kapilari",
+      "olcum": "risk audit (OlayTuru) + evren-durum safe_mode",
+      "kural": "en az bir risk reddi (oynaklik/limit) kayitli VE reddedilen niyet execution'a ulasmadi; SAFE_MODE tetiklendiyse sebebi audit'te; promotion kapisi gozlemde sorulmadi (mod=gozlem kayitli)",
+      "esik_kaynagi": "K-037, K-035, config/risk.json"
+    },
+    {
+      "alan": "karar_seal",
+      "olcum": "kosu kimligi (kimlik_oku) + config_hash",
+      "kural": "kosu kimligi pencere boyunca degismedi; kod_degisti olayi yalniz planli durdurma icinde; kimlik degisikligi ile yeniden baslatma denemesi reddedildi (K-009)",
+      "esik_kaynagi": "K-009, K-038"
+    },
+    {
+      "alan": "paper_execution",
+      "olcum": "fill defteri + adim kayitlari",
+      "kural": "fill her zaman sinyal barinin SONRAKI barinin acilisinda (K-004); gercek borsa emri 0 (gozlem: simule fill); hedef ile fill arasi fark yalniz risk reddi/nakit yetersizligi ile aciklanabilir",
+      "esik_kaynagi": "K-004, K-035/3"
+    },
+    {
+      "alan": "idempotency_recovery",
+      "olcum": "sq paper evren-tatbikat (gunluk yedekten yeniden uretim) + planli durdur/baslat + acik pozisyonla yeniden baslatma",
+      "kural": "pencere icinde >= 1 gercek yeniden baslatma (planli) ve >= 1 plansiz (varsa) sonrasi 'toparlandi' olayi; tatbikat gecti=true (bit duzeyinde ayni ozkaynak, canliyla ayni); ayrisma varsa kosu DURDU (tahmin yurutmedi, K-038)",
+      "esik_kaynagi": "K-038, Faz 14 tatbikat"
+    },
+    {
+      "alan": "audit_trail",
+      "olcum": "kosu deposundaki risk defteri (SqliteDefter, zincir hash'li) — `sq risk audit --audit runs/paper/r8-kiyas.sqlite` (zincir dogrulamasi) + kosu olaylari",
+      "kural": "zincir dogrulanir (defter.dogrula() kirik satir 0); her fill ve her risk karari icin audit satiri var; sayilar kosu deposu ile tutarli",
+      "esik_kaynagi": "K-082 kalibi, risk/audit.py"
+    },
+    {
+      "alan": "monitoring",
+      "olcum": "ScryneQuant-Izleme (15 dk), ntfy bildirimleri, gunluk ozet",
+      "kural": "kritik alarm 0 ya da her kritik alarm runbook koduyla eslesip 24 saat icinde kapatildi; SEBEPSIZ_SAPMA 0; SAPMA (>50 bps) varsa sebebi (gec bar/eksik adim/uyelik gecikmesi) kayitli",
+      "esik_kaynagi": "live/izleme.ESIKLER, docs/Runbook.md"
+    }
+  ],
+  "sonuc_kurali": "10 alanin 10'u gecerse R8 PASS (operasyon kaniti); herhangi biri kalirsa R8 FAIL ve kalan alan(lar) K kaydinda; esikler pencere icinde ve sonrasinda DEGISTIRILMEZ. PASS/FAIL hicbir strateji hakkinda hicbir sey soylemez.",
+  "olcum_disi": [
+    "Sharpe",
+    "getiri",
+    "benchmark farki",
+    "promotion",
+    "ASGARI_PAPER_GUN sayaci (K-069/3: 30, dokunulmadi)"
+  ],
+  "kapanis_kaydi": "docs/research/records/<tarih>-R8-kapanis.md + K-112: olculen 10 alan, PASS/FAIL, sonraki karar (R9 baglantisi ya da giderme)"
+}
