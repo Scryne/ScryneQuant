@@ -117,12 +117,15 @@ Onaydan sonra kodda commit, kademe, strateji aşaması, anahtar yetkisi gibi **k
 | Hemen dur | `sq execution kill --kosu K --sebep "..."` | SAFE_MODE işareti → süreç öldürülür → açık emirler iptal (canlıda yalnız-iptal adaptör, emir açamaz) → doğrulama |
 | Planlı dur | `sq execution durdur --kosu K` | Sonraki döngüde temiz kapanış + kapanış mutabakatı |
 | SAFE_MODE kaldır | `sq execution safe-kaldir --kosu K --not "..."` | Yalnız elle, gerekçeyle (K-008/4) |
-| Modu düşür | `sq execution indir DISABLED --sebep "..."` | Onaysız |
+| Modu düşür | `sq execution indir DISABLED --sebep "..."` | Onaysız; **çalışan koşular da** bir sonraki artıran emirde durur (azaltanlar geçer) |
+| Koşuyu kalıcı kapat | `sq execution kosu-kapat --kosu K --not "..."` | Halt/SAFE_MODE'lu koşu arşive geçer, bir daha başlatılamaz, live gate'i tutmaz |
 
 Otomatik olanlar (riski azaltan, K-050): borsa ölçümlü drawdown → SAFE_MODE; mutabakat uyuşmazlığı,
 yetim emir, açıklanamayan pozisyon farkı → **halt** (hiçbir emir, çıkış dahil — gerçek durum
 bilinmiyor); bağlantı hatasında artıran emir yok; hız sınırına yaklaşınca yazma gönderilmez.
-Kill açık pozisyonu **kapatmaz** (K-008/2, spot).
+Kill açık pozisyonu **kapatmaz** (K-008/2, spot). Adaptör kurulamasa da (anahtar/dosya yok) SAFE_MODE işareti yazılır ve süreç sonlandırılır; açık emirler doğrulanamadığı için rapor başarısız döner.
+
+Mutabakat **yapılamadığında** (borsa okunamadı, bozuk yanıt) artıran emir gitmez; koşu başında da ilk mutabakat geçene kadar. Aynı koşu iki süreçle, iki ayrı canlı koşu aynı anda açılamaz (kilit). Kanıt dosyaları (`rapor.json`, `kill.json`) koşunun audit zincirindeki hash'le tutmuyorsa live gate onları kanıt saymaz.
 
 ## 6. Dosyalar
 

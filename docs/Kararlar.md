@@ -5668,3 +5668,17 @@ işlem anahtarı yok (bilerek, K-062/5: elle onaydan sonra üretilir); canlı ho
 > Gerçek parayla emir gönderebilen tek nesne, bütün kontrolleri **o an** geçen bir kapının ve bir
 > insanın onayının birlikte ürettiği, diske yazılmayan bir yetkidir. Kod bu yetkiyi üretemez, taşıyamaz,
 > tahmin edemez.
+
+### K-114 eki — adversarial denetim (2026-09-22)
+
+Denetim (`docs/research/records/2026-09-22-K114-execution-denetim.md`) execution katmanında **dört HIGH**
+fail-open buldu ve kapattı (`c255e94`): (1) tek canlı koşu kilidi yoktu — iki canlı süreç kademe
+tavanını katlayabilirdi; (2) mutabakat *yapılamadığında* artıran emirler gidiyordu; (3) mod düşürme
+çalışan süreci etkilemiyordu; (4) kill adaptörü kurulamazsa işaret ve süreç sonlandırma da yapılmıyordu.
+Ek olarak: `SUBMITTED`+borsada dolmuş emir artık ACK üzerinden çözülür (önceden halt); bayatlık gönderim
+anında ölçülür; LIVE onayı global audit'le, kanıt dosyaları koşu audit'iyle doğrulanır; onay API
+anahtarına (`createTime`) ve yetki host'a bağlı; boyut tabanı ≤ sermaye. Karar değişmedi: canlı aktivasyon
+kapıları aynı; hiçbir eşik değişmedi; hiçbir kullanıcı kararı dolduruldu. Yeni değişmez:
+
+> Mutabakat yapılamamış bir hesap üzerinde, bir kilitle tekil kılınmamış bir canlı süreçte ya da sistem
+> modunun artık izin vermediği bir anda riski artıran emir gönderilmez.
