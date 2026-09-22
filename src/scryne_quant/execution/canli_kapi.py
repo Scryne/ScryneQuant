@@ -49,6 +49,22 @@ TEST_KAYDI: Final = KOSU_KOKU / "testler.json"
 
 KARAR_BEKLIYOR: Final = "DECISION REQUIRED"
 
+#: K-115 mikro canlı pilot tavanları. **Kodda sabit**: yükseltmek kod + test + yeni K ister
+#: (K-050/2 — izni artıran değişiklik config'den tek başına yapılamaz). `config/kademe.json`
+#: bu sayıların altında kalabilir, üstüne çıkamaz. Pilot promotion istemez (Scryne kararı,
+#: K-115); onun yerine parayı bu tavanlar sınırlar ve açılış yine elle onaydır (K-010 zinciri).
+PILOT_AZAMI_SERMAYE_USDT: Final = 100.0
+PILOT_AZAMI_KAYIP_USDT: Final = 10.0
+PILOT_HESAP_CARPANI: Final = 1.5
+"""Hesabın toplam değeri ≤ sermaye × bu çarpan. İşlem anahtarı **bütün** hesaba erişir; kod
+hatası kademe sermayesini aşarsa zarar hesapta duranla sınırlı kalsın."""
+
+PILOT_KARARLARI: Final = ("risk_sermayesi", "venue_statusu", "canli_modul_sinir")
+"""Pilotun kapanmış olmasını istediği Faz-8-Hazirlik §6 kararları. Geri kalanlar (shadow
+ölçütü, kademe artışı, drift) Kademe 2 (micro-live, promotion sonrası) içindir."""
+
+KARARLI_PARA: Final = frozenset({"USDT", "USDC", "FDUSD"})
+
 LF: Final = bytes([10])
 CRLF: Final = bytes([13, 10])
 
@@ -85,6 +101,8 @@ class AgYoklamasi:
     islem_anahtari_kisitlari: Callable[[], dict[str, Any]] | None = None
     testnet_baglantisi: Callable[[], dict[str, Any]] | None = None
     canli_baglantisi: Callable[[], dict[str, Any]] | None = None
+    canli_hesap_degeri: Callable[[], dict[str, Any]] | None = None
+    """Canlı hesabın toplam USDT değeri (`hesap_degeri_hesapla` biçimi). Pilot kapısı (K-115)."""
 
 
 @dataclass
@@ -278,6 +296,79 @@ def aktif_kademe(tablo: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def pilot_mu(tablo: dict[str, Any] | None) -> bool:
+    """Aktif kademe mikro canlı pilot mu (K-115)? Yalnız açık `"pilot": true` sayılır."""
+    k = aktif_kademe(tablo) if tablo else None
+    return bool(k and k.get("pilot") is True)
+
+
+def hesap_degeri_hesapla(
+    bakiye: dict[str, Any], fiyat: Callable[[str], float]
+) -> dict[str, Any]:
+    """Bakiyelerin USDT karşılığı. Fiyatı okunamayan varlık **ölçülemedi** listesine girer.
+
+    `bakiye`: varlık → `toplam` alanı olan nesne (`Varlik`) ya da sayı. Kararlı paralar 1,0.
+    """
+    toplam = 0.0
+    olculemeyen: list[str] = []
+    varliklar: dict[str, float] = {}
+    for varlik, v in sorted(bakiye.items()):
+        miktar = float(getattr(v, "toplam", v))
+        if miktar <= 0.0:
+            continue
+        if varlik in KARARLI_PARA:
+            deger = miktar
+        else:
+            try:
+                deger = miktar * float(fiyat(f"{varlik}USDT"))
+            except Exception:  # noqa: BLE001 — fiyatsız varlık tahmin edilmez
+                olculemeyen.append(varlik)
+                continue
+        varliklar[varlik] = round(deger, 4)
+        toplam += deger
+    return {"toplam_usdt": toplam, "varliklar": varliklar, "olculemeyen": olculemeyen}
+
+
+def pilot_siniri_kontrolu(b: KapiBaglami) -> Kontrol:
+    """Pilot kademesi kodda sabit tavanların içinde mi (K-115)?"""
+    k = aktif_kademe(kademe_tablosu(b) or {}) or {}
+    ks, kayip = k.get("sermaye_usdt"), k.get("azami_kayip_usdt")
+    engel = (f"pilot: sermaye ≤ {PILOT_AZAMI_SERMAYE_USDT}, azami kayıp ≤ "
+             f"{PILOT_AZAMI_KAYIP_USDT} USDT ve sermayeden küçük (K-115; artırmak yeni K)")
+    if not b.strateji:
+        return Kontrol("pilot_siniri", False, "strateji verilmedi", engel)
+    if not isinstance(ks, (int, float)) or not 0 < ks <= PILOT_AZAMI_SERMAYE_USDT:
+        return Kontrol("pilot_siniri", False, f"pilot sermayesi {ks!r}", engel)
+    if not isinstance(kayip, (int, float)) or not 0 < kayip <= PILOT_AZAMI_KAYIP_USDT:
+        return Kontrol("pilot_siniri", False, f"azami kayıp {kayip!r}", engel)
+    if kayip >= ks:
+        return Kontrol("pilot_siniri", False, f"azami kayıp {kayip} ≥ sermaye {ks}", engel)
+    return Kontrol("pilot_siniri", True,
+                   f"{b.strateji}: sermaye {ks} USDT, {kayip} USDT kayıpta SAFE_MODE (K-115)",
+                   kanit=nesne_hash({"strateji": b.strateji, "kademe": k}))
+
+
+def _pilot_hesap_degerlendir(b: KapiBaglami) -> Callable[[dict[str, Any]], str | None]:
+    k = aktif_kademe(kademe_tablosu(b) or {}) or {}
+
+    def degerlendir(sonuc: dict[str, Any]) -> str | None:
+        ks, kayip = k.get("sermaye_usdt"), k.get("azami_kayip_usdt")
+        if not isinstance(ks, (int, float)) or not isinstance(kayip, (int, float)):
+            return "pilot kademesi tanımsız"
+        if sonuc.get("olculemeyen"):
+            return f"değeri ölçülemeyen varlık: {', '.join(sonuc['olculemeyen'])}"
+        toplam = float(sonuc.get("toplam_usdt", -1.0))
+        alt, ust = ks - kayip, ks * PILOT_HESAP_CARPANI
+        if toplam > ust:
+            return (f"hesap {toplam:.2f} USDT > {ust:.2f} (sermaye × {PILOT_HESAP_CARPANI}); "
+                    f"işlem anahtarı bütün hesaba erişir — fazlası pilot hesabında durmaz")
+        if toplam < alt:
+            return f"hesap {toplam:.2f} USDT < {alt:.2f} (sermaye − azami kayıp); yatırılmalı"
+        return None
+
+    return degerlendir
+
+
 def kademe_kontrolu(b: KapiBaglami) -> Kontrol:
     tablo = kademe_tablosu(b)
     if tablo is None:
@@ -313,17 +404,23 @@ def kademe_kontrolu(b: KapiBaglami) -> Kontrol:
 
 
 def kademe_kararlari_kontrolu(b: KapiBaglami) -> Kontrol:
-    """`DECISION REQUIRED` işaretli kalem kaldıysa kapı kapalı (Faz-8-Hazirlik §6)."""
+    """`DECISION REQUIRED` işaretli kalem kaldıysa kapı kapalı (Faz-8-Hazirlik §6).
+
+    Pilotta (K-115) yalnız `PILOT_KARARLARI`na bakılır; tabloda olmayanı da açık sayılır.
+    """
     tablo = kademe_tablosu(b)
     if tablo is None:
         return Kontrol("acik_kararlar", False, "config/kademe.json yok", "Faz-8-Hazirlik §6")
-    acik = [ad for ad, k in (tablo.get("kararlar") or {}).items()
-            if isinstance(k, dict) and str(k.get("durum", "")).startswith(KARAR_BEKLIYOR)]
+    kararlar = tablo.get("kararlar") or {}
+    if pilot_mu(tablo):
+        kararlar = {ad: kararlar.get(ad, {"durum": KARAR_BEKLIYOR}) for ad in PILOT_KARARLARI}
+    acik = [ad for ad, k in kararlar.items()
+            if not isinstance(k, dict) or str(k.get("durum", "")).startswith(KARAR_BEKLIYOR)]
     if acik:
         return Kontrol("acik_kararlar", False, f"açık kararlar: {', '.join(sorted(acik))}",
                        "Scryne kararları K olarak yazılmalı (Faz-8-Hazirlik §6)")
     return Kontrol("acik_kararlar", True, "Faz-8-Hazirlik §6 kararları kapalı",
-                   kanit=nesne_hash(tablo.get("kararlar") or {}))
+                   kanit=nesne_hash(kararlar))
 
 
 def venue_kontrolu(b: KapiBaglami) -> Kontrol:
@@ -522,14 +619,40 @@ def _kontroller(hedef: CalismaModu, b: KapiBaglami) -> list[Kontrol]:
                          "testnet anahtarı + bağlantı (SQ_BINANCE_TESTNET_API_KEY)"),
         ]
     # LIVE_PENDING_APPROVAL ve LIVE: aynı liste; LIVE yalnızca insan onayıyla açılır.
+    testnet = kosu_raporu_kontrolu(
+        b, CalismaModu.TESTNET, ad="testnet_kaniti",
+        engel="≥1 testnet koşusu: sinyal→risk→niyet→kapı→emir→fill→mutabakat→portföy, "
+              "duplicate engellendi",
+    )
+    if pilot_mu(kademe_tablosu(b)):
+        # K-115 mikro canlı pilot: promotion (strateji_onayi), R8 ve shadow kanıtı yerine kodda
+        # sabit para tavanları + hesap değeri. Geri kalan her kontrol aynen; onay yine elle.
+        return [
+            *temel,
+            paper,
+            testnet,
+            pilot_siniri_kontrolu(b),
+            kademe_kontrolu(b),
+            kademe_kararlari_kontrolu(b),
+            venue_kontrolu(b),
+            kill_tatbikati_kontrolu(b),
+            testler_kontrolu(b),
+            kritik_hata_kontrolu(b),
+            _ag_kontrolu("islem_anahtari_yetkisi", b.ag.islem_anahtari_kisitlari,
+                         _yetki_degerlendir("live"),
+                         "işlem anahtarı: spot işlem açık, çekim/transfer/margin/futures "
+                         "kapalı, IP kısıtlı (Faz-8-Hazirlik §1.2/§1.6)"),
+            _ag_kontrolu("pilot_hesap_degeri", b.ag.canli_hesap_degeri,
+                         _pilot_hesap_degerlendir(b),
+                         f"canlı hesabın toplam değeri sermaye − azami kayıp ile sermaye × "
+                         f"{PILOT_HESAP_CARPANI} arasında (K-115)"),
+            _ag_kontrolu("canli_baglanti", b.ag.canli_baglantisi, _baglanti_degerlendir,
+                         "canlı borsa bağlantısı ve saat"),
+        ]
     return [
         *temel,
         paper,
-        kosu_raporu_kontrolu(
-            b, CalismaModu.TESTNET, ad="testnet_kaniti",
-            engel="≥1 testnet koşusu: sinyal→risk→niyet→kapı→emir→fill→mutabakat→portföy, "
-                  "duplicate engellendi",
-        ),
+        testnet,
         kosu_raporu_kontrolu(
             b, CalismaModu.SHADOW, ad="shadow_live_kaniti",
             engel="aynı stratejinin `shadow` risk modunda §1.5 kapısını geçen shadow koşusu "
@@ -565,11 +688,14 @@ def kapi_raporu(hedef: CalismaModu, b: KapiBaglami) -> dict[str, Any]:
     kontroller = _kontroller(hedef, b)
     tablo = kademe_tablosu(b) or {}
     k = aktif_kademe(tablo) if tablo else None
+    pilot = pilot_mu(tablo)
     govde = {
         "hedef": str(hedef),
         "strateji": b.strateji or "",
         "kademe": None if k is None else k.get("kademe"),
         "sermaye_usdt": None if k is None else k.get("sermaye_usdt"),
+        "pilot": pilot,
+        "azami_kayip_usdt": k.get("azami_kayip_usdt") if (k and pilot) else None,
         "kontroller": [(x.ad, x.gecti, x.kanit) for x in kontroller],
     }
     gecti = all(x.gecti is True for x in kontroller)
@@ -578,6 +704,8 @@ def kapi_raporu(hedef: CalismaModu, b: KapiBaglami) -> dict[str, Any]:
         "strateji": b.strateji or "",
         "kademe": govde["kademe"],
         "sermaye_usdt": govde["sermaye_usdt"],
+        "pilot": pilot,
+        "azami_kayip_usdt": govde["azami_kayip_usdt"],
         "gecti": gecti,
         "kontroller": [x.sozluk() for x in kontroller],
         "engeller": [
@@ -661,6 +789,10 @@ __all__ = [
     "KAPATILDI",
     "KARAR_BEKLIYOR",
     "OPERASYON_YOLU",
+    "PILOT_AZAMI_KAYIP_USDT",
+    "PILOT_AZAMI_SERMAYE_USDT",
+    "PILOT_HESAP_CARPANI",
+    "PILOT_KARARLARI",
     "R8_KRITER_SHA256_ONEK",
     "TEST_KAYDI",
     "VENUE_YOLU",
@@ -670,8 +802,10 @@ __all__ = [
     "Kontrol",
     "aktif_kademe",
     "canli_yetki_ver",
+    "hesap_degeri_hesapla",
     "kademe_tablosu",
     "kapi_raporu",
     "r8_kriter_sha256",
     "kosu_raporlari",
+    "pilot_mu",
 ]

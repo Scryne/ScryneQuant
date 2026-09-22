@@ -59,7 +59,9 @@ from scryne_quant.strategy.sinyal import Sinyal
 #: `shadow` K-114'te eklendi (Faz-8-Hazirlik §1.3/1): emir gönderilmeyen ama gerçek hesabı
 #: okuyan canlı provası; eşiği `LIVE_ADAYI` — sırada yalnızca insan onayı var. Diğer modların
 #: davranışı değişmedi (yeni bir ad, yeni bir eşik; mevcut eşlemeler aynı).
-MODLAR: Final[tuple[str, ...]] = ("backtest", "gozlem", "paper", "shadow", "live")
+#: `pilot` K-115'te eklendi: gerçek parayla mikro canlı pilot; eşiği `YOK` (gözlem gibi) ve
+#: promotion dışındaki her limit tam uygulanır. Parayı sınırlayan live gate'in pilot tavanları.
+MODLAR: Final[tuple[str, ...]] = ("backtest", "gozlem", "paper", "shadow", "live", "pilot")
 
 #: Hedefi aşağı çekebilen limitler. Audit'te "hangi limit kısıtladı" sayımı bunu kullanıyor.
 #: İlk ikisi sinyal düzeyinde, son ikisi portföy düzeyinde (Faz 10).

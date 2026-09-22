@@ -262,6 +262,13 @@ def _parametreler(ham: list[str] | None) -> dict[str, Any]:
     return out
 
 
+def _canli_risk_modu() -> str:
+    """LIVE'da varsayılan risk modu kademeden: pilot kademe → `pilot` (K-115), yoksa `live`."""
+    from scryne_quant.execution.canli_kapi import KapiBaglami, kademe_tablosu, pilot_mu
+
+    return "pilot" if pilot_mu(kademe_tablosu(KapiBaglami())) else "live"
+
+
 @execution_app.command("calistir")
 def calistir(
     mod: Annotated[str, typer.Option("--mod", help="paper | shadow | testnet | live")],
@@ -281,7 +288,7 @@ def calistir(
     from scryne_quant.trader.kurulum import KosuIstegi, KurulumHatasi, kosu_kur
 
     m = _mod_coz(mod)
-    rm = risk_modu or {CalismaModu.LIVE: "live"}.get(m, "gozlem")
+    rm = risk_modu or {CalismaModu.LIVE: _canli_risk_modu()}.get(m, "gozlem")
     barlar = None
     if tekrar:
         from scryne_quant.data.depo import ParquetDepo

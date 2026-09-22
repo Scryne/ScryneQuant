@@ -1,10 +1,10 @@
 {
   "surum": 1,
-  "karar": "K-114",
+  "karar": "K-114, K-115",
   "kaynak": "docs/Faz-8-Hazirlik.md §2.1 (biçim); sayılar Scryne kararı ya da shadow/Kademe 1 ölçümü",
   "not": "Bu dosya live gate'in (execution/canli_kapi.py) okuduğu kademe tablosudur. null = karar verilmedi ya da ölçülmedi ve kapıyı KAPALI tutar. Sayı yazmak izni artırır: K-050/2 gereği her değişiklik sayısal kapı + elle onay + yeni K ister; gevşetme (sermaye artışı, eşik düşürme) bu dosyadan tek başına yapılamaz.",
-  "risk_sermayesi_usdt": null,
-  "aktif_kademe": 0,
+  "risk_sermayesi_usdt": 100.0,
+  "aktif_kademe": 1,
   "drift_tanimi": "docs/Faz-8-Hazirlik.md §2.3",
   "golge_olcutu": {
     "asgari_gun": 14,
@@ -22,24 +22,52 @@
       "asgari_emir": 20,
       "drift_ust_siniri_bps": null,
       "pozisyon_farki": 0,
-      "onay": {"gerekli": true, "not": null, "tarih": null}
+      "onay": {
+        "gerekli": true,
+        "not": null,
+        "tarih": null
+      }
     },
     {
       "kademe": 1,
+      "ad": "pilot",
+      "pilot": true,
+      "sermaye_usdt": 100.0,
+      "azami_kayip_usdt": 10.0,
+      "sembol": "BTCUSDT",
+      "strateji": "sma_kesisim",
+      "asgari_gun": null,
+      "asgari_emir": null,
+      "drift_ust_siniri_bps": null,
+      "pozisyon_farki": 0,
+      "not": "K-115 mikro canlı pilot: promotion'suz, alfa iddiası yok; amaç gerçek parayla execution/mutabakat/drift ölçümü. Tavanlar kodda sabit (canli_kapi.PILOT_*): sermaye ≤ 100, azami kayıp ≤ 10 USDT. Risk limitleri (config/risk.json) değişmedi; 100 USDT sermayede pozisyon ≈ 6-11 USDT.",
+      "onay": {
+        "gerekli": true,
+        "not": "Scryne 2026-09-22: '100 USDT, 10 USDT kayıpta dur'; 'ben direkt live olarak kullanmak istiyorum' (shadow adımı pilot için atlandı). Açılış yine `sq execution onayla` (TTY).",
+        "tarih": "2026-09-22"
+      }
+    },
+    {
+      "kademe": 2,
       "ad": "micro-live",
       "sermaye_usdt": null,
       "asgari_gun": null,
       "asgari_emir": null,
       "drift_ust_siniri_bps": null,
       "pozisyon_farki": 0,
-      "onay": {"gerekli": true, "not": null, "tarih": null}
+      "onay": {
+        "gerekli": true,
+        "not": null,
+        "tarih": null
+      }
     }
   ],
   "kararlar": {
     "shadow_zincirdeki_yeri": {
       "durum": "DECISION REQUIRED",
       "kaynak": "Faz-8-Hazirlik §6/1",
-      "oneri": "elle onayın zorunlu girdisi (K-010 zinciri değişmez); K-114 uygulaması bu öneriyle kuruldu"
+      "oneri": "elle onayın zorunlu girdisi (K-010 zinciri değişmez); K-114 uygulaması bu öneriyle kuruldu",
+      "pilot": "K-115: pilot (Kademe 1) için shadow adımı atlandı (Scryne kararı); Kademe 2 için DECISION REQUIRED sürüyor"
     },
     "shadow_olcutu": {
       "durum": "DECISION REQUIRED",
@@ -47,9 +75,9 @@
       "oneri": "14 gün / 20 GOLGE (istah) — golge_olcutu"
     },
     "risk_sermayesi": {
-      "durum": "DECISION REQUIRED",
-      "kaynak": "Faz-8-Hazirlik §6/3, Final-Doküman §Bütçeler",
-      "oneri": null
+      "durum": "kabul (K-115)",
+      "kaynak": "Scryne 2026-09-22",
+      "oneri": "100 USDT pilot sermayesi, 10 USDT mutlak kayıp tavanı"
     },
     "kademe_artis_orani": {
       "durum": "DECISION REQUIRED",
@@ -62,8 +90,8 @@
       "oneri": "Kademe 1'in ilk 30 günündeki |d_i| p95'i"
     },
     "venue_statusu": {
-      "durum": "DECISION REQUIRED",
-      "kaynak": "Faz-8-Hazirlik §6/6, §3",
+      "durum": "kabul (K-115)",
+      "kaynak": "config/venue_statu.json",
       "oneri": "config/venue_statu.json kaynaklı kayıt; yalnız `AÇIK` canlıyı açar"
     },
     "canli_modul_sinir": {

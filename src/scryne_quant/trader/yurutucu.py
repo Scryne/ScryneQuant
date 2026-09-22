@@ -209,8 +209,12 @@ class Yurutucu:
             raise YurutucuHatasi("hat modu/sembolü ayarla uyuşmuyor")
         if a.mod is CalismaModu.PAPER and self.paper is None:
             raise YurutucuHatasi("PAPER modu paper borsayı ister (fill açılışta)")
-        if a.mod is CalismaModu.LIVE and a.risk_modu != "live":
-            raise YurutucuHatasi("LIVE modu yalnızca `live` risk moduyla koşar (K-010)")
+        if a.mod is CalismaModu.LIVE and a.risk_modu not in ("live", "pilot"):
+            raise YurutucuHatasi(
+                "LIVE modu yalnızca `live` (K-010) ya da `pilot` (K-115) risk moduyla koşar"
+            )
+        if a.risk_modu == "pilot" and self.hat.limitler.azami_kayip_usdt is None:
+            raise YurutucuHatasi("`pilot` risk modu mutlak kayıp tavanı ister (K-115)")
         self._adim = timeframe_ms(a.timeframe)
         self.pencere = BarPenceresi(a.sembol, a.timeframe, kapasite=self.kapasite)
         self._kimlik_dogrula()

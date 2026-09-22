@@ -5682,3 +5682,73 @@ kapıları aynı; hiçbir eşik değişmedi; hiçbir kullanıcı kararı dolduru
 
 > Mutabakat yapılamamış bir hesap üzerinde, bir kilitle tekil kılınmamış bir canlı süreçte ya da sistem
 > modunun artık izin vermediği bir anda riski artıran emir gönderilmez.
+
+## K-115 — Mikro canlı pilot: promotion'suz, kodda sabit tavanlı (100 USDT sermaye / 10 USDT kayıp) gerçek para kademesi
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("artık bir şeyleri beklemek istemiyorum. bir
+an önce kullanmak istiyorum … ne gerekiyor ise en iyi ve en profesyonel bir şekilde yap"; yol: "en iyi
+şekilde sen karar ver"; shadow: "ben direkt live olarak kullanmak istiyorum"; sermaye: "100 USDT, 10 USDT
+kayıpta dur"; venue: "bilmiyorum, araştır") · **Değiştirir:** değişmez kural 8'in (K-010, K-018)
+kapsamı — promotion kapıları **Kademe ≥ 2** için aynen, Kademe 1 bundan sonra *pilot*tur; Faz-8-Hazirlik
+§2.1 kademe numaraları (micro-live 1 → 2) · **Kapatır:** Faz-8-Hazirlik §6/3 risk sermayesi, §6/6 venue
+statüsü (pilot için) · **Tabi:** K-004, K-007, K-008, K-010, K-014, K-035, K-037, K-046, K-050, K-065,
+K-111, K-114 · **Açık bırakır:** §6/1-2 shadow, §6/4 kademe artışı, §6/5 drift (Kademe 2 için)
+
+### Bağlam (ölçülen)
+
+- 62 hipotez, 0 promotion (K-078/1, K-110); araştırma askıda (K-111). K-114 canlı yolu kodladı ama live
+  gate'in ilk kontrolü `strateji_onayi` — bugün geçen strateji yok, yani canlı kapı süresiz kapalı.
+- Hesap (2026-09-22, salt okunur anahtar): `canTrade=true`, SPOT, bakiye 0, komisyon %0,10.
+  `BTCUSDT` `minNotional` 5 USDT, step 1e-5.
+- Risk limitleri (`config/risk.json`, değişmedi) boyutu sermayenin yüzdesi olarak kurar: tipik
+  oynaklıkta `islem_basina_risk` bağlar ve pozisyon ≈ sermayenin %11,4'ü (p75 %8,6, p90 %6,6).
+  **10 USDT sermayede pozisyon ≈ 1 USDT < 5 USDT minNotional → hiç emir verilemez.** 100 USDT'de
+  ≈ 6,6-11,4 USDT — minNotional'ın üstünde (p90 oynaklığa kadar).
+
+### Karar
+
+1. **Pilot, promotion kanıtı değil ve alfa iddiası değil.** Amaç gerçek parayla execution, mutabakat ve
+   paper↔live farkını ölçmek. Strateji `sma_kesisim` (BTCUSDT 1h; promotion aşaması `kalite_kontrol`,
+   K-045'e göre tek sembollü yönlü arama kapalı) — **beklenen getiri ≈ −maliyet.** Paper/testnet'te uçtan
+   uca koşan tek sembollü yol bu olduğu için seçildi.
+2. **Tavanlar kodda sabit** (`execution/canli_kapi.py`): `PILOT_AZAMI_SERMAYE_USDT = 100`,
+   `PILOT_AZAMI_KAYIP_USDT = 10`, `PILOT_HESAP_CARPANI = 1,5`. `config/kademe.json` bunların altında
+   kalabilir, üstüne çıkamaz; yükseltmek kod + `tests/unit/test_pilot.py` + yeni K (K-050/2).
+3. **Pilot live gate'i** (aktif kademede `"pilot": true`): `strateji_onayi`, `operasyon_r8`,
+   `shadow_live_kaniti` yerine `pilot_siniri` (sermaye/kayıp tavanları, strateji verilmiş) ve
+   `pilot_hesap_degeri` (salt okunur anahtarla canlı hesabın toplam USDT değeri **sermaye − azami kayıp ≤
+   toplam ≤ sermaye × 1,5**; fiyatı ölçülemeyen varlık → kapalı). Geri kalan her kontrol aynen: paper ve
+   testnet kanıtı, kademe + onay, pilot kararları (`risk_sermayesi`, `venue_statusu`,
+   `canli_modul_sinir`), venue `AÇIK`, canlı host kill tatbikatı, HEAD'de yeşil test kaydı, açık
+   SAFE_MODE/halt/UNKNOWN yok, işlem anahtarı yetkisi (spot açık; çekim/transfer/margin/futures kapalı;
+   **IP kısıtlı**), canlı bağlantı. Açılış yine `sq execution onayla` (TTY, hash) — K-010'un "elle toggle
+   yok, insan onayı var" zinciri değişmedi; değişen, onayın girdisinin promotion değil sabit tavan olması.
+4. **Risk modu `pilot`** (`MOD_ESIGI["pilot"] = YOK`): K-035'in `gozlem` kalıbı — promotion istemez,
+   promotion dışındaki **her** risk limiti tam uygulanır, ve `Kanit.paper_mod` yalnız `paper` kabul
+   ettiği için pilot koşusu promotion kanıtı **üretemez**. Pilot kademe yalnız `pilot`, pilot olmayan
+   kademe yalnız `live` risk moduyla kurulur (`trader/kurulum.py`).
+5. **Mutlak kayıp tavanı** (`GuvenlikLimitleri.azami_kayip_usdt`, execution hattı, engelleyen katman —
+   K-037): özkaynak (defter + borsa fiyatı) ≤ sermaye − 10 USDT → SAFE_MODE, artıran emir yok, azaltan
+   geçer (K-008/3). Tavan zirveye değil sermayeye göredir ve özkaynak altında kaldıkça işaret kaldırılsa
+   da her barda yeniden konur: bu sermayeyle koşu bir daha risk artırmaz. Açık pozisyon kendiliğinden
+   kapatılmaz (K-008/2, spot). Risk motorunun %20 drawdown ve %2 günlük zarar frenleri de aynen durur.
+6. **Venue kaydı** `config/venue_statu.json`: binance.com SPK KVHS listesinde yok (Binance Turkey AŞ
+   var); 7518 sayılı Kanun rejiminin yükümlülüğü hizmet sağlayıcıya; bireysel kullanımı yasaklayan hüküm
+   bulunmadı; Binance "Türkiye'den erişilebilir kalır" (2024-07-02); hesap API'den `canTrade=true`.
+   Bilinmeyenler (vergi, madde numaraları, sözleşme tüzel kişiliği) kayıtta açık. Hukuki görüş değil;
+   `AÇIK` sonucunu Scryne canlı onayla birlikte sahiplenir. Gözden geçirme ≤ 90 gün.
+7. **Shadow adımı pilot için atlandı** (Scryne kararı). Karşılığı: kayıp tavanı + hesap tavanı + 5 USDT
+   minNotional düzeyinde emirler. Kademe 2 (promotion sonrası micro-live) için shadow ölçütü ve
+   §6/1-2 `DECISION REQUIRED` olarak duruyor.
+
+### R8 ve K-111'e etkisi
+
+**R8: sıfır.** `live/evren_*` yoluna dokunulmadı; `risk/`deki değişiklik ekleme (`MODLAR`/`MOD_ESIGI`'ne
+`pilot`). Pilot bu makinede koşar; host-1'e dokunmaz (K-069 penceresi). **K-111: sıfır.** Yeni hipotez/
+çekiliş yok; pilot koşusu defter kaydı ve promotion kanıtı değildir.
+
+### Değişmez (yeni)
+
+> Promotion'u geçmemiş bir stratejiyle gerçek paraya dokunan tek yol, kodda sabit bir sermaye ve kayıp
+> tavanının içinde, bir insanın o anki kapı raporunu onaylamasıyla açılan pilottur; pilot hiçbir
+> promotion kanıtı üretmez ve tavanını kendisi büyütemez.

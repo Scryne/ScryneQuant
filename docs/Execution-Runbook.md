@@ -110,6 +110,44 @@ sq execution preflight --hedef LIVE_PENDING_APPROVAL --strateji <S> --ag
 Onaydan sonra kodda commit, kademe, strateji aşaması, anahtar yetkisi gibi **karar değiştiren** bir
 şey değişirse canlı koşu başlamaz: 7-9 yeniden.
 
+### 4.3 Mikro canlı pilot (K-115) — bugün açılabilen tek canlı yol
+
+`config/kademe.json` aktif kademe 1 = `pilot`: sermaye 100 USDT, **10 USDT kayıpta SAFE_MODE**, strateji
+`sma_kesisim` BTCUSDT 1h. Promotion, R8 ve shadow kanıtı istenmez; yerine kodda sabit tavanlar
+(`canli_kapi.PILOT_*`) ve hesap değeri kontrolü. Alfa iddiası yok — beklenen getiri ≈ −komisyon; amaç
+gerçek emir yolunu ölçmek.
+
+1. **Binance'te işlem anahtarı üret** (API Management → Create API → System generated):
+   - ✅ Enable Reading, ✅ **Enable Spot & Margin Trading**
+   - ❌ Withdrawals, ❌ Margin loan/repay, ❌ Futures, ❌ Universal/Internal transfer, ❌ Options
+   - **Restrict access to trusted IPs only** → bu makinenin genel IP'si (`curl -s https://api.ipify.org`).
+     IP değişirse anahtar çalışmaz; Binance'te IP güncellenir ve 5-10. adımlar yeniden.
+2. `.env`e ekle (salt okunur `BINANCE_API_KEY/SECRET` kalır — hesap değeri kontrolü onu kullanır):
+   ```
+   SQ_BINANCE_LIVE_API_KEY=...
+   SQ_BINANCE_LIVE_API_SECRET=...
+   ```
+3. **Spot cüzdana 90-150 USDT** (öneri: tam 100) yatır. Hesapta başka varlık bırakma: toplam değer
+   150 USDT'yi aşarsa kapı kapanır (işlem anahtarı bütün hesaba erişir).
+4. Canlı host kill tatbikatı yoksa (preflight `kill_tatbikati` kalırsa): kısa bir shadow koşusu aç ve
+   çalışırken öldür — `sq execution calistir --mod shadow --kosu kill-1 --strateji sma_kesisim
+   --sermaye 100` (ayrı terminal) → `sq execution kill --kosu kill-1 --sebep "canlı host kill tatbikatı"`
+   → `sq execution kosu-kapat --kosu kill-1 --not "tatbikat koşusu"`. (Mod SHADOW'un altındaysa önce
+   bir adım yükselt; şu an TESTNET, yani izinli.)
+5. Temiz ağaçta: `sq execution test-kaydet`
+6. `sq execution preflight --hedef LIVE_PENDING_APPROVAL --strateji sma_kesisim --ag` → hepsi ✓ olmalı.
+7. `sq execution yukselt LIVE_PENDING_APPROVAL --strateji sma_kesisim --ag --not "K-115 pilot"`
+8. `sq execution preflight --hedef LIVE --strateji sma_kesisim --ag` → `hash`i not et.
+9. `sq execution onayla --strateji sma_kesisim --hash <hash> --not "K-115 mikro canlı pilot, 100 USDT, 10 USDT kayıp tavanı"`
+   → terminalde `CANLI <hash8>` yaz.
+10. `sq execution calistir --mod live --kosu pilot-1 --strateji sma_kesisim` (risk modu kademeden
+    `pilot` gelir). Süreç açık kaldığı sürece çalışır; bilgisayar uykuya geçerse durur, aynı komutla
+    kaldığı yerden devam eder (kalıcı durum + başlangıç mutabakatı). İzleme: `sq execution pano`.
+
+Durdurmak: `sq execution durdur --kosu pilot-1` (planlı) ya da `sq execution kill --kosu pilot-1 --sebep
+"..."` (acil). Kayıp tavanı tetiklenirse koşu artıran emir göndermez; açık BTC pozisyonu strateji çıkış
+sinyaliyle ya da elle kapatılır. Sermaye/kayıp artışı = kod + test + yeni K (config'den yapılamaz).
+
 ## 5. Acil durum
 
 | Durum | Komut | Etki |

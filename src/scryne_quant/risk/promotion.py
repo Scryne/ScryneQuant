@@ -120,6 +120,10 @@ MOD_ESIGI: Final[dict[str, Asama]] = {
     # kontrollerinin tamamını geçmiş (`LIVE_ADAYI`) bir strateji üretebilir.
     "shadow": Asama.LIVE_ADAYI,
     "live": Asama.LIVE,
+    # K-115: mikro canlı pilot. `gozlem`in gerçek paradaki karşılığı: promotion istemiyor,
+    # ve aynı sebeple zincire hiç girmiyor (`Kanit.paper_mod` yalnız `paper`). Gerçek parayı
+    # sınırlayan promotion değil, kodda sabit tavanlar (`canli_kapi.PILOT_*`) + elle onay.
+    "pilot": Asama.YOK,
 }
 
 

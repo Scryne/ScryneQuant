@@ -163,11 +163,18 @@ def test_kademe(kok, tablo, beklenen):
     assert ck.kademe_kontrolu(b(kok)).gecti is beklenen
 
 
-def test_repodaki_kademe_tablosu_bugun_undecided_ve_kapali(kok):
+def test_repodaki_kademe_tablosu_pilotta_kararli_kademe2_kararlari_acik(kok):
+    # K-115: pilot (Kademe 1) kararları verildi; Kademe 2 (micro-live) kararları hâlâ açık ve
+    # pilot kademe kaldırılınca kapıyı yine kapatıyor.
     shutil.copy(REPO / "config/kademe.json", kok / "config/kademe.json")
-    assert ck.kademe_kontrolu(b(kok)).gecti is False
+    assert ck.kademe_kontrolu(b(kok)).gecti is True
+    assert ck.kademe_kararlari_kontrolu(b(kok)).gecti is True
+    t = json.loads((kok / "config/kademe.json").read_text(encoding="utf-8"))
+    for k in t["kademeler"]:
+        k.pop("pilot", None)
+    yaz(kok / "config/kademe.json", t)
     k = ck.kademe_kararlari_kontrolu(b(kok))
-    assert k.gecti is False and "risk_sermayesi" in k.ayrinti and "venue_statusu" in k.ayrinti
+    assert k.gecti is False and "kademe_artis_orani" in k.ayrinti and "shadow_olcutu" in k.ayrinti
 
 
 def test_acik_kararlar_kapaninca_gecer(kok):

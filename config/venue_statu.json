@@ -1,0 +1,29 @@
+{
+  "surum": 1,
+  "karar": "K-115",
+  "venue": "Binance (binance.com, spot) — Faz 7/8'in tek venue'su",
+  "kullanici_yerlesikligi": "Türkiye",
+  "kapsam": "Tek kişi, kendi hesabı, kendi parası; sinyal paylaşımı / copy trading / başkasının parası yok (K-014). Bu sınırın dışına çıkılırsa kayıt geçersizdir.",
+  "duzenleme": "6362 sayılı SPKn'ye 7518 sayılı Kanunla (RG 02.07.2024) eklenen kripto varlık hizmet sağlayıcı (KVHS) rejimi: Türkiye'de yerleşik kişilere hizmet sunan KVHS'ler SPK izni ister; yükümlülük ve yaptırım hizmet sağlayıcıya yöneliktir. Bu kayıt bireysel kullanıcının yabancı platformu kullanmasını yasaklayan bir hüküm bulmadı. Madde numaraları metinden doğrulanmadı (açık kalem).",
+  "venue_statusu": {
+    "spk_listesi": "binance.com SPK KVHS 'faaliyette bulunanlar' listesinde YOK. Binance'in Türkiye kuruluşu 'Binance Turkey Kripto Varlık Alım Satım Platformu AŞ' (eski BN Teknoloji AŞ, TR Binance) listede sıra 4.",
+    "venue_beyani": "Binance 2024-07-02 duyurusu: 'Binance.com will remain accessible from Turkey'; Türkçe dil seçeneği kaldırıldı, Türk kullanıcılara pazarlama durduruldu. Üçüncü el kaynaklara göre 2025-11-13'ten itibaren TR Binance doğrulaması olmayan kullanıcılar binance.com'da TRY çiftlerinde emir veremiyor — bu projenin çifti BTCUSDT, TRY yok.",
+    "hesap_olcumu": "2026-09-22, salt okunur anahtarla GET /api/v3/account: canTrade=true, accountType=SPOT, permissions=[TRD_GRP_065], taker/maker 0,10%. Hesap spot işleme açık (venue'nun kendi API yanıtı)."
+  },
+  "kaynaklar": [
+    {"iddia": "SPK KVHS faaliyette bulunanlar listesi (binance.com yok; Binance Turkey AŞ var)", "url": "https://spk.gov.tr/kurumlar/kripto-varlik-hizmet-saglayicilar/faaliyette-bulunanlar-listesi", "erisim": "2026-09-22", "sha256": "529b56f531b765eaafd3200545abf90bb6b7515e9bbf8a754dc94e19faee0e6e", "arsiv": "data/hukuki/2026-09-22-spk-kvhs-faaliyette.html"},
+    {"iddia": "Binance.com Türkiye'den erişilebilir kalır; Türkçe ve pazarlama kaldırıldı (2024-07-02)", "url": "https://www.binance.com/en/support/announcement/updates-to-binance-s-services-in-turkey-under-the-new-crypto-regulations-653d43c0083047beab4e1f6efcc48b30", "erisim": "2026-09-22", "sha256": null, "arsiv": null, "not": "sayfa bot korumalı, curl boş gövde döndü (K-079'daki durum); içerik tarayıcı-render özetinden"},
+    {"iddia": "Bireysel alım-satım tek başına suç değil; risk: banka blokesi, MASAK incelemesi, vergi", "url": "https://bilalalyar.av.tr/binance-kullanmak-yasal-mi/", "erisim": "2026-09-22", "sha256": null, "arsiv": null, "not": "avukat bilgilendirme yazısı; madde numarası vermiyor — ikincil kaynak"},
+    {"iddia": "TRY çiftleri 2025-11-13'ten sonra TR Binance doğrulaması istiyor", "url": "https://www.bitget.com/academy/are-there-any-specific-regulations-for-binance-users-in-turkey-2026-comprehensive-guide", "erisim": "2026-09-22", "sha256": null, "arsiv": null, "not": "üçüncü el; bu projeyi etkilemiyor (TRY çifti yok)"}
+  ],
+  "bilinmeyen": [
+    "Vergi: kripto kazancının beyanı / işlem vergisi — bu projenin kapsamı dışında, kullanıcının yükümlülüğü; 'kapsam dışı', 'düşünülmedi' değil.",
+    "Hesap sözleşmesinin tüzel kişiliği (Binance'in hangi kuruluşu) hesap ekranından okunmadı.",
+    "7518 sayılı Kanun madde numaraları resmî metinden doğrulanmadı; ileride yabancı platformların TR yerleşiklerine hizmetinin kısıtlanması ihtimali gözden geçirmede izlenir.",
+    "Bu kayıt hukuki görüş değildir; kaynakların derlemesidir."
+  ],
+  "kayit_tarihi": "2026-09-22 UTC",
+  "gozden_gecirme": "2026-12-21'e kadar (≤ 90 gün) ya da Binance'in TR politikası değişince, hangisi önce",
+  "karar_veren": "Scryne (2026-09-22: 'bilmiyorum, araştır' + 'en iyi şekilde sen karar ver'); araştırma ve derleme Claude. Canlı açılışı `sq execution onayla` ile Scryne onaylar.",
+  "sonuc": "AÇIK"
+}

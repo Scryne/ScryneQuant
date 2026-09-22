@@ -29,7 +29,7 @@ tahmindir (K-038, K-046).
 | 7 | Son mutabakat hatasız tamamlanmamış | artıran | K-038, K-046 |
 | 8 | SAFE_MODE işareti (`kosu.safemode`) | artıran | K-008, K-065 |
 | 9 | Bayat karar (karar barı, gönderim anındaki son kapanmış bar değil) | artıran | K-004, §24 |
-| 10 | Günlük zarar / drawdown (defter + borsa fiyatı, her bar) | artıran (+SAFE) | risk.json |
+| 10 | Pilot kayıp tavanı; günlük zarar / drawdown (defter + borsa fiyatı, her bar) | artıran (+SAFE) | K-115, risk.json |
 | 11 | Tavan: maruziyet, brüt, nakit; boyut tabanı ≤ sermaye | küçültür | risk.json, kademe |
 
 **Hesap görünümü defterden türer, borsanın toplam bakiyesinden değil.** Koşunun sermayesi
@@ -87,6 +87,8 @@ class Engel(StrEnum):
     BAYAT_KARAR = "bayat_karar"
     GUNLUK_ZARAR = "gunluk_zarar"
     DRAWDOWN = "drawdown"
+    KAYIP_TAVANI = "kayip_tavani"
+    """K-115 pilot: özkaynak sermaye − azami kayıp altına indi; SAFE_MODE."""
     BAGLANTI = "baglanti"
     MUTABAKAT = "mutabakat_yok"
     """Son mutabakat hatasız tamamlanmadı: hesap doğrulanmamış, artıran emir yok."""
@@ -106,27 +108,43 @@ class GuvenlikLimitleri:
     azami_brut_maruziyet: float
     gunluk_zarar_limiti: float
     drawdown_limiti: float
+    azami_kayip_usdt: float | None = None
+    """Mutlak kayıp tavanı (K-115 pilot): özkaynak ≤ sermaye − bu değer → SAFE_MODE. Tavan
+    sermayeye göre sabittir (zirveye göre değil) ve özkaynak altında kaldıkça işaret kaldırılsa
+    da yeniden konur — koşu bu sermayeyle bir daha artıran emir göndermez."""
 
     @classmethod
-    def risk_limitlerinden(cls, limitler: Any, sermaye_usdt: float) -> GuvenlikLimitleri:
+    def risk_limitlerinden(
+        cls, limitler: Any, sermaye_usdt: float, *, azami_kayip_usdt: float | None = None
+    ) -> GuvenlikLimitleri:
         if sermaye_usdt <= 0.0:
             raise ValueError(f"sermaye pozitif olmalı: {sermaye_usdt}")
+        if azami_kayip_usdt is not None and not 0.0 < azami_kayip_usdt < sermaye_usdt:
+            raise ValueError(f"azami kayıp (0, sermaye) aralığında olmalı: {azami_kayip_usdt}")
         return cls(
             sermaye_usdt=float(sermaye_usdt),
             azami_maruziyet=float(limitler.azami_maruziyet),
             azami_brut_maruziyet=float(limitler.azami_brut_maruziyet),
             gunluk_zarar_limiti=float(limitler.gunluk_zarar_limiti),
             drawdown_limiti=float(limitler.drawdown_limiti),
+            azami_kayip_usdt=None if azami_kayip_usdt is None else float(azami_kayip_usdt),
         )
 
+    def kayip_tavani_asildi(self, ozkaynak: float) -> bool:
+        k = self.azami_kayip_usdt
+        return k is not None and ozkaynak <= self.sermaye_usdt - k
+
     def sozluk(self) -> dict[str, float]:
-        return {
+        out = {
             "sermaye_usdt": self.sermaye_usdt,
             "azami_maruziyet": self.azami_maruziyet,
             "azami_brut_maruziyet": self.azami_brut_maruziyet,
             "gunluk_zarar_limiti": self.gunluk_zarar_limiti,
             "drawdown_limiti": self.drawdown_limiti,
         }
+        if self.azami_kayip_usdt is not None:
+            out["azami_kayip_usdt"] = self.azami_kayip_usdt
+        return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -271,7 +289,15 @@ class ExecutionHatti:
     def ozkaynak_isle(self, ozkaynak: float, zaman_ms: int) -> None:
         """Her barda çağrılır: kayıp izleyicisinin zirve/gün başı ölçümü emirden bağımsız."""
         self.izleyici.isle(ozkaynak, zaman_ms)
+        if self.limitler.kayip_tavani_asildi(ozkaynak):
+            self._kayip_tavani_isaretle(ozkaynak)
         self._durum_kaydet()
+
+    def _kayip_tavani_isaretle(self, ozkaynak: float) -> None:
+        self.safe_isaretle(
+            f"kayıp tavanı: özkaynak {ozkaynak:.4f} ≤ sermaye {self.limitler.sermaye_usdt} − "
+            f"{self.limitler.azami_kayip_usdt} USDT (K-115)"
+        )
 
     def __post_init__(self) -> None:
         self.kosu_dizini = Path(self.kosu_dizini)
@@ -521,6 +547,9 @@ class ExecutionHatti:
         self.izleyici.isle(h.ozkaynak, simdi)
         self._durum_kaydet()
         if not azaltan:
+            if self.limitler.kayip_tavani_asildi(h.ozkaynak):
+                self._kayip_tavani_isaretle(h.ozkaynak)
+                return self._engel(n, Engel.KAYIP_TAVANI)
             if h.ozkaynak < self.izleyici.zirve * (1.0 - self.limitler.drawdown_limiti):
                 self.safe_isaretle(
                     f"drawdown {self.izleyici.drawdown(h.ozkaynak):.4f} > "

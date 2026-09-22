@@ -54,7 +54,9 @@ bunlardan birini ihlal ediyorsa görev yanlıştır; kural değil.
 7. **Aynı girdi aynı çıktıyı verir.** Determinizm testle korunur. (K-009)
 8. **Promotion kapıları kaldırılamaz ve sayısaldır.** Live'a elle toggle ile geçilmez;
    her kapı geçer/kalır döndüren makine kontrolüdür, "sonuçlara bakıp karar ver" değil.
-   (K-010, K-018)
+   (K-010, K-018) **Tek istisna K-115 mikro canlı pilot:** promotion'suz Kademe 1, kodda
+   sabit tavan (`canli_kapi.PILOT_*`: 100 USDT sermaye, 10 USDT kayıp), yine elle onay;
+   promotion kanıtı üretmez. Tavanı büyütmek kod + test + yeni K; Kademe ≥ 2 promotion ister.
 9. **Kendi hesabı, kendi parası.** Başkasının parası, sinyal paylaşımı, copy trading
    yasak — hukuki sınır. (K-014)
 10. **Engelleyen katman risk motorunun dışında olabilir; izin veren katman olamaz.**
@@ -287,6 +289,12 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   import edebilir, `test_canli_izolasyon.py`); `trader/` yürütücü + pano (`sq execution pano`, 8790).
   `config/kademe.json` Faz-8-Hazirlik §6 kararları `DECISION REQUIRED` → live gate kapalı. R8 yolu bağlanmadı.
   **R8 kriter hash'i CRLF biçiminin** (`canli_kapi.r8_kriter_sha256` satır sonunu normalize eder).
+- **Mikro canlı pilot (K-115):** `config/kademe.json` aktif Kademe 1 `"pilot": true` (100 USDT, `azami_kayip_usdt`
+  10, `sma_kesisim` BTCUSDT 1h); micro-live Kademe 2'ye kaydı (promotion ister). Pilot kapısı `strateji_onayi`/
+  `operasyon_r8`/`shadow_live_kaniti` yerine `pilot_siniri` + `pilot_hesap_degeri` (hesap toplamı 90-150 USDT,
+  salt okunur anahtarla). Risk modu `pilot` (`MOD_ESIGI` YOK, `Kanit` reddeder); hat `GuvenlikLimitleri.
+  azami_kayip_usdt` → SAFE_MODE (`Engel.KAYIP_TAVANI`). Venue kaydı `config/venue_statu.json` (arşiv
+  `data/hukuki/`). Testler `tests/unit/test_pilot.py`; açılış yordamı runbook §4.3. Alfa iddiası yok.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

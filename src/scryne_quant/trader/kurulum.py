@@ -9,6 +9,8 @@ ve hangi kontrolden sonra kurulduğu burada okunur. Özellikle:
 - **TESTNET**: `BinanceImzaliAdaptoru` (testnet host, testnet anahtarı).
 - **LIVE**: `canli_kapi.canli_yetki_ver` (mod LIVE + kapı şimdi geçiyor + onay hash'i tutuyor)
   → `CanliYetki` → işlem anahtarı → `canli_emir_adaptoru`. Sermaye kademe sermayesidir.
+  Aktif kademe pilotsa (K-115) risk modu `pilot` olmak zorunda ve execution hattı onaylanan
+  raporun azami kaybını mutlak kayıp tavanı olarak taşır; pilot değilse risk modu `live`.
 
 Sistem modu bir **tavandır**: istenen koşu modu sistem modunun üstündeyse kurulum reddedilir.
 """
@@ -57,7 +59,7 @@ RISK_MODLARI: Final[dict[CalismaModu, tuple[str, ...]]] = {
     CalismaModu.PAPER: ("gozlem", "paper"),
     CalismaModu.SHADOW: ("gozlem", "shadow"),
     CalismaModu.TESTNET: ("gozlem",),
-    CalismaModu.LIVE: ("live",),
+    CalismaModu.LIVE: ("live", "pilot"),
 }
 
 
@@ -110,11 +112,20 @@ def ag_yoklamasi(env_dosyasi: str | Path = ".env") -> AgYoklamasi:
         sunucu = public_zaman()
         return {"ok": True, "rtt_ms": simdi_ms() - t0, "yerel_eksi_sunucu_ms": t0 - sunucu}
 
+    def hesap_degeri() -> dict[str, Any]:
+        # Salt okunur anahtarla (taşımada GET-only); işlem anahtarı yetkisiz okunmaz.
+        from scryne_quant.execution.canli_kapi import hesap_degeri_hesapla
+
+        anahtar, sir = canli.okuma_anahtari_oku(env_dosyasi)
+        o = canli.canli_okuyucu(anahtar, sir)
+        return hesap_degeri_hesapla(o.bakiye(), o.son_fiyat)
+
     return AgYoklamasi(
         okuma_anahtari_kisitlari=okuma,
         islem_anahtari_kisitlari=islem,
         testnet_baglantisi=testnet,
         canli_baglantisi=canli_b,
+        canli_hesap_degeri=hesap_degeri,
     )
 
 
@@ -176,6 +187,7 @@ def kosu_kur(
     audit = SqliteDefter(dizin / "audit.sqlite")
     limitler = limitler_mod.yukle()
     sermaye = float(istek.sermaye_usdt)
+    azami_kayip: float | None = None
 
     # ------------------------------------------------------------ bar kaynağı ve saat
     kaynak: BarKaynagi
@@ -225,7 +237,16 @@ def kosu_kur(
         )
         if b.strateji != istek.strateji:
             raise KurulumHatasi("kapı bağlamının stratejisi istekle aynı olmalı")
-        yetki, _ = canli_yetki_ver(b)
+        yetki, rapor = canli_yetki_ver(b)
+        # Pilot (K-115) yalnız `pilot` risk moduyla, pilot olmayan kademe yalnız `live` ile.
+        beklenen = "pilot" if rapor.get("pilot") else "live"
+        if istek.risk_modu != beklenen:
+            raise KurulumHatasi(
+                f"aktif kademe {'pilot' if rapor.get('pilot') else 'pilot değil'}; risk modu "
+                f"{beklenen!r} olmalı, verilen {istek.risk_modu!r} (K-115)"
+            )
+        if rapor.get("pilot"):
+            azami_kayip = float(rapor["azami_kayip_usdt"])
         anahtar, sir = canli.islem_anahtari_oku(yetki, istek.env_dosyasi)
         adaptor = canli.canli_emir_adaptoru(yetki, anahtar, sir)
         # Canlı sermaye **kademe** sermayesidir; istek bunu aşamaz.
@@ -237,7 +258,9 @@ def kosu_kur(
         mod=istek.mod,
         adaptor=adaptor,
         defter=EmirDefteri(dizin / "emirler.sqlite"),
-        limitler=GuvenlikLimitleri.risk_limitlerinden(limitler, sermaye),
+        limitler=GuvenlikLimitleri.risk_limitlerinden(
+            limitler, sermaye, azami_kayip_usdt=azami_kayip
+        ),
         sembol=istek.sembol,
         kosu_dizini=dizin,
         audit=audit,
