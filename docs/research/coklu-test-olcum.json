@@ -40,6 +40,7 @@
   "c9c6a16a4e413d27d770f8ca185438f09bf88fc932d1c3c4af37319e41fbf5ad",
   "d133e5cfd08332ffdcba445ac00e343cd4325a21a028fb13940b308efee16f99",
   "d36a9a2799ca1796c6e06654182758c48714226283ae8fb76e83dacf24d3fb1b",
+  "ddae0a1e73d4b87e435c50fb6b1e197236956d22e70232dd507952af6ab650a2",
   "e40e15e61755b3df786313b44808020f58b839952bfb3726fd4b1ce19e5fd93c",
   "e69c715bd11f28cf35cd6e51671ed680ad40148dd8be8227475485b2ce8c230f",
   "ef7223965592de96604f9217641e68501e36a9ec285d2352c422f36e512a73c1",
@@ -48,23 +49,23 @@
   "f845b3fba9cba79654bcc0e89edde06501d3dfbddce5494337ecd440dafbb2dc",
   "fdce091fbfa2d5a639f3a709bf2288856b01d47848c1314cde9a14995bf3b7be"
  ],
- "defter_sayisi": 61,
- "defter_sha256": "bedb871833a98788701a36c6d9b56b3f8fd2aa36f06367a89ddf6d0ebe12b4bc",
+ "defter_sayisi": 62,
+ "defter_sha256": "5f32d29458531bafcaa4942522fc809d889cb1a4300ace6d2a2c85bcab67327f",
  "deneme": 500,
- "evren": 16,
+ "evren": 17,
  "ga05": [
   0.9818147555388195,
   1.0634610745437818
  ],
  "git": {
-  "commit": "a9982f60e9a6d117f1681964c3fc213a971d7cd7",
+  "commit": "050c6c8440be3f19d6b7da9f8daee64434b88a76",
   "dirty": true,
   "git_yok": false
  },
  "kaynak": "runs/faz12/coklu-test-birlesik-500-0.json",
  "mevcut_esigin_yanlis_pozitifi": 0.042,
  "mevcut_esik": 1.04,
- "olculebilir": 47,
+ "olculebilir": 48,
  "olculemez_kimlikleri": [
   "5f215052bc0b3e7fe3fcd70e0750a0c37a63de75b97a4e9c6511d6d4bc8ca244",
   "0d4ee7c2c9f128177d8c87d645ac2bd09e9bff5de0271076ac87d2c1b4f70fca",
@@ -84,5 +85,5 @@
  "p05": 1.0039280761569713,
  "seed": 0,
  "tek_sembollu": 31,
- "uretildi": "2026-09-22 08:14:17 UTC"
+ "uretildi": "2026-09-22 09:33:08 UTC"
 }

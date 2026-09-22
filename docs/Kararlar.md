@@ -5393,3 +5393,36 @@ kapat") · **Tabi:** K-019, K-033, K-037, K-039, K-044, K-050, K-051/4, K-061, K
 6. **Çoklu test:** h60/h61 null'u ölçüldü (500 deneme, seed 0; 82 + 48 dk), fotoğraf yenilendi: ölçülebilir
    45 → **47**, %5 sınırı 1,0039 aynı, sabit 1,04 korunuyor; `COKLU_TEST_CEKILIS_SAYISI` 45 → 47 (K-081 kuralı:
    sabit yalnız karar kaydıyla güncellenir). Defter 61.
+
+---
+
+## K-109 — R7(2): kripto alfa/sinyal turu — K-068 ön koşulu ölçüldü, tek aday (kesitsel düşük oynaklık, h62) kıyas altı; FAIL
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("R7(2)'de doğrudan kripto alpha/sinyal araştırmasına
+geç; 2-3 basit sinyal; 11 kapı; null eşiği değiştirme; tek OOS başarısı promotion değil; zayıfsa kapat") ·
+**Tabi:** K-039, K-044, K-045, K-051, K-061, K-068 (geri dönüş koşulu), K-072, K-078 (sınırlı istisna), K-108 ·
+**Kaynak:** `docs/research/records/2026-09-22-R7-kesit-oynaklik.md`, `tools/r7_sinyal_gucu.py`,
+`runs/faz12/r7-sinyal-gucu.json`, `research/izgaralar.py` (`KESIT_OYNAKLIK_CEKILISLERI`)
+
+### Karar
+
+1. **K-078/1'e sınırlı istisna, K-068 koşuluyla.** K-078/1 fiyat-türevli hattı "yeniden açılmaz" yazmıştı; Scryne'ın
+   talimatıyla hat, K-068'in **ölçülebilir** geri dönüş koşulu (yalnız IS'te ileriye dönük sıralama gücü, |t| ≥ 2 ∧
+   IS iki yarısında aynı işaret; koşudan önce yazıldı) uygulanarak açıldı. Ölçüm çekiliş değildir; OOS'a bakılmadı.
+2. **Ön koşul sonucu:** 11 sinyalden (ts momentum 168-1440, ts ters 24-168, sapma 168/720, hacim şoku, düşük
+   oynaklık 14-1440) yalnız **kesitsel düşük oynaklık** geçti (IC +0,11..+0,14, t 6-7,8). Diğerleri açılmadı,
+   çekiliş harcanmadı. Program `kesit_oynaklik` (bütçe 2; Faz 12'nin hiç harcanmamış `kesitsel_dusuk_oynaklik`
+   ızgarası aynen; yeni kod yok).
+3. **h62 (1440 / n5): elendi.** IS Sharpe 0,929 (12/12 pozitif) → OOS 0,287 vs kıyas n10 0,302 (< ikinci çizgi
+   0,333); net +603 vs +926 USDT; DD 12,7 % vs 18,8 %; `oos_is_orani` 0,31; `evren_dayanikliligi` 0,22 (XRP çıkınca
+   0,06); pbo 0,11; pertürbasyon 0,15; rejim 0,11; **5/11**. Aylık çekiliş durma kuralı gereği harcanmadı (1/2).
+   Aile kapalı, tekrar gereksinimi yok.
+4. **Ek kural:** IS IC'si K-068 ölçütünü geçen bir sinyal yalnızca **aday**dır; sıralama gücü kıyas-üstü olma
+   iddiası taşımaz (h62: t ≈ 7 IC, OOS kıyas altı — IC'nin kaynağı büyük ölçüde yüksek oynaklı isimlerin ortalama
+   kaybı). İşaret testinde |t| ≥ 2 veren `roc720` (devam) ve `roc72` (devam) IC ölçütünü geçmedi; kayıt yalnız
+   bilgi, açılmaz.
+5. **Sonuç (kapsamlı):** mevcut veri (spot, 429 sembol PIT), evren kuralı, pencere ve 11 kapı kapsamında
+   fiyat/hacim türevli kesit/ts sinyallerinde doğrulanmış kripto alfası yok; K-078/1'in yapısal okuması
+   (eylem uzayı ve veri sınıfı açık, fiyat geçmişi hattı tükenmiş) **pekişti**. Evrensel iddia değil.
+6. **Çoklu test:** h62 null'u ölçüldü (500/0, 50 dk), fotoğraf 47 → **48** ölçülebilir, %5 sınırı 1,0039 aynı, sabit
+   1,04 değişmedi; `COKLU_TEST_CEKILIS_SAYISI` 48 (K-081 kuralı).

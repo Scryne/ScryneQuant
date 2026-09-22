@@ -80,6 +80,9 @@ PROGRAM_AYARI = {
     # R7 (K-108): portföy düzeyi kurma — aynı seçim, `KurmaAyarlari`/brüt değişiyor; kurma
     # programıyla aynı portföy kodu ve seçilen yoğunlukta kıyas.
     "portfoy_kurma": (False, KURMA_PORTFOY, True),
+    # R7(2) (K-109): kesitsel düşük oynaklık — Faz 12 kesitsel programının iskeleti ve kıyas kalıbı
+    # (sabit yoğunluk 10, K-072: kıyas ayarlanmaz).
+    "kesit_oynaklik": (False, ed.KESITSEL_PORTFOY, False),
 }
 #: Ölçüm (24 GB makine): veri yüklü süreç ≈4,5 GB; tek koşunun tepesi in-sample +0,6 GB,
 #: tam pencere +0,9 GB. Ana süreç + 3 işçi in-sample'da ≈20 GB; tam pencere 2 işçiyle.

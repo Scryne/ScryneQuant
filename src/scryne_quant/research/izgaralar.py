@@ -278,6 +278,18 @@ PORTFOY_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
     }),
 }
 
+#: `kesit_oynaklik` programının çekilişleri (R7(2), K-109). Faz 12'nin `kesitsel_dusuk_oynaklik`
+#: çekilişleri (`EVREN_CEKILISLERI`) hiç harcanmadı (program 4/4'te güç ve ters ile kapandı, K-068).
+#: K-068 ek şartı ölçüldü (`tools/r7_sinyal_gucu.py`, yalnız IS): `−atr(p)/close` ↔ 168 bar ileri
+#: getiri Spearman IC ≈ +0,14, t 6-7,6, IS'in iki yarısında aynı işaret — ölçülen 11 sinyalden K-068
+#: ölçütünü (|t| ≥ 2 ∧ aynı işaret) yalnız bu sağladı. Izgara Faz 12 tanımının **aynısı** (pencere
+#: {168,336,720,1440} × yoğunluk {5,10,20}); yeni eksen yok. Sıra: haftalık; aylık yalnız haftalık
+#: OOS'ta kıyası geçerse (takvim tekrarı), aksi hâlde harcanmaz.
+KESIT_OYNAKLIK_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "r7_dusuk_oynaklik_haftalik": ("kesitsel_dusuk_oynaklik", _evren(_ORTA_VADE, HAFTALIK)),
+    "r7_dusuk_oynaklik_aylik": ("kesitsel_dusuk_oynaklik", _evren(_ORTA_VADE, AYLIK)),
+}
+
 #: `fx_fiyat` programının çekilişleri (R5, K-102): ilk FX alfa araştırması, üç aile, üç çekiliş.
 #:
 #: Pencereler **FX seans barında** (1h, 5x24 → 120 bar = 1 hafta, K-099): 24 = 1 gün, 48 = 2 gün,
@@ -361,6 +373,7 @@ PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "konumlanma_evren": tuple(KONUMLANMA_CEKILISLERI),
     "kurma_evren": tuple(KURMA_CEKILISLERI),
     "portfoy_kurma": tuple(PORTFOY_CEKILISLERI),
+    "kesit_oynaklik": tuple(KESIT_OYNAKLIK_CEKILISLERI),
     "fx_fiyat": tuple(FX_CEKILISLERI),
     "fx_ortalama_donus": tuple(FX_DONUS_CEKILISLERI),
     "fx_oynaklik": tuple(FX_OYNAKLIK_CEKILISLERI),
@@ -371,7 +384,8 @@ def _TUM_CEKILISLER() -> dict[str, tuple[str, dict[str, Sequence[Any]]]]:
     """Bütün evren çekilişleri tek sözlükte. Yeni bir program eklenince **tek yer**
     değişsin diye ayrı: iki ayrı birleştirme listesi sessizce ayrışabilirdi."""
     return {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
-            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **PORTFOY_CEKILISLERI, **FX_CEKILISLERI,
+            **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **PORTFOY_CEKILISLERI,
+            **KESIT_OYNAKLIK_CEKILISLERI, **FX_CEKILISLERI,
             **FX_DONUS_CEKILISLERI, **FX_OYNAKLIK_CEKILISLERI}
 
 

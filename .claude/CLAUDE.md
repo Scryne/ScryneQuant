@@ -262,6 +262,9 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   `EvrenEsitAgirlik._korelasyon_icin` kancası + `kur(korelasyon=)`; `evren_oynaklik_hedefi`: yalnız düşüren
   brüt ölçekleme), `izgaralar.PORTFOY_CEKILISLERI`; h60 elendi (ters çalıştı), h61 Sharpe-nötr elendi (7/11 kapı).
   Rapor `docs/research/records/2026-09-22-R7-portfoy-kurma-1.md`.
+  **R7(2) `kesit_oynaklik` (K-109): kapalı, 0/1** — `tools/r7_sinyal_gucu.py` K-068 ön koşulu (yalnız IS IC; 11
+  sinyalden yalnız düşük oynaklık t ≈ 7), h62 OOS kıyas altı (0,287 vs 0,302; XRP'ye bağlı). Fiyat/hacim
+  kesit/ts sinyalleri: momentum/ters/sapma/hacim |t| < 2. Rapor `docs/research/records/2026-09-22-R7-kesit-oynaklik.md`.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor
