@@ -311,3 +311,44 @@ class TestCli:
         govde = json.loads(r.output)
         assert govde["akis"]["islenen_sinyal"] >= 9 and govde["metrikler"]["toplam_finansman"] > 0
         assert govde["evren"]["takvim"]["id"] == TAKVIM_FX_5X24
+
+    def test_fx_tablosunda_varsayilan_dengeleme_k099(self):
+        """Bayraksız FX koşusu `--yeniden-dengele 120` ile bit düzeyinde aynı (K-099); açık 720
+        eski varsayılanı aynen verir — yani bayrak her iki tabloda da ezer."""
+        from scryne_quant.cli.main import app
+
+        taban = ["evren", "backtest", str(TABLO), "--fx-depo", str(FIXTURE), "--yazma", "--json",
+                 "--strateji", "fx_evren_esit_agirlik", "--azami-enstruman", "21"]
+        sonuc = {}
+        for ad, ek in (("yok", []), ("120", ["--yeniden-dengele", "120"]),
+                       ("720", ["--yeniden-dengele", "720"])):
+            r = CliRunner().invoke(app, taban + ek)
+            assert r.exit_code == 0, r.output
+            sonuc[ad] = json.loads(r.output)["sonuc_hash"]
+        assert sonuc["yok"] == sonuc["120"]
+        assert sonuc["720"] != sonuc["120"]
+
+    def test_kripto_tablosunda_varsayilan_dengeleme_degismedi(self, monkeypatch):
+        """FX olmayan tabloda bayraksız varsayılan 720 (K-099 öncesiyle aynı)."""
+        from scryne_quant.cli import main
+        from scryne_quant.research import evren_kosu
+
+        gorulen: dict[str, int] = {}
+
+        class Dur(Exception):
+            pass
+
+        def kur(_tablo, nesne, **_):
+            gorulen["periyot"] = int(nesne.parametreler["yeniden_dengele_bar"])
+            raise Dur
+
+        monkeypatch.setattr(evren_kosu, "tablo_oku", lambda _y: (None, {}))
+        monkeypatch.setattr(evren_kosu, "kur", kur)
+        with pytest.raises(Dur):
+            main.evren_backtest(
+                tablo=TABLO, strateji="evren_esit_agirlik", baslangic_ay="", bitis_ay="",
+                azami_enstruman=10, azami_agirlik=0.30, yeniden_dengele=None,
+                oynaklik_ayarli=False, azami_sembol=120, sermaye=10_000.0,
+                depo_kok=FIXTURE, fx_depo=FIXTURE, yaz=False, json_cikti=True,
+            )
+        assert gorulen["periyot"] == 720

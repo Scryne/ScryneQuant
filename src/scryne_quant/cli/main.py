@@ -93,6 +93,9 @@ from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
 #: Backtest sonuç kayıtlarının yazıldığı dizin (`.gitignore`'da).
 VARSAYILAN_KOSU_KOKU = Path("runs")
 
+#: `sq evren backtest` FX tablosunda varsayılan dengeleme periyodu (K-099: 1h'te bir 5x24 hafta).
+FX_YENIDEN_DENGELE = 120
+
 #: Varsayılan depo kökü. `.gitignore` `/data/`'yı dışlıyor — market verisi repoya girmez.
 VARSAYILAN_DEPO = Path("data/market")
 
@@ -3888,8 +3891,12 @@ def evren_backtest(
         float, typer.Option("--azami-agirlik", help="Tek enstrüman ağırlık tavanı.")
     ] = 0.30,
     yeniden_dengele: Annotated[
-        int, typer.Option("--yeniden-dengele", help="Yeniden dengeleme periyodu (bar).")
-    ] = 720,
+        int | None,
+        typer.Option(
+            "--yeniden-dengele",
+            help="Yeniden dengeleme periyodu (bar). Verilmezse kripto 720, FX tablosu 120 (K-099).",
+        ),
+    ] = None,
     oynaklik_ayarli: Annotated[
         bool, typer.Option("--oynaklik-ayarli", help="Eşit ağırlık yerine oynaklık ayarlı boyut.")
     ] = False,
@@ -3923,15 +3930,18 @@ def evren_backtest(
             f"{', '.join(sorted(EVREN_KIYAS))}"
         )
     sinif = EVREN_KIYAS[strateji]
+    basladi = time.perf_counter()
+    _, tablo_meta = evren_kosu_mod.tablo_oku(tablo)
+    # K-099: FX kıyası seans başına (1h'te 120 bar = bir 5x24 hafta) dengelenir; kripto
+    # varsayılanı (720) değişmedi. Açık `--yeniden-dengele` her iki tabloda da aynen geçer.
+    if yeniden_dengele is None:
+        yeniden_dengele = FX_YENIDEN_DENGELE if evren_kosu_mod.fx_tablo_mu(tablo_meta) else 720
     nesne = sinif(
         yeniden_dengele_bar=yeniden_dengele,
         azami_enstruman=azami_enstruman,
         azami_agirlik=azami_agirlik,
         esit_agirlik=not oynaklik_ayarli,
     )
-
-    basladi = time.perf_counter()
-    _, tablo_meta = evren_kosu_mod.tablo_oku(tablo)
     takvim: takvim_mod.Takvim | None = None
     if evren_kosu_mod.fx_tablo_mu(tablo_meta):
         kurulum = evren_kosu_mod.fx_kur(
