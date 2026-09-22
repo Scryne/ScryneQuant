@@ -5678,7 +5678,7 @@ tavanını katlayabilirdi; (2) mutabakat *yapılamadığında* artıran emirler 
 Ek olarak: `SUBMITTED`+borsada dolmuş emir artık ACK üzerinden çözülür (önceden halt); bayatlık gönderim
 anında ölçülür; LIVE onayı global audit'le, kanıt dosyaları koşu audit'iyle doğrulanır; onay API
 anahtarına (`createTime`) ve yetki host'a bağlı; boyut tabanı ≤ sermaye. Karar değişmedi: canlı aktivasyon
-kapıları aynı; hiçbir eşik değişmedi; hiçbir kullanıcı kararı dolduruldu. Yeni değişmez:
+kapıları aynı; hiçbir eşik değişmedi; hiçbir kullanıcı kararı doldurulmadı. Yeni değişmez:
 
 > Mutabakat yapılamamış bir hesap üzerinde, bir kilitle tekil kılınmamış bir canlı süreçte ya da sistem
 > modunun artık izin vermediği bir anda riski artıran emir gönderilmez.
