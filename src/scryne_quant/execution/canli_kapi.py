@@ -503,7 +503,8 @@ def _kontroller(hedef: CalismaModu, b: KapiBaglami) -> list[Kontrol]:
         _ag_kontrolu("islem_anahtari_yetkisi", b.ag.islem_anahtari_kisitlari,
                      _yetki_degerlendir("live"),
                      "işlem anahtarı: spot işlem açık, çekim/transfer/margin/futures kapalı, "
-                     "IP kısıtlı (Faz-8-Hazirlik §1.2/§1.6) — elle onaydan sonra üretilir"),
+                     "IP kısıtlı (Faz-8-Hazirlik §1.2/§1.6) — promotion elle onayından "
+                     "(K-010) sonra üretilir"),
         _ag_kontrolu("canli_baglanti", b.ag.canli_baglantisi, _baglanti_degerlendir,
                      "canlı borsa bağlantısı ve saat"),
     ]
