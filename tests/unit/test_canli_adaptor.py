@@ -82,7 +82,8 @@ def govde(durum: str, dolan: str = "0", kimlik: str = "") -> dict:
     return {"symbol": "BTCUSDT", "orderId": 7, "clientOrderId": kimlik, "side": "BUY",
             "status": durum, "origQty": "0.002", "executedQty": dolan,
             "cummulativeQuoteQty": str(float(dolan) * 50_000), "transactTime": T0 + 1,
-            "fills": [{"commission": "0.0000001", "commissionAsset": "BTC"}] if float(dolan) else []}
+            "fills": ([{"commission": "0.0000001", "commissionAsset": "BTC"}]
+                      if float(dolan) else [])}
 
 
 def test_kismi_dolum_canli_host_ve_duplicate_aga_cikmaz():
