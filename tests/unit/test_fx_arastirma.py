@@ -328,3 +328,102 @@ class TestOrtalamaDonus:
             g = evren_gorunum_kur("1h", diziler, uyelik, s, kural_kimligi="test")
             sonuc = CokluBacktest(s, MALIYET).calistir(g, veri_sha256={}, olcum_baslangici=0)
             assert sonuc.metrikler.islem_sayisi == 0
+
+
+class TestOynaklikFiltre:
+    """R6 `fx_oynaklik` (K-105): kıyasın üstüne engelleyici oynaklık filtresi, elenen pay nakit."""
+
+    def test_kayitli_ve_izgaralar(self):
+        from scryne_quant.research.izgaralar import FX_OYNAKLIK_CEKILISLERI
+        from scryne_quant.strategy.kutuphane.oynaklik_filtre import (
+            FxEvrenOynaklikFiltre,
+            FxOynaklikFiltreCift,
+        )
+
+        assert EVREN_AILELER["fx_oynaklik_filtre_cift"] is FxOynaklikFiltreCift
+        assert EVREN_AILELER["fx_oynaklik_filtre_evren"] is FxEvrenOynaklikFiltre
+        assert PROGRAM_CEKILISLERI["fx_oynaklik"] == tuple(FX_OYNAKLIK_CEKILISLERI)
+        for ad in FX_OYNAKLIK_CEKILISLERI:
+            strateji, g = evren_cekilisi(ad)
+            noktalar = list(izgara(g))
+            assert len(noktalar) == 12 and g["yeniden_dengele_bar"] == (120,)
+            assert g["azami_enstruman"] == (21,)  # yoğunluk ekseni yok: evrenin tamamı
+            for p in noktalar:
+                s = EVREN_AILELER[strateji](**p)
+                assert s.sozluk()["kiyas"] is False
+        with pytest.raises(ValueError):
+            FxOynaklikFiltreCift(pencere=14)  # taban kısa ATR'den uzun olmalı
+        with pytest.raises(ValueError):
+            FxEvrenOynaklikFiltre(esik=0.0)
+
+    @pytest.mark.parametrize("ad", ["fx_oynaklik_filtre_cift", "fx_oynaklik_filtre_evren"])
+    def test_esik_sonsuzken_kiyasla_bit_ayni(self, veri, ad):
+        """Eleme olmadığında tavan eşit paya oturur, dengeleme takvimi kıyasınkiyle aynı çıpaya
+        oturur ve ekonomik çıktı (metrikler, işlemler, özkaynak, maruziyet) bit düzeyinde aynıdır.
+
+        `sonuc_hash` karşılaştırılmaz: fixture'ın ısınması (50) taban ATR'sinden (48+2) kısa; kıyas
+        ısınma bölgesinde 3 emir üretip `isinma_penceresi`ne düşürüyor, filtre orada oranı
+        ölçemediği için emir üretmiyor — yalnız atlama sayacı ayrışıyor, ölçülen aralıkta hiçbir
+        şey değil. Gerçek koşuda ısınma tabanı 242 bu bölgeyi ölçüm dışında bırakır.
+        """
+        from scryne_quant.strategy.kutuphane import FxEvrenEsitAgirlik
+
+        _, _, tam, _ = ed.pencereler(veri, isinma_bar=ISINMA)
+        kiyas = ed.kosu(FxEvrenEsitAgirlik(yeniden_dengele_bar=120, azami_enstruman=21,
+                                           hedef_brut=0.2), MALIYET, veri, tam)
+        filtre = ed.kosu(EVREN_AILELER[ad](pencere=48, esik=1e9, azami_enstruman=21,
+                                           yeniden_dengele_bar=120, hedef_brut=0.2),
+                         MALIYET, veri, tam)
+        assert filtre.metrikler.sozluk() == kiyas.metrikler.sozluk()
+        assert ([i.sozluk(sembol_yaz=True) for i in filtre.islemler]
+                == [i.sozluk(sembol_yaz=True) for i in kiyas.islemler])
+        assert np.array_equal(filtre.ozkaynak, kiyas.ozkaynak)
+        assert np.array_equal(filtre.maruziyet, kiyas.maruziyet)
+        def sayac(sonuc):
+            return {a: d for a, d in sonuc.atlanan.items() if d and a != "isinma_penceresi"}
+
+        assert sayac(filtre) == sayac(kiyas)
+
+    def test_cift_elenince_pay_nakitte_kalir(self, veri):
+        """Sıkı eşik: elenen çiftin payı kalanlara dağıtılmaz, brüt maruziyet kıyasın altına
+        iner; alınan her çiftte karar barında oran eşiğin altında."""
+        from scryne_quant.strategy.kosu import evren_gorunum_kur
+        from scryne_quant.strategy.kutuphane import FxEvrenEsitAgirlik
+
+        _, _, tam, _ = ed.pencereler(veri, isinma_bar=ISINMA)
+        esik = 0.9
+        s = EVREN_AILELER["fx_oynaklik_filtre_cift"](pencere=48, esik=esik, azami_enstruman=21,
+                                                     yeniden_dengele_bar=120, hedef_brut=0.2)
+        sonuc = ed.kosu(s, MALIYET, veri, tam)
+        kiyas = ed.kosu(FxEvrenEsitAgirlik(yeniden_dengele_bar=120, azami_enstruman=21,
+                                           hedef_brut=0.2), MALIYET, veri, tam)
+        assert sonuc.metrikler.islem_sayisi > 0
+        assert sonuc.maruziyet.max() <= kiyas.maruziyet.max() + 1e-12
+        assert sonuc.maruziyet.mean() < kiyas.maruziyet.mean()
+        g = evren_gorunum_kur(veri.timeframe, veri.diziler, veri.uyelik, s,
+                              kural_kimligi=veri.kural_kimligi)
+        for islem in sonuc.islemler:
+            i = int(np.searchsorted(g.zamanlar, islem.acilis_ms)) - 1
+            pg = g.gorunumler[islem.sembol]
+            oran = pg.ozellikler["atr"][i] / pg.ozellikler["atr_uzun"][i]
+            assert oran <= esik, (islem.sembol, oran)
+
+    def test_evren_filtresi_ya_hepsi_ya_hicbiri(self, veri):
+        """Evren geneli filtre: her dengelemede ya kıyasın kümesi taşınır ya da hiçbir şey."""
+        from scryne_quant.strategy.kosu import evren_gorunum_kur
+
+        _, _, tam, _ = ed.pencereler(veri, isinma_bar=ISINMA)
+        s = EVREN_AILELER["fx_oynaklik_filtre_evren"](pencere=48, esik=0.95, azami_enstruman=21,
+                                                      yeniden_dengele_bar=120, hedef_brut=0.2)
+        sonuc = ed.kosu(s, MALIYET, veri, tam)
+        assert sonuc.metrikler.islem_sayisi > 0  # en az bir "hepsi nakit" haftası
+        g = evren_gorunum_kur(veri.timeframe, veri.diziler, veri.uyelik, s,
+                              kural_kimligi=veri.kural_kimligi)
+        # Nakde geçilen barlarda (maruziyet 0'a düşen) medyan oran eşiğin üstünde olmalı.
+        sifir = np.flatnonzero((sonuc.maruziyet[1:] == 0.0) & (sonuc.maruziyet[:-1] > 0.0)) + 1
+        assert len(sifir) > 0
+        for k in sifir:
+            i = int(np.searchsorted(g.zamanlar, sonuc.zamanlar[k])) - 1
+            oranlar = [pg.ozellikler["atr"][i] / pg.ozellikler["atr_uzun"][i]
+                       for sm, pg in g.gorunumler.items() if veri.uyelik[sm][i]]
+            assert np.median(oranlar) > 0.95

@@ -109,6 +109,13 @@ SINYAL_OZELLIKLERI: Final[dict[str, tuple[str, ...]]] = {
     # Ortalama dönüş (R6, `fx_ortalama_donus`): iddia sma/rsi eşiği; taşıyıcı alan `skor_ham`.
     "zaman_serisi_sapma": ("skor_ham",),
     "zaman_serisi_rsi": ("skor_ham",),
+    # Oynaklık filtresi (R6, `fx_oynaklik`): iddia `atr/atr_uzun` oranı. İkisi birlikte
+    # kaydırılır ki oran kendisi korunsun, yalnız zamanla hizası bozulsun; `atr` burada iskelet
+    # (uygunluk) de olduğu için kaydırmak uygunluğu da oynatır — FX'te ATR>0 hemen her barda
+    # sağlandığından etkisi ihmal edilebilir, ama FX null'u zaten ölçülmüyor (K-102/6); bu satır
+    # yalnız kayıt.
+    "fx_oynaklik_filtre_cift": ("atr", "atr_uzun"),
+    "fx_oynaklik_filtre_evren": ("atr", "atr_uzun"),
 }
 
 

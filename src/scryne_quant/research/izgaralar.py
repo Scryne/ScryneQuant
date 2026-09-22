@@ -304,6 +304,28 @@ FX_DONUS_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
     }),
 }
 
+#: `fx_oynaklik` programının çekilişleri (R6, K-105): kıyasın üstüne oynaklık genişlemesi
+#: filtresi, elenen pay nakitte. 12 nokta: taban penceresi (3) × eşik (4). Ölçü
+#: `atr(14)/atr(pencere)`; ATR 14 eksen değil (kıyas/risk motoru ölçüsü). Pencereler kıyasın
+#: haftasının katları: 48 = 2 gün, 120 = 1 hafta, 240 = 2 hafta (24 sığmaz: taban 14'ten uzun
+#: olmalı ve ölçüm oranı 1'e çiviliyor). **Eşikler ölçülen dağılımdan** (getiri okunmadan,
+#: `runs/fx/oynaklik-kaynak-olcumu.json`): oran üye-haftalarda q10 0,82-0,89, q50 ≈ 1,00, q90
+#: 1,11-1,26; 1,25+ hiç ya da nadiren tetikliyor (K-104'teki rsi48<30 gibi ölü sütun olurdu),
+#: 0,9-1,2 dağılımın gövdesi. 0,9 "yalnız sıkışmış oynaklık", 1,2 "yalnız belirgin genişleme".
+#: Yoğunluk ekseni yok: evrenin tamamı (K-099, kıyas gibi).
+#: Sıra durma kuralının sırası: çift başına, sonra evren geneli.
+_FX_OYNAKLIK: Final[dict[str, Sequence[Any]]] = {
+    "pencere": (48, 120, 240),
+    "esik": (0.9, 1.0, 1.1, 1.2),
+    "azami_enstruman": (21,),
+    "yeniden_dengele_bar": (FX_HAFTALIK,),
+    "hedef_brut": (SABIT_MARUZIYET,),
+}
+FX_OYNAKLIK_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "fx_oynaklik_filtre_cift": ("fx_oynaklik_filtre_cift", _FX_OYNAKLIK),
+    "fx_oynaklik_filtre_evren": ("fx_oynaklik_filtre_evren", _FX_OYNAKLIK),
+}
+
 #: Program → çekilişleri. Koşucu çekilişin programını buradan bulur.
 PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "kesitsel_fiyat": tuple(EVREN_CEKILISLERI),
@@ -313,6 +335,7 @@ PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "kurma_evren": tuple(KURMA_CEKILISLERI),
     "fx_fiyat": tuple(FX_CEKILISLERI),
     "fx_ortalama_donus": tuple(FX_DONUS_CEKILISLERI),
+    "fx_oynaklik": tuple(FX_OYNAKLIK_CEKILISLERI),
 }
 
 
@@ -321,7 +344,7 @@ def _TUM_CEKILISLER() -> dict[str, tuple[str, dict[str, Sequence[Any]]]]:
     değişsin diye ayrı: iki ayrı birleştirme listesi sessizce ayrışabilirdi."""
     return {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
             **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **FX_CEKILISLERI,
-            **FX_DONUS_CEKILISLERI}
+            **FX_DONUS_CEKILISLERI, **FX_OYNAKLIK_CEKILISLERI}
 
 
 def evren_cekilisi(ad: str) -> tuple[str, Mapping[str, Sequence[Any]]]:

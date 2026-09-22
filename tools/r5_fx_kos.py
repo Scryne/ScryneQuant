@@ -54,6 +54,7 @@ from scryne_quant.research.izgaralar import (
     FX_CEKILISLERI,
     FX_DONUS_CEKILISLERI,
     FX_HAFTALIK,
+    FX_OYNAKLIK_CEKILISLERI,
     SABIT_MARUZIYET,
     cekilis_programi,
     evren_cekilisi,
@@ -65,11 +66,20 @@ KOK = Path(__file__).resolve().parent.parent
 TABLO = KOK / "data" / "fx" / "_evren" / "6124cf568498.parquet"
 DEPO = KOK / "data" / "fx"
 CIKTI = KOK / "runs" / "fx"
-#: FX programları ve çekilişleri (K-102 `fx_fiyat`, K-104 `fx_ortalama_donus`): aynı pencere, aynı
+#: FX programları ve çekilişleri (K-102 `fx_fiyat`, K-104 `fx_ortalama_donus`, K-105
+#: `fx_oynaklik`): aynı pencere, aynı
 #: kontrol, aynı ısınma tabanı — sonuçlar programlar arasında aynı IS/OOS barlarında karşılaştırılır
 FX_PROGRAMLAR: dict[str, tuple[str, ...]] = {
     "fx_fiyat": tuple(FX_CEKILISLERI),
     "fx_ortalama_donus": tuple(FX_DONUS_CEKILISLERI),
+    "fx_oynaklik": tuple(FX_OYNAKLIK_CEKILISLERI),
+}
+#: Program → hipotez portföy kodu (K-051/4). `fx_oynaklik` kıyasın kurmasını aynen kullanır (türev
+#: filtreleri gibi, `TUREV_PORTFOY`); kesitsel/eşikli aileler `KESITSEL_ESIT`.
+PROGRAM_PORTFOY: dict[str, str] = {
+    "fx_fiyat": ed.KESITSEL_PORTFOY,
+    "fx_ortalama_donus": ed.KESITSEL_PORTFOY,
+    "fx_oynaklik": ed.TUREV_PORTFOY,
 }
 TUM_CEKILISLER = tuple(c for adlar in FX_PROGRAMLAR.values() for c in adlar)
 #: Isınma tabanı: `fx_fiyat`ın en büyük penceresi (240) + 2. Daha küçük pencereli program da bu
@@ -83,7 +93,6 @@ AZAMI_SEMBOL = 30
 REJIM_KIYASI = "EURUSD"
 #: Kıyasın çift sayısı (K-099: tavan bağlamaz, evrenin tamamı).
 KIYAS_CIFT = 21
-PORTFOY = ed.KESITSEL_PORTFOY
 
 
 def _isinma(secenekler: dict[str, Any]) -> int:
@@ -113,8 +122,9 @@ def _temiz(x: Any) -> Any:
 
 
 def _hipotez(cekilis: str, veri: evren_kosu.EvrenVerisi, gerekce: str) -> hipotez_mod.Hipotez:
+    program = cekilis_programi(cekilis)
     return ed.hipotez_kur(
-        cekilis, veri, program=cekilis_programi(cekilis), gerekce=gerekce, portfoy=PORTFOY
+        cekilis, veri, program=program, gerekce=gerekce, portfoy=PROGRAM_PORTFOY[program]
     )
 
 

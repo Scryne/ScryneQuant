@@ -5263,3 +5263,47 @@ K-045 (istisna, ölçümle), K-051, K-061, K-099, K-101, K-102, K-103 · **Kayna
   barında ölçü eşiğin altında; tekdüze yükselen evrende 0 işlem; FX/araştırma testleri geçti.
 - K-061: h56 incele 1 (h54 "farklı"), h57 incele 1 (h4 tek sembol RSI "parametre varyasyonu", bilerek).
 - Koşu: `tools/r5_fx_kos.py kos` × 2 (~3,5 s); h56 OOS hash `807c7c89cf29`, kontrol `5689acde9405`.
+
+---
+
+## K-105 — R6: FX volatilite/risk-temelli aile (`fx_oynaklik`, h58-h59) — zayıf, aile kapalı; tekrar gereksinimi yok
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne (R6 talimatı: "volatilite/risk-temelli aile;
+en fazla 2-3 basit hipotez; sinyal seçimi ile boyutlandırmayı karıştırma; küçük parametre seti; zayıfsa
+kapat") · **Tabi:** K-037, K-039, K-045 (istisna, ölçümle), K-051, K-061, K-099, K-101, K-102, K-104 ·
+**Kaynak:** `docs/research/records/2026-09-22-R6-fx-oynaklik.md`, `strategy/kutuphane/oynaklik_filtre.py`,
+`research/izgaralar.py` (`FX_OYNAKLIK_CEKILISLERI`), `tools/r5_fx_kos.py`, `tests/unit/test_fx_arastirma.py`,
+`runs/fx/oynaklik-kaynak-olcumu.json` (program kaydında)
+
+### Karar
+
+1. **Aile:** oynaklık genişlemesi filtresi — kıyasın (`fx_evren_esit_agirlik`) evreni, eşit ağırlığı, haftalık
+   takvimi ve takvim çıpası aynen; `atr(14)/atr(pencere) > esik` olan üye o hafta **nakde** alınır, payı
+   kalanlara dağıtılmaz (tavan = filtre öncesi eşit pay; brüt düşer). Seçim yok, boyutlandırma yok; K-037
+   engelleyici. İki üye: çift başına (`fx_oynaklik_filtre_cift`) ve evren geneli medyan (`fx_oynaklik_filtre_evren`).
+   Eşik sonsuzken kıyasla ekonomik olarak bit-aynı (testle; gerçek IS'te `esik ≥ 1,1` noktaları kıyasın kendisi).
+2. **İki eksen çekiliş harcanmadan dışarıda, ölçümle:** ters oynaklık ağırlık (`1/σ`) kapalı tur üretmez
+   (üyelik değişimi 0, toz eşiği 0,11 çift/hafta); düşük oynaklık seçimi IS'te en çok 14 tur (asgari 20).
+   İkisi de bu pencere ve bu kapıyla **yapısal olarak ölçülemez**; kapı küçültülmedi, çekiliş harcanmadı.
+3. **Izgara 12, eşikler ölçülen dağılımdan** (getiri okunmadan): oran q10 0,82-0,89 / q50 ≈ 1 / q90 1,11-1,26
+   → esik {0,9; 1,0; 1,1; 1,2}, pencere {48, 120, 240}; ATR 14 eksen değil; yoğunluk ekseni yok. Bütçe 2.
+4. **Sonuç:** h58 seçilen (48 / 0,9): IS **+10,20 vs kontrol −10,59** (+20,79 USD); **OOS +4,57 vs +20,76 →
+   −16,20 USD**, 12 tur; durma kuralı ölçüsünde geçemedi (4,44 < 6,08); `asgari_islem` 12, pbo 0,278,
+   pertürbasyon 0,859 (izole tepe), evren dayanıklılığı 0,64 (USDJPY) kaldı. h59 seçilen (48 / 0,9): IS +1,87
+   vs −10,59; **OOS'ta 4/4 dengelemede nakit, 0 tur, 0,00 vs +20,76 → −20,76 USD**. Kapılar 0/2; `yillik_anlamli`
+   yok; mutlak engel `gecici_finansman_modeli`. Kalıp: filtre yalnız maruziyet düşürür, kıyasın negatif ayında
+   kazanır, pozitif ayında kaybeder (`−β × kıyas`); maliyet bağlayıcı değil (h58 OOS'ta brütün %10'u).
+5. **Aile kapalı, zayıf. Tekrar gereksinimi yok** (hiçbiri OOS'ta kontrolü geçmedi). Genişletilmez.
+6. **Yapısal (dört FX programı):** `asgari_islem` (30) haftalık dengeleme × 4,3 haftalık OOS'ta geçilemez;
+   filtre ailesinde ayrıca eşiğin gövdeden uzak yarısı IS'te tur üretmiyor (etkin ızgara 6/12). K-104/5 aynen.
+7. **Defter fotoğrafı** önbellekten yenilendi (59 satır; 45 ölçülebilir, p05 1,0039 aynı; h53-h59 ölçülemez).
+
+### Kanıt
+
+- Testler: iki sınıf kayıtlı, ızgaralar 12 noktalı, kurulabilir, `kiyas=False`; eşik sonsuzken kıyasla
+  metrik/işlem/özkaynak/maruziyet eşit (yalnız ısınma atlama sayacı farklı, fixture ısınması kısa); çift
+  elenince pay nakitte (maruziyet kıyasın altında, alınan her çiftte karar barında oran ≤ eşik); evren
+  filtresi ya hepsi ya hiçbiri (nakde geçilen barda medyan > eşik). FX/araştırma testleri geçti.
+- K-061: h58 uyarı 0 / incele 0; h59 uyarı 0 / incele 0 ("benzer mekanizma bulunmadı").
+- Koşu: `tools/r5_fx_kos.py kos` × 2 (4,7 s / 4,6 s); h58 OOS hash `b5acf4f53869`, h59 `f9a3de7e72e3`, kontrol
+  `5689acde9405` (h53-h57 ile aynı).

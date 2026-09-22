@@ -246,6 +246,12 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   (`zaman_serisi_sapma`, `zaman_serisi_rsi`, eşikli), `izgaralar.FX_DONUS_CEKILISLERI`; h56 tekrar
   gereksinimi taşıyor (W2/W3 sabit nokta, koşulmadı), h57 elendi. `tools/r5_fx_kos.py` artık çok
   programlı (`FX_PROGRAMLAR`, ısınma tabanı 242). Rapor `docs/research/records/2026-09-22-R6-fx-ortalama-donus.md`.
+  **Oynaklık/risk ailesi (K-105, R6): kapalı, zayıf, tekrar gereksinimi yok** — `strategy/kutuphane/
+  oynaklik_filtre.py` (`fx_oynaklik_filtre_cift` / `_evren`: kıyasın üstüne `atr14/atr(p) > esik` → nakit,
+  elenen pay dağıtılmaz, eşik sonsuzken kıyasla bit-aynı), `izgaralar.FX_OYNAKLIK_CEKILISLERI` (eşikler
+  ölçülen dağılımdan), h58/h59 OOS'ta kontrolün −16/−21 USD altında; `1/σ` ağırlık ve düşük oynaklık seçimi
+  bu pencerede **yapısal olarak ölçülemez** (kapalı tur yok; `runs/fx/oynaklik-kaynak-olcumu.json`), çekiliş
+  harcanmadı. Rapor `docs/research/records/2026-09-22-R6-fx-oynaklik.md`.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

@@ -49,6 +49,10 @@ from scryne_quant.strategy.kutuphane.kesitsel import (
 )
 from scryne_quant.strategy.kutuphane.momentum import Momentum
 from scryne_quant.strategy.kutuphane.ortalama_donus import ZamanSerisiRsi, ZamanSerisiSapma
+from scryne_quant.strategy.kutuphane.oynaklik_filtre import (
+    FxEvrenOynaklikFiltre,
+    FxOynaklikFiltreCift,
+)
 from scryne_quant.strategy.kutuphane.rsi_donus import RsiOrtalamaDonus
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
 from scryne_quant.strategy.kutuphane.zaman_serisi import ZamanSerisiTrend
@@ -117,6 +121,10 @@ EVREN_AILELER: Final[dict[str, type[PortfoyStratejisi]]] = {
     # `fx_ortalama_donus` programı (R6, K-104): zaman serisi ortalama dönüş, eşikli (sıralama yok).
     ZamanSerisiSapma.ad: ZamanSerisiSapma,
     ZamanSerisiRsi.ad: ZamanSerisiRsi,
+    # `fx_oynaklik` programı (R6, K-105): FX kıyasının üstüne oynaklık genişlemesi filtresi, elenen
+    # pay nakitte (seçim yok, boyut yok). Çift başına ve evren geneli.
+    FxOynaklikFiltreCift.ad: FxOynaklikFiltreCift,
+    FxEvrenOynaklikFiltre.ad: FxEvrenOynaklikFiltre,
 }
 
 #: Aile → o ailenin stratejileri. Roadmap "5 aile de aynı veri ve aynı maliyet
@@ -185,6 +193,8 @@ __all__ = [
     "FundingEgilim",
     "FundingFiltre",
     "FundingTers",
+    "FxEvrenOynaklikFiltre",
+    "FxOynaklikFiltreCift",
     "KesitselDusukOynaklik",
     "KesitselGuc",
     "KesitselTers",
