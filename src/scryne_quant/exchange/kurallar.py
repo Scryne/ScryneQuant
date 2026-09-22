@@ -69,6 +69,20 @@ class SembolKurallari:
     reddediyor, sessizce varsaymıyor.
     """
 
+    min_miktar: float = 0.0
+    """`LOT_SIZE.minQty`. 0 = borsa bildirmedi; o hâlde yalnız `step_size` bağlar."""
+
+    azami_miktar: float = 0.0
+    """`LOT_SIZE.maxQty`. 0 = bildirilmedi (sınır yok sayılmaz, kontrol atlanır)."""
+
+    market_azami_miktar: float = 0.0
+    """`MARKET_LOT_SIZE.maxQty` — market emrinin ayrı tavanı (K-114). Canlı spot'ta
+    `LOT_SIZE`dan **dar** olabilir; ikisini karıştırmak, borsada `-1013` ile reddedilen
+    ve yerelde geçmiş görünen bir emir demek."""
+
+    azami_notional: float = 0.0
+    """`NOTIONAL.maxNotional` (varsa). 0 = bildirilmedi."""
+
     @property
     def islenebilir(self) -> bool:
         return self.durum == "TRADING"
@@ -133,7 +147,11 @@ def miktar_metni(miktar: float, step_size: float) -> str:
 
 
 def emri_dogrula(
-    kurallar: SembolKurallari, miktar: float, *, referans_fiyat: float
+    kurallar: SembolKurallari,
+    miktar: float,
+    *,
+    referans_fiyat: float,
+    market: bool = True,
 ) -> float:
     """Miktarı kurallara uydurup döndürür; sağlanamıyorsa `KuralIhlali`.
 
@@ -150,7 +168,23 @@ def emri_dogrula(
             f"{kurallar.sembol}: miktar lot adımının altında "
             f"({miktar} < step {kurallar.step_size})"
         )
+    if kurallar.min_miktar > 0.0 and uydurulmus < kurallar.min_miktar * (1 - 1e-12):
+        raise KuralIhlali(
+            f"{kurallar.sembol}: miktar {uydurulmus} < minQty {kurallar.min_miktar}"
+        )
+    # Tavanlar **aşağı uydurmaz, reddeder.** Tavanı aşan bir emri sessizce kırpmak,
+    # risk motorunun onayladığından farklı bir büyüklüğü "onaylı" diye göndermek olurdu —
+    # aşağı yönde olsa da kimse fark etmeden. Görünür red, sessiz kırpmaya yeğdir.
+    tavan = kurallar.market_azami_miktar if market else 0.0
+    for ad, sinir in (("maxQty", kurallar.azami_miktar), ("marketMaxQty", tavan)):
+        if sinir > 0.0 and uydurulmus > sinir * (1 + 1e-12):
+            raise KuralIhlali(f"{kurallar.sembol}: miktar {uydurulmus} > {ad} {sinir}")
     notional = uydurulmus * referans_fiyat
+    if kurallar.azami_notional > 0.0 and notional > kurallar.azami_notional:
+        raise KuralIhlali(
+            f"{kurallar.sembol}: notional {notional:.2f} > maxNotional "
+            f"{kurallar.azami_notional:.2f}"
+        )
     if notional < kurallar.min_notional:
         raise KuralIhlali(
             f"{kurallar.sembol}: notional {notional:.2f} < minNotional "

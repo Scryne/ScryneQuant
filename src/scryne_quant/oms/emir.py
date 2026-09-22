@@ -132,6 +132,14 @@ class EmirDurumu(StrEnum):
     `UNKNOWN`dan farkı bu bilgi. `FAILED` bir emir yeniden gönderilebilir; `UNKNOWN` bir
     emir gönderilemez."""
 
+    GOLGE = "GOLGE"
+    """Shadow: kuruldu, kurallara uyduruldu, doğrulandı ve **bilerek gönderilmedi**. Nihai.
+
+    Faz 8 hazırlık dokümanı §1.3/3'ün durumu (K-114). `VALIDATED`dan doğrudan gelir ve
+    `SUBMITTED`a hiç uğramaz: `SUBMITTED` "ağ çağrısından önceki son an" demek, shadow'da
+    o an yok. Ayrı bir durum olmasının sebebi sayım: `FAILED` ya da `CANCELED` yazmak,
+    gönderilmemesi **tasarım** olan bir emri bir arıza ya da bir iptal gibi saydırırdı."""
+
     UNKNOWN = "UNKNOWN"
     """Gönderildi ama sonucu bilinmiyor (yanıt kayboldu, zaman aşımı, süreç öldü).
 
@@ -148,6 +156,7 @@ NIHAI: Final[frozenset[EmirDurumu]] = frozenset(
         EmirDurumu.CANCELED,
         EmirDurumu.EXPIRED,
         EmirDurumu.FAILED,
+        EmirDurumu.GOLGE,
     }
 )
 
@@ -171,7 +180,11 @@ ACIK: Final[frozenset[EmirDurumu]] = frozenset(
 #:   kalır. Bunu `FILLED` saymak, olmayan bir miktarı defterde var etmek olurdu.
 GECISLER: Final[dict[EmirDurumu, frozenset[EmirDurumu]]] = {
     EmirDurumu.CREATED: frozenset({EmirDurumu.VALIDATED, EmirDurumu.REJECTED}),
-    EmirDurumu.VALIDATED: frozenset({EmirDurumu.SUBMITTED, EmirDurumu.REJECTED}),
+    # `VALIDATED → GOLGE` yalnızca shadow adaptörüyle (`execution/motor.py`); `SUBMITTED`a
+    # uğramaz, çünkü shadow'da ağ çağrısı yoktur.
+    EmirDurumu.VALIDATED: frozenset(
+        {EmirDurumu.SUBMITTED, EmirDurumu.REJECTED, EmirDurumu.GOLGE}
+    ),
     EmirDurumu.SUBMITTED: frozenset(
         {
             EmirDurumu.ACKNOWLEDGED,

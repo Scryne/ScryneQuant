@@ -1,0 +1,75 @@
+{
+  "surum": 1,
+  "karar": "K-114",
+  "kaynak": "docs/Faz-8-Hazirlik.md §2.1 (biçim); sayılar Scryne kararı ya da shadow/Kademe 1 ölçümü",
+  "not": "Bu dosya live gate'in (execution/canli_kapi.py) okuduğu kademe tablosudur. null = karar verilmedi ya da ölçülmedi ve kapıyı KAPALI tutar. Sayı yazmak izni artırır: K-050/2 gereği her değişiklik sayısal kapı + elle onay + yeni K ister; gevşetme (sermaye artışı, eşik düşürme) bu dosyadan tek başına yapılamaz.",
+  "risk_sermayesi_usdt": null,
+  "aktif_kademe": 0,
+  "drift_tanimi": "docs/Faz-8-Hazirlik.md §2.3",
+  "golge_olcutu": {
+    "asgari_gun": 14,
+    "asgari_golge": 20,
+    "kaynak": "istah",
+    "metin": "Faz-8-Hazirlik §1.5 önerisi: 14 gün = haftalık dengeleme turunu iki kez görmek (K-069'un 'bir tam tur' ölçütünün iki katı); 20 GOLGE = gecikme dağılımının p95'i için asgari örneklem. Sayılar kapıyı SIKILAŞTIRIR, gevşetmez; bağlayıcılığı acik_kararlar/shadow_olcutu kapanınca başlar.",
+    "gozden_gecirme": "İlk shadow koşusunda strateji başına gerçek emir sıklığı ölçülünce."
+  },
+  "kademeler": [
+    {
+      "kademe": 0,
+      "ad": "shadow",
+      "sermaye_usdt": 0.0,
+      "asgari_gun": 14,
+      "asgari_emir": 20,
+      "drift_ust_siniri_bps": null,
+      "pozisyon_farki": 0,
+      "onay": {"gerekli": true, "not": null, "tarih": null}
+    },
+    {
+      "kademe": 1,
+      "ad": "micro-live",
+      "sermaye_usdt": null,
+      "asgari_gun": null,
+      "asgari_emir": null,
+      "drift_ust_siniri_bps": null,
+      "pozisyon_farki": 0,
+      "onay": {"gerekli": true, "not": null, "tarih": null}
+    }
+  ],
+  "kararlar": {
+    "shadow_zincirdeki_yeri": {
+      "durum": "DECISION REQUIRED",
+      "kaynak": "Faz-8-Hazirlik §6/1",
+      "oneri": "elle onayın zorunlu girdisi (K-010 zinciri değişmez); K-114 uygulaması bu öneriyle kuruldu"
+    },
+    "shadow_olcutu": {
+      "durum": "DECISION REQUIRED",
+      "kaynak": "Faz-8-Hazirlik §6/2",
+      "oneri": "14 gün / 20 GOLGE (istah) — golge_olcutu"
+    },
+    "risk_sermayesi": {
+      "durum": "DECISION REQUIRED",
+      "kaynak": "Faz-8-Hazirlik §6/3, Final-Doküman §Bütçeler",
+      "oneri": null
+    },
+    "kademe_artis_orani": {
+      "durum": "DECISION REQUIRED",
+      "kaynak": "Faz-8-Hazirlik §6/4",
+      "oneri": "×2 (istah)"
+    },
+    "drift_ust_siniri_kurali": {
+      "durum": "DECISION REQUIRED",
+      "kaynak": "Faz-8-Hazirlik §6/5",
+      "oneri": "Kademe 1'in ilk 30 günündeki |d_i| p95'i"
+    },
+    "venue_statusu": {
+      "durum": "DECISION REQUIRED",
+      "kaynak": "Faz-8-Hazirlik §6/6, §3",
+      "oneri": "config/venue_statu.json kaynaklı kayıt; yalnız `AÇIK` canlıyı açar"
+    },
+    "canli_modul_sinir": {
+      "durum": "kabul (K-114)",
+      "kaynak": "Faz-8-Hazirlik §6/7",
+      "oneri": "exchange/canli.py + AST izolasyon testi (tests/unit/test_canli_izolasyon.py)"
+    }
+  }
+}

@@ -56,7 +56,10 @@ from scryne_quant.strategy.sinyal import Sinyal
 #: mod. Risk motorunun promotion dışındaki her limiti orada da tam olarak uygulanır; tek
 #: farkı `MOD_ESIGI` eşiğinin `YOK` olması. Gerekçe K-035'te: altyapıyı ölçmek için kapıyı
 #: indirmek, kapının var olma sebebini yok ederdi.
-MODLAR: Final[tuple[str, ...]] = ("backtest", "gozlem", "paper", "live")
+#: `shadow` K-114'te eklendi (Faz-8-Hazirlik §1.3/1): emir gönderilmeyen ama gerçek hesabı
+#: okuyan canlı provası; eşiği `LIVE_ADAYI` — sırada yalnızca insan onayı var. Diğer modların
+#: davranışı değişmedi (yeni bir ad, yeni bir eşik; mevcut eşlemeler aynı).
+MODLAR: Final[tuple[str, ...]] = ("backtest", "gozlem", "paper", "shadow", "live")
 
 #: Hedefi aşağı çekebilen limitler. Audit'te "hangi limit kısıtladı" sayımı bunu kullanıyor.
 #: İlk ikisi sinyal düzeyinde, son ikisi portföy düzeyinde (Faz 10).

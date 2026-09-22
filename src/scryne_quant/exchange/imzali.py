@@ -38,6 +38,7 @@ from urllib.parse import urlencode
 
 import requests
 
+from scryne_quant.exchange import yetki as yetki_mod
 from scryne_quant.exchange.binance import ipv4_zorla
 from scryne_quant.exchange.emir_adaptoru import (
     BorsaEmri,
@@ -91,6 +92,22 @@ BEKLEME_TABANI_S: Final = 0.5
 
 TIMEOUT_S: Final = 15.0
 
+#: Binance spot'un yayımlanmış istek ağırlığı sınırı (`REQUEST_WEIGHT`, dakika başına) ve
+#: emir sayısı sınırı (`ORDERS`, 10 saniye). Bunlar strateji eşiği değil **borsanın
+#: sözleşmesi** (exchangeInfo `rateLimits`). Borsa değiştirirse buraya yazılır.
+AGIRLIK_SINIRI_1DK: Final = 6_000
+EMIR_SINIRI_10S: Final = 100
+
+#: Sınırın bu kesri dolunca **okumalar** bir sonraki dakikaya kadar bekler, **yazmalar**
+#: gönderilmeden `GonderilemediHatasi` alır (K-114). Yazmayı bekletmek yerine reddetmek:
+#: bekleyen emir kararından uzaklaşır (K-004); reddedilen emir `FAILED` olarak görünür ve
+#: bir sonraki kararla yeniden kurulur. Borsanın 429'unu yemek ise IP yasağına (418)
+#: giden yoldur.
+SINIR_ORANI: Final = 0.8
+
+#: 429'da `Retry-After` bu süreyi aşıyorsa beklenmez, hata yükselir.
+AZAMI_GERI_CEKILME_S: Final = 60.0
+
 #: Binance hata kodları. Tam liste değil — davranışı **değiştiren** kodlar.
 KOD_SAAT: Final = -1021
 """Timestamp pencerenin dışında. Emir oluşmadı; sebep saat."""
@@ -108,6 +125,115 @@ KOD_IPTAL_EDILECEK_EMIR_YOK: Final = -2011
 kod budur. İkisini de `None`a çevirmek gerekiyor: iptal edilecek bir şeyin olmaması bir
 hata değil, emrin bu arada dolmuş/kapanmış olmasıdır — ve o durumda yapılacak şey
 sorgulamaktır, tekrar iptal denemek değil."""
+
+
+def kurallari_coz(s: dict[str, Any]) -> SembolKurallari:
+    """`exchangeInfo` sembol gövdesinden `SembolKurallari`. Canlı adaptör de bunu kullanır.
+
+    `MARKET_LOT_SIZE` ve `maxQty`/`minQty` K-114'te eklendi: testnet'te geniş, canlıda
+    dar olabiliyor ve yerelde yakalanmayan her kural borsada `-1013` reddi demek.
+    """
+    filtreler = {f["filterType"]: f for f in s.get("filters", [])}
+    notional = filtreler.get("NOTIONAL") or filtreler.get("MIN_NOTIONAL") or {}
+    lot = filtreler["LOT_SIZE"]
+    market_lot = filtreler.get("MARKET_LOT_SIZE") or {}
+    return SembolKurallari(
+        sembol=str(s["symbol"]),
+        tick_size=float(filtreler["PRICE_FILTER"]["tickSize"]),
+        step_size=float(lot["stepSize"]),
+        min_notional=float(notional.get("minNotional", 0.0)),
+        durum=str(s["status"]),
+        taban_varlik=str(s.get("baseAsset", "")),
+        kote_varlik=str(s.get("quoteAsset", "")),
+        min_miktar=float(lot.get("minQty", 0.0) or 0.0),
+        azami_miktar=float(lot.get("maxQty", 0.0) or 0.0),
+        market_azami_miktar=float(market_lot.get("maxQty", 0.0) or 0.0),
+        azami_notional=float(notional.get("maxNotional", 0.0) or 0.0),
+    )
+
+
+class SaltOkunurIhlali(PermissionError):
+    """Salt okunur kurulmuş bir adaptörden yazma istendi. Ağa hiç çıkılmadı."""
+
+
+class HizSiniri(BorsaReddetti):
+    """Borsa hız sınırı (429) ya da IP yasağı (418). İstek **işlenmedi** — kesin bilgi.
+
+    `BorsaReddetti` alt sınıfı çünkü anlamı aynı: emir oluşmadı. Ayrı tip, çağıranın
+    "sebep giderilene kadar bekle" ile "kural ihlali" ayrımını yapabilmesi için. 418
+    **yasaktır**, geçici değil: koşu durmalı (`yasak=True`).
+    """
+
+    def __init__(
+        self,
+        mesaj: str,
+        *,
+        kod: int | None = None,
+        yasak: bool = False,
+        bekle_s: float | None = None,
+    ) -> None:
+        super().__init__(mesaj, kod=kod)
+        self.yasak = yasak
+        self.bekle_s = bekle_s
+
+
+class HizSayaci:
+    """Borsanın yanıt başlıklarından okunan kullanım. Tahmin değil, borsanın beyanı.
+
+    `X-MBX-USED-WEIGHT-1M` ve `X-MBX-ORDER-COUNT-10S` her yanıtta gelir; yerel sayaç tutmak
+    yerine onları okumak, aynı IP'yi paylaşan diğer süreçlerin (pano, izleme) tüketimini de
+    hesaba katar — yerel sayaç onları hiç görmezdi.
+    """
+
+    __slots__ = ("agirlik", "agirlik_dk", "emir_10s", "emir_an")
+
+    def __init__(self) -> None:
+        self.agirlik = 0
+        self.agirlik_dk = -1
+        self.emir_10s = 0
+        self.emir_an = 0.0
+
+    def oku(self, basliklar: Any) -> None:
+        if not basliklar:
+            return
+        try:
+            deger = basliklar.get("X-MBX-USED-WEIGHT-1M")
+            if deger is not None:
+                self.agirlik = int(deger)
+                self.agirlik_dk = int(time.time() // 60)
+            emir = basliklar.get("X-MBX-ORDER-COUNT-10S")
+            if emir is not None:
+                self.emir_10s = int(emir)
+                self.emir_an = time.monotonic()
+        except (AttributeError, TypeError, ValueError):
+            return
+
+    def okuma_beklemesi_s(self) -> float:
+        """Ağırlık sınırın `SINIR_ORANI`nı aştıysa bir sonraki dakikaya kalan süre."""
+        simdi = time.time()
+        if int(simdi // 60) != self.agirlik_dk:
+            return 0.0
+        if self.agirlik < AGIRLIK_SINIRI_1DK * SINIR_ORANI:
+            return 0.0
+        return 60.0 - (simdi % 60) + 0.25
+
+    def yazma_engeli(self) -> str | None:
+        """Yazma gönderilmemeli mi? Sebep metni ya da `None`."""
+        simdi = time.time()
+        if (
+            int(simdi // 60) == self.agirlik_dk
+            and self.agirlik >= AGIRLIK_SINIRI_1DK * SINIR_ORANI
+        ):
+            return f"istek ağırlığı {self.agirlik}/{AGIRLIK_SINIRI_1DK} (1 dk)"
+        if (
+            time.monotonic() - self.emir_an < 10.0
+            and self.emir_10s >= EMIR_SINIRI_10S * SINIR_ORANI
+        ):
+            return f"emir sayısı {self.emir_10s}/{EMIR_SINIRI_10S} (10 s)"
+        return None
+
+    def sozluk(self) -> dict[str, Any]:
+        return {"agirlik_1dk": self.agirlik, "emir_10s": self.emir_10s}
 
 
 class Transport(Protocol):
@@ -220,14 +346,27 @@ class SaatSenkronu:
 
 
 class BinanceImzaliAdaptoru(EmirAdaptoru):
-    """Binance Spot Testnet, imzalı uçlar. (Faz 7)
+    """Binance Spot, imzalı uçlar. Yetkisiz tek host: testnet. (Faz 7, K-114)
+
+    Canlı host yalnızca `exchange/canli.py` üzerinden ve geçerli bir `CanliYetki` ile
+    kurulabilir; kurucu aksi hâlde `CanliYetkiGecersiz` fırlatır.
 
     Tek sembolle çalışan bir sistem için yazıldı: sembol kuralları ve saat farkı
     önbellekli, `load_markets()` benzeri toplu çağrı yok (Spike 1/6: 3,2 s ve 4.619
     market, tek sembol için saf kayıp).
     """
 
-    __slots__ = ("_host", "_kural_onbellek", "_oturum", "_saat", "_sir")
+    __slots__ = (
+        "_hiz",
+        "_host",
+        "_kural_onbellek",
+        "_oturum",
+        "_saat",
+        "_sir",
+        "canli",
+        "salt_okunur",
+        "yalniz_iptal",
+    )
 
     def __init__(
         self,
@@ -237,7 +376,27 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         host: str = TESTNET_HOST,
         oturum: Transport | None = None,
         ipv4: bool = True,
+        canli_yetki: yetki_mod.CanliYetki | None = None,
+        salt_okunur: bool = False,
+        yalniz_iptal: bool = False,
     ) -> None:
+        # **Host koruması (K-114).** Testnet dışındaki her host ya geçerli bir canlı yetki
+        # ister ya da **salt okunur** kurulumdur (shadow). Önceden `host` serbest bir
+        # parametreydi — canlı borsaya emir göndermek tek bir argümana bakıyordu. Kontrol
+        # anahtar okunmadan **önce**: yetkisiz bir kurulum anahtara dokunmadan patlamalı.
+        self.canli = host.rstrip("/") != TESTNET_HOST
+        self.salt_okunur = salt_okunur
+        # `yalniz_iptal`: okuma + iptal, **emir açma yok** (acil iptal, K-114). İptal riski
+        # azaltır (K-050: riski azaltan otomatik olabilir), o yüzden canlı yetki istemez.
+        self.yalniz_iptal = yalniz_iptal
+        if self.canli:
+            if not (salt_okunur or yalniz_iptal):
+                yetki_mod.dogrula(canli_yetki)
+            if anahtar is None or sir is None:
+                raise yetki_mod.CanliYetkiGecersiz(
+                    "canlı adaptörün anahtarı **açıkça** verilmeli; ortamdan ya da .env'den "
+                    "kendiliğinden okunmaz (K-114)"
+                )
         if anahtar is None or sir is None:
             anahtar, sir = anahtarlari_oku()
         if ipv4 and oturum is None:
@@ -253,6 +412,12 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
             self._oturum = oturum
         self._saat = SaatSenkronu(self._ham_sunucu_zamani_ms)
         self._kural_onbellek: dict[str, SembolKurallari] = {}
+        self._hiz = HizSayaci()
+
+    @property
+    def hiz(self) -> HizSayaci:
+        """Borsanın bildirdiği son kullanım. Sağlık göstergesi (pano, preflight)."""
+        return self._hiz
 
     # ------------------------------------------------------------------- ağ
 
@@ -272,6 +437,18 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         borsada engeller (`-2010`), ama o korumaya **yaslanarak** tekrar göndermek, tek
         bir katmanı iki katmanmış gibi kullanmaktır.
         """
+        if self.yalniz_iptal and method.upper() not in ("GET", "DELETE"):
+            raise SaltOkunurIhlali(
+                f"yalnız-iptal adaptörde emir açma isteği: {method} {yol} (K-114)"
+            )
+        if self.salt_okunur and (yazma or method.upper() != "GET"):
+            # Shadow'un taşıma katmanındaki garantisi: istek **kurulmadan** reddedilir.
+            # `GonderilemediHatasi` değil `SaltOkunurIhlali`: bu bir ağ durumu değil, bir
+            # yetki ihlalidir ve hiçbir emir yolu onu "yeniden denenebilir" okumamalı.
+            raise SaltOkunurIhlali(
+                f"salt okunur adaptörde yazma isteği: {method} {yol}. Shadow/izleme "
+                f"kurulumları emir gönderemez (K-114)."
+            )
         p = dict(parametreler or {})
         if imzali:
             p["recvWindow"] = RECV_WINDOW_MS
@@ -292,7 +469,17 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         deneme_sayisi = 1 if yazma else OKUMA_DENEMESI
         son: Exception | None = None
 
+        if yazma:
+            engel = self._hiz.yazma_engeli()
+            if engel is not None:
+                # Gönderilmedi — kesin bilgi, `FAILED`. Borsanın 429'unu beklemek yerine.
+                raise GonderilemediHatasi(f"{yol}: hız sınırına yakın, gönderilmedi: {engel}")
+
         for deneme in range(deneme_sayisi):
+            if not yazma:
+                bekle = self._hiz.okuma_beklemesi_s()
+                if bekle > 0.0:
+                    time.sleep(min(bekle, AZAMI_GERI_CEKILME_S))
             try:
                 yanit = self._oturum.request(method, url, timeout=TIMEOUT_S)
             except requests.exceptions.ConnectTimeout as hata:
@@ -317,7 +504,24 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
             except requests.exceptions.RequestException as hata:
                 son = GonderilemediHatasi(f"{yol}: istek kurulamadı: {hata}")
             else:
-                return self._yaniti_coz(yanit, yol=yol, yazma=yazma)
+                self._hiz.oku(getattr(yanit, "headers", None))
+                try:
+                    return self._yaniti_coz(yanit, yol=yol, yazma=yazma)
+                except HizSiniri as hata:
+                    # Okumada 429 geçicidir: `Retry-After` kadar beklenip yeniden denenir.
+                    # 418 yasaktır; yazmada 429 emrin oluşmadığının kesin bilgisidir — ikisi
+                    # de yeniden denenmez.
+                    if (
+                        yazma
+                        or hata.yasak
+                        or hata.bekle_s is None
+                        or hata.bekle_s > AZAMI_GERI_CEKILME_S
+                        or deneme + 1 >= deneme_sayisi
+                    ):
+                        raise
+                    time.sleep(hata.bekle_s)
+                    son = hata
+                    continue
 
             if deneme + 1 < deneme_sayisi:
                 time.sleep(BEKLEME_TABANI_S * (2**deneme))
@@ -347,7 +551,17 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
                 f"{self._saat.yerel_sapma_ms()} ms, recvWindow {RECV_WINDOW_MS} ms."
             )
         if durum in (418, 429):
-            raise BorsaReddetti(f"{yol}: hız sınırı ({durum}): {mesaj}", kod=kod)
+            basliklar = getattr(yanit, "headers", None) or {}
+            try:
+                bekle: float | None = float(basliklar.get("Retry-After"))
+            except (TypeError, ValueError):
+                bekle = None
+            raise HizSiniri(
+                f"{yol}: {'IP yasağı' if durum == 418 else 'hız sınırı'} ({durum}): {mesaj}",
+                kod=kod,
+                yasak=durum == 418,
+                bekle_s=bekle if durum == 429 else None,
+            )
         raise BorsaReddetti(f"{yol}: borsa reddetti ({durum}): {mesaj}", kod=kod)
 
     @staticmethod
@@ -379,18 +593,7 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         semboller = govde.get("symbols") or []
         if not semboller:
             raise BorsaHatasi(f"sembol bulunamadı: {sembol}")
-        s = semboller[0]
-        filtreler = {f["filterType"]: f for f in s.get("filters", [])}
-        notional = filtreler.get("NOTIONAL") or filtreler.get("MIN_NOTIONAL") or {}
-        kural = SembolKurallari(
-            sembol=str(s["symbol"]),
-            tick_size=float(filtreler["PRICE_FILTER"]["tickSize"]),
-            step_size=float(filtreler["LOT_SIZE"]["stepSize"]),
-            min_notional=float(notional.get("minNotional", 0.0)),
-            durum=str(s["status"]),
-            taban_varlik=str(s.get("baseAsset", "")),
-            kote_varlik=str(s.get("quoteAsset", "")),
-        )
+        kural = kurallari_coz(semboller[0])
         self._kural_onbellek[sembol] = kural
         return kural
 
@@ -399,9 +602,17 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
             self._cagir("GET", "/api/v3/ticker/price", {"symbol": sembol})["price"]
         )
 
+    def _emir_acma_izni(self) -> None:
+        """Salt okunur ve yalnız-iptal kurulumlar emir **açamaz** — ağa hiç çıkmadan."""
+        if self.salt_okunur or self.yalniz_iptal:
+            raise SaltOkunurIhlali(
+                "bu adaptör emir açamaz (salt okunur / yalnız iptal kurulumu, K-114)"
+            )
+
     def market_emri(
         self, *, istemci_kimligi: str, sembol: str, yon: str, miktar: float
     ) -> BorsaEmri:
+        self._emir_acma_izni()
         kural = self.sembol_kurallari(sembol)
         uydurulmus = miktar_uydur(miktar, kural.step_size)
         govde = self._cagir(
@@ -429,6 +640,7 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         miktar: float,
         fiyat: float,
     ) -> BorsaEmri:
+        self._emir_acma_izni()
         kural = self.sembol_kurallari(sembol)
         borsa_yon = borsa_yonu(yon)
         uydurulmus = miktar_uydur(miktar, kural.step_size)
@@ -459,6 +671,8 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         o bilinmezliği çözmez, yalnızca gizler. Çözüm sorgulamak — emir gönderiminde
         `UNKNOWN`dan çıkışın tek yolunun sorgulama olmasıyla aynı disiplin.
         """
+        if self.salt_okunur:
+            raise SaltOkunurIhlali("salt okunur adaptör iptal gönderemez (K-114)")
         try:
             govde = self._cagir(
                 "DELETE",
@@ -575,7 +789,13 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
 
 
 __all__ = [
+    "AGIRLIK_SINIRI_1DK",
     "ANAHTAR_DEGISKENI",
+    "EMIR_SINIRI_10S",
+    "HizSayaci",
+    "HizSiniri",
+    "SaltOkunurIhlali",
+    "kurallari_coz",
     "KOD_DUPLICATE",
     "KOD_EMIR_YOK",
     "KOD_SAAT",

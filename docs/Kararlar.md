@@ -5583,3 +5583,88 @@ penceresinde `research/` dahil hiçbir şey değişmez.
 > Yıllıklandırılmış bir OOS metriği, yıllıklandırmanın anlamlı olmadığı pencerede kapı kararı
 > üretemez; null-kalibre bir eşik, kalibre edildiği en kısa OOS'tan kısa pencerede okunamaz. İkisi
 > de "ölçülemedi"dir, "geçti" değil.
+
+## K-114 — Execution altyapısı (R9 teknik kısmı) tetikten bağımsız kodlandı; canlı aktivasyonun kapıları değişmedi
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("Live trading'e giden bütün teknik yolu şimdi
+mümkün olduğunca tamamla … gerçek para ile işlem gönderen yolu gizlice etkinleştirme, approval/risk
+gate/promotion bypass etme, R8 PASS varsayma; bunların dışındaki execution altyapısını tamamlamak için
+tekrar izin isteme") · **Değiştirir:** Faz-8-Hazirlik §0 "tetik gelmeden kod yazılmaz" ve §5/4'ün
+zamanlaması (kod şimdi; aktivasyon yine tetikli) · **Kapatır:** Faz-8-Hazirlik §6/7 (canlı modül + AST
+sınırı) · **Tabi:** K-004, K-007, K-008, K-009, K-010, K-032, K-035, K-037, K-038, K-041, K-046, K-047,
+K-050, K-065, K-082, K-111 · **Açık bırakır:** Faz-8-Hazirlik §6/1-6 (`config/kademe.json` `kararlar`,
+`DECISION REQUIRED`)
+
+### Karar
+
+1. **Mod durum makinesi** (`execution/mod.py`): `DISABLED → PAPER → SHADOW → TESTNET →
+   LIVE_PENDING_APPROVAL → LIVE`. Yukarı yalnızca bir adım ve hedef modun kontrol listesi geçerse;
+   aşağı her zaman, onaysız (K-050). `LIVE` yalnızca `canli_onayla` ile — onu yalnızca
+   `sq execution onayla` (TTY, rapor hash'inin ilk 8 karakteri elle, ≥20 karakter not) çağırır, AST
+   testli. Kayıt zincir hash'li + audit'e bağlı (`OlayTuru.EXECUTION`); kırık zincir DISABLED okunur.
+2. **Live gate** (`execution/canli_kapi.py`): kontrol listesi — mod kaydı, R8 sözleşme hash'i, risk
+   config, paper/testnet/shadow koşu kanıtları, **strateji promotion `LIVE`** (K-010, K-082 audit
+   çapraz kontrolü), **R8 PASS kaydı** (`config/operasyon_dogrulama.json`, K-112; önceden varsayılmaz),
+   kademe tablosu (risk sermayesi + Kademe 1 sermayesi + onay), açık kararlar kapalı, venue statüsü
+   `AÇIK`, canlı host kill tatbikatı, HEAD'de yeşil test kaydı, açık SAFE_MODE/halt/UNKNOWN yok, işlem
+   anahtarının `apiRestrictions`ı (spot işlem açık; çekim/transfer/margin/futures kapalı; IP kısıtlı),
+   canlı bağlantı. Ölçülemeyen kontrol geçmiş sayılmaz. **Eşik icat edilmedi:** her sayı mevcut bir
+   karardan ya da `config/kademe.json`da `DECISION REQUIRED`/`null` olarak Scryne'dan.
+3. **`CanliYetki`** (`exchange/yetki.py`): mühürlü, süreç başına rastgele anahtarla imzalı belirteç;
+   yalnızca `canli_yetki_ver` üretir (AST testli) ve yalnızca mod LIVE + kapı **şimdi** geçiyor + rapor
+   hash'i onay satırındaki hash'le aynıysa. Diske yazılmaz; her canlı başlangıçta yeniden türetilir.
+   Onaydan sonra karar değiştiren bir şey (kod commit'i, strateji aşaması, kademe, anahtar yetkisi…)
+   değişirse yeniden onay gerekir.
+4. **Canlı host yalnızca `exchange/canli.py`de** ve oraya yalnızca `cli/execution.py`,
+   `trader/kurulum.py`, `execution/canli_kapi.py` ulaşır; `backtest/research/strategy/live/risk/oms/data/
+   features/portfolio/jev` ulaşamaz (AST). `BinanceImzaliAdaptoru` testnet dışında **yetkisiz
+   kurulamaz**; `salt_okunur` (shadow) taşımada yalnız GET, `yalniz_iptal` (acil iptal) GET+DELETE —
+   ikisi de emir açamaz. İşlem anahtarı `.env`de dursa bile yetki olmadan okunmaz.
+5. **Shadow dört katmanlı** (Faz-8-Hazirlik §1.2-1.3 aynen): anahtar yetkisi (işlem kapalı, açılışta
+   `apiRestrictions`) → taşıma GET-only → `GolgeAdaptoru` yazmaları reddeder → `EmirMotoru` `VALIDATED →
+   GOLGE` (yeni nihai durum; `SUBMITTED`a uğramaz). Risk modu `shadow` eklendi: `MOD_ESIGI["shadow"] =
+   LIVE_ADAYI` (§1.3/1). Diğer modların eşlemesi değişmedi.
+6. **Execution hattı** (`execution/hat.py`): onaylı niyet → engelleyici güvenlik (DISABLED, halt,
+   UNKNOWN, açık emir, aynı bar ikinci emir, SAFE_MODE, bayat karar, **borsa ölçümlü** günlük zarar/
+   drawdown → SAFE_MODE) → miktar (tavanlar yalnızca aşağı: `azami_maruziyet`, `azami_brut_maruziyet`,
+   nakit; canlıda sermaye = kademe) → `EmirMotoru` → emir + pozisyon mutabakatı (uyuşmazlık/yetim emir
+   → halt). Onay üretmez, büyütmez (K-037). Paper, shadow, testnet, live **aynı kod**; fark adaptör.
+7. **Paper borsa** (`exchange/paper_adaptoru.py`): `EmirAdaptoru`nun simüle karşı tarafı, kalıcı
+   (SQLite). Market emri **sonraki barın açılışında** dolar (K-004), slippage aleyhte (K-007),
+   komisyon `config/maliyet.json`dan; duplicate kimlik `-2010`. Böylece paper, Faz 7'nin emir yolunu
+   (defter, mutabakat, pozisyon mutabakatı) uçtan uca sınıyor.
+8. **Yürütücü** (`trader/yurutucu.py`): kapanmış bar → (paper fill) → mutabakat → risk durumu →
+   strateji → risk motoru → hat. Tek sembol. Son kapanmış bar `AKIS`, geç gelen `BACKFILL` ve karar
+   üretmez (K-028). Kalıcı durum + kimlik (K-009); yeniden başlatma yeniden üretimdir (test: kesintili
+   koşu = kesintisiz koşu, bit düzeyinde).
+9. **İmzalı adaptör sertleştirmesi:** 429'da `Retry-After` kadar bekleyip okumayı yeniden dener; 418
+   yasaktır, denenmez; `X-MBX-USED-WEIGHT-1M`/`ORDER-COUNT-10S` başlıkları okunur ve sınırın %80'inde
+   yazma **gönderilmez** (`FAILED`, yeniden denenebilir). `SembolKurallari`na `minQty/maxQty/
+   MARKET_LOT_SIZE/maxNotional` (tavanlar kırpmaz, reddeder).
+10. **R8 sözleşme hash'i satır sonundan bağımsız okunur.** Bulgu: `config/r8_kriterler.json` K-111'den
+    beri **değişmedi**, ama K-111'in hash'i (`2c3d520e…`) CRLF biçiminin; git LF saklıyor ve LF biçimin
+    hash'i `9519524c…`. Kontrol satır sonlarını CRLF'e normalize edip hash'ler; içerikteki her değişiklik
+    yine yakalanır. R8 kapanışında (K-112) hash doğrulanırken aynı normalizasyon kullanılmalı.
+
+### R8 ve K-111'e etkisi
+
+**R8: sıfır davranış değişikliği.** R8 yolu (`live/evren_*`, `EvrenPaperMotoru`, gözlem modu)
+değiştirilmedi; yeni paketler (`trader/`, `execution/hat|mod|canli_kapi`, `exchange/paper_adaptoru|golge|
+canli|yetki`) R8 yolundan import edilmiyor. `risk/`deki değişiklikler eklemedir (`MODLAR`'a `shadow`,
+`MOD_ESIGI`'ne `shadow`, `OlayTuru.EXECUTION`); `gozlem` eşlemesi ve risk kararları aynen. 25 Eylül kod
+senkronu bu commit'i taşır; K-043 yordamındaki test adımı yeşil takımı görür. **K-111: sıfır.** Yeni
+hipotez/çekiliş/aile/veri kaynağı yok; defter 62. Doğrulama koşuları (`sma_kesisim` paper/shadow)
+`gozlem` risk modunda altyapı ölçümüdür (K-035): promotion kanıtı değil, defter kaydı değil.
+
+### Bugün LIVE'ı engelleyen (makine listesi `sq execution preflight --hedef LIVE_PENDING_APPROVAL`)
+
+Promotion'u geçmiş strateji yok (K-078/1, K-110, K-111); R8 kapanmadı (K-112); risk sermayesi, Kademe 1
+sermayesi ve onayı, shadow ölçütü, kademe artış oranı, drift kuralı, venue statüsü — Scryne kararları;
+işlem anahtarı yok (bilerek, K-062/5: elle onaydan sonra üretilir); canlı host kill tatbikatı ve
+§1.5 kapısını geçen `shadow` risk modlu shadow koşusu (promotion `LIVE_ADAYI` gerektirir) yok.
+
+### Değişmez (yeni)
+
+> Gerçek parayla emir gönderebilen tek nesne, bütün kontrolleri **o an** geçen bir kapının ve bir
+> insanın onayının birlikte ürettiği, diske yazılmayan bir yetkidir. Kod bu yetkiyi üretemez, taşıyamaz,
+> tahmin edemez.

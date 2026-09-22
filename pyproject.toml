@@ -73,3 +73,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 # bu dosyalara atıf yapıyor). Biçim düzeltmesi bile ölçümü "yeniden yazılmış" gösterirdi;
 # yeni betik bu istisnadan yararlanamaz — desen ada bağlı.
 "tools/faz16_*.py" = ["E501", "E401", "E701", "E702", "B007", "F401", "F841", "I001", "SIM115"]
+# K-114 execution panosu: tek dosyada gömülü HTML/CSS/JS (sayfa ayrı bir build'e bağlanmasın,
+# pano salt okuma ve bağımlılıksız kalsın). Satır sınırı yalnızca bu dosyada, yalnızca E501.
+"src/scryne_quant/trader/pano.py" = ["E501"]

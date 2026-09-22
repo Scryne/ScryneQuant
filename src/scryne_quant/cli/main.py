@@ -26,6 +26,7 @@ import typer
 
 from scryne_quant.backtest.coklu_motor import CokluBacktest
 from scryne_quant.backtest.motor import Backtest
+from scryne_quant.cli.execution import execution_app
 from scryne_quant.cli.izle import izle_app
 from scryne_quant.cli.jev import jev_app
 from scryne_quant.cli.kill import kill_app
@@ -131,6 +132,7 @@ app.add_typer(testnet_app)
 app.add_typer(kill_app)
 app.add_typer(izle_app)
 app.add_typer(jev_app)
+app.add_typer(execution_app)
 
 #: Koşu dosyalarının varsayılan yeri. Koşu başına **tek** dosya: durum, fill defteri,
 #: koşu günlüğü ve risk audit'i aynı SQLite dosyasında (K-034). Koşuyu yedeklemek tek bir

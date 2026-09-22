@@ -88,6 +88,16 @@ class ExecutionHatasi(RuntimeError):
     """Execution katmanı bir niyeti emre çeviremedi."""
 
 
+def golge_mi(adaptor: object) -> bool:
+    """Adaptör shadow mu? `GOLGE` özniteliği yalnızca `exchange/golge.py`de `True`.
+
+    `isinstance` yerine öznitelik: `execution/` `exchange.golge`yi import ederse shadow'un
+    canlı okuma bağımlılıkları emir motoruna taşınırdı. Öznitelik yoksa `False` — yani
+    bilinmeyen bir adaptör **gönderen** sayılır ve bütün emir yolu kontrolleri uygulanır.
+    """
+    return getattr(adaptor, "GOLGE", False) is True
+
+
 class SaatEngeli(ExecutionHatasi):
     """Saat sapması yüzünden emir gönderilemiyor. Koşu durmalı."""
 
@@ -198,7 +208,7 @@ class EmirMotoru:
         zaman_ms = self._adaptor.sunucu_zamani_ms()
         sembol = onayli.sinyal.symbol
         try:
-            uydurulmus, ihlal = self._uydur(sembol, miktar), None
+            uydurulmus, ihlal = self._uydur(sembol, miktar, market=limit_fiyati is None), None
         except KuralIhlali as hata:
             uydurulmus, ihlal = miktar, hata
 
@@ -244,6 +254,20 @@ class EmirMotoru:
         emir = self._defter.gecir(
             emir.istemci_kimligi, EmirDurumu.VALIDATED, zaman_ms=zaman_ms
         )
+        if golge_mi(self._adaptor):
+            # Shadow (K-114, Faz-8-Hazirlik §1.3/3): gerçek kurallarla kuruldu ve doğrulandı,
+            # **gönderilmiyor**. `SUBMITTED` yazılmıyor — o durum "ağ çağrısından önceki son
+            # an" demek ve shadow'da o an yok. Adaptörün yazma metodları da ayrıca patlar;
+            # bu satır birinci katman değil, ikincisi (birincisi anahtarın yetkisi).
+            return GonderimSonucu(
+                self._defter.gecir(
+                    emir.istemci_kimligi,
+                    EmirDurumu.GOLGE,
+                    zaman_ms=self._zaman_ms(),
+                    hata="shadow: kuruldu ve doğrulandı, bilerek gönderilmedi",
+                ),
+                gonderildi=False,
+            )
         # 4. adım: ağ çağrısından ÖNCE diske.
         emir = self._defter.gecir(
             emir.istemci_kimligi, EmirDurumu.SUBMITTED, zaman_ms=zaman_ms
@@ -302,11 +326,11 @@ class EmirMotoru:
 
     # ------------------------------------------------------------------ iç
 
-    def _uydur(self, sembol: str, miktar: float) -> float:
+    def _uydur(self, sembol: str, miktar: float, *, market: bool = True) -> float:
         """Miktarı sembolün kurallarına uydurur; sağlanamıyorsa `KuralIhlali`."""
         kurallar = self._adaptor.sembol_kurallari(sembol)
         fiyat = self._adaptor.son_fiyat(sembol)
-        return emri_dogrula(kurallar, miktar, referans_fiyat=fiyat)
+        return emri_dogrula(kurallar, miktar, referans_fiyat=fiyat, market=market)
 
     def _borsaya_ilet(self, emir: Emir, miktar: float) -> GonderimSonucu:
         kimlik = emir.istemci_kimligi

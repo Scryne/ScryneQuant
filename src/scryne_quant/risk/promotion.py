@@ -116,6 +116,9 @@ MOD_ESIGI: Final[dict[str, Asama]] = {
     "backtest": Asama.YOK,
     "gozlem": Asama.YOK,
     "paper": Asama.RISK_INCELEMESI,
+    # K-114: shadow'un ürettiği rapor elle onayın girdisidir; onu yalnızca makine
+    # kontrollerinin tamamını geçmiş (`LIVE_ADAYI`) bir strateji üretebilir.
+    "shadow": Asama.LIVE_ADAYI,
     "live": Asama.LIVE,
 }
 

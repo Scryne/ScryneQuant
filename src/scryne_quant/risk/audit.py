@@ -62,6 +62,12 @@ class OlayTuru(StrEnum):
     PROMOTION = "promotion"
     """Promotion zincirinde bir aşama geçildi veya elle onay verildi (K-010)."""
 
+    EXECUTION = "execution"
+    """Execution modu geçişi, live gate değerlendirmesi, emir/iptal/mutabakat olayı (K-114).
+
+    Ayrı tür, çünkü bu satırlar risk kararı değil: risk defterinin `onay`/`red` sayımına
+    karışmamalı. Mevcut koşuların (R8 gözlem) yazdığı hiçbir satırı değiştirmez."""
+
 
 #: Zincirin ilk satırının `onceki_hash`i. Sabit bir değer: boş dize kullanmak, zinciri
 #: baştan kesilmiş bir defterle baştan yazılmış defteri ayırt edilemez kılardı.
