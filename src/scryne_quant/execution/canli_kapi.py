@@ -358,7 +358,12 @@ def kill_tatbikati_kontrolu(b: KapiBaglami) -> Kontrol:
     kok = b.yol(KOSU_KOKU)
     for p in sorted(kok.glob("*/kill.json"), reverse=True) if kok.is_dir() else []:
         r = _json(p) or {}
-        if r.get("canli_host") and r.get("basarili"):
+        # Kanıt: canlı host + başarılı iptal doğrulaması + **yaşayan** bir sürecin gerçekten
+        # sonlandırılması. Zaten kapanmış bir koşuya karşı kill, K-065'in ölçtüğü şeyi
+        # (donmuş/çalışan süreci dışarıdan durdurmak) ölçmez.
+        surec = r.get("surec") or {}
+        if (r.get("canli_host") and r.get("basarili") and surec.get("sonlandirildi")
+                and surec.get("not") != "zaten ölüydü"):
             return Kontrol("kill_tatbikati", True, f"{p.parent.name}: başarılı",
                            kanit=_sha256(p))
     return Kontrol("kill_tatbikati", False, "canlı host'a karşı başarılı kill tatbikatı yok",
