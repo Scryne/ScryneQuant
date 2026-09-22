@@ -265,6 +265,9 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   **R7(2) `kesit_oynaklik` (K-109): kapalı, 0/1** — `tools/r7_sinyal_gucu.py` K-068 ön koşulu (yalnız IS IC; 11
   sinyalden yalnız düşük oynaklık t ≈ 7), h62 OOS kıyas altı (0,287 vs 0,302; XRP'ye bağlı). Fiyat/hacim
   kesit/ts sinyalleri: momentum/ters/sapma/hacim |t| < 2. Rapor `docs/research/records/2026-09-22-R7-kesit-oynaklik.md`.
+  **R7 kapandı (K-110):** `docs/research/records/2026-09-22-R7-kapanis-alfa-envanteri.md` — R6+R7 ortak bulgu,
+  tükenen aileler (tekrar denenmez), K-078/1 null-persentil ölçümüyle desteklendi, test edilmemiş kaynak
+  envanteri (A-H) + mimari uygunluk; yeni hat yok; tek adım Scryne'ın K-079/2 kararı (hayır → R8 kıyasla).
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

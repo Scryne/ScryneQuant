@@ -5426,3 +5426,34 @@ geç; 2-3 basit sinyal; 11 kapı; null eşiği değiştirme; tek OOS başarısı
    (eylem uzayı ve veri sınıfı açık, fiyat geçmişi hattı tükenmiş) **pekişti**. Evrensel iddia değil.
 6. **Çoklu test:** h62 null'u ölçüldü (500/0, 50 dk), fotoğraf 47 → **48** ölçülebilir, %5 sınırı 1,0039 aynı, sabit
    1,04 değişmedi; `COKLU_TEST_CEKILIS_SAYISI` 48 (K-081 kuralı).
+
+---
+
+## K-110 — R6+R7 kapanış değerlendirmesi: K-078/1 desteklendi; yeni alfa hattı açılmıyor; tek kilit K-079/2
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("R6+R7'yi birlikte değerlendir; elenenleri kayda geç;
+K-078/1'i ölç; evrensel sonuç çıkarma; test edilmemiş kaynak envanteri; gerekliyse en az altyapılı hattı öner;
+yeni kod/grid/refactor yok") · **Tabi:** K-044, K-045, K-068, K-072, K-077, K-078, K-079, K-106, K-107, K-108,
+K-109 · **Kaynak:** `docs/research/records/2026-09-22-R7-kapanis-alfa-envanteri.md`
+
+### Karar
+
+1. **R7 kapandı, sonuç FAIL** (K-107 BLOCKED, K-108 0/2, K-109 0/1). R6 ile birlikte 10 çekiliş, 0 kapı geçen,
+   0 tekrar eden kıyas-üstü OOS.
+2. **K-078/1 ("fiyat-türevli long-only hat tükenmiş") bugünkü kanıtla desteklendi — kapsam içinde:** 48 ölçülebilir
+   çekilişin gerçekleşen OOS Sharpe'ı kendi null dağılımında medyan persentil 0,50 (tek sembollü 31) / 0,45 (evren
+   17); null p95'i aşan 0/31 ve 2/17 (şansla beklenen 0,85; ikisi de kıyas-üstü değil); IS'te 11 fiyat/hacim
+   sinyalinden 10'u |t| < 2; defter 62'de en iyi OOS 0,46 < null %5 sınırı 1,004 < kapı 1,04. Kapsam: Binance spot
+   1h PIT `27b7a16ed0ed` 2019→2025, FXCM 21 çift 2023-11→2024-02, long-only kaldıraçsız, §3'teki aileler, K-054/K-058
+   kapıları. **Evrensel iddia değil.**
+3. **Tükenen aileler tekrar denenmez** (doküman §3): tek sembol TA, funding yönlü, kesitsel momentum/ters/düşük
+   oynaklık, kıyas-üstü dışlama (8 kaynak), rejim/seçici/Jev yönü, kurma katmanı, FX seçim/dönüş/oynaklık, duyuru
+   long, funding-anı ve NY çapası mikroyapısı. "Farklı parametre/pencere/eşik" açılış değildir.
+4. **Envanter (A-H):** mevcut veriyle hemen ölçülebilen yalnız A (cross-asset/makro→kripto) ve G (opsiyon IV) IS IC
+   ön koşulu — ikisi de K-068 sınıfı (kıyas-üstü filtre), **önerilmez**. Mekanizması farklı tek hat B (delta-nötr
+   carry; C ona bağlı): veri var, kilit K-079/2 hesap kararı; D/E/F veri sınıfı hatları ileriye toplama/bütçe ister.
+5. **Yeni araştırma hattı açılmıyor; kod yok.** Tek uygulanabilir adım Scryne'ın K-079/2 kararı: korunuyorsa
+   araştırma programı askıya alınır (defter 62'de donar) ve **R8 paper koşusu kıyasla açılır** (kanıt değil, yol
+   testi); açılıyorsa Hat B ikinci tavanı mevcut araçla (`tools/faz16_hat1_ikinci_tavan_kismi.py`) ölçülür,
+   K-079/6 kuralıyla.
+6. Bu karar hiçbir kapı, eşik, kapsam ya da yetki değiştirmez.
