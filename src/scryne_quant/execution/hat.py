@@ -29,7 +29,7 @@ tahmindir (K-038, K-046).
 | 7 | Son mutabakat hatasız tamamlanmamış | artıran | K-038, K-046 |
 | 8 | SAFE_MODE işareti (`kosu.safemode`) | artıran | K-008, K-065 |
 | 9 | Bayat karar (karar barı, gönderim anındaki son kapanmış bar değil) | artıran | K-004, §24 |
-| 10 | Pilot kayıp tavanı; günlük zarar / drawdown (defter + borsa fiyatı, her bar) | artıran (+SAFE) | K-115, risk.json |
+| 10 | Kayıp tavanı; günlük zarar / drawdown (defter + borsa, her bar) | artıran (+SAFE) | K-115 |
 | 11 | Tavan: maruziyet, brüt, nakit; boyut tabanı ≤ sermaye | küçültür | risk.json, kademe |
 
 **Hesap görünümü defterden türer, borsanın toplam bakiyesinden değil.** Koşunun sermayesi
