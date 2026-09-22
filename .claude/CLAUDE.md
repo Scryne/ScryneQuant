@@ -277,6 +277,16 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   **R8 = operasyon koşusu** (`docs/research/records/2026-09-22-R8-paper-protokol.md`, kriterler
   `config/r8_kriterler.json` dondurulmuş): `r8-kiyas` gözlem modu, host-1, 25 Eylül'de K-043 yordamıyla açılır,
   14 gün, 10 alan PASS/FAIL; alfa/promotion kanıtı değil. Kapanış K-112.
+- **Execution / live yolu (K-114, R9 teknik kısmı):** `docs/Execution-Runbook.md` nasıl çalıştırılır.
+  `execution/mod.py` mod durum makinesi (DISABLED→PAPER→SHADOW→TESTNET→LIVE_PENDING_APPROVAL→LIVE,
+  `runs/execution/mod.json` zincirli; LIVE yalnız `sq execution onayla`, TTY, AST testli);
+  `execution/canli_kapi.py` live gate + `CanliYetki`'yi üreten tek yer (`exchange/yetki.py`, diske yazılmaz);
+  `execution/hat.py` onaylı niyet → engelleyici güvenlik → `EmirMotoru` → emir/pozisyon mutabakatı;
+  `exchange/paper_adaptoru.py` (K-004 fill), `exchange/golge.py` (shadow, `EmirDurumu.GOLGE`),
+  `exchange/canli.py` (canlı host — yalnız `cli/execution.py`, `trader/kurulum.py`, `execution/canli_kapi.py`
+  import edebilir, `test_canli_izolasyon.py`); `trader/` yürütücü + pano (`sq execution pano`, 8790).
+  `config/kademe.json` Faz-8-Hazirlik §6 kararları `DECISION REQUIRED` → live gate kapalı. R8 yolu bağlanmadı.
+  **R8 kriter hash'i CRLF biçiminin** (`canli_kapi.r8_kriter_sha256` satır sonunu normalize eder).
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

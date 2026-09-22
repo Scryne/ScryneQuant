@@ -182,15 +182,15 @@ body{margin:0;background:var(--bg);color:var(--t1);font:400 14px/1.5 var(--sans)
 header{position:sticky;top:0;z-index:10;display:flex;gap:12px;align-items:center;flex-wrap:wrap;
   padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border)}
 h1{font:600 18px/1.3 var(--sans);margin:0}
-h2{font:600 12px/1.4 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin:0 0 8px}
+h2{font:600 12px/1.4 var(--sans);letter-spacing:.06em;color:var(--t2);margin:0 0 8px}
 .mod{font:600 14px/1 var(--mono);padding:8px 12px;border-radius:4px;border:1px solid var(--border);color:var(--t1)}
 .mod[data-m="LIVE"]{background:var(--risk);color:var(--on-risk);border-color:var(--risk)}
 .mod[data-m="LIVE_PENDING_APPROVAL"]{background:var(--risk-s);color:var(--risk);border-color:var(--risk-b)}
 .mod[data-m="PAPER"]{color:var(--m-paper);border-color:var(--m-paper)}
 .mod[data-m="SHADOW"],.mod[data-m="TESTNET"]{color:var(--int);border-color:var(--int)}
 .mod[data-m="DISABLED"]{color:var(--t3)}
-.meta{color:var(--t3);font:400 12px/1.35 var(--mono)}
-main{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;padding:16px}
+.meta{color:var(--t3);font:400 12px/1.35 var(--mono);overflow-wrap:anywhere}
+main{display:grid;overflow-x:hidden;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;padding:16px}
 section{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px;min-width:0}
 section.genis{grid-column:1/-1}
 dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:0}
@@ -219,16 +219,16 @@ select:focus-visible{outline:2px solid var(--int);outline-offset:2px}
 </header>
 <div id="uyari" role="alert"></div>
 <main>
-  <section><h2>System</h2><div id="system"></div></section>
-  <section><h2>Market</h2><div id="market"></div></section>
-  <section><h2>Strategy</h2><div id="strategy"></div></section>
-  <section><h2>Signal</h2><div id="signal"></div></section>
-  <section><h2>Portfolio</h2><div id="portfolio"></div></section>
-  <section><h2>Risk</h2><div id="risk"></div></section>
-  <section class="genis"><h2>Orders</h2><div id="orders"></div></section>
-  <section class="genis"><h2>Execution</h2><div id="execution"></div></section>
-  <section><h2>Jev</h2><div id="jev"></div></section>
-  <section class="genis"><h2>Audit</h2><div id="audit"></div></section>
+  <section><h2>SYSTEM</h2><div id="system"></div></section>
+  <section><h2>MARKET</h2><div id="market"></div></section>
+  <section><h2>STRATEGY</h2><div id="strategy"></div></section>
+  <section><h2>SIGNAL</h2><div id="signal"></div></section>
+  <section><h2>PORTFOLIO</h2><div id="portfolio"></div></section>
+  <section><h2>RISK</h2><div id="risk"></div></section>
+  <section class="genis"><h2>ORDERS</h2><div id="orders"></div></section>
+  <section class="genis"><h2>EXECUTION</h2><div id="execution"></div></section>
+  <section><h2>JEV</h2><div id="jev"></div></section>
+  <section class="genis"><h2>AUDIT</h2><div id="audit"></div></section>
 </main>
 <script>
 const $=id=>document.getElementById(id);

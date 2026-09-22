@@ -196,6 +196,8 @@ class Yurutucu:
     son_karar: dict[str, Any] = field(default_factory=dict)
     son_bar: dict[str, Any] = field(default_factory=dict)
     son_hata: str = ""
+    tekrar: bool = False
+    """Tekrar oynatma koşusu mu (saat barlarla ilerler). Raporda `veri` alanı olarak görünür."""
 
     def __post_init__(self) -> None:
         a = self.ayar
@@ -479,6 +481,7 @@ class Yurutucu:
         barlar = kaynak.barlar
         if len(barlar) <= isinma:
             raise YurutucuHatasi("tekrar için ısınmadan fazla bar gerekir")
+        self.tekrar = True
         kaynak.simdi = barlar[isinma - 1].open_time + self._adim
         self.baslat()
         for b in barlar[isinma:]:
@@ -558,6 +561,8 @@ class Yurutucu:
             "mod": str(mod),
             "strateji": self.ayar.strateji,
             "risk_modu": self.ayar.risk_modu,
+            "veri": "tekrar" if self.tekrar else "canli",
+            "duvar_saati_bitis_utc": utc_str(simdi_ms()),
             "baslangic_ms": self.baslangic_ms,
             "bitis_ms": self.saat(),
             "bitis_utc": utc_str(self.saat()),
