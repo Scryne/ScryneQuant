@@ -170,7 +170,7 @@ class TestKesitselSiralama:
 
 
 class TestTamDegerlendirme:
-    def test_on_bir_kapi_uretiliyor(self):
+    def test_on_iki_kapi_uretiliyor(self):
         veri = _veri()
         sonuc = ed.degerlendir(
             KesitselGuc, IZGARA, MALIYET, veri, secim="plato",
@@ -178,7 +178,7 @@ class TestTamDegerlendirme:
         )
         kapilar = sonuc["kapilar"]["kapilar"]
         assert set(kapilar) == {
-            "oos_sharpe", "oos_is_orani", "wf_katman_basari", "parametre_kararliligi",
+            "oos_suresi", "oos_sharpe", "oos_is_orani", "wf_katman_basari", "parametre_kararliligi",
             "asgari_islem", "max_drawdown", "stres_dayanikliligi",
             "pbo", "parametre_perturbasyonu", "rejim_kararliligi", "evren_dayanikliligi",
         }

@@ -25,6 +25,7 @@ from typing import Any
 import numpy as np
 
 from scryne_quant.common.maliyet import MaliyetModeli
+from scryne_quant.common.zaman import timeframe_ms
 from scryne_quant.research import analiz, kapilar, walkforward
 from scryne_quant.research.bolme import Pencere, walk_forward
 from scryne_quant.research.izgaralar import izgara
@@ -95,10 +96,11 @@ def degerlendir(
         olcumler: dict[str, Any] = {}
 
         if en_iyi is not None:
-            oos = kosu(
+            oos_sonuc = kosu(
                 sinif(**en_iyi.sozluk_parametreler), maliyet, sembol, timeframe,
                 bar_dizileri, oos_pencere, baslangic_sermaye=baslangic_sermaye,
-            ).metrikler
+            )
+            oos = oos_sonuc.metrikler
             ins_sharpe = en_iyi.metrikler.sharpe
             olcumler |= {
                 "oos_sharpe": oos.sharpe,
@@ -108,6 +110,12 @@ def degerlendir(
                 "is_sharpe": ins_sharpe,
                 # IS Sharpe pozitif değilse oran tanımsız: korunacak bir başarı yok.
                 "oos_is_orani": (oos.sharpe / ins_sharpe) if ins_sharpe > 0 else float("nan"),
+                # K-113: Sharpe'ın yorumlanabilirliği (ön koşul) ve OOS süresi (kapı) —
+                # ikisi de ölçülen bar sayısından, `Metrikler.yillik_anlamli` ile aynı ölçek.
+                "oos_yillik_anlamli": oos.yillik_anlamli,
+                "oos_gun": kapilar.oos_suresi_gun(
+                    int(oos_sonuc.ozkaynak.size), timeframe_ms(timeframe)
+                ),
                 "secilen": en_iyi.sozluk_parametreler,
                 "plato_orani": tarama_sonucu.ust_yuzde_plato(),
             }

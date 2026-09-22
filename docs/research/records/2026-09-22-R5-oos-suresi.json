@@ -1,0 +1,491 @@
+{
+  "uretildi": "2026-09-22 11:05:28 UTC",
+  "fotograf": {
+    "yol": "docs\\research\\coklu-test-olcum.json",
+    "sha256": "4e427451b3ea56614bbfef62f30a1546273540a7223cdd271f504f3842563e07",
+    "olculebilir": 48,
+    "defter_sayisi": 62
+  },
+  "cekilis_sayisi": 48,
+  "asgari_oos_gun": 569.6666666666666,
+  "asgari_oos_bar": 13672,
+  "asgari_oos_timeframe": "1h",
+  "en_kisa": {
+    "kimlik": "058cc3fb9b2d05fa5de4cc37e48d6ca14b9c1cdeec7d656151a4bb16e013cbd7",
+    "sinif": "tek_sembollu",
+    "timeframe": "1h",
+    "oos_bar": 13672,
+    "oos_gun": 569.6666666666666,
+    "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json"
+  },
+  "dagilim": [
+    [
+      "evren",
+      "1h",
+      23826,
+      992.75
+    ],
+    [
+      "evren",
+      "1h",
+      23862,
+      994.25
+    ],
+    [
+      "tek_sembollu",
+      "1h",
+      13672,
+      569.6666666666666
+    ],
+    [
+      "tek_sembollu",
+      "4h",
+      3484,
+      580.6666666666666
+    ]
+  ],
+  "cekilisler": [
+    {
+      "kimlik": "058cc3fb9b2d05fa5de4cc37e48d6ca14b9c1cdeec7d656151a4bb16e013cbd7",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json"
+    },
+    {
+      "kimlik": "0d2071b736726616d2e9c5ccb78c0afec6f450e4c866d53b0d1630b98ba72c90",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json"
+    },
+    {
+      "kimlik": "0dc93a4d9a71818c30aa795f0d48e71b5916ac5782e3057de58c0c2fa27e76c8",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json"
+    },
+    {
+      "kimlik": "0e0c204939df98cfb6b098bcaf8c3e72b70bac4531477e4dd70fc311434212f6",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json"
+    },
+    {
+      "kimlik": "14123b789f7bdd2d402732e1e7aeefdb2ba5ed7654815f0268c8078afad32bba",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json"
+    },
+    {
+      "kimlik": "15d1e974c65fa5b50ac0402cf7eb56e05de45617be0af08adc9b2441f43ddaa2",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json"
+    },
+    {
+      "kimlik": "17fe3056f84bc6db22a397bb6cd6e24a6fb7eb0f28a04595cf02a9a178cbd7db",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json"
+    },
+    {
+      "kimlik": "3289b7b51145757db833f708ad1a52a2a6d9467ad9b28bd4e349bf0a673bfb21",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json"
+    },
+    {
+      "kimlik": "342210ff80540b0a62b70b30c2c33ba3fd0e196e9285467af74b57107da03e65",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json"
+    },
+    {
+      "kimlik": "38e35a540fc14492eb9582b6185cafc4a996d80933d4ae826e0210c039faf498",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\konumlanma_taker.json"
+    },
+    {
+      "kimlik": "3a077f36ea0bdd8bf24fa6b4bf1bd6795fd276cdc1c321f7c913fd8de2240dac",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\kurma_turnover.json"
+    },
+    {
+      "kimlik": "4bb5c0dcafdca8d57754b91d229d49c5a9d5dd858a221919d3d35952c1ef5f95",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json"
+    },
+    {
+      "kimlik": "4f2b10be2dedd07d63583c3a5c7f88d8f7c33dc509ed9b4346e89f900dfda3d3",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json"
+    },
+    {
+      "kimlik": "501049cf9901befacf1c0567fc3c63b9f39ab8552285619321adef538ab44c5a",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\kurma_oynaklik.json"
+    },
+    {
+      "kimlik": "5438647da177034a8c94023fe1f69d7a9a3452b505fbc93f56088b992b42771f",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json"
+    },
+    {
+      "kimlik": "55e9987db54f1658d52814e2da5809ce3803d3693bebdaadd28aef24ae7b86dc",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23862,
+      "oos_gun": 994.25,
+      "kaynak": "runs\\faz12\\portfoy_korelasyon.json"
+    },
+    {
+      "kimlik": "5616538e07ee01d808baf4402ed282f4e540b6b52be58b0725e4a122cdd43ef5",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json"
+    },
+    {
+      "kimlik": "5696e5248eb930404892d284e12df33a3fd732e8f8fdb132e804999c9539392c",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\turev_funding_basis.json"
+    },
+    {
+      "kimlik": "587fc8a303228b58903a8e11c373ebb2ab54388613eb7b1ce3371f579b1f32ca",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json"
+    },
+    {
+      "kimlik": "58d43bff62e014d166591d65797e9f398baca93bd16bbabfc15855f38a447afe",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json"
+    },
+    {
+      "kimlik": "5cfa6d8d4c09f8f98dd15ccb09dfe004a67a85e0d91b572f1fa541286d998c42",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json"
+    },
+    {
+      "kimlik": "5d769ffac3beb7dc75bf8b48e3fd23404ee5ae46fbf454af5dc1426945f1afb4",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json"
+    },
+    {
+      "kimlik": "66922f60b108848936689da5fba66c0ce030b9ce87699ad55d381ff10c12d47f",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23862,
+      "oos_gun": 994.25,
+      "kaynak": "runs\\faz12\\portfoy_oynaklik_hedefi.json"
+    },
+    {
+      "kimlik": "6e4aad334a0325cd267fbd746e7cfba3e5f72e6819cc3eeb7018917df5c8a2d8",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json"
+    },
+    {
+      "kimlik": "6f00ff6f906191ec14157a7bddddcfdc4ae773e98e801544966cd8e49973a1d5",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json"
+    },
+    {
+      "kimlik": "753752c4ff4dc2d9afe02497eeb5207c783b1f1774c22507979ea0a6e5ef6691",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\turev_funding_kesit.json"
+    },
+    {
+      "kimlik": "7644e7f509100657c029917ded640f85491c37c0e9084d7215eb9f6a0ed3bf43",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\makro_nfci.json"
+    },
+    {
+      "kimlik": "7923a9e9d8aa958f2e14302e6bfd46d0817d4f02a69c9e5f526add468bf76601",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json"
+    },
+    {
+      "kimlik": "7fdaac3d75e092fe0e574a0ad16421970a97a16f3e822360ea61c5a82b6204e3",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\kesitsel_ters_haftalik.json"
+    },
+    {
+      "kimlik": "82c78bca11a8d2a51750260989afee7af34b75db0155711bfabe62e1ad193b29",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\turev_basis.json"
+    },
+    {
+      "kimlik": "8817e966a2a2eb978e8e24ce29c71c1a637fc794615c122964ab921a8049a078",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json"
+    },
+    {
+      "kimlik": "90490ad7e30971522dc81d262df97fc41773d3af60f07a015d17d6cf7ecc2bc3",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\makro_vix.json"
+    },
+    {
+      "kimlik": "91597ff8378937e92160b565fa0dd99369c236c37d8322d9c84e4178afe03bee",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json"
+    },
+    {
+      "kimlik": "926314fa8f1db701e4aa62012cddb64c2ee805e882a65f32cc1191b625e17be9",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\kesitsel_guc_haftalik.json"
+    },
+    {
+      "kimlik": "9bddf531506e820ebb5ba260ff0b84df54e3f68d0bd85abf5bd5f117cc379022",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json"
+    },
+    {
+      "kimlik": "9e99659841c4e5cf9223cb4591e278db77f9dc62e13be1eb0049b4fdd0debcc3",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\konumlanma_oi.json"
+    },
+    {
+      "kimlik": "c3e1bbf4d1112ac62c18c7f3d42bb0a7fed7bfad4e9d9d175ad27bad283d1342",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json"
+    },
+    {
+      "kimlik": "c9c6a16a4e413d27d770f8ca185438f09bf88fc932d1c3c4af37319e41fbf5ad",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json"
+    },
+    {
+      "kimlik": "d133e5cfd08332ffdcba445ac00e343cd4325a21a028fb13940b308efee16f99",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json"
+    },
+    {
+      "kimlik": "d36a9a2799ca1796c6e06654182758c48714226283ae8fb76e83dacf24d3fb1b",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json"
+    },
+    {
+      "kimlik": "ddae0a1e73d4b87e435c50fb6b1e197236956d22e70232dd507952af6ab650a2",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23862,
+      "oos_gun": 994.25,
+      "kaynak": "runs\\faz12\\r7_dusuk_oynaklik_haftalik.json"
+    },
+    {
+      "kimlik": "e40e15e61755b3df786313b44808020f58b839952bfb3726fd4b1ce19e5fd93c",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\kesitsel_ters_aylik.json"
+    },
+    {
+      "kimlik": "e69c715bd11f28cf35cd6e51671ed680ad40148dd8be8227475485b2ce8c230f",
+      "sinif": "tek_sembollu",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json"
+    },
+    {
+      "kimlik": "ef7223965592de96604f9217641e68501e36a9ec285d2352c422f36e512a73c1",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\turev_funding_birikim.json"
+    },
+    {
+      "kimlik": "f306e77e53df4d476ada5b8def7a105b75fff578eefd793823342ba282eaaca7",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json"
+    },
+    {
+      "kimlik": "f5a1ab27e74b86d92d301bf770b6788d8507a13bf5059eed71cd565141923eb0",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json"
+    },
+    {
+      "kimlik": "f845b3fba9cba79654bcc0e89edde06501d3dfbddce5494337ecd440dafbb2dc",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "kaynak": "runs\\faz12\\kesitsel_guc_aylik.json"
+    },
+    {
+      "kimlik": "fdce091fbfa2d5a639f3a709bf2288856b01d47848c1314cde9a14995bf3b7be",
+      "sinif": "tek_sembollu",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json"
+    }
+  ],
+  "olculemez_cekilisler": [
+    {
+      "kimlik": "673b47b9af23b82d95bd0a88338fdbebd60855843a57710f7399df4e455eaead",
+      "sinif": "olculemez",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "kaynak": "runs\\fx\\fx_kesitsel_guc.json"
+    },
+    {
+      "kimlik": "67e7cf3bcc779304c468d93fb58f4b014e9a551c7c3b67f5621321cf17af4a56",
+      "sinif": "olculemez",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "kaynak": "runs\\fx\\fx_kesitsel_ters.json"
+    },
+    {
+      "kimlik": "85258ff9335674344cf91cec9e89c29f0320b7c697a2e5364edf6c2904844d55",
+      "sinif": "olculemez",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "kaynak": "runs\\fx\\fx_zaman_serisi_trend.json"
+    },
+    {
+      "kimlik": "2346fdff4ca9eb7f4cae85fb657bb166d5d91dca992cbc66bbbe131fada25b34",
+      "sinif": "olculemez",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "kaynak": "runs\\fx\\fx_zaman_serisi_sapma.json"
+    },
+    {
+      "kimlik": "e6b085a1e5f3ae1a7e19d3e3888b9b1291121561172bd392b2eea9fd0ee2dd0f",
+      "sinif": "olculemez",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "kaynak": "runs\\fx\\fx_zaman_serisi_rsi.json"
+    },
+    {
+      "kimlik": "c5e045e1ef1bb4b72bf33c9af4d29033fba34c74121a84060cc4a442ce0fcda3",
+      "sinif": "olculemez",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "kaynak": "runs\\fx\\fx_oynaklik_filtre_cift.json"
+    },
+    {
+      "kimlik": "6657422e58fd1ed70e9d1f93dfb617a9c572d6306e3af67cfc044ed5ed5ee9a0",
+      "sinif": "olculemez",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "kaynak": "runs\\fx\\fx_oynaklik_filtre_evren.json"
+    }
+  ]
+}

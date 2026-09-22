@@ -68,6 +68,7 @@ from scryne_quant.data.takvim import Takvim
 from scryne_quant.data.takvim import takvim as takvim_al
 from scryne_quant.research import evren_dayaniklilik as day_mod
 from scryne_quant.research import hipotez as hipotez_mod
+from scryne_quant.research import kapilar as kapilar_mod
 from scryne_quant.research import kapilar_v2
 from scryne_quant.research import pbo as pbo_mod
 from scryne_quant.research import perturbasyon as pert_mod
@@ -632,6 +633,12 @@ def degerlendir(
             "oos_max_drawdown": m.max_drawdown,
             "is_sharpe": ins_sharpe,
             "oos_is_orani": (m.sharpe / ins_sharpe) if ins_sharpe > 0 else float("nan"),
+            # K-113: Sharpe'ın yorumlanabilirliği (ön koşul) ve OOS süresi (kapı) —
+            # ikisi de ölçülen bar sayısından, `Metrikler.yillik_anlamli` ile aynı ölçek.
+            "oos_yillik_anlamli": m.yillik_anlamli,
+            "oos_gun": kapilar_mod.oos_suresi_gun(
+                int(oos_sonuc.ozkaynak.size), timeframe_ms(veri.timeframe)
+            ),
             "plato_orani": tarama.ust_yuzde_plato(),
         }
         detay["oos"] = {"metrikler": m.sozluk(), "sonuc_hash": oos_sonuc.sonuc_hash,

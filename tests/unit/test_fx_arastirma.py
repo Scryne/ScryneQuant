@@ -215,13 +215,21 @@ class TestFxCekilisleri:
 
 
 class TestTamDegerlendirmeFx:
-    def test_on_bir_kapi_fx_fixture(self, veri):
+    def test_on_iki_kapi_fx_fixture(self, veri):
         sonuc = ed.degerlendir(
             KesitselGuc, IZGARA, MALIYET, veri, secim="plato", asgari_islem=1,
             rejim_kiyasi="EURUSD", isinma_bar=ISINMA,
         )
         kapilar = sonuc["kapilar"]["kapilar"]
-        assert len(kapilar) == 11
+        assert len(kapilar) == 12
+        # K-113: fixture OOS'u haftalar mertebesinde → yıllık Sharpe yorumlanamaz.
+        o = sonuc["olcumler"]
+        assert o["oos_yillik_anlamli"] is False and o["oos_gun"] < 30
+        assert isinstance(o["oos_sharpe"], float)  # sayı kayda giriyor…
+        assert kapilar["oos_sharpe"]["gecti"] is None  # …karar vermiyor
+        assert kapilar["oos_sharpe"]["on_kosul"]["deger"] is False
+        assert kapilar["oos_is_orani"]["gecti"] is None
+        assert kapilar["oos_suresi"]["gecti"] is False
         assert sonuc["motor"]["coklu_model"] is True
         assert sonuc["motor"]["takvim"]["id"] == TAKVIM_FX_5X24
         assert sonuc["motor"]["rejim_kiyasi"] == "EURUSD"

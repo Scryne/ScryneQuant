@@ -97,9 +97,11 @@ class TestDegerlendirme:
         sonuc = v2.kapilari_degerlendir("x", olcumler)
         assert sonuc.kalan_kapilar == ["evren_dayanikliligi"]
 
-    def test_butun_kapilar_on_bir_kapi(self):
+    def test_butun_kapilar_on_iki_kapi(self):
+        """K-019 yedi + K-113 `oos_suresi` + K-054 dört."""
         sonuc = v2.butun_kapilar("x", self.KUSURSUZ)
-        assert len(sonuc.kapilar) == len(kapilar_mod.ESIKLER) + len(v2.ESIKLER_V2) == 11
+        assert len(sonuc.kapilar) == len(kapilar_mod.ESIKLER) + len(v2.ESIKLER_V2) == 12
+        assert "oos_suresi" in sonuc.kapilar
 
     def test_butun_kapilar_mutlak_engeli_tasiyor(self):
         sonuc = v2.butun_kapilar("x", self.KUSURSUZ, mutlak_engeller=["leak_riski"])

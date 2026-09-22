@@ -1,7 +1,10 @@
 # Threshold Policy — Eşik Politikası
 
-**Sürüm:** 0.1 (taslak, 2026-09-20, denetim döngüsü çıktısı) · **Durum:** `DECISION REQUIRED`
-kalemleri Scryne'ın kararına kadar bağlayıcı değildir; ölçülmüş kalemler zaten koddadır.
+**Sürüm:** 0.2 (2026-09-22, K-113) · **Durum:** §2'nin yürürlükteki değerleri **kabul edildi** ve
+`config/esikler.json`'a taşındı (kod sabitleri `tests/unit/test_esikler.py` ile o dosyaya eşit tutulur;
+kod dosyayı okumaz — kayıt, ayar değil). `DECISION REQUIRED` kalemleri Scryne'ın kararına kadar
+bağlayıcı değildir ve dosyaya **girmez**. K-113 ayrıca `oos_suresi` kapısını ekledi ve
+`oos_sharpe`/`oos_is_orani`ye `oos_yillik_anlamli` ön koşulu bağladı (§2 tablosu).
 **Kural (brief §14):** bu doküman **sayı uydurmaz**. Her satır ya repodaki mevcut değeri ve
 kaynağını (ölçüm / iştah) taşır, ya da `DECISION REQUIRED` + aday aralık + gerekçe. Aday
 aralıklar öneri niteliğindedir; "önerildi" ≠ "kabul edildi".
@@ -56,6 +59,7 @@ Bunlar sayı değil, ihlali "görev yanlıştır" demek olan kurallar. Repo: `.c
 | Ölçülemeyen kapı = geçilmemiş | kural | K-019 | politika, değişmez |
 | Ön kayıt zorunlu; program bütçesi | zorunlu; bütçe program başına | K-039, K-051 | politika, değişmez |
 | Çoklu test düzeltmesi yöntemi | sızıntısız dairesel kaydırma, 500 deneme, seed 0, %5 yanlış-pozitif hedefi | K-044/064/071 | politika; `deneme=500` **DECISION REQUIRED** (GA genişliği 0,84-0,97 → yeterli mi?) |
+| `oos_suresi` ≥ 569,67 gün (K-113) | 569,67 | null-kalibre: `oos_sharpe` fotoğrafındaki en kısa OOS (13.672 bar × 1h), yuvarlanmadan | eşik yalnız kalibre edildiği uzunlukta okunur; fotoğraf değişince `tools/r5_oos_suresi_olcum.py`. `oos_sharpe`/`oos_is_orani` ayrıca `oos_yillik_anlamli` (30 gün) ön koşullu — sağlanmazsa ölçülemedi |
 | `oos_sharpe` (tek sembol + evren, Binance spot) | **1,04** | null-kalibre; **45 çekiliş** (K-081, 2026-09-20): %5 sınırı 1,004, GA 0,982–1,064, sabitin FP'si %4,2 — sabit **korundu** (politika kararı, GA sabiti kapsıyor) | Bekçi: `docs/research/coklu-test-olcum.json` + defter (CI'da); defter büyürse yeniden ölçüm zorunlu. Yeni evren için U17 |
 | `oos_is_orani` ≥ 0,5 | 0,5 | politika (K-019) | kabul; gerekçesi "OOS IS'in yarısını korumalı" — ölçülmemiş |
 | `wf_katman_basari` ≥ 0,6 | 0,6 | politika | kabul; **DECISION REQUIRED**: katman sayısına bağlı binom eşiği daha doğru (16 katmanda 0,6 = 10/16; 4 katmanda 3/4) |
@@ -141,5 +145,5 @@ Scryne'ın vermesi gereken kararlar, önem sırasıyla. Hiçbiri bu dokümanda v
    **ölçüm ve compliance'tan sonra**.
 8. Kademe/sermaye/drift (§5) — tetik gelince.
 
-Bu dokümanın kabulü = `config/esikler.json` + test (R5). Kabulden önce mevcut sabitler
-yürürlükte kalır.
+Bu dokümanın §2 kabulü = `config/esikler.json` + `tests/unit/test_esikler.py` (R5, K-113, 2026-09-22).
+Yukarıdaki karar listesi açık; her karar verildiğinde satır dosyaya yeni bir K ile girer.

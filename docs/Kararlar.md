@@ -5492,3 +5492,94 @@ K-037, K-038, K-043, K-050, K-052, K-069, K-079, K-082, K-110 · **Kaynak:**
    burada verilmez.
 6. **Kapanış:** pencere sonunda ayrı kayıt (`<tarih>-R8-kapanis.md` + K-112) — ölçülen 10 alan, PASS/FAIL,
    giderme/R9 kararı. Bu paket kod değiştirmez.
+
+## K-113 — `oos_sharpe` kapısı `yillik_anlamli`yı okur; `oos_suresi` ayrı kapı; Threshold-Policy §2 `config/esikler.json`'da kabul
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("R5 artıklarını şimdi kapat; `oos_sharpe` ↔
+`yillik_anlamli` semantiğini denetle ve düzelt; kapıyı gevşetme, K-050 asimetrisine uygun sıkılaştır; minimum
+geçerli OOS koşulu ile Sharpe anlamlılığı açıkça ayrışsın; Threshold-Policy kabulünü `config/esikler.json` ile
+tamamla, eşik değişikliği tuning mekanizmasına dönüşmesin; R8 öncesi bitsin") · **Kapatır:** K-102/7 açık
+kalemi, K-106 dönüş koşulu 4, R5 "Threshold-Policy kabul" · **Değiştirir:** K-019 (kapı listesi 7 → 8; iki
+kapıya ön koşul) · **Tabi:** K-007, K-010, K-018, K-019, K-044, K-050, K-054, K-081, K-111 · **Kaynak:**
+`docs/research/records/2026-09-22-R5-oos-suresi.json` (`tools/r5_oos_suresi_olcum.py`),
+`docs/research/records/2026-09-22-R5-oos-kapi-once-sonra.json` (`tools/r5_oos_kapi_once_sonra.py`),
+`docs/research/records/2026-09-22-R5-K113-oos-kapisi.md`
+
+### Mevcut semantik (denetim)
+
+- `Metrikler.yillik_anlamli` (Faz 4): ölçülen pencere `bar × timeframe ≥ 30 gün` ise `True`. Docstring'i
+  *"Promotion kapıları (K-019) bu bayrağa bakmak zorunda"* diyordu; **hiçbir kapı bakmıyordu.**
+- `research/degerlendirme.py` ve `research/evren_degerlendirme.py` `oos_sharpe = metrikler.sharpe` yazıyor,
+  `kapilar.degerlendir` bunu doğrudan `≥ 1,04` ile karşılaştırıyordu. Sharpe `mean/std × √(bar/yıl)`: 21,5
+  günlük OOS'ta +0,21 % getiri 6,08 ediyor (K-102/7). Kapı bunu "geçti" sayıyordu: R5/R6 kayıtlarında
+  h53 (1,09), h54 (6,44), h56 (5,58), h58 (4,44) `oos_sharpe` ✓ görünüyor (`…once-sonra.json`, "önce").
+- OOS süresi ile eşik arasında hiçbir bağ yoktu. Oysa 1,04 bir null dağılımından ölçüldü ve o null
+  fotoğraftaki 48 çekilişin **kendi OOS pencerelerinde** koşuldu: 13.672 bar 1h (569,67 gün), 3.484 bar 4h
+  (580,67 gün), 23.826-23.862 bar evren (992,75-994,25 gün). Sharpe kestiriminin dağılımı OOS kısaldıkça
+  genişler; kısa OOS'ta null'un %5 sınırı 1,04'ün **üstündedir**. 1,04'ü 21,5 güne uygulamak kapıyı
+  ölçülmemiş biçimde gevşetmekti.
+- Promotion'a etkisi **bugüne kadar sıfır**: dört "geçti" çekilişin hepsi başka kapılarda kaldı
+  (`asgari_islem`, `pbo`, pertürbasyon, mutlak engel), toplam PASS 0/78 kayıt. Ama zincirin tek savunması
+  "başka kapı tutar" olamaz (K-037'nin ruhu): promotion kaydına giden `kapi_sonucu` bu değeri taşıyordu.
+
+### Karar
+
+1. **`oos_sharpe` ve `oos_is_orani` ön koşullu:** `Esik.on_kosul="oos_yillik_anlamli"`. Ön koşul
+   **tam olarak `True`** değilse (False, eksik, 1, "True" — hepsi sağlanmadı) kapı `gecti=None`
+   (ölçülemedi), değer kayda girer, karar girmez; satıra `on_kosul: {alan, deger}` yazılır. Ölçülemeyen
+   kapı geçilmiş sayılmaz (K-019). Ön koşul yalnız `True`'yu `None` yapar; hiçbir yolla `False`'u
+   `True` yapamaz (testli).
+2. **Yeni kapı `oos_suresi`:** alan `oos_gun` (ölçülen bar × timeframe / gün — `yillik_anlamli` ile aynı
+   ölçek, bar-zamanı; seanslı takvimde takvim gününden küçük, bilerek), sınır
+   `ASGARI_OOS_GUN = 13.672 × 1h / 24 = 569,666… gün`, yön `≥`. Sınır fotoğraftaki en kısa OOS'un
+   **kendisi**; yuvarlanmadı — kalibrasyon kümesinin üyeleri tanım gereği geçmeli. (Ölçüldü: 570'e
+   yuvarlama 1h tek sembollü 31 çekilişin tamamını `oos_suresi`de bırakıyordu; sınır bir kestirim değil,
+   kayıtlı bir bar sayısı.) Daha uzun OOS'ta 1,04 tutucudur (K-007 yönünde), daha kısasında kapı
+   ölçülemez. Fotoğraf değişince `tools/r5_oos_suresi_olcum.py` yeniden koşulur;
+   `test_esikler.py` sabiti kayıtla ve fotoğrafla eşit tutar.
+3. **İki koşul ayrı ve ikisi de gerekli:** (1) yıllıklandırma yorumlanabilir mi (30 gün, ön koşul) —
+   (2) eşik bu uzunlukta ölçülmüş mü (569,67 gün, kapı). 30 ≤ OOS < 569,67 günde Sharpe okunur ama
+   kapı kalır; ≥ 569,67'de eski mantık birebir (1,04, `≥`).
+4. **Ölçüm katmanı** iki alanı üretir: `oos_yillik_anlamli` (`Metrikler.yillik_anlamli` aynen) ve
+   `oos_gun` (`kapilar.oos_suresi_gun(ozkaynak.size, timeframe_ms)`), tek sembollü ve evren yolunda
+   aynı. `oos_sharpe` sayısı **silinmez** (rapor/DSR/çoklu test aynen okur). `Metrikler`e dokunulmadı:
+   backtest çıktısı ve `sonuc_hash` bit-aynı.
+5. **Threshold-Policy §2 kabulü = `config/esikler.json`** (SHA-256 `040219d6232aca5d132b2b541fb60b08b015d8834dc27bab6266d32b86f58b4b`). Kayıt, ayar değil: kod
+   dosyayı **okumaz** (statik testli); 12 kapı + 3 girdi (`asgari_yillik_pencere_gun` 30,
+   `coklu_test_cekilis_sayisi` 48, `yanlis_pozitif` 0,05) her biri `kaynak` ∈ {olculdu, istah,
+   null-kalibre, politika}, `karar` (Kararlar.md'de başlık olarak var olmak zorunda), ölçülmüşse
+   `kayit` + `olcum_tarihi`, iştahsa `gozden_gecirme`. Bir eşiği değiştirmek = kod + JSON + yeni K
+   aynı anda; biri eksikse `test_esikler.py` kırmızı. Tuning'e kapalı olmasının mekanizması bu:
+   JSON tek başına hiçbir davranışı değiştiremez, kod tek başına testi geçemez.
+   **DECISION REQUIRED kalemleri (Threshold-Policy §2/§5/§6) dosyaya girmedi:** karar verilmemiş sayı
+   eşik değildir; liste olduğu yerde açık kalır, Scryne'ın kararını bekler.
+6. **Kapsam dışı (bilerek):** `rejim_kararliligi` (30 günlük rejim pencereleri, kendi null'u),
+   `wf_sharpe` (kapı değil), `parametre_kararliligi` — hiçbirine dokunulmadı; `oos_sharpe` eşiğinin
+   sayısı (1,04) ve fotoğrafı değişmedi. Yeni hipotez/çekiliş/koşu yok; defter 62 (K-111).
+
+### Önce / sonra (yalnız mevcut kayıtlardan, yeni koşu yok — `…once-sonra.json`)
+
+| | önce | sonra |
+| --- | --- | --- |
+| Kayıt | 78 (7 FX · 17 evren · 54 tek sembollü satır) | 78 |
+| `oos_sharpe` ✓ | **4** — h53 1,09 / h54 6,44 / h56 5,58 / h58 4,44, hepsi OOS 21,5 gün | **0** (dördü `—` ölçülemedi, `on_kosul.deger=False`) |
+| `oos_suresi` | yok | 6 FX kaydı ✗, 72 kripto kaydı ✓ (569,67-994,25 gün) |
+| Toplam PASS | 0 | 0 |
+| Gevşeyen kapı (herhangi bir kayıtta `✗/—` → `✓`) | — | **0** |
+
+K-102/7'nin vakası: OOS 516 bar / 21,5 gün, kontrol Sharpe 6,08 → önce `oos_sharpe` ✓, sonra
+`oos_sharpe` `—` + `oos_is_orani` `—` + `oos_suresi` ✗ (`test_kapilar.TestOosSuresiVeSharpeAnlamliligi`).
+
+### R8'e etkisi
+
+**Sıfır.** Değişen paketler `research/` (kapilar, kapilar_v2, degerlendirme, evren_degerlendirme) ve
+`tools/`; `paper/`, `risk/`, `execution/`, `oms/`, `backtest/`, `strategy/` hiçbir `research` modülünü
+import etmiyor (doğrulandı), `Metrikler`/`Sonuc` değişmedi. R8 gözlem koşusu kapı değerlendirmesi
+yapmıyor (K-111/3 ölçüm dışı: Sharpe, promotion). 25 Eylül kod senkronu bu commit'i taşır; R8
+penceresinde `research/` dahil hiçbir şey değişmez.
+
+### Değişmez (yeni)
+
+> Yıllıklandırılmış bir OOS metriği, yıllıklandırmanın anlamlı olmadığı pencerede kapı kararı
+> üretemez; null-kalibre bir eşik, kalibre edildiği en kısa OOS'tan kısa pencerede okunamaz. İkisi
+> de "ölçülemedi"dir, "geçti" değil.

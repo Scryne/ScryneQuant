@@ -1,0 +1,163 @@
+{
+  "_aciklama": "Promotion kapılarının eşik kaydı — Threshold-Policy §2 kabulü (K-113). Bu dosya bir AYAR DEĞİL, KAYITTIR: kod bu dosyayı okumaz; `research/kapilar.py` ve `research/kapilar_v2.py` sabitleri burayla `tests/unit/test_esikler.py` ile eşit tutulur. Bir eşiği değiştirmek = kod + bu dosya + yeni K (Kararlar.md) + testin geçmesi. Her satır `karar` taşımak zorunda ve o K başlığı Kararlar.md'de var olmalı; `olculdu`/`null-kalibre` satırlar `kayit` (kanıt dosyası), `istah` satırlar `gozden_gecirme` ister. DECISION REQUIRED kalemleri (Threshold-Policy §2 ve §6) bu dosyaya GİRMEZ: karar verilmemiş sayı, eşik değildir.",
+  "politika": {
+    "dokuman": "docs/research/Threshold-Policy.md",
+    "surum": "0.2",
+    "kabul_tarihi": "2026-09-22",
+    "kabul_karari": "K-113",
+    "kapsam": "§2 mevcut değerler (K-019 yedi + K-113 bir + K-054 dört kapı) ve doğrudan girdileri; §2/§5 DECISION REQUIRED kalemleri açık"
+  },
+  "kapilar": [
+    {
+      "ad": "oos_suresi",
+      "alan": "oos_gun",
+      "deger": 569.6666666666666,
+      "yon": ">=",
+      "kaynak": "null-kalibre",
+      "karar": "K-113",
+      "gerekce": "`oos_sharpe` eşiğinin kalibre edildiği 48 çekilişin en kısa OOS'unun kendisi: tek sembollü 1h, 13.672 bar × 1h / 24 = 569,67 gün (yuvarlanmadı; kalibrasyon üyeleri tanım gereği geçer). Daha kısa OOS'ta 1,04'ün yanlış-pozitifi ölçülmemiş ve %5'ten büyük.",
+      "olcum_tarihi": "2026-09-22",
+      "kayit": "docs/research/records/2026-09-22-R5-oos-suresi.json",
+      "yeniden_olcum": "Fotoğraf (`docs/research/coklu-test-olcum.json`) değişince `tools/r5_oos_suresi_olcum.py`."
+    },
+    {
+      "ad": "oos_sharpe",
+      "alan": "oos_sharpe",
+      "deger": 1.04,
+      "yon": ">=",
+      "on_kosul": "oos_yillik_anlamli",
+      "kaynak": "null-kalibre",
+      "karar": "K-081",
+      "gerekce": "Çoklu test için düzeltilmiş OOS Sharpe: sızıntısız dairesel kaydırma, 500 deneme, seed 0, %5 yanlış-pozitif hedefi; 48 çekilişte %5 sınırı 1,004 (GA 0,982-1,064), sabit tutucu olan (K-044 → K-064 → K-071 → K-081 → K-108/K-109 fotoğrafı).",
+      "olcum_tarihi": "2026-09-22",
+      "kayit": "docs/research/coklu-test-olcum.json",
+      "yeniden_olcum": "Defter büyüyünce `sq lab coklu-test` (tek sembollü) / `tools/faz12_coklu_test.py` (evren)."
+    },
+    {
+      "ad": "oos_is_orani",
+      "alan": "oos_is_orani",
+      "deger": 0.5,
+      "yon": ">=",
+      "on_kosul": "oos_yillik_anlamli",
+      "kaynak": "politika",
+      "karar": "K-019",
+      "gerekce": "OOS Sharpe / IS Sharpe ≥ 0,5: in-sample başarının en az yarısı dışarıda korunmalı. Threshold-Policy: gerekçesi ölçülmemiş, kabul."
+    },
+    {
+      "ad": "wf_katman_basari",
+      "alan": "wf_pozitif_katman_orani",
+      "deger": 0.6,
+      "yon": ">=",
+      "kaynak": "politika",
+      "karar": "K-019",
+      "gerekce": "Walk-forward katmanlarının pozitif getiren payı; 16 katmanda 10. Threshold-Policy DECISION REQUIRED (katman sayısına bağlı binom) açık, mevcut değer yürürlükte."
+    },
+    {
+      "ad": "parametre_kararliligi",
+      "alan": "wf_kararsizlik",
+      "deger": 0.35,
+      "yon": "<=",
+      "kaynak": "politika",
+      "karar": "K-019",
+      "gerekce": "Katmanlar arası benzersiz parametre oranı; Faz 4'te 0,15-0,25 ölçüldü. Threshold-Policy DECISION (v2 pertürbasyonla biri emekli) açık."
+    },
+    {
+      "ad": "asgari_islem",
+      "alan": "oos_islem",
+      "deger": 30,
+      "yon": ">=",
+      "kaynak": "politika",
+      "karar": "K-019",
+      "gerekce": "OOS işlem sayısı; 30 işlemde win rate standart hatası ~%9. Threshold-Policy DECISION REQUIRED (timeframe-farkında tanım) açık."
+    },
+    {
+      "ad": "max_drawdown",
+      "alan": "oos_max_drawdown",
+      "deger": 0.25,
+      "yon": "<=",
+      "kaynak": "istah",
+      "karar": "K-019",
+      "gerekce": "OOS azami düşüş; al-tut kıyası %25,7 düşmüştü. `risk/limitler.PROMOTION_DRAWDOWN_KAPISI` ile testle bağlı (`test_risk_limitleri`).",
+      "gozden_gecirme": "Risk limitleri (`config/risk.json` drawdown_limiti 0,20) yeniden kalibre edildiğinde birlikte."
+    },
+    {
+      "ad": "stres_dayanikliligi",
+      "alan": "stres_bozulma",
+      "deger": 0.15,
+      "yon": "<=",
+      "kaynak": "politika",
+      "karar": "K-019",
+      "gerekce": "Temel senaryodan en kötü stres senaryosuna getiri farkı (yüzde puan); maliyet kalibrasyonunun doğruluğuna bahis oynanmaz (K-021)."
+    },
+    {
+      "ad": "pbo",
+      "alan": "pbo",
+      "deger": 0.0087,
+      "yon": "<=",
+      "kaynak": "null-kalibre",
+      "karar": "K-058",
+      "gerekce": "CSCV backtest overfitting olasılığı; iki ızgarada null (donchian 0,0087, rsi_donus 0,0462), sıkı olanı. Izgara biçimine bağlı.",
+      "olcum_tarihi": "2026-09-16",
+      "kayit": "docs/Faz-11-Dogrulama-Raporu.md",
+      "yeniden_olcum": "Yeni ızgara biçimi → `tools/kalibrasyon_v2_kos.py`."
+    },
+    {
+      "ad": "parametre_perturbasyonu",
+      "alan": "perturbasyon_dusus",
+      "deger": 0.0565,
+      "yon": "<=",
+      "kaynak": "null-kalibre",
+      "karar": "K-058",
+      "gerekce": "Seçilen noktanın komşu medyanına göre yüksekliği; null donchian 0,0752 / rsi_donus 0,0565, sıkı olanı.",
+      "olcum_tarihi": "2026-09-16",
+      "kayit": "docs/Faz-11-Dogrulama-Raporu.md",
+      "yeniden_olcum": "Yeni ızgara biçimi → `tools/kalibrasyon_v2_kos.py`."
+    },
+    {
+      "ad": "rejim_kararliligi",
+      "alan": "en_kotu_rejim_sharpe",
+      "deger": 0.685,
+      "yon": ">=",
+      "kaynak": "null-kalibre",
+      "karar": "K-058",
+      "gerekce": "OOS'ta en kötü rejimin Sharpe'ı (30 günlük rejim penceresi); null donchian 0,481 / rsi_donus 0,685, sıkı olanı. Rejim tanımı kripto kıyasında kalibre (FX'te değil, K-106).",
+      "olcum_tarihi": "2026-09-16",
+      "kayit": "docs/Faz-11-Dogrulama-Raporu.md",
+      "yeniden_olcum": "Yeni ızgara biçimi ya da yeni varlık sınıfı → `tools/kalibrasyon_v2_kos.py`."
+    },
+    {
+      "ad": "evren_dayanikliligi",
+      "alan": "evren_dayaniklilik_orani",
+      "deger": 0.75,
+      "yon": ">=",
+      "kaynak": "istah",
+      "karar": "K-058",
+      "gerekce": "En yüksek katkılı enstrüman çıkarılınca kalan Sharpe payı; yapısal ölçüm bandı 0,832-1,023, altından iştah seçimi. Tek sembolde ölçülemez (K-054).",
+      "gozden_gecirme": "Kapıyı geçen ilk gerçek cross-sectional adayla yeniden ölçüm (K-058)."
+    }
+  ],
+  "girdiler": [
+    {
+      "ad": "asgari_yillik_pencere_gun",
+      "deger": 30,
+      "kaynak": "politika",
+      "karar": "K-113",
+      "gerekce": "`Metrikler.yillik_anlamli` tanımı (`backtest/metrikler.ASGARI_YILLIK_PENCERE_MS`, Faz 4): yıllıklandırmanın yorumlanabildiği en kısa pencere (bar-zamanı). `oos_sharpe` ve `oos_is_orani` kapılarının ön koşulu `oos_yillik_anlamli` buradan. K-113 bunu kapıya bağladı; sayıyı değiştirmedi."
+    },
+    {
+      "ad": "coklu_test_cekilis_sayisi",
+      "deger": 48,
+      "kaynak": "null-kalibre",
+      "karar": "K-109",
+      "gerekce": "`oos_sharpe` eşiğinin ölçüldüğü defter fotoğrafı (ölçülebilir çekiliş sayısı); eşik değil, eşiğin geçerlilik koşulu. `coklu_test_fotograf` bekçisi git'teki fotoğrafla ve defterle sayar.",
+      "kayit": "docs/research/coklu-test-olcum.json"
+    },
+    {
+      "ad": "yanlis_pozitif",
+      "deger": 0.05,
+      "kaynak": "politika",
+      "karar": "K-044",
+      "gerekce": "Null-kalibre eşiklerin hedef yanlış-pozitif oranı (%5 sınırı). `kapilar_v2.YANLIS_POZITIF`."
+    }
+  ]
+}

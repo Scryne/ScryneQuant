@@ -250,15 +250,7 @@ def kapilari_degerlendir(
     sebebi raporlama: 38 çekilişin yeni kapılardaki durumu, eski kapılardaki durumundan
     bağımsız okunabilmeli.
     """
-    kapilar: dict[str, dict[str, Any]] = {}
-    for esik in ESIKLER_V2:
-        deger = olcumler.get(esik.alan)
-        kapilar[esik.ad] = {
-            "deger": deger,
-            "sinir": esik.sinir,
-            "yon": esik.yon,
-            "gecti": esik.gecti_mi(deger),
-        }
+    kapilar = {esik.ad: esik.satir(olcumler) for esik in ESIKLER_V2}
     return KapiSonucu(strateji=strateji, kapilar=kapilar, mutlak_engeller=list(mutlak_engeller or []))
 
 
@@ -268,7 +260,7 @@ def butun_kapilar(
     *,
     mutlak_engeller: list[str] | None = None,
 ) -> KapiSonucu:
-    """K-019'un yedi + K-054'ün dört kapısı. Promotion'un okuduğu tam liste."""
+    """K-019'un yedi + K-113'ün bir + K-054'ün dört kapısı. Promotion'un okuduğu tam liste."""
     eski = degerlendir(strateji, olcumler, mutlak_engeller=mutlak_engeller)
     yeni = kapilari_degerlendir(strateji, olcumler)
     return KapiSonucu(

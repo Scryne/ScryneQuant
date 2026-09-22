@@ -266,6 +266,8 @@ class TestLeakRiski:
     def test_leak_riskli_sonuc_kapidan_gecemiyor(self):
         """**Faz 11 bitti kriteri.** Bütün sayısal kapılar geçse bile engel duruyor."""
         kusursuz = {
+            "oos_gun": 1_000.0,  # K-113: süre kapısı + Sharpe'ın ön koşulu
+            "oos_yillik_anlamli": True,
             "oos_sharpe": 99.0,
             "oos_is_orani": 99.0,
             "wf_pozitif_katman_orani": 1.0,

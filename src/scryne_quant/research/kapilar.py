@@ -40,20 +40,51 @@ class Esik:
 
     gerekce: str
 
+    on_kosul: str | None = None
+    """Ölçümün **yorumlanabilir** olması için `True` olması gereken boolean alan. (K-113)
+
+    Sayı hesaplanmış olabilir ama anlamsızdır: 21,5 günlük OOS'un yıllıklandırılmış
+    Sharpe'ı 6,08 çıkar ve bu bir kanıt değildir. Ön koşul sağlanmadıysa kapı
+    **ölçülemedi** sayılır — değer kayda girer, karar girmez. Eksik alan = sağlanmadı
+    (K-050: "veri yoktu" ile "geçti" aynı şey değil).
+    """
+
     def gecti_mi(self, deger: float | None) -> bool | None:
         """`None` = ölçülemedi. Ölçülemeyen bir kapı **geçilmiş sayılmaz**."""
         if deger is None or (isinstance(deger, float) and np.isnan(deger)):
             return None
         return deger >= self.sinir if self.yon == ">=" else deger <= self.sinir
 
+    def on_kosul_saglandi_mi(self, olcumler: Mapping[str, Any]) -> bool:
+        """Ön koşulu yoksa `True`; varsa alan **tam olarak** `True` olmalı."""
+        return self.on_kosul is None or olcumler.get(self.on_kosul) is True
+
+    def satir(self, olcumler: Mapping[str, Any]) -> dict[str, Any]:
+        """Kapının kayda giren satırı: değer, sınır, yön, `gecti` (ve varsa ön koşul)."""
+        deger = olcumler.get(self.alan)
+        satir: dict[str, Any] = {
+            "deger": deger,
+            "sinir": self.sinir,
+            "yon": self.yon,
+            "gecti": self.gecti_mi(deger),
+        }
+        if not self.on_kosul_saglandi_mi(olcumler):
+            # Sayı var ama yorumlanamaz (K-113): değer kayda girer, karar girmez.
+            satir["gecti"] = None
+            satir["on_kosul"] = {"alan": self.on_kosul, "deger": olcumler.get(self.on_kosul)}
+        return satir
+
     def sozluk(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "ad": self.ad,
             "alan": self.alan,
             "sinir": self.sinir,
             "yon": self.yon,
             "gerekce": self.gerekce,
         }
+        if self.on_kosul is not None:
+            d["on_kosul"] = self.on_kosul
+        return d
 
 
 #: `oos_sharpe` kapısının çoklu test için düzeltilmiş sınırı. (K-044)
@@ -83,15 +114,75 @@ COKLU_TEST_ESIGI: Final = 1.04
 #: `docs/research/coklu-test-olcum.json` ile eşit olmak zorundadır (`coklu_test_fotograf`).
 COKLU_TEST_CEKILIS_SAYISI: Final = 48
 
+#: `oos_sharpe` eşiğinin **geçerli olduğu** en kısa OOS süresi, gün (bar-zamanı). (K-113)
+#:
+#: `COKLU_TEST_ESIGI` bir null dağılımından ölçüldü ve o dağılım belirli OOS uzunluklarında
+#: koşuldu: tek sembollü 1h çekilişlerde 13.672 bar (569,67 gün), 4h'te 3.484 bar (580,67
+#: gün), evren çekilişlerinde 23.826-23.862 bar (992,75-994,25 gün). Sharpe kestiriminin
+#: dağılımı OOS uzunluğuyla daralır; daha **kısa** bir OOS'ta null'un %5 sınırı 1,04'ün
+#: üstündedir, yani 1,04'ü kısa OOS'a uygulamak kapıyı ölçülmemiş biçimde gevşetmektir.
+#: Kural: eşik yalnız kalibre edildiği en kısa OOS'tan **kısa olmayan** pencerelerde okunur;
+#: daha uzun pencerede aynı eşik tutucudur (K-007 yönünde), daha kısasında **ölçülemedi**.
+#:
+#: Sayı yuvarlanmadı: bu bir kestirim değil, fotoğraftaki en kısa OOS'un **kendisi**
+#: (13.672 bar × 1h), ve o çekilişler kalibrasyonun içinde olduğu için tanım gereği geçer —
+#: yukarı yuvarlamak kalibrasyon kümesinin kendi üyelerini elerdi (ölçüldü: 570 ile 1h tek
+#: sembollü 31 çekilişin tamamı `oos_suresi`de kalıyordu). Aynı formül `oos_suresi_gun`.
+#: Kaynak `docs/research/records/2026-09-22-R5-oos-suresi.json` (`tools/r5_oos_suresi_olcum.py`);
+#: fotoğraf değişirse yeniden ölçülür, elle küçültülmez.
+ASGARI_OOS_GUN: Final = 13_672 * 3_600_000 / (24 * 3_600_000)
+
+#: Yıllıklandırmanın anlamlı sayıldığı en kısa pencere, gün — `Metrikler.yillik_anlamli`nın
+#: tanımı (`backtest/metrikler.ASGARI_YILLIK_PENCERE_MS`, Faz 4). Burada yalnız bağ için;
+#: tanım orada, `tests/unit/test_esikler.py` iki sayıyı eşit tutar.
+ASGARI_YILLIK_PENCERE_GUN: Final = 30
+
+_GUN_MS: Final = 24 * 3_600_000
+
+
+def oos_suresi_gun(bar_sayisi: int, timeframe_ms: int) -> float:
+    """OOS penceresinin ölçülen süresi, gün — `Metrikler.yillik_anlamli` ile aynı ölçek.
+
+    Bar-zamanı (`bar × timeframe`), takvim süresi değil: seanslı bir takvimde (FX 5/7) bu
+    sayı takvim gününden **küçüktür** ve bilerek öyle bırakıldı — kısa olan, sıkı olandır
+    (K-007). 516 saatlik FX barı 21,5 gündür, 30 takvim günü değil.
+    """
+    if bar_sayisi < 0 or timeframe_ms <= 0:
+        raise ValueError("bar sayısı negatif ya da timeframe sıfır olamaz")
+    return bar_sayisi * timeframe_ms / _GUN_MS
+
 #: K-019'un eşikleri. Her biri Faz 4'ün ölçümüne dayanıyor; gerekçeler
 #: `docs/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı. `oos_sharpe` ayrıca K-044'ün
 #: çoklu test düzeltmesini taşıyor.
 ESIKLER: Final[tuple[Esik, ...]] = (
     Esik(
+        ad="oos_suresi",
+        alan="oos_gun",
+        sinir=ASGARI_OOS_GUN,
+        yon=">=",
+        gerekce=(
+            "Out-of-sample penceresinin süresi (gün, bar-zamanı). İki ayrı soru var ve bu "
+            "kapı ikincisini soruyor: (1) yıllıklandırılmış Sharpe **yorumlanabilir** mi — "
+            "`Metrikler.yillik_anlamli` (≥ 30 gün), `oos_sharpe`/`oos_is_orani`nin ön koşulu; "
+            "(2) `oos_sharpe` eşiği bu OOS uzunluğu için **ölçülmüş** mü. Eşik 1,04 bir "
+            "null dağılımından geliyor ve o null belirli OOS uzunluklarında koşuldu (en "
+            "kısası 569,67 gün: tek sembollü 1h, 13.672 bar). Sharpe kestiriminin sapması "
+            "OOS kısaldıkça büyür; kısa OOS'ta null'un %5 sınırı 1,04'ün üstündedir, yani "
+            "aynı eşiği daha kısa pencereye uygulamak kapıyı ölçülmemiş biçimde gevşetmek "
+            "olur. R5/R6'da bu tam olarak oldu: 21,5 günlük FX OOS'unda kontrolün +0,21 % "
+            "getirisi Sharpe 6,08 verdi ve `oos_sharpe` 'geçti' göründü (K-102/7, K-106 §5). "
+            "Eşik fotoğraftaki en kısa OOS'un kendisi (yuvarlanmadı: kalibrasyon kümesinin "
+            "üyeleri tanım gereği geçer); daha uzun OOS'ta 1,04 tutucu kalır, daha kısasında "
+            "kapı ölçülemez. Fotoğraf değişince `tools/r5_oos_suresi_olcum.py` ile yeniden "
+            "ölçülür (K-113)."
+        ),
+    ),
+    Esik(
         ad="oos_sharpe",
         alan="oos_sharpe",
         sinir=COKLU_TEST_ESIGI,
         yon=">=",
+        on_kosul="oos_yillik_anlamli",
         gerekce=(
             "Out-of-sample Sharpe, **çoklu test için düzeltilmiş** (K-044). İlk değer "
             "0,5'ti ve gerekçesi tek bir stratejiye bakmaktı: Faz 4'te al-tut kıyasının "
@@ -126,6 +217,7 @@ ESIKLER: Final[tuple[Esik, ...]] = (
         alan="oos_is_orani",
         sinir=0.5,
         yon=">=",
+        on_kosul="oos_yillik_anlamli",
         gerekce=(
             "OOS Sharpe'ın IS Sharpe'a oranı — overfitting'in en doğrudan ölçüsü. "
             "Faz 4'te altı stratejinin **altısında da** bu oran negatif çıktı "
@@ -251,15 +343,7 @@ def degerlendir(
     `olcumler` `ESIKLER`in `alan` adlarını taşıyan bir sözlük; eksik alan "ölçülemedi"
     demektir ve o kapı geçilmemiş sayılır.
     """
-    kapilar: dict[str, dict[str, Any]] = {}
-    for esik in ESIKLER:
-        deger = olcumler.get(esik.alan)
-        kapilar[esik.ad] = {
-            "deger": deger,
-            "sinir": esik.sinir,
-            "yon": esik.yon,
-            "gecti": esik.gecti_mi(deger),
-        }
+    kapilar = {esik.ad: esik.satir(olcumler) for esik in ESIKLER}
     return KapiSonucu(
         strateji=strateji,
         kapilar=kapilar,

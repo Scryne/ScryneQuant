@@ -1,0 +1,2819 @@
+{
+  "uretildi": "2026-09-22 11:05:28 UTC",
+  "asgari_oos_gun": 569.6666666666666,
+  "ozet": {
+    "kayit": 78,
+    "once_oos_sharpe_gecti": 4,
+    "sonra_oos_sharpe_gecti": 0,
+    "kisa_oos": 6,
+    "oos_suresi_kalan": 6,
+    "once_toplam_gecti": 0,
+    "sonra_toplam_gecti": 0,
+    "gevseyen_kapi_sayisi": 0
+  },
+  "satirlar": [
+    {
+      "strateji": "kesitsel_guc",
+      "kaynak": "runs\\fx\\fx_kesitsel_guc.json",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "oos_yillik_anlamli": false,
+      "oos_sharpe": 1.0864140749014972,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": true,
+        "oos_is_orani": true,
+        "kalan": [
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": false,
+        "oos_sharpe": null,
+        "oos_is_orani": null,
+        "kalan": [
+          "oos_suresi",
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "degisen_kapilar": {
+        "oos_sharpe": {
+          "once": true,
+          "sonra": null
+        },
+        "oos_is_orani": {
+          "once": true,
+          "sonra": null
+        }
+      },
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "kesitsel_ters",
+      "kaynak": "runs\\fx\\fx_kesitsel_ters.json",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "oos_yillik_anlamli": false,
+      "oos_sharpe": 6.4392637571124665,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": true,
+        "oos_is_orani": null,
+        "kalan": [
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": false,
+        "oos_sharpe": null,
+        "oos_is_orani": null,
+        "kalan": [
+          "oos_suresi",
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "degisen_kapilar": {
+        "oos_sharpe": {
+          "once": true,
+          "sonra": null
+        }
+      },
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "fx_oynaklik_filtre_cift",
+      "kaynak": "runs\\fx\\fx_oynaklik_filtre_cift.json",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "oos_yillik_anlamli": false,
+      "oos_sharpe": 4.4436299223276245,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": true,
+        "oos_is_orani": true,
+        "kalan": [
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": false,
+        "oos_sharpe": null,
+        "oos_is_orani": null,
+        "kalan": [
+          "oos_suresi",
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {
+        "oos_sharpe": {
+          "once": true,
+          "sonra": null
+        },
+        "oos_is_orani": {
+          "once": true,
+          "sonra": null
+        }
+      },
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "fx_oynaklik_filtre_evren",
+      "kaynak": "runs\\fx\\fx_oynaklik_filtre_evren.json",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "oos_yillik_anlamli": false,
+      "oos_sharpe": 0.0,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": false,
+        "oos_sharpe": null,
+        "oos_is_orani": null,
+        "kalan": [
+          "oos_suresi",
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {
+        "oos_sharpe": {
+          "once": false,
+          "sonra": null
+        },
+        "oos_is_orani": {
+          "once": false,
+          "sonra": null
+        }
+      },
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "zaman_serisi_sapma",
+      "kaynak": "runs\\fx\\fx_zaman_serisi_sapma.json",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "oos_yillik_anlamli": false,
+      "oos_sharpe": 5.57562834988719,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": true,
+        "oos_is_orani": true,
+        "kalan": [
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": false,
+        "oos_sharpe": null,
+        "oos_is_orani": null,
+        "kalan": [
+          "oos_suresi",
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "degisen_kapilar": {
+        "oos_sharpe": {
+          "once": true,
+          "sonra": null
+        },
+        "oos_is_orani": {
+          "once": true,
+          "sonra": null
+        }
+      },
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "zaman_serisi_trend",
+      "kaynak": "runs\\fx\\fx_zaman_serisi_trend.json",
+      "timeframe": "1h",
+      "oos_bar": 516,
+      "oos_gun": 21.5,
+      "oos_yillik_anlamli": false,
+      "oos_sharpe": 0.45647608905620224,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": false,
+        "oos_sharpe": null,
+        "oos_is_orani": null,
+        "kalan": [
+          "oos_suresi",
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "degisen_kapilar": {
+        "oos_sharpe": {
+          "once": false,
+          "sonra": null
+        },
+        "oos_is_orani": {
+          "once": false,
+          "sonra": null
+        }
+      },
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "kesitsel_guc",
+      "kaynak": "runs\\faz12\\kesitsel_guc_aylik.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.17706280471835226,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "kesitsel_guc",
+      "kaynak": "runs\\faz12\\kesitsel_guc_haftalik.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.5104678213260214,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "max_drawdown",
+          "stres_dayanikliligi",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "max_drawdown",
+          "stres_dayanikliligi",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "kesitsel_ters",
+      "kaynak": "runs\\faz12\\kesitsel_ters_aylik.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.9671872083943212,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "max_drawdown",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "max_drawdown",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "kesitsel_ters",
+      "kaynak": "runs\\faz12\\kesitsel_ters_haftalik.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.9220306136785483,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "max_drawdown",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "max_drawdown",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_oi_birikim",
+      "kaynak": "runs\\faz12\\konumlanma_oi.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.08672619809601077,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_taker_baski",
+      "kaynak": "runs\\faz12\\konumlanma_taker.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.055542125331328684,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_oynaklik_agirlik",
+      "kaynak": "runs\\faz12\\kurma_oynaklik.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.3634804475058846,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_turnover_bandi",
+      "kaynak": "runs\\faz12\\kurma_turnover.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.2799035465637712,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_makro_nfci",
+      "kaynak": "runs\\faz12\\makro_nfci.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.2164252244006843,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_makro_vix",
+      "kaynak": "runs\\faz12\\makro_vix.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.16456074350089517,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_korelasyon_budama",
+      "kaynak": "runs\\faz12\\portfoy_korelasyon.json",
+      "timeframe": "1h",
+      "oos_bar": 23862,
+      "oos_gun": 994.25,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -1.1127680056192992,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "max_drawdown",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "max_drawdown",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_oynaklik_hedefi",
+      "kaynak": "runs\\faz12\\portfoy_oynaklik_hedefi.json",
+      "timeframe": "1h",
+      "oos_bar": 23862,
+      "oos_gun": 994.25,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.4605811325203584,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "kesitsel_dusuk_oynaklik",
+      "kaynak": "runs\\faz12\\r7_dusuk_oynaklik_haftalik.json",
+      "timeframe": "1h",
+      "oos_bar": 23862,
+      "oos_gun": 994.25,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.2868801127570517,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_basis",
+      "kaynak": "runs\\faz12\\turev_basis.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.12942233961300578,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_funding_basis",
+      "kaynak": "runs\\faz12\\turev_funding_basis.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.25581205025832393,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_funding_birikim",
+      "kaynak": "runs\\faz12\\turev_funding_birikim.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.22074553396299307,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": true,
+        "kalan": [
+          "oos_sharpe",
+          "wf_katman_basari",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "evren_funding_kesit",
+      "kaynak": "runs\\faz12\\turev_funding_kesit.json",
+      "timeframe": "1h",
+      "oos_bar": 23826,
+      "oos_gun": 992.75,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.1841673409531829,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "pbo",
+          "parametre_perturbasyonu",
+          "rejim_kararliligi",
+          "evren_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "al_tut",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.27088098061440974,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "cok_faktor",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.9450911242171967,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "donchian",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.34840718795530856,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "ema_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.4686405470293136,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "funding_egilim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.28772153727540434,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "funding_filtre",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.09359695217442421,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "funding_ters",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.2683375612899862,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "momentum",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.5544472197267009,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "rsi_donus",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.8541870744596403,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "sma_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-34065b334590.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -1.032834790454486,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "al_tut",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.27088098061440974,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "cok_faktor",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.9450911242171967,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "donchian",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.34840718795530856,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "ema_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.4686405470293136,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "funding_egilim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.28772153727540434,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "funding_filtre",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.09359695217442421,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "funding_ters",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.2683375612899862,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "momentum",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.5544472197267009,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "rsi_donus",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.8541870744596403,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "sma_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\058f6de87165-b0fd228f2e1d.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -1.032834790454486,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "al_tut",
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.3307537856662232,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "cok_faktor",
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.45852170990649627,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "donchian",
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.3304498190743943,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "ema_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.31674744929869075,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "momentum",
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.8267336898967331,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "rsi_donus",
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.5525273312228746,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "sma_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\379ada5f5439-233847018b31.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.38641469002126594,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "al_tut",
+      "kaynak": "runs\\deneyler\\degerlendirme\\51c7651025bb-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.27088098061440974,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "cok_faktor",
+      "kaynak": "runs\\deneyler\\degerlendirme\\51c7651025bb-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.9450911242171967,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "donchian",
+      "kaynak": "runs\\deneyler\\degerlendirme\\51c7651025bb-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.34840718795530856,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "ema_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\51c7651025bb-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.4570742418298093,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "momentum",
+      "kaynak": "runs\\deneyler\\degerlendirme\\51c7651025bb-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.08371894536004047,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "rsi_donus",
+      "kaynak": "runs\\deneyler\\degerlendirme\\51c7651025bb-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.8541870744596403,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "sma_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\51c7651025bb-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -1.032834790454486,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "al_tut",
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.27088098061440974,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "cok_faktor",
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.7918874128806177,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "donchian",
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.34840718795530856,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "ema_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.6947847057004057,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "momentum",
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.3973045155367688,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "rsi_donus",
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.8541870744596403,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "sma_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\859167154162-7d89241e3c5a.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -1.032834790454486,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "al_tut",
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.27088098061440974,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "cok_faktor",
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.9450911242171967,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "donchian",
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.34840718795530856,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "ema_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.4570742418298093,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "momentum",
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.08371894536004047,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "rsi_donus",
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.8541870744596403,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "sma_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\c8cbb92bf037-1d08f48c3790.json",
+      "timeframe": "1h",
+      "oos_bar": 13672,
+      "oos_gun": 569.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -1.032834790454486,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "al_tut",
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.3307537856662232,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "cok_faktor",
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.1657316101312411,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem",
+          "stres_dayanikliligi"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem",
+          "stres_dayanikliligi"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "donchian",
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.3304498190743943,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "ema_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.31674744929869075,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "momentum",
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.1782065899656833,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "rsi_donus",
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": -0.45163323493536195,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    },
+    {
+      "strateji": "sma_kesisim",
+      "kaynak": "runs\\deneyler\\degerlendirme\\eaee87aa275a-1857153416f4.json",
+      "timeframe": "4h",
+      "oos_bar": 3484,
+      "oos_gun": 580.6666666666666,
+      "oos_yillik_anlamli": true,
+      "oos_sharpe": 0.38641469002126594,
+      "once": {
+        "gecti": false,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "sonra": {
+        "gecti": false,
+        "oos_suresi": true,
+        "oos_sharpe": false,
+        "oos_is_orani": false,
+        "kalan": [
+          "oos_sharpe",
+          "oos_is_orani",
+          "asgari_islem"
+        ]
+      },
+      "degisen_kapilar": {},
+      "gevseyen_kapilar": []
+    }
+  ]
+}

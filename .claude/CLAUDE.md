@@ -136,8 +136,8 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 - `docs/Arastirma-Programlari.jsonl` — **araştırma programı defteri (K-051/2, K-058).**
   Append-only. Faz 12'de her program `sq lab program-kaydet` ile **önce** buraya açılır;
   `sq lab hipotez-kaydet` artık `--program` istiyor ve bütçe dolunca reddediyor.
-- `src/scryne_quant/research/kapilar_v2.py` — K-054'ün dört kapısı ve eşikleri; `butun_kapilar` 11 kapının
-  tamamı. Eşikler ızgara şekline bağlı: yeni ızgara biçimi `tools/kalibrasyon_v2_kos.py` ile
+- `src/scryne_quant/research/kapilar_v2.py` — K-054'ün dört kapısı ve eşikleri; `butun_kapilar` 12 kapının
+  tamamı (K-019 yedi + K-113 `oos_suresi` + K-054 dört). Eşikler ızgara şekline bağlı: yeni ızgara biçimi `tools/kalibrasyon_v2_kos.py` ile
   yeniden ölçüm ister.
 - `docs/Faz-10-Coklu-Enstruman-Raporu.md` — **Faz 10 ölçümleri (K-057):** tek motor +
   sarmalayıcı (bit düzeyinde eşitlik kanıtı), çok enstrümanlı Decimal referansı, evren
@@ -170,6 +170,11 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   `docs/Faz-7-Execution-Raporu.md` — faz sonu ölçüm raporları.
   Sayılar buradan alınır, tahmin edilmez. Faz 6 **kapandı** (K-055): 30 günlük koşu kriteri
   sürekli açık host gerektirdiği için Faz 8 ön koşuluna ve Faz 14'e taşındı.
+- **`config/esikler.json` — promotion eşiklerinin kaydı (K-113, Threshold-Policy §2 kabulü).** Ayar değil kayıt: kod
+  okumaz, `tests/unit/test_esikler.py` `kapilar.py`/`kapilar_v2.py` sabitlerini bu dosyaya ve her satırın K'sını
+  Kararlar.md'ye bağlar. Eşik değiştirmek = kod + JSON + yeni K. DECISION REQUIRED kalemleri girmez.
+  **`oos_sharpe`/`oos_is_orani` `oos_yillik_anlamli` ön koşullu; `oos_suresi` ≥ 569,67 gün** (fotoğraftaki en kısa
+  OOS; fotoğraf değişince `tools/r5_oos_suresi_olcum.py`). Kısa OOS'un yıllık Sharpe'ı kapı kararı üretmez.
 - `config/risk.json` — yürürlükteki risk limitleri; her limit `olculdu`/`istah` kaynağını
   ve (iştahsa) gözden geçirme koşulunu taşır (K-033). `sq risk limitler` ile okunur.
 - `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Uygulanmadı ve bu artık bir
