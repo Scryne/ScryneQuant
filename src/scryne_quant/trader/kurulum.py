@@ -168,6 +168,10 @@ def kosu_kur(
     md = mod_defteri or ModDefteri(istek.kok / "mod.json")
     _mod_tavani(istek, md)
     dizin = istek.kok / istek.kosu
+    from scryne_quant.execution.canli_kapi import KAPATILDI
+
+    if (dizin / KAPATILDI).is_file():
+        raise KurulumHatasi(f"koşu {istek.kosu} gerekçeyle kapatılmış; yeniden başlatılamaz")
     dizin.mkdir(parents=True, exist_ok=True)
     audit = SqliteDefter(dizin / "audit.sqlite")
     limitler = limitler_mod.yukle()
@@ -238,6 +242,8 @@ def kosu_kur(
         kosu_dizini=dizin,
         audit=audit,
         saat=saat,
+        # Çalışan koşu da sistem modunu her artıran emirde okur (K-114 denetimi).
+        mod_tavani=md.mod,
     )
     asamalar = (
         _asamalar(istek.strateji, SqliteDefter("runs/audit.sqlite"))

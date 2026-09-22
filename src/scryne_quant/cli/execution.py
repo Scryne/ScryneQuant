@@ -343,30 +343,18 @@ def kill(
     kimlik = json.loads(kimlik_yolu.read_text(encoding="utf-8"))
     m = CalismaModu(kimlik["mod"])
     sembol = kimlik["sembol"]
-    borsa: Any = None
-    canli_host = False
-    if m is CalismaModu.PAPER:
-        from scryne_quant.exchange.kurallar import SembolKurallari
-        from scryne_quant.exchange.paper_adaptoru import PaperBorsa, PaperMaliyet
-
-        kural = SembolKurallari(**json.loads((dizin / "kurallar.json").read_text("utf-8")))
-        borsa = PaperBorsa(kurallar={sembol: kural}, maliyet=PaperMaliyet(0.0, 0.0),
-                           saat=simdi_ms, yol=dizin / "paper_borsa.sqlite")
-    elif m is CalismaModu.TESTNET:
-        from scryne_quant.exchange.imzali import BinanceImzaliAdaptoru
-
-        borsa = BinanceImzaliAdaptoru()
-    elif m is CalismaModu.LIVE:
-        from scryne_quant.exchange.canli import canli_iptal_adaptoru
-
-        borsa, canli_host = canli_iptal_adaptoru(), True
-    elif m is CalismaModu.SHADOW:
-        from scryne_quant.exchange import canli
-        from scryne_quant.exchange.golge import GolgeAdaptoru
-
-        anahtar, sir = canli.okuma_anahtari_oku()
-        borsa, canli_host = GolgeAdaptoru(canli.canli_okuyucu(anahtar, sir)), True
+    canli_host = m in (CalismaModu.LIVE, CalismaModu.SHADOW)
+    # Adaptör kurulamasa da (anahtar okunamadı, kurallar dosyası yok) SAFE_MODE işareti ve
+    # süreç sonlandırma **yine yapılır** — kill switch'in en önemli iki adımı borsaya bağlı
+    # değil. Açık emirler doğrulanamadıysa rapor başarısız yazılır (K-114 denetimi).
+    borsa_hatasi = ""
+    try:
+        borsa = _kill_adaptoru(m, sembol, dizin)
+    except Exception as hata:  # noqa: BLE001 — kill her koşulda ilerlemeli
+        borsa, borsa_hatasi = None, f"adaptör kurulamadı: {type(hata).__name__}: {hata}"
     rapor = kill_mod.kill(dizin / "kosu", sebep=sebep, borsa=borsa, semboller=(sembol,))
+    if borsa_hatasi:
+        rapor.hatalar.append(f"{borsa_hatasi} — açık emirler iptal/doğrulanamadı")
     govde = {
         **rapor.sozluk(),
         "mod": str(m),
@@ -374,14 +362,60 @@ def kill(
         "basarili": rapor.basarili,
         "zaman_utc": utc_str(simdi_ms()),
     }
-    (dizin / "kill.json").write_text(json.dumps(govde, ensure_ascii=False, indent=1, default=str),
-                                     encoding="utf-8")
+    yol = dizin / "kill.json"
+    yol.write_text(json.dumps(govde, ensure_ascii=False, indent=1, default=str),
+                   encoding="utf-8")
+    # kill.json'ın hash'i koşunun zincirli audit'ine (live gate kanıtı yalnız buna güvenir).
+    _audit_olay(dizin, sembol, "kill", {"kill_sha256": _dosya_sha(yol),
+                                        "basarili": rapor.basarili, "sebep": sebep})
     if json_cikti:
         _yaz(govde)
     else:
         typer.secho(f"kill {'BAŞARILI' if rapor.basarili else 'BAŞARISIZ'}: {kosu} ({m})",
                     fg=typer.colors.GREEN if rapor.basarili else typer.colors.RED, bold=True)
     raise typer.Exit(0 if rapor.basarili else 1)
+
+
+def _dosya_sha(yol: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(yol.read_bytes()).hexdigest()
+
+
+def _audit_olay(dizin: Path, sembol: str, olay: str, govde: dict[str, Any]) -> None:
+    from scryne_quant.risk.audit import Olay, OlayTuru
+
+    defter = SqliteDefter(dizin / "audit.sqlite")
+    try:
+        defter.yaz(Olay(tur=OlayTuru.EXECUTION, zaman_ms=simdi_ms(), sembol=sembol,
+                        govde={"olay": olay, **govde}, durum={}))
+    finally:
+        defter.kapat()
+
+
+def _kill_adaptoru(m: CalismaModu, sembol: str, dizin: Path) -> Any:
+    if m is CalismaModu.PAPER:
+        from scryne_quant.exchange.kurallar import SembolKurallari
+        from scryne_quant.exchange.paper_adaptoru import PaperBorsa, PaperMaliyet
+
+        kural = SembolKurallari(**json.loads((dizin / "kurallar.json").read_text("utf-8")))
+        return PaperBorsa(kurallar={sembol: kural}, maliyet=PaperMaliyet(0.0, 0.0),
+                          saat=simdi_ms, yol=dizin / "paper_borsa.sqlite")
+    if m is CalismaModu.TESTNET:
+        from scryne_quant.exchange.imzali import BinanceImzaliAdaptoru
+
+        return BinanceImzaliAdaptoru()
+    if m is CalismaModu.LIVE:
+        from scryne_quant.exchange.canli import canli_iptal_adaptoru
+
+        return canli_iptal_adaptoru()
+    if m is CalismaModu.SHADOW:
+        from scryne_quant.exchange import canli
+        from scryne_quant.exchange.golge import GolgeAdaptoru
+
+        anahtar, sir = canli.okuma_anahtari_oku()
+        return GolgeAdaptoru(canli.canli_okuyucu(anahtar, sir))
+    raise ValueError(f"{m} koşusu için kill adaptörü yok")
 
 
 @execution_app.command("safe-kaldir")
@@ -393,6 +427,9 @@ def safe_kaldir(
     from scryne_quant.live import kill as kill_mod
 
     kayit = kill_mod.safe_kaldir(KOK / kosu / "kosu", not_metni)
+    if (KOK / kosu / "kosu.json").is_file():
+        sembol = json.loads((KOK / kosu / "kosu.json").read_text(encoding="utf-8"))["sembol"]
+        _audit_olay(KOK / kosu, sembol, "safe_kaldirildi", {"not": not_metni})
     rp = KOK / kosu / "risk.json"
     if rp.is_file():
         d = json.loads(rp.read_text(encoding="utf-8"))
@@ -402,6 +439,37 @@ def safe_kaldir(
             durum_ = RiskDurumu.yukle(d)
             durum_.serbest_birak()
             rp.write_text(json.dumps(durum_.sozluk(), ensure_ascii=False, indent=1), "utf-8")
+    _yaz(kayit)
+
+
+@execution_app.command("kosu-kapat")
+def kosu_kapat(
+    kosu: Annotated[str, typer.Option("--kosu")],
+    not_metni: Annotated[str, typer.Option("--not", help="Gerekçe (≥20 karakter).")],
+) -> None:
+    """Koşuyu **kalıcı olarak** kapatır (halt/SAFE_MODE'lu tatbikat koşuları dahil).
+
+    Kapatılan koşu bir daha başlatılamaz (`kosu_kur` reddeder) ve live gate'in
+    `kritik_hata_yok` kontrolünü tutmaz. Halt/SAFE_MODE **kaldırılmaz**: koşu işlem
+    yapamaz hâlde arşive geçer. Gerekçe audit'e yazılır (K-008/4, K-038).
+    """
+    from scryne_quant.execution.canli_kapi import KAPATILDI
+
+    dizin = KOK / kosu
+    if not (dizin / "kosu.json").is_file():
+        raise typer.BadParameter(f"koşu yok: {dizin}")
+    if len(not_metni.strip()) < 20:
+        raise typer.BadParameter("koşu kapatma bir gerekçe ister (≥20 karakter)")
+    from scryne_quant.live import kill as kill_mod
+
+    pid = kill_mod.pid_oku(dizin / "kosu")
+    if pid is not None and kill_mod.surec_yasiyor_mu(pid):
+        raise typer.BadParameter("koşu hâlâ çalışıyor; önce `sq execution durdur` ya da `kill`")
+    sembol = json.loads((dizin / "kosu.json").read_text(encoding="utf-8"))["sembol"]
+    kayit = {"not": not_metni.strip(), "zaman_utc": utc_str(simdi_ms()),
+             "safe_mode": (dizin / "kosu.safemode").is_file()}
+    (dizin / KAPATILDI).write_text(json.dumps(kayit, ensure_ascii=False, indent=1), "utf-8")
+    _audit_olay(dizin, sembol, "kosu_kapatildi", kayit)
     _yaz(kayit)
 
 

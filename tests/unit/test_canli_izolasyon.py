@@ -122,11 +122,12 @@ def test_canli_host_yetkisiz_kurulmaz():
 
 
 def test_sahte_ya_da_degistirilmis_yetki_gecmez():
-    sahte = yetki.CanliYetki("k", "o", "s", 1, 100.0, imza="0" * 64)
+    sahte = yetki.CanliYetki(CANLI_HOST, "k", "o", "s", 1, 100.0, imza="0" * 64)
     with pytest.raises(yetki.CanliYetkiGecersiz):
         BinanceImzaliAdaptoru(anahtar="a", sir="b", host=CANLI_HOST, oturum=Oturum(),
                               canli_yetki=sahte)
-    gercek = yetki.ver(kanit_hash="k", onay_hash="o", strateji="s", kademe=1, sermaye_usdt=100.0)
+    gercek = yetki.ver(host=CANLI_HOST, kanit_hash="k", onay_hash="o", strateji="s",
+                  kademe=1, sermaye_usdt=100.0)
     from dataclasses import replace
 
     buyutulmus = replace(gercek, sermaye_usdt=1_000_000.0)
@@ -136,7 +137,8 @@ def test_sahte_ya_da_degistirilmis_yetki_gecmez():
 
 
 def test_canli_yetkili_kurulum_anahtari_acikca_ister():
-    y = yetki.ver(kanit_hash="k", onay_hash="o", strateji="s", kademe=1, sermaye_usdt=100.0)
+    y = yetki.ver(host=CANLI_HOST, kanit_hash="k", onay_hash="o", strateji="s",
+                  kademe=1, sermaye_usdt=100.0)
     with pytest.raises(yetki.CanliYetkiGecersiz, match="açıkça"):
         BinanceImzaliAdaptoru(host=CANLI_HOST, oturum=Oturum(), canli_yetki=y)
 

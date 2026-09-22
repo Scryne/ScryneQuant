@@ -202,6 +202,25 @@ def _tek_emir(
     if borsada.durum is emir.durum and _dolum_ayni(emir, borsada):
         return None, False
 
+    # `SUBMITTED` + borsa kabulün ötesinde (dolmuş/kısmi/iptal/süresi geçmiş): süreç yanıtı
+    # yazamadan öldü. Tablodaki satır "emir var → borsanın durumu"; state machine ise
+    # `SUBMITTED → FILLED`ı tanımıyor (kabul ile dolum ayrı olaylar). Önceden bu, olağan bir
+    # çökmeyi **halt**a çeviriyordu. Emir motorunun `_yaniti_isle`deki yolu aynen izlenir:
+    # önce `ACKNOWLEDGED` (borsa kabul etmiş olmak zorunda — dolmuş), sonra borsanın durumu
+    # (K-114 denetimi). Borsanın durumu ACK'den de ulaşılamıyorsa aşağıdaki halt aynen.
+    if (
+        emir.durum is EmirDurumu.SUBMITTED
+        and not gecis_yasal_mi(emir.durum, borsada.durum)
+        and gecis_yasal_mi(EmirDurumu.ACKNOWLEDGED, borsada.durum)
+    ):
+        emir = defter.gecir(
+            emir.istemci_kimligi,
+            EmirDurumu.ACKNOWLEDGED,
+            zaman_ms=borsada.guncellendi_ms or emir.guncellendi_ms,
+            borsa_kimligi=borsada.borsa_kimligi,
+            hata="mutabakat: borsa emri kabul etmiş (yanıt kaydedilmeden süreç öldü)",
+        )
+
     if not gecis_yasal_mi(emir.durum, borsada.durum):
         return (
             Fark(

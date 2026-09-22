@@ -26,6 +26,7 @@ import secrets
 from collections.abc import Callable
 from dataclasses import dataclass
 from hashlib import sha256
+from typing import Any
 
 
 class CanliYetkiGecersiz(PermissionError):
@@ -51,6 +52,10 @@ _imzala, _dogrula = _kur()
 class CanliYetki:
     """Canlı emir yetkisi. Yalnızca `ver()` üretir; alanları değişirse geçersizdir."""
 
+    host: str
+    """Yetkinin geçerli olduğu **tek** host (K-114 denetimi). Başka bir host'a kurulan adaptör
+    bu yetkiyle kurulamaz — anahtarın yanlış/sahte bir uca gönderilmesi dahil."""
+
     kanit_hash: str
     """Yetkiyi doğuran live-gate raporunun (`execution/canli_kapi.py`) hash'i."""
 
@@ -64,9 +69,15 @@ class CanliYetki:
 
     imza: str = ""
 
+    def __reduce__(self) -> Any:
+        # Serileştirme yok: yetki bir sürecin içinde doğar ve orada ölür (diske/kuyruğa
+        # yazılamaz). Başka süreçte zaten geçersiz; bu, denemeyi görünür bir hataya çevirir.
+        raise TypeError("CanliYetki serileştirilemez (K-114)")
+
     def _icerik(self) -> bytes:
         return "\x00".join(
             (
+                self.host.rstrip("/"),
                 self.kanit_hash,
                 self.onay_hash,
                 self.strateji,
@@ -81,7 +92,13 @@ class CanliYetki:
 
 
 def ver(
-    *, kanit_hash: str, onay_hash: str, strateji: str, kademe: int, sermaye_usdt: float
+    *,
+    host: str,
+    kanit_hash: str,
+    onay_hash: str,
+    strateji: str,
+    kademe: int,
+    sermaye_usdt: float,
 ) -> CanliYetki:
     """Mühürlü yetki üretir. **Yalnızca `execution/canli_kapi.py` çağırır** (AST testi)."""
     if kademe < 1 or sermaye_usdt <= 0.0:
@@ -90,6 +107,7 @@ def ver(
             f"sermaye={sermaye_usdt}"
         )
     ham = CanliYetki(
+        host=host.rstrip("/"),
         kanit_hash=kanit_hash,
         onay_hash=onay_hash,
         strateji=strateji,
@@ -97,6 +115,7 @@ def ver(
         sermaye_usdt=float(sermaye_usdt),
     )
     return CanliYetki(
+        host=ham.host,
         kanit_hash=ham.kanit_hash,
         onay_hash=ham.onay_hash,
         strateji=ham.strateji,
@@ -106,13 +125,20 @@ def ver(
     )
 
 
-def dogrula(yetki: object) -> CanliYetki:
-    """Adaptör kurucularının çağırdığı doğrulayıcı. Geçmeyen her şey `CanliYetkiGecersiz`."""
+def dogrula(yetki: object, *, host: str | None = None) -> CanliYetki:
+    """Adaptör kurucularının çağırdığı doğrulayıcı. Geçmeyen her şey `CanliYetkiGecersiz`.
+
+    `host` verilirse yetkinin host'uyla birebir aynı olmalı.
+    """
     if not isinstance(yetki, CanliYetki) or not yetki.gecerli:
         raise CanliYetkiGecersiz(
             "canlı borsa host'u geçerli bir CanliYetki olmadan kullanılamaz (K-114). Yetki "
             "yalnızca live gate'in bütün kontrolleri geçip elle onay verildiğinde üretilir; "
             "`sq execution preflight` eksikleri listeler."
+        )
+    if host is not None and host.rstrip("/") != yetki.host:
+        raise CanliYetkiGecersiz(
+            f"canlı yetki {yetki.host} için; {host} host'una kurulum reddedildi (K-114)"
         )
     return yetki
 

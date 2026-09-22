@@ -74,7 +74,8 @@ def niyet(sebep="TEST"):
 
 
 def adaptor(b: Borsa):
-    y = yetki.ver(kanit_hash="k", onay_hash="o", strateji="s", kademe=1, sermaye_usdt=200.0)
+    y = yetki.ver(host=CANLI_HOST, kanit_hash="k", onay_hash="o", strateji="s",
+                  kademe=1, sermaye_usdt=200.0)
     return canli_emir_adaptoru(y, "anahtar", "sir", oturum=b)
 
 

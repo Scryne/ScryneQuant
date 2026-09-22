@@ -391,7 +391,7 @@ class BinanceImzaliAdaptoru(EmirAdaptoru):
         self.yalniz_iptal = yalniz_iptal
         if self.canli:
             if not (salt_okunur or yalniz_iptal):
-                yetki_mod.dogrula(canli_yetki)
+                yetki_mod.dogrula(canli_yetki, host=host)
             if anahtar is None or sir is None:
                 raise yetki_mod.CanliYetkiGecersiz(
                     "canlı adaptörün anahtarı **açıkça** verilmeli; ortamdan ya da .env'den "

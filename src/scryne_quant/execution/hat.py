@@ -25,10 +25,12 @@ tahmindir (K-038, K-046).
 | 3 | Çözülmemiş `UNKNOWN` emir | hepsi | §33 |
 | 4 | Aynı sembolde açık emir | hepsi | duplicate/yığılma |
 | 5 | Aynı bar için ikinci emir | hepsi | §33 duplicate (bar düzeyi) |
-| 6 | SAFE_MODE işareti (`kosu.safemode`) | artıran | K-008, K-065 |
-| 7 | Bayat karar (karar barı son kapanmış bar değil) | artıran | K-004, §24 |
-| 8 | Borsa ölçümlü günlük zarar / drawdown limiti | artıran (+ SAFE_MODE) | `config/risk.json` |
-| 9 | Tavanlar: sembol maruziyeti, brüt maruziyet, sermaye | küçültür | `config/risk.json`, kademe |
+| 6 | Sistem modu bu koşunun modunun altına inmiş / okunamıyor | artıran | K-050, K-114 |
+| 7 | Son mutabakat hatasız tamamlanmamış | artıran | K-038, K-046 |
+| 8 | SAFE_MODE işareti (`kosu.safemode`) | artıran | K-008, K-065 |
+| 9 | Bayat karar (karar barı, gönderim anındaki son kapanmış bar değil) | artıran | K-004, §24 |
+| 10 | Günlük zarar / drawdown (defter + borsa fiyatı, her bar) | artıran (+SAFE) | risk.json |
+| 11 | Tavan: maruziyet, brüt, nakit; boyut tabanı ≤ sermaye | küçültür | risk.json, kademe |
 
 **Hesap görünümü defterden türer, borsanın toplam bakiyesinden değil.** Koşunun sermayesi
 (`sermaye_usdt`: paper'da açılış nakdi, canlıda kademe sermayesi) + defterdeki fill akışı =
@@ -53,7 +55,7 @@ from typing import Any, Final
 from scryne_quant.common.zaman import simdi_ms, utc_str
 from scryne_quant.exchange.emir_adaptoru import BORSA_YONU, EmirAdaptoru
 from scryne_quant.exchange.hatalar import BorsaHatasi
-from scryne_quant.execution.mod import CalismaModu
+from scryne_quant.execution.mod import CalismaModu, sira
 from scryne_quant.execution.motor import EmirMotoru, GonderimSonucu, golge_mi
 from scryne_quant.oms.defter import EmirDefteri
 from scryne_quant.oms.emir import ACIK, EmirDurumu
@@ -86,6 +88,9 @@ class Engel(StrEnum):
     GUNLUK_ZARAR = "gunluk_zarar"
     DRAWDOWN = "drawdown"
     BAGLANTI = "baglanti"
+    MUTABAKAT = "mutabakat_yok"
+    """Son mutabakat hatasız tamamlanmadı: hesap doğrulanmamış, artıran emir yok."""
+
     HEDEFTE = "hedefte"
     """Pozisyon zaten hedefte; gönderilecek fark yok. Engel değil, sonuç — ama emir yok."""
 
@@ -246,6 +251,27 @@ class ExecutionHatti:
     son_mutabakat: dict[str, Any] = field(default_factory=dict)
     son_pozisyon: dict[str, Any] = field(default_factory=dict)
     baglanti_hatasi: str = ""
+    mutabakat_tamam: bool = False
+    """Son mutabakat hatasız bitti mi. Başlangıçta `False` (fail closed)."""
+
+    mod_tavani: Callable[[], CalismaModu] | None = None
+    """Sistem modunu **her artıran emirde** okuyan fonksiyon (K-114 denetimi). Verilirse ve
+    sistem modu bu koşunun modunun altına indiyse (`sq execution indir`), çalışan koşu da
+    artıran emir gönderemez; okuma hatası DISABLED sayılır. Canlıda zorunlu (kurulum verir)."""
+
+    def _mod_tavani_izin_veriyor(self) -> bool:
+        if self.mod_tavani is None:
+            return self.mod is not CalismaModu.LIVE  # canlıda tavansız hat çalışmaz
+        try:
+            sistem = self.mod_tavani()
+        except Exception:  # noqa: BLE001 — okunamayan mod DISABLED'dır (fail closed)
+            return False
+        return sira(sistem) >= sira(self.mod)
+
+    def ozkaynak_isle(self, ozkaynak: float, zaman_ms: int) -> None:
+        """Her barda çağrılır: kayıp izleyicisinin zirve/gün başı ölçümü emirden bağımsız."""
+        self.izleyici.isle(ozkaynak, zaman_ms)
+        self._durum_kaydet()
 
     def __post_init__(self) -> None:
         self.kosu_dizini = Path(self.kosu_dizini)
@@ -385,12 +411,24 @@ class ExecutionHatti:
         return sonuc
 
     def mutabakat_yap(self, *, asama: str = "dongu") -> dict[str, Any]:
-        """Emir + pozisyon mutabakatı. Uyuşmazlıkta **halt**; tahmin yürütülmez (K-038)."""
+        """Emir + pozisyon mutabakatı. Uyuşmazlıkta **halt**; tahmin yürütülmez (K-038).
+
+        **Mutabakat yapılamadıysa da işlem yok (K-114 denetimi).** Uyuşmazlık halt'a götürür;
+        ama mutabakatın *koşamaması* (borsa okunamadı, bozuk yanıt) önceden sessizdi ve
+        artıran emirler doğrulanmamış bir hesap üzerinde gönderilebiliyordu. Artık
+        `mutabakat_tamam` yalnızca emir + pozisyon mutabakatının ikisi de hatasız bittiğinde
+        `True`; aksi hâlde artıran niyetler `Engel.MUTABAKAT` ile durur (fail closed). Koşu
+        başında da `False`: başlangıç mutabakatı geçmeden hiçbir artıran emir gitmez.
+        """
+        self.mutabakat_tamam = False
         try:
             emir = mutabakat(self.defter, self.adaptor, self.sembol, durdur=False)
-        except BorsaHatasi as hata:
+        except (BorsaHatasi, ValueError, KeyError, TypeError) as hata:
+            # ValueError/KeyError/TypeError: borsanın bozuk/tanınmayan yanıtı
+            # (`BilinmeyenDurum` bir ValueError). Tahmin yok: mutabakat yapılamadı.
             self.baglanti_hatasi = f"{type(hata).__name__}: {hata}"
-            return {"asama": asama, "ok": False, "hata": self.baglanti_hatasi}
+            self._olay("mutabakat_yapilamadi", {"asama": asama, "hata": self.baglanti_hatasi})
+            return {"asama": asama, "ok": False, "hata": self.baglanti_hatasi, "halt": self.halt}
         self.son_mutabakat = {"asama": asama, **emir.sozluk()}
         if emir.halt:
             self.durdur(f"emir mutabakatı uyuşmazlığı: {emir.ozet()}")
@@ -402,13 +440,16 @@ class ExecutionHatti:
         except CipaYok as hata:
             self.son_pozisyon = {"halt": True, "cipa_yok": True, "hata": str(hata)}
             self.durdur("çıpa yok")
-        except (PozisyonHatasi, BorsaHatasi) as hata:
+        except (PozisyonHatasi, BorsaHatasi, ValueError, KeyError, TypeError) as hata:
             self.son_pozisyon = {"hata": f"{type(hata).__name__}: {hata}"}
             self.baglanti_hatasi = str(hata)
-        self.baglanti_hatasi = "" if not self.son_pozisyon.get("hata") else self.baglanti_hatasi
+            self._olay("mutabakat_yapilamadi", {"asama": asama, "hata": self.baglanti_hatasi})
+        hatasiz = not self.son_pozisyon.get("hata")
+        self.baglanti_hatasi = "" if hatasiz else self.baglanti_hatasi
+        self.mutabakat_tamam = hatasiz and not self.halt
         return {
             "asama": asama,
-            "ok": not self.halt,
+            "ok": self.mutabakat_tamam,
             "emir_mutabakati": self.son_mutabakat,
             "pozisyon_mutabakati": self.son_pozisyon,
             "halt": self.halt,
@@ -460,6 +501,10 @@ class ExecutionHatti:
             return self._engel(n, Engel.AYNI_BAR)
 
         # 6-7: artıranlar için.
+        if not azaltan and not self._mod_tavani_izin_veriyor():
+            return self._engel(n, Engel.MOD)
+        if not azaltan and not self.mutabakat_tamam:
+            return self._engel(n, Engel.MUTABAKAT)
         if not azaltan and self.safe_mode:
             return self._engel(n, Engel.SAFE_MODE)
         if not azaltan and n.karar_ms != son_kapali_bar_ms:
@@ -479,7 +524,7 @@ class ExecutionHatti:
             if h.ozkaynak < self.izleyici.zirve * (1.0 - self.limitler.drawdown_limiti):
                 self.safe_isaretle(
                     f"drawdown {self.izleyici.drawdown(h.ozkaynak):.4f} > "
-                    f"{self.limitler.drawdown_limiti} (borsa ölçümlü)"
+                    f"{self.limitler.drawdown_limiti} (execution hattı ölçümü)"
                 )
                 return self._engel(n, Engel.DRAWDOWN)
             if h.ozkaynak < self.izleyici.gun_basi * (1.0 - self.limitler.gunluk_zarar_limiti):
@@ -512,7 +557,13 @@ class ExecutionHatti:
         ):
             if hedef > tavan:
                 hedef, kisit = tavan, [*kisit, ad]
-        hedef_deger = hedef * h.ozkaynak
+        # Boyut tabanı koşunun **sermayesiyle** sınırlı: kâr birikse de emir büyüklüğü
+        # sermaye tavanını (canlıda kademe, K-050/3) aşamaz — sermaye artışı yalnız yeni
+        # kademe + onayla (K-114 denetimi). Zararda taban özkaynaktır (küçülür).
+        taban = min(h.ozkaynak, self.limitler.sermaye_usdt)
+        if taban < h.ozkaynak:
+            kisit = [*kisit, "sermaye_tavani"]
+        hedef_deger = hedef * taban
         fark = hedef_deger - h.pozisyon_degeri
         if yon == "BUY":
             if fark <= 0.0:

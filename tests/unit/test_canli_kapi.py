@@ -28,6 +28,7 @@ from scryne_quant.execution.canli_kapi import (
     kapi_raporu,
 )
 from scryne_quant.execution.mod import CalismaModu, ModDefteri, canli_onayla
+from scryne_quant.risk.audit import Olay, OlayTuru, SqliteDefter
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -61,10 +62,23 @@ def test_shadow_kapisi_ag_yoksa_olculemedi(kok):
     assert not r["gecti"]
 
 
+def capali_rapor(dizin: Path, govde: dict) -> Path:
+    """Yürütücünün yaptığı gibi: rapor.json + hash'i koşunun audit zincirinde."""
+    import hashlib
+
+    dizin.mkdir(parents=True, exist_ok=True)
+    p = dizin / "rapor.json"
+    p.write_text(json.dumps(govde), encoding="utf-8")
+    d = SqliteDefter(dizin / "audit.sqlite")
+    d.yaz(Olay(tur=OlayTuru.EXECUTION, zaman_ms=1, sembol="BTCUSDT", durum={},
+               govde={"olay": "rapor",
+                      "rapor_sha256": hashlib.sha256(p.read_bytes()).hexdigest()}))
+    d.kapat()
+    return p
+
+
 def test_shadow_kapisi_islem_yetkili_anahtari_reddeder(kok):
-    ex = kok / "runs/execution/p1"
-    ex.mkdir(parents=True)
-    (ex / "rapor.json").write_text(json.dumps({"mod": "PAPER", "gecti": True, "bitis_ms": 1}))
+    capali_rapor(kok / "runs/execution/p1", {"mod": "PAPER", "gecti": True, "bitis_ms": 1})
     ag = AgYoklamasi(
         okuma_anahtari_kisitlari=lambda: {"enableReading": True,
                                           "enableSpotAndMarginTrading": True},
@@ -97,8 +111,9 @@ def _hepsi_gecer(monkeypatch):
 
 def test_yetki_yalniz_live_modda_ve_onaylanan_hashle(kok, monkeypatch):
     _hepsi_gecer(monkeypatch)
-    md = ModDefteri(kok / "runs/execution/mod.json")
-    b = KapiBaglami(kok=kok, strateji="s", mod_defteri=md)
+    audit = SqliteDefter(":memory:")
+    md = ModDefteri(kok / "runs/execution/mod.json", audit=audit)
+    b = KapiBaglami(kok=kok, strateji="s", mod_defteri=md, audit=audit)
     with pytest.raises(CanliKapiKapali, match="LIVE değil"):
         canli_yetki_ver(b)
     for m in list(CalismaModu)[1:5]:

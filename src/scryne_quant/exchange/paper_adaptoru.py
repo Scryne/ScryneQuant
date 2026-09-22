@@ -241,6 +241,11 @@ class PaperBorsa(EmirAdaptoru):
                 g = json.loads(s["govde"])
                 if g["symbol"] != sembol or g["status"] not in ("NEW", "PARTIALLY_FILLED"):
                     continue
+                # Bu barın açılışından **sonra** verilmiş emir bu açılıştan dolamaz (K-004):
+                # çökme sonrası aynı bar yeniden işlenirse emir kendi karar barının açılışında
+                # dolmuş gibi görünürdü (K-114 denetimi).
+                if int(g.get("transactTime", 0)) > int(zaman_ms):
+                    continue
                 if g["type"] == "MARKET":
                     fiyat = self._slip(acilis, g["side"])
                 else:

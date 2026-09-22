@@ -50,6 +50,7 @@ from scryne_quant.features.indikator import atr as atr_hesapla
 from scryne_quant.live import durdurma
 from scryne_quant.live import kill as kill_mod
 from scryne_quant.live.akis import Bar, Kaynak
+from scryne_quant.live.kilit import KilitAlinamadi, KosuKilidi
 from scryne_quant.live.pencere import VARSAYILAN_KAPASITE, BarPenceresi
 from scryne_quant.oms.emir import EmirDurumu
 from scryne_quant.risk.durum import RiskDurumu
@@ -325,7 +326,9 @@ class Yurutucu:
         for b in yeni:
             canli = b.open_time == en_son_kapali
             ozetler.append(self._bar_isle(canli_bar(b) if canli else _backfill(b), canli=canli))
-        self._durum_kaydet()
+            # Her bardan sonra: çökme penceresi tek bara iner (aynı bar yeniden işlenirse
+            # `Engel.AYNI_BAR` ve paper'ın `transactTime` kuralı ikinci emri/erken fill'i keser).
+            self._durum_kaydet()
         self.hat.durum_yaz(ek=self._ek())
         return ozetler
 
@@ -356,6 +359,7 @@ class Yurutucu:
             self.son_hata = f"hesap: {hata}"
             return {"bar_ms": bar.open_time, "karar": None, "hata": self.son_hata}
         self.risk.bar_isle(bar.open_time, h.ozkaynak)
+        self.hat.ozkaynak_isle(h.ozkaynak, bar.open_time + self._adim)
 
         # 4-5) Karar + execution.
         karar = self._karar(bar, canli=canli, ozkaynak=h.ozkaynak, maruziyet=h.maruziyet,
@@ -407,7 +411,15 @@ class Yurutucu:
         self.sayac.risk_onay += 1
         self.son_karar["risk"] = {"karar": "onay", "onayli_maruziyet": karar.onayli_maruziyet,
                                   "kisitlayan": list(karar.kisitlayan)}
-        u = self.hat.uygula(karar, son_kapali_bar_ms=bar.open_time)
+        # Bayatlık **gönderim anında** ölçülür (K-114 denetimi): karar barı, borsanın şimdiki
+        # saatine göre son kapanmış bar değilse (işlem bir sonraki bar kapanışını aştıysa)
+        # artıran emir gitmez. Saat okunamazsa bayat sayılır (fail closed).
+        try:
+            simdi = self.kaynak.sunucu_zamani_ms()
+            son_kapali = bar_acilisi(simdi, self.ayar.timeframe) - self._adim
+        except BorsaHatasi:
+            son_kapali = -1
+        u = self.hat.uygula(karar, son_kapali_bar_ms=son_kapali)
         self.son_karar["execution"] = u.sozluk()
         alan = {
             "gonderildi": "gonderildi", "golge": "golge", "kural_reddi": "kural_reddi",
@@ -458,6 +470,7 @@ class Yurutucu:
         durdur: Callable[[], bool] | None = None,
     ) -> dict[str, Any]:
         """Gerçek zamanlı döngü. `kosu.dur` bayrağı, `azami_sure_s` ya da `durdur()` ile biter."""
+        kilitler = self.kilitle()
         kill_mod.pid_yaz(self.kosu_yolu)
         bitis = None if azami_sure_s is None else time.monotonic() + azami_sure_s
         try:
@@ -471,10 +484,29 @@ class Yurutucu:
                 if bitis is not None and time.monotonic() >= bitis:
                     break
                 time.sleep(bekleme_s)
+            return self.kapat()
         finally:
             durdurma.temizle(self.kosu_yolu)
             kill_mod.pid_sil(self.kosu_yolu)
-        return self.kapat()
+            for k in kilitler:
+                k.kapat()
+
+    def kilitle(self) -> list[KosuKilidi]:
+        """Tek süreç kilidi; LIVE'da ayrıca **tek canlı koşu** kilidi (K-114 denetimi).
+
+        Aynı koşuyu iki süreçle sürmek defteri çiftler; iki **ayrı** canlı koşu ise her biri
+        kademe sermayesiyle sınırlı olduğu hâlde toplam maruziyeti kademenin katına çıkarır —
+        kademe tavanının (K-050/3) ikinci bir süreçle delinmesi. İkinci süreç kilidi alamaz ve
+        başlamaz.
+        """
+        kilitler = [KosuKilidi(self.kosu_yolu).al()]
+        if self.ayar.mod is CalismaModu.LIVE:
+            try:
+                kilitler.append(KosuKilidi(self.ayar.kosu_dizini.parent / "canli").al())
+            except KilitAlinamadi:
+                kilitler[0].kapat()
+                raise
+        return kilitler
 
     def tekrar_oynat(self, kaynak: ListeBarKaynagi, *, isinma: int) -> dict[str, Any]:
         """Tekrar kaynağında: ilk `isinma` bar ısınma, kalanlar birer birer 'canlı' gelir."""
@@ -482,12 +514,17 @@ class Yurutucu:
         if len(barlar) <= isinma:
             raise YurutucuHatasi("tekrar için ısınmadan fazla bar gerekir")
         self.tekrar = True
-        kaynak.simdi = barlar[isinma - 1].open_time + self._adim
-        self.baslat()
-        for b in barlar[isinma:]:
-            kaynak.simdi = b.open_time + self._adim
-            self.adim()
-        return self.kapat()
+        kilitler = self.kilitle()
+        try:
+            kaynak.simdi = barlar[isinma - 1].open_time + self._adim
+            self.baslat()
+            for b in barlar[isinma:]:
+                kaynak.simdi = b.open_time + self._adim
+                self.adim()
+            return self.kapat()
+        finally:
+            for k in kilitler:
+                k.kapat()
 
     def kapat(self) -> dict[str, Any]:
         """Kapanış mutabakatı + rapor (`rapor.json`). Açık emir iptal edilmez, raporlanır."""
@@ -496,6 +533,13 @@ class Yurutucu:
         durum = self.hat.durum_yaz(ek=self._ek())
         rapor = self.rapor(durum, sonuc)
         self._yaz("rapor.json", rapor)
+        # Raporun hash'i koşunun zincirli audit defterine yazılır (K-114 denetimi): live gate
+        # kanıtı rapor dosyasına değil, audit'e bağlı hash'e bakar — elle düzenlenmiş bir
+        # rapor.json kanıt sayılmaz.
+        import hashlib
+
+        sha = hashlib.sha256((self.ayar.kosu_dizini / "rapor.json").read_bytes()).hexdigest()
+        self.hat._olay("rapor", {"rapor_sha256": sha, "gecti": rapor["gecti"]})
         return rapor
 
     # ================================================================ rapor
@@ -571,6 +615,7 @@ class Yurutucu:
             "emir_sayimi": sayim,
             "dolan_emir": dolan,
             "golge_sayisi": golge,
+            "kapanista_acik_emir": int((durum.get("emirler") or {}).get("acik", 0)),
             "kural_reddi": s.kural_reddi,
             "pozisyon_farki": pozisyon_farki,
             "saat_sicramasi": s.saat_sicramasi,

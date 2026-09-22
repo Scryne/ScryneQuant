@@ -165,6 +165,36 @@ def risk_config_kontrolu(b: KapiBaglami) -> Kontrol:
                    kanit=limitler.kimlik())
 
 
+KAPATILDI: Final = "kapatildi.json"
+"""`sq execution kosu-kapat` işareti: koşu gerekçeyle kapatıldı, bir daha başlatılamaz."""
+
+
+def audit_capasi(dizin: Path, olay: str, dosya: Path) -> str | None:
+    """`dosya`nın SHA-256'sı koşunun **zinciri sağlam** audit defterinde `olay` olarak var mı?
+
+    Kanıt dosyaları (rapor.json, kill.json) düz JSON: elle düzenlenebilir. Live gate onlara
+    değil, koşunun zincirli audit defterine yazılmış hash'lerine güvenir (K-114 denetimi).
+    Dönen değer sebep (kanıt değil) ya da `None` (kanıt).
+    """
+    yol = dizin / "audit.sqlite"
+    if not yol.is_file() or not dosya.is_file():
+        return "audit defteri ya da dosya yok"
+    from scryne_quant.risk.audit import SqliteDefter
+
+    defter = SqliteDefter(yol)
+    try:
+        if not defter.dogrula():
+            return "koşu audit zinciri kırık"
+        sha = _sha256(dosya)
+        for satir in defter.oku():
+            g = satir.get("govde") or {}
+            if g.get("olay") == olay and sha in (g.get("rapor_sha256"), g.get("kill_sha256")):
+                return None
+        return f"{dosya.name} hash'i audit'te yok (elle düzenlenmiş ya da eski biçim)"
+    finally:
+        defter.kapat()
+
+
 def kosu_raporlari(b: KapiBaglami) -> list[tuple[Path, dict[str, Any]]]:
     """`runs/execution/<koşu>/rapor.json` dosyaları, yeniden eskiye."""
     kok = b.yol(KOSU_KOKU)
@@ -200,6 +230,10 @@ def kosu_raporu_kontrolu(
             if sebep:
                 son_sebep = f"{p.parent.name}: {sebep}"
                 continue
+        sebep = audit_capasi(p.parent, "rapor", p)
+        if sebep:
+            son_sebep = f"{p.parent.name}: {sebep}"
+            continue
         # Altyapı kanıtında (paper/testnet) varlık yeter; kanıt hash'e girmez, yoksa her yeni
         # koşu onayı geçersiz kılardı. Shadow'un canlı kanıtı ise **belirli** bir rapordur.
         return Kontrol(ad, True, f"{p.parent.name} ({utc_str(int(r.get('bitis_ms', 0)))})",
@@ -362,8 +396,13 @@ def kill_tatbikati_kontrolu(b: KapiBaglami) -> Kontrol:
         # sonlandırılması. Zaten kapanmış bir koşuya karşı kill, K-065'in ölçtüğü şeyi
         # (donmuş/çalışan süreci dışarıdan durdurmak) ölçmez.
         surec = r.get("surec") or {}
+        dogrulanmis = bool(r.get("kalan_acik_emir")) and not any(
+            (r.get("kalan_acik_emir") or {}).values()
+        )
         if (r.get("canli_host") and r.get("basarili") and surec.get("sonlandirildi")
-                and surec.get("not") != "zaten ölüydü"):
+                and dogrulanmis
+                and surec.get("not") != "zaten ölüydü"
+                and audit_capasi(p.parent, "kill", p) is None):
             return Kontrol("kill_tatbikati", True, f"{p.parent.name}: başarılı",
                            kanit=_sha256(p))
     return Kontrol("kill_tatbikati", False, "canlı host'a karşı başarılı kill tatbikatı yok",
@@ -393,7 +432,10 @@ def kritik_hata_kontrolu(b: KapiBaglami) -> Kontrol:
     """Açık SAFE_MODE işareti, durdurulmuş (halt) koşu ya da çözülmemiş UNKNOWN emir."""
     kok = b.yol(KOSU_KOKU)
     sorunlar: list[str] = []
-    for p in sorted(kok.glob("*/durum.json")) if kok.is_dir() else []:
+    for k in sorted(kok.glob("*/kosu.json")) if kok.is_dir() else []:
+        p = k.parent / "durum.json"
+        if (k.parent / KAPATILDI).is_file():
+            continue  # gerekçeyle kapatılmış: bir daha başlatılamaz, gate'i tutmaz
         d = _json(p) or {}
         if (p.parent / "kosu.safemode").is_file():
             sorunlar.append(f"{p.parent.name}: SAFE_MODE işareti açık")
@@ -422,8 +464,11 @@ def _ag_kontrolu(
     sebep = degerlendir(sonuc)
     if sebep:
         return Kontrol(ad, False, sebep, engel)
+    # Anahtar kontrollerinde kanıt **hangi anahtar** olduğunu taşır (`createTime`): onaydan
+    # sonra aynı yetkili başka bir anahtara geçmek de yeniden onay ister (K-114 denetimi).
+    kanit = f"{ad}:{sonuc.get('createTime')}" if "createTime" in sonuc else ad
     return Kontrol(ad, True, json.dumps(sonuc, ensure_ascii=False, sort_keys=True)[:160],
-                   kanit=ad)
+                   kanit=kanit)
 
 
 def _yetki_degerlendir(mod: str) -> Callable[[dict[str, Any]], str | None]:
@@ -544,6 +589,28 @@ def kapi_raporu(hedef: CalismaModu, b: KapiBaglami) -> dict[str, Any]:
     }
 
 
+def onay_audit_capasi(b: KapiBaglami, onay: dict[str, Any]) -> str | None:
+    """LIVE onay satırı global audit defterinde (zinciri sağlam) aynı hash'le var mı?
+
+    Mod kaydı zincirli ama tek başına bir dosya: zincir yeniden hesaplanarak sahte bir onay
+    satırı eklenebilir. Onay satırı yazılırken audit'e de yazılır (`ModDefteri._yaz`) ve
+    audit satırının hash'i onay satırına döner; burada iki yön birlikte doğrulanır
+    (K-082 kalıbı). Audit verilmemişse doğrulanamaz → kapalı (K-114 denetimi).
+    """
+    if b.audit is None:
+        return "audit defteri verilmedi"
+    if not b.audit.dogrula():
+        return "global audit zinciri kırık"
+    for satir in b.audit.oku():
+        g = satir.get("govde") or {}
+        if (satir.get("satir_hash") == onay.get("audit_hash")
+                and g.get("olay") == "mod_gecisi"
+                and g.get("satir_hash") == onay.get("satir_hash")
+                and g.get("nereye") == str(CalismaModu.LIVE)):
+            return None
+    return "onay satırının audit karşılığı yok"
+
+
 class CanliKapiKapali(PermissionError):
     """Canlı yetki üretilemedi: mod, kapı ya da onay hash'i tutmuyor."""
 
@@ -562,6 +629,9 @@ def canli_yetki_ver(b: KapiBaglami) -> tuple[yetki_mod.CanliYetki, dict[str, Any
     onay = kayit.son_onay
     if onay is None:
         raise CanliKapiKapali(f"mod LIVE değil ({kayit.mod}); canlı yetki üretilmez")
+    sebep = onay_audit_capasi(b, onay)
+    if sebep:
+        raise CanliKapiKapali(f"LIVE onayı audit'le doğrulanamadı: {sebep}")
     rapor = kapi_raporu(CalismaModu.LIVE, b)
     if not rapor["gecti"]:
         eksik = ", ".join(e["ad"] for e in rapor["engeller"])
@@ -573,7 +643,10 @@ def canli_yetki_ver(b: KapiBaglami) -> tuple[yetki_mod.CanliYetki, dict[str, Any
         )
     if rapor["strateji"] != onay.get("strateji"):
         raise CanliKapiKapali("onaylanan strateji ile başlatılan strateji farklı")
+    from scryne_quant.exchange.canli import CANLI_HOST
+
     yetki = yetki_mod.ver(
+        host=CANLI_HOST,
         kanit_hash=rapor["hash"],
         onay_hash=str(onay.get("satir_hash", "")),
         strateji=rapor["strateji"],
@@ -585,6 +658,7 @@ def canli_yetki_ver(b: KapiBaglami) -> tuple[yetki_mod.CanliYetki, dict[str, Any
 
 __all__ = [
     "KADEME_YOLU",
+    "KAPATILDI",
     "KARAR_BEKLIYOR",
     "OPERASYON_YOLU",
     "R8_KRITER_SHA256_ONEK",

@@ -82,3 +82,39 @@ def test_onay_tty_olmadan_verilmez(calisma):
     s = CliRunner().invoke(app, ["execution", "onayla", "--strateji", "s", "--hash", "x",
                                  "--not", "yirmi karakterden uzun bir not"])
     assert s.exit_code == 2 and "etkileşimli" in s.output
+
+
+def test_kill_adaptor_kurulamasa_da_isaret_ve_basarisiz_rapor(calisma):
+    """Kill'in borsaya bağlı olmayan adımları (SAFE_MODE işareti) adaptör hatasında da olur;
+    açık emirler doğrulanamadığı için rapor BAŞARISIZ (önceden komut tamamen patlıyordu)."""
+    r = CliRunner()
+    assert r.invoke(app, ["execution", "yukselt", "PAPER", "--not", "test"]).exit_code == 0
+    y, kaynak = kosu_kur(istek())
+    assert y.hat.mod_tavani is not None  # çalışan koşu sistem modunu okur
+    y.tekrar_oynat(kaynak, isinma=100)
+    # kurallar.json yok → paper adaptörü kurulamaz
+    s = r.invoke(app, ["execution", "kill", "--kosu", "k", "--sebep", "adaptor yok", "--json"])
+    assert s.exit_code == 1
+    kayit = json.loads((calisma / "runs/execution/k/kill.json").read_text(encoding="utf-8"))
+    assert not kayit["basarili"] and any("adaptör kurulamadı" in h for h in kayit["hatalar"])
+    assert (calisma / "runs/execution/k/kosu.safemode").is_file()
+
+
+def test_kosu_kapat_gate_i_birakir_ama_kosu_bir_daha_baslamaz(calisma):
+    from scryne_quant.execution.canli_kapi import KapiBaglami, kritik_hata_kontrolu
+
+    r = CliRunner()
+    assert r.invoke(app, ["execution", "yukselt", "PAPER", "--not", "test"]).exit_code == 0
+    y, kaynak = kosu_kur(istek())
+    y.tekrar_oynat(kaynak, isinma=100)
+    y.hat.safe_isaretle("tatbikat")
+    b = KapiBaglami(kok=calisma)
+    assert kritik_hata_kontrolu(b).gecti is False
+    assert r.invoke(app, ["execution", "kosu-kapat", "--kosu", "k", "--not", "kisa"]).exit_code
+    s = r.invoke(app, ["execution", "kosu-kapat", "--kosu", "k", "--not",
+                       "tatbikat koşusu, işlem yapamaz hâlde arşivleniyor"])
+    assert s.exit_code == 0, s.output
+    assert kritik_hata_kontrolu(b).gecti is True
+    assert (calisma / "runs/execution/k/kosu.safemode").is_file()  # işaret kalkmadı
+    with pytest.raises(KurulumHatasi, match="kapatılmış"):
+        kosu_kur(istek())
