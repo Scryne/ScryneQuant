@@ -5307,3 +5307,27 @@ kapat") · **Tabi:** K-037, K-039, K-045 (istisna, ölçümle), K-051, K-061, K-
 - K-061: h58 uyarı 0 / incele 0; h59 uyarı 0 / incele 0 ("benzer mekanizma bulunmadı").
 - Koşu: `tools/r5_fx_kos.py kos` × 2 (4,7 s / 4,6 s); h58 OOS hash `b5acf4f53869`, h59 `f9a3de7e72e3`, kontrol
   `5689acde9405` (h53-h57 ile aynı).
+
+---
+
+## K-106 — R6 kapanışı: FX alfa araştırması (h53-h59) sonuç FAIL; mevcut kapsamda doğrulanmış FX alfası yok
+
+**Durum:** kabul · **Tarih:** 2026-09-22 · **Onay:** Scryne ("R6 FX alpha araştırmasını kapat; yeni hipotez,
+grid, kod yok; yalnız mevcut kayıtlardan kapanış dokümanı") · **Tabi:** K-045, K-051, K-101, K-102, K-103,
+K-104, K-105 · **Kaynak:** `docs/research/records/2026-09-22-R6-kapanis.md`
+
+### Karar
+
+1. **R6 kapandı, sonuç FAIL.** Üç program (`fx_fiyat`, `fx_ortalama_donus`, `fx_oynaklik`; 7/7 çekiliş) ve
+   h54 tekrar turu: kapılar 0/7, tekrar eden OOS üstünlüğü 0/7, promotion adayı yok. Program kaydı + bütçe
+   kalıbı üç kez uçtan uca işledi; her programın kapanış raporu var.
+2. **İddianın kapsamı sınırlı:** 21 FXCM çifti, 1h, K-101 proxy penceresi (2023-11..2024-02; tekrar için
+   2024-03..07 alt evrenleri), haftalık dengeleme, yalnız uzun, test edilen yedi mekanizma ve mevcut kapılar.
+   "FX'te alfa yok" **denmiyor**.
+3. **Kapanış dokümanı** ölçülemeyen kapıları (walk-forward, rejim, FX null), `yillik_anlamli=False`'un
+   etkisini (dört "geçti" Sharpe'ı kanıt değil), `asgari_islem`in yapısal kapalılığını, proxy finansman
+   engelini ve dönüş koşullarını (ölçülmüş tarihli finansman, ≥1 yıl finansman-geçerli veri, FX null,
+   `oos_sharpe`↔`yillik_anlamli`, kısa bacak, rejim kalibrasyonu) tek yerde toplar.
+4. **Açık kalan tek kalem:** h56 tekrar gereksinimi (K-104) — koşulmadı; R6 kapanışında takip edilmiyor,
+   dönüş koşulları sağlanınca yeni çekiliş harcamadan koşulur.
+5. Yeni hipotez/ızgara/kod yok; mevcut sonuçlar değiştirilmedi; defter 59.

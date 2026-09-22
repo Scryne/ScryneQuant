@@ -252,6 +252,9 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   ölçülen dağılımdan), h58/h59 OOS'ta kontrolün −16/−21 USD altında; `1/σ` ağırlık ve düşük oynaklık seçimi
   bu pencerede **yapısal olarak ölçülemez** (kapalı tur yok; `runs/fx/oynaklik-kaynak-olcumu.json`), çekiliş
   harcanmadı. Rapor `docs/research/records/2026-09-22-R6-fx-oynaklik.md`.
+  **R6 kapandı (K-106, 2026-09-22):** `docs/research/records/2026-09-22-R6-kapanis.md` — h53-h59 kapılar 0/7,
+  tekrar eden OOS üstünlüğü 0/7; mevcut veri/dönem/hipotez kapsamında doğrulanmış FX alfası yok; dönüş
+  koşulları (tarihli finansman, ≥1 yıl veri, FX null, `oos_sharpe`↔`yillik_anlamli`) orada. Yeni çekiliş yok.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor
