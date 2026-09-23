@@ -67,6 +67,7 @@ def hesap_ozeti(ad: str, tanim: dict[str, Any], dizin: Path, simdi_ms: int) -> d
         "hafta_islem": 0,
         "toplam_islem": 0,
         "toplam_ucret": 0.0,
+        "swap_toplam": None,
     }
     db_yolu = dizin / "defter.sqlite"
     if not db_yolu.is_file():
@@ -121,7 +122,10 @@ def hesap_ozeti(ad: str, tanim: dict[str, Any], dizin: Path, simdi_ms: int) -> d
     son_acilis = {s: (f, t) for s, f, t in acilislar}
     paper = dizin / "paper.json"
     if paper.is_file():
-        adet = json.loads(paper.read_text(encoding="utf-8")).get("adet", {})
+        durum = json.loads(paper.read_text(encoding="utf-8"))
+        adet = durum.get("adet", {})
+        if "swap_toplam" in durum.get("ek", {}):
+            ozet["swap_toplam"] = float(durum["ek"]["swap_toplam"])
         ozet["pozisyonlar"] = [
             {"sembol": s, "adet": a, "yon": "long" if a > 0 else "short",
              "giris_fiyat": son_acilis.get(s, (None, None))[0],

@@ -67,6 +67,7 @@ export interface HesapOzeti {
   hafta_islem: number;
   toplam_islem: number;
   toplam_ucret: number;
+  swap_toplam: number | null;
 }
 
 export interface AktifYaniti {

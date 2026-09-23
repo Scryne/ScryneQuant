@@ -172,6 +172,7 @@ export function Ayar({ h, risk }: { h: HesapOzeti; risk: Record<string, number> 
         {satir("Günlük kayıp freni", oran(risk.gunluk_kayip, 0))}
         {satir("Haftalık kayıp freni", oran(risk.haftalik_kayip, 0))}
         {satir("Toplam maliyet", `${usdt(h.toplam_ucret)} ${h.para_birimi}`)}
+        {h.swap_toplam != null ? satir("Gecelik swap (toplam)", `${h.swap_toplam > 0 ? "+" : ""}${usdt(h.swap_toplam)} ${h.para_birimi}`) : null}
       </dl>
       <p className="mt-1 text-[12px] text-pretty text-bot-text-3">{h.semboller.join(" · ")}</p>
     </section>

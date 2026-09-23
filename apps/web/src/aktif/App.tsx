@@ -12,7 +12,7 @@ const HESAP_ADI: Record<string, { ad: string; piyasa: string }> = {
   "kripto-trend": { ad: "Kripto · Trend", piyasa: "10 coin" },
   "kripto-kirilim": { ad: "Kripto · Kırılım", piyasa: "10 coin" },
   "kripto-donus": { ad: "Kripto · Dönüş", piyasa: "10 coin" },
-  "mt5-demo": { ad: "MT5 · FX ve endeks", piyasa: "EURUSD, GBPUSD, altın, S&P, Nasdaq" },
+  "mt5-demo": { ad: "MT5 · FX ve endeks", piyasa: "7 parite, altın, S&P, Nasdaq, Dow" },
 };
 
 function hesapAdi(ad: string) {
