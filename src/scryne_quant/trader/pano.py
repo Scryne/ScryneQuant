@@ -153,6 +153,7 @@ WEB_DIST = Path(__file__).resolve().parents[3] / "apps" / "web" / "dist"
 def uygulama(kok: Path, web_dist: Path | None = None) -> FastAPI:
     from fastapi.staticfiles import StaticFiles
 
+    from scryne_quant.trader.aktif_panosu import aktif_topla
     from scryne_quant.trader.bot_panosu import bot_topla
 
     app = FastAPI(title="ScryneQuant execution panosu", docs_url=None, redoc_url=None)
@@ -166,14 +167,27 @@ def uygulama(kok: Path, web_dist: Path | None = None) -> FastAPI:
     def api_bot(kosu: str | None = None) -> JSONResponse:
         return JSONResponse(bot_topla(kok, kosu))
 
+    @app.get("/api/aktif")
+    def api_aktif() -> JSONResponse:
+        return JSONResponse(aktif_topla(kok))
+
     @app.get("/klasik", response_class=HTMLResponse)
     def klasik() -> str:
         return SAYFA
 
-    @app.get("/", response_class=HTMLResponse)
-    def sayfa() -> str:
+    @app.get("/bot", response_class=HTMLResponse)
+    def bot_sayfasi() -> str:
         bot = dist / "bot.html"
         return bot.read_text(encoding="utf-8") if bot.is_file() else SAYFA
+
+    @app.get("/", response_class=HTMLResponse)
+    def sayfa() -> str:
+        # K-134: kök sayfa aktif demo botlar. Eski BTC ekranları bağlantısız (`/bot`, `/klasik`).
+        for ad in ("aktif.html", "bot.html"):
+            yol = dist / ad
+            if yol.is_file():
+                return yol.read_text(encoding="utf-8")
+        return SAYFA
 
     if (dist / "assets").is_dir():
         app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")

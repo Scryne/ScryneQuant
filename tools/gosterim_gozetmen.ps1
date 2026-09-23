@@ -25,13 +25,10 @@ function Yaz([string]$m) {
 
 if (Test-Path (Join-Path $Gosterim "DURDUR")) { exit 0 }
 
-$Kosular = @(
-    @{ Ad = "gosterim-testnet"; Arg = "execution calistir --mod testnet --kosu gosterim-testnet --strateji sma_kesisim --timeframe 1h --sermaye 100 --bekleme 20" },
-    @{ Ad = "gosterim-shadow";  Arg = "execution calistir --mod shadow --kosu gosterim-shadow --strateji sma_kesisim --timeframe 1h --sermaye 100 --bekleme 20" }
-    # K-134: `urun-testnet` cikarildi — gosterim-testnet ile ayni testnet hesabini paylasiyordu;
-    # 49,58 USDT'lik alimi gosterim-testnet'in mutabakatini "aciklanamayan fark"la durdurdu.
-    # Bir testnet hesabinda tek kosu.
-)
+# K-134: eski BTC gösterim koşuları (gosterim-testnet, gosterim-shadow, urun-testnet) Scryne'ın
+# isteğiyle kaldırıldı ("yeniler olsun sadece"); gerçek para pilotu yok. Liste bilerek boş.
+# (urun-testnet ayrıca gosterim-testnet ile aynı testnet hesabını paylaşıyordu.)
+$Kosular = @()
 
 $Calisan = Get-CimInstance Win32_Process -Filter "name='python.exe' or name='sq.exe'" |
     ForEach-Object { $_.CommandLine } | Where-Object { $_ }

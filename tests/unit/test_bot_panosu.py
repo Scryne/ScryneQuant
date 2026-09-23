@@ -103,3 +103,41 @@ def test_kok_sayfa_derlenmis_bot_sayfasi_yoksa_klasik(tmp_path):
     assert "CURRENT MODE" in c.get("/klasik").text
     for yol in ("/api/bot", "/"):
         assert c.post(yol).status_code in (404, 405)
+
+
+def test_aktif_ucu_ve_kok_sayfa(tmp_path):
+    """K-134: `/api/aktif` hesapları defterden okur, yazmaz; kök sayfa aktif ekranı."""
+    import json as _json
+
+    from scryne_quant.aktif.araci import Dolum
+    from scryne_quant.aktif.defter import Defter
+
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config/aktif.json").write_text(_json.dumps({"risk": {}, "hesaplar": {
+        "k": {"araci": "kripto_paper", "sermaye": 100, "timeframe": "15m", "strateji": "x",
+              "semboller": ["A"]},
+        "bos": {"araci": "mt5_paper", "timeframe": "1h", "strateji": "y", "semboller": []}}}),
+        encoding="utf-8")
+    dizin = tmp_path / "runs/aktif/k"
+    d = Defter(dizin)
+    d.ozkaynak(1_000, 100.0)
+    d.islem(2_000, Dolum("A", 2.0, 10.0, 0.1), 20.0, "giris")
+    d.ozkaynak(2_000, 99.9)
+    d.kapat()
+    (dizin / "paper.json").write_text(
+        _json.dumps({"nakit": 80, "adet": {"A": 2.0}}), encoding="utf-8")
+    once = _dosyalar(tmp_path)
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "aktif.html").write_text("<title>Demo botlar</title>", encoding="utf-8")
+    c = TestClient(uygulama(tmp_path, web_dist=dist))
+    y = c.get("/api/aktif").json()
+    k, bos = y["hesaplar"]
+    assert k["ad"] == "k" and k["ozkaynak"] == 99.9 and k["toplam_islem"] == 1
+    assert k["pozisyonlar"][0] == {"sembol": "A", "adet": 2.0, "yon": "long",
+                                  "giris_fiyat": 10.0, "giris_ms": 2_000}
+    assert k["para_birimi"] == "USDT" and bos["para_birimi"] == "USD" and not bos["var"]
+    assert "Demo botlar" in c.get("/").text
+    assert c.post("/api/aktif").status_code == 405
+    (dist / "aktif.html").unlink()
+    assert _dosyalar(tmp_path) == once  # uç hiçbir şey yazmadı

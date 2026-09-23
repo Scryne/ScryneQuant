@@ -17,6 +17,7 @@ export default defineConfig({
     proxy: {
       // Bot paneli (`bot.html`) `sq execution pano` (8790) sunucusunu okur; önce eşleşmeli.
       "/api/bot": { target: "http://127.0.0.1:8790", changeOrigin: true },
+      "/api/aktif": { target: "http://127.0.0.1:8790", changeOrigin: true },
       "/api": { target: "http://127.0.0.1:8787", changeOrigin: true },
     },
   },
@@ -28,6 +29,8 @@ export default defineConfig({
         index: fileURLToPath(new URL("index.html", import.meta.url)),
         pano: fileURLToPath(new URL("pano.html", import.meta.url)),
         bot: fileURLToPath(new URL("bot.html", import.meta.url)),
+        // K-134: aktif demo botlar; `sq execution pano` kök sayfası.
+        aktif: fileURLToPath(new URL("aktif.html", import.meta.url)),
       },
     },
   },

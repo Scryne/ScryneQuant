@@ -335,8 +335,10 @@ sınırları görünmez yapar.
 
 ## Bot takip ekranı (K-133)
 
-`apps/web/bot.html` (`sq execution pano`, 8790) sabit oranlı yatırım botunu (`sabit_oran`) takip
-ekranıdır; `bot-` önekli token'lar yalnız orada kullanılır. Kimlik Scryne'ın referansından geliyor
+`apps/web/bot.html` sabit oranlı yatırım botunu (`sabit_oran`) takip ekranıdır; `bot-` önekli
+token'lar yalnız bot ekranlarında kullanılır. K-134'ten beri `sq execution pano` (8790) kökü
+`apps/web/aktif.html` (demo botlar: hesap kartları, eğri, pozisyon, işlem, karne) aynı token ve
+bileşenlerle; eski BTC ekranı bağlantısız `/bot`ta. Kimlik Scryne'ın referansından geliyor
 (koyu zemin + nane yeşili, 2026-09-23) ve yukarıdaki "doygunluk yalnız risk" ilkesini **bu ekranda
 bilerek daraltıyor**: nane (`bot-mint`) marka, etkin gezinme ve kâr rengidir; ama **risk hâlâ tek
 ve ayrı bir renkte** (`bot-risk` kehribar) ve başka hiçbir şeye verilmez. Zarar mercan

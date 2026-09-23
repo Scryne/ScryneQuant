@@ -14,7 +14,9 @@ type: durum
   ayakta. TR'de kaldıraçlı FX/CFD gerçek parası ≥ 50.000 TL teminat + 1:10 (SPK).
 - İlk geriye bakış: 3 strateji × 3 zaman dilimi, **9/9 maliyet sonrası negatif**; 15m dönüşün brüt etkisi spot
   ücretine gidiyor. Sık işlemin asıl engeli maliyet (K-134 tablosu).
-- `urun-testnet` durduruldu (gösterim hesabını paylaşıyordu). Aşağıdaki K-125/K-132 BTC yatırım hattı tarihsel/ikincil.
+- Takip: `sq execution pano` → http://127.0.0.1:8790 (demo botlar ekranı, `/api/aktif`).
+- Eski BTC gösterim koşuları (`gosterim-testnet`, `gosterim-shadow`, `urun-testnet`) Scryne'ın isteğiyle
+  durduruldu ve gözetmenden çıkarıldı; mikro pilot/R8 hattı askıda. Aşağıdaki K-125/K-132 bölümleri tarihsel.
 
 **Ürün (K-132, 2026-09-23):** sabit risk bütçeli sistematik yatırım — `sabit_oran`: hesabın %50'si BTC, %50 USDT,
 ±5 puan bant dışında yeniden dengeleme; risk profili `config/risk_yatirim.json` (yalnız maruziyet tavanı 0,5 ve işlem
