@@ -16,6 +16,8 @@ const HESAP_ADI: Record<string, { ad: string; piyasa: string }> = {
   "mt5-gece": { ad: "MT5 · Gece", piyasa: "S&P, Nasdaq, Dow · 16:00-09:00 ET" },
   "mt5-aydonumu": { ad: "MT5 · Ay dönümü", piyasa: "S&P, Nasdaq, Dow · ay sonu → 3. gün" },
   "kripto-carry": { ad: "Kripto · Funding carry", piyasa: "spot al + vadeli sat · en çok 8 coin" },
+  "vadeli-bollinger-3x": { ad: "Vadeli · Bollinger 3x", piyasa: "6 büyük coin · long/short · %2 stop" },
+  "vadeli-donchian-2x": { ad: "Vadeli · Donchian 2x", piyasa: "6 büyük coin · long/short · iz süren stop" },
 };
 
 function hesapAdi(ad: string) {

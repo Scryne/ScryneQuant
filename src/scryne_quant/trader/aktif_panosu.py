@@ -21,6 +21,7 @@ from typing import Any
 from scryne_quant.common.zaman import timeframe_ms
 
 EGRI_AZAMI = 1500
+USDT_ARACILAR = ("kripto_paper", "carry_paper", "vadeli_paper")
 ISLEM_SON = 40
 
 
@@ -51,7 +52,7 @@ def hesap_ozeti(ad: str, tanim: dict[str, Any], dizin: Path, simdi_ms: int) -> d
         "timeframe": tf,
         "semboller": list(tanim.get("semboller", [])),
         "sermaye": float(sermaye) if sermaye is not None else None,
-        "para_birimi": "USDT" if tanim.get("araci") in ("kripto_paper", "carry_paper") else "USD",
+        "para_birimi": "USDT" if tanim.get("araci") in USDT_ARACILAR else "USD",
         "yalniz_long": bool(tanim.get("yalniz_long", False)),
         "kapali": (dizin / "kapali").is_file(),
         "var": False,

@@ -9,6 +9,8 @@ const NEDEN: Record<string, string> = {
   cikis_perp: "Çıkış · vadeli short",
   tasfiye: "Tasfiye",
   tasfiye_perp: "Tasfiye · vadeli",
+  sinyal: "Sinyal",
+  stop: "Stop",
   cikis: "Çıkış",
   donus: "Yön değişimi",
   fren: "Kayıp freni",
@@ -160,6 +162,8 @@ const STRATEJI: Record<string, string> = {
   gece: "Gece getirisi (16:00 → 09:00 ET)",
   ay_donumu: "Ay dönümü (son gün → 3. gün)",
   carry: "Funding carry (yön nötr, funding toplar)",
+  S3: "Bollinger kırılımı (20, 2σ), günlük",
+  S1: "Donchian 55/20 kırılımı, günlük",
 };
 
 export function Ayar({ h, risk }: { h: HesapOzeti; risk: Record<string, number> }) {

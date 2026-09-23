@@ -90,6 +90,26 @@
       "semboller": [],
       "timeframe": "1h",
       "strateji": "carry"
+    },
+    "vadeli-bollinger-3x": {
+      "araci": "vadeli_paper",
+      "sermaye": 10000,
+      "_not": "K-140 (demo kademesi, OOS'a bakılarak seçildi): Bollinger (20, 2σ) günlük kırılım, long/short, %2 keskin stop, 3x, 6 büyük perp. Backtest 2020-23 +%26/yıl, 2024-26 +%57/yıl, en kötü düşüş −%42; 10x −%38, 20x −%100.",
+      "semboller": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT"],
+      "timeframe": "1d",
+      "strateji": "S3",
+      "kaldirac": 3,
+      "sert_stop": true
+    },
+    "vadeli-donchian-2x": {
+      "araci": "vadeli_paper",
+      "sermaye": 10000,
+      "_not": "K-140 (demo kademesi, OOS'a bakılarak seçildi): Donchian 55/20 günlük kırılım + 3×ATR iz süren stop + %2 keskin stop, long/short, 2x, 6 büyük perp. Backtest 2020-23 +%11/yıl, 2024-26 +%22/yıl, en kötü düşüş −%15.",
+      "semboller": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT"],
+      "timeframe": "1d",
+      "strateji": "S1",
+      "kaldirac": 2,
+      "sert_stop": true
     }
   }
 }

@@ -7032,3 +7032,45 @@ otomatik cüzdan dengelemesi ayrıca tasarlanır.
 funding geçmişi yalnız anlık yıllık oranı ≥ %10 olan perp'ler için çekilir. Binance public uçları (fapi +
 data-api), emir yok. Testler: yön nötrlüğü (iki bacakta %30 fiyat değişimi → değer sabit), funding tahakkuku,
 giriş/çıkış eşikleri, likidite filtresi, tasfiye vekili.
+
+---
+
+## K-140 — Kaldıraçlı vadeli trend/kırılım: 10-20x her yapılandırmada hesabı sıfırlıyor; günlük Bollinger/Donchian + %2 stop 2-3x demoya
+
+**Durum:** kabul · **Tarih:** 2026-09-24 · **Onay:** Scryne ("bu strateji var mı bilmiyorum ama bunun üzerinden
+gidelim. araştırmalarıma göre max kazanç strateji buymuş"; K-139 tam yetki) · **Kaynak:** ön kayıt
+`docs/research/records/2026-09-23-kaldirac-trend-onkayit.md` (`239d880`, koşudan önce),
+`tools/kaldirac_trend.py`, sonuç `2026-09-23-kaldirac-trend-sonuc.json`, `src/scryne_quant/aktif/vadeli.py`,
+`tests/unit/test_vadeli.py`
+
+### Yöntem
+
+6 büyük perp (BTC, ETH, SOL, XRP, BNB, DOGE), 2020-2026; S1 Donchian 55/20 + 3×ATR iz süren stop, S2 SuperTrend
+(10, 3), S3 Bollinger (20, 2σ); 4h ve 1d; %2 keskin stop açık/kapalı; kaldıraç 1-2-3-5-10-20. Likidasyon: işlem içi
+en kötü saatlik aleyhte hareket ≥ 1/L − %0,5 → izole dilim sıfırlanır. Maliyet 7 bps/taraf + funding.
+**Hata düzeltmeleri (koşudan sonra, kural değil):** SuperTrend bandı ısınmada NaN kalıyordu (yön hep −1); dönem
+sonunda açık işlem sayılmıyordu. İkisi de düzeltilip yeniden koşuldu. Karar/stop mantığı sonra
+`aktif/vadeli.py`ye taşındı; araç oradan çağırır ve 72/72 satır birebir aynı çıktı.
+
+### Sonuç
+
+- **Kaldıraç:** 20x'te 12 yapılandırmanın 12'si IS'te (2020-23) sıfıra iniyor; 10x'te 12'nin 11'i sıfıra ya da
+  −%68'in altına. Kriptoda %5-10'luk aleyhte hareketler olağan; yüksek kaldıraçta stop'a ulaşmadan likidasyon olur.
+- **Ön kayıtlı seçim (IS'te en yüksek son özkaynak):** S2 günlük + %2 stop, 1x — IS 9,85 kat, OOS −%3,8/yıl → **FAIL**
+  (aşırı uyum).
+- **İki dönemde de tutarlı aileler (1-3x, likidasyonsuz):**
+
+  | | L | 2020-23 yıllık | 2024-26 yıllık | En kötü düşüş (2024-26) | İşlem/hafta |
+  |---|---|---|---|---|---|
+  | S3 Bollinger 1d + %2 stop | 1 | +%18 | +%25 | −%17 | 2,3 |
+  | | 2 | +%24 | +%41 | −%31 | |
+  | | **3** | **+%26** | **+%57** | **−%42** | |
+  | | 10 | −%38 (4 likidasyon) | | | |
+  | S1 Donchian 1d + %2 stop | **2** | **+%11** | **+%22** | **−%15** | 1,1 |
+  | | 3 | +%10 | +%35 | −%22 | |
+
+### Karar (demo kademesi, K-138)
+
+`vadeli-bollinger-3x` (S3, 3x; IS'te büyümeyi en çok artıran kaldıraç) ve `vadeli-donchian-2x` (S1, 2x; IS en iyi)
+demoya. İkisi OOS'a bakılarak seçildi → doğrulanmamış aday; demo ölçer. Gerçek para bu kaldıraçta **en az 3 ay demo**
++ ayrı K ister. 10-20x demo dahil hiçbir hesapta kullanılmaz: veride hesap sıfırlıyor.

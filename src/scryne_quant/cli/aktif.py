@@ -149,6 +149,15 @@ def calistir_komut(hesap: HesapOpt) -> None:
         typer.echo(f"AKTİF DEMO '{hesap}' · funding carry · spot long + perp short")
         carry.calistir_carry(KOK / hesap, float(ham["sermaye"]), yaz=typer.echo)
         return
+    if ayar.araci == "vadeli_paper":  # K-140: kaldıraçlı vadeli trend/kırılım, kendi döngüsü
+        from scryne_quant.aktif import vadeli
+
+        v_ayar = vadeli.VadeliAyari(strat=str(ham["strateji"]), kaldirac=float(ham["kaldirac"]),
+                                    sert_stop=bool(ham.get("sert_stop", False)),
+                                    semboller=tuple(ham["semboller"]))
+        typer.echo(f"AKTİF DEMO '{hesap}' · vadeli {v_ayar.strat} · {v_ayar.kaldirac:g}x")
+        vadeli.calistir_vadeli(KOK / hesap, float(ham["sermaye"]), v_ayar, yaz=typer.echo)
+        return
     araci = _araci(ayar, ham)
     typer.echo(f"AKTİF DEMO '{hesap}' · {ayar.araci} · {ayar.strateji} · {ayar.timeframe} · "
                f"{len(ayar.semboller)} sembol")
