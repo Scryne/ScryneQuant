@@ -83,7 +83,10 @@ def _veri() -> evren_kosu.EvrenVerisi:
 
 
 def _pencereler(veri: evren_kosu.EvrenVerisi):
-    ins, oos, _, _ = ed.pencereler(veri, isinma_bar=_strateji().isinma_bar())
+    """IS/OOS; ısınma ızgaranın **en büyük** ısınması: bütün varyantlar aynı IS barlarında
+    ölçülür ve pencere seçilen adaya bağlı değildir. OOS başlangıcı ısınmadan bağımsızdır."""
+    isinma = max(EvrenRiskKapisi(rejim_pencere=p).isinma_bar() for p in IS_IZGARA["rejim_pencere"])
+    ins, oos, _, _ = ed.pencereler(veri, isinma_bar=isinma)
     return ins, oos
 
 
