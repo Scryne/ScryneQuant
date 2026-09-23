@@ -195,3 +195,26 @@ def test_geriye_deterministik() -> None:
     s2 = geriye(b, ayar, yalniz_long=False, ucret_bps=10, kayma_bps=5)
     pd.testing.assert_frame_equal(s1, s2)
     assert ozet(s1)["hafta"] >= 1
+
+
+def test_mt5_paper_spreadden_dolar_ve_demo_ister(tmp_path: Path) -> None:
+    from scryne_quant.aktif.araci import MT5Paper
+
+    m = sahte_mt5(0)
+    simdi = __import__("time").time()
+    m.symbol_info_tick = lambda s: SimpleNamespace(bid=1.1000, ask=1.1002, time=simdi + 3 * 3600)
+    m.symbol_info = lambda s: SimpleNamespace(visible=True, currency_profit="USD",
+                                              trade_contract_size=100_000.0, volume_step=0.01,
+                                              volume_min=0.05, volume_max=100.0)
+    p = MT5Paper(tmp_path, sermaye=100_000.0, ucret_bps=0.0, kayma_bps=0.0,
+                 sunucu_utc_farki_saat=3, mt5=m)
+    d = p.emir("EURUSD", 1.0, "giris")
+    assert d.fiyat == pytest.approx(1.1002)  # alış ask'tan
+    assert p.ozkaynak() == pytest.approx(100_000.0 - 1.0 * 100_000 * 0.0001)  # yarım spread
+    d = p.emir("EURUSD", -2.0, "donus")
+    assert d.fiyat == pytest.approx(1.1000)  # satış bid'den
+    assert p.pozisyonlar() == {"EURUSD": -1.0}
+    m.account_info = lambda: SimpleNamespace(trade_mode=2, margin_mode=0, currency="USD",
+                                             equity=1.0)
+    with pytest.raises(AraciHatasi, match="DEMO"):
+        p.emir("EURUSD", 1.0, "cikis")

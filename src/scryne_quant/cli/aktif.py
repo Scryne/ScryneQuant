@@ -36,7 +36,7 @@ def _ayar(hesap: str) -> tuple[Any, dict[str, Any]]:
 
 
 def _araci(ayar: Any, ham: dict[str, Any]) -> Any:
-    from scryne_quant.aktif.araci import KriptoPaper, MT5Araci
+    from scryne_quant.aktif.araci import KriptoPaper, MT5Araci, MT5Paper
 
     if ayar.araci == "kripto_paper":
         return KriptoPaper(KOK / ayar.ad, sermaye=float(ham["sermaye"]),
@@ -44,6 +44,10 @@ def _araci(ayar: Any, ham: dict[str, Any]) -> Any:
                            yalniz_long=bool(ham.get("yalniz_long", True)))
     if ayar.araci == "mt5":
         return MT5Araci(sunucu_utc_farki_saat=ham.get("sunucu_utc_farki_saat"))
+    if ayar.araci == "mt5_paper":
+        return MT5Paper(KOK / ayar.ad, sermaye=float(ham["sermaye"]),
+                        ucret_bps=float(ham["ucret_bps"]), kayma_bps=float(ham["kayma_bps"]),
+                        sunucu_utc_farki_saat=ham.get("sunucu_utc_farki_saat"))
     raise typer.BadParameter(f"bilinmeyen aracı: {ayar.araci}")
 
 
@@ -165,13 +169,14 @@ def karne_komut(
 def baglanti_komut(hesap: HesapOpt) -> None:
     """MT5 bağlantısı: hesap türü, bakiye, ayardaki sembollerin varlığı ve benzer adlar."""
     ayar, ham = _ayar(hesap)
-    if ayar.araci != "mt5":
+    if ayar.araci not in ("mt5", "mt5_paper"):
         raise typer.BadParameter("bu komut yalnız MT5 hesabı için")
     araci = _araci(ayar, ham)
     mt5 = araci._mt5
     h = mt5.account_info()
     typer.echo(f"hesap {h.login} · {h.server} · DEMO · {h.currency} · özkaynak {h.equity:.2f} · "
-               f"kaldıraç 1:{h.leverage} · {'hedging' if araci.hedging else 'netting'}")
+               f"kaldıraç 1:{h.leverage} · {'hedging' if araci.hedging else 'netting'} · "
+               f"algoritmik emir {'AÇIK' if h.trade_expert else 'KAPALI (aracı sunucusu)'}")
     for s in ayar.semboller:
         bilgi = mt5.symbol_info(s)
         if bilgi is None:

@@ -51,7 +51,7 @@ foreach ($k in $Kosular) {
 
 # K-134: aktif çok varlıklı DEMO bot hesapları (config/aktif.json). Her hesap kendi dizininde,
 # kendi simüle/demo hesabında; `sq aktif durdur` `kapali` bırakır ve gözetmen onu başlatmaz.
-$Aktif = @("kripto-trend", "kripto-kirilim", "kripto-donus")
+$Aktif = @("kripto-trend", "kripto-kirilim", "kripto-donus", "mt5-demo")
 foreach ($ad in $Aktif) {
     if ($Calisan | Where-Object { $_ -match "aktif calistir --hesap $ad( |$)" }) { continue }
     $dizin = Join-Path $Kok "runs\aktif\$ad"

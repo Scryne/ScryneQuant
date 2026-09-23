@@ -41,18 +41,20 @@
       "strateji": "rsi_donus"
     },
     "mt5-demo": {
-      "araci": "mt5",
-      "_not": "Sembol adları aracı kuruma göre değişir (US500 / SPX500 / US500.cash). `sq aktif baglanti --hesap mt5-demo` doğru adları listeler. ucret/kayma yalnız backtest tahmini; demoda gerçek spread ve komisyon uygulanır.",
-      "semboller": ["EURUSD", "US500", "NAS100"],
-      "timeframe": "15m",
-      "strateji": "kirilim",
+      "araci": "mt5_paper",
+      "sermaye": 100000,
+      "_araci_not": "mt5_paper: fiyat/spread MT5'ten, dolum simüle. Integral demo sunucusu algoritmik emri kapalı tutuyor (trade_expert=False, retcode 10026). Kurum açarsa \"mt5\" yapılır ve emirler demo hesaba gider.",
+      "_not": "Integral Yatırım MT5 demo (hedging, 1:10). Sembol adları bu kuruma özgü: S&P = E-mini S&P 500, NASDAQ = E-mini Nasdaq 100 (vadeli tabanlı, vade 10.12.2026). Yalnız kâr para birimi USD olan semboller (çevrim yok). ucret/kayma yalnız backtest tahmini: ölçülen spread 0,5-1,5 bps (2026-09-23), komisyon ölçülmedi; demoda gerçek spread uygulanır.",
+      "semboller": ["EURUSD", "GBPUSD", "XAUUSD", "S&P", "NASDAQ"],
+      "timeframe": "1h",
+      "strateji": "rsi_donus",
       "asgari_emir": 0,
       "ucret_bps": 0.5,
-      "kayma_bps": 1.5,
-      "sunucu_utc_farki_saat": null,
+      "kayma_bps": 1.0,
+      "sunucu_utc_farki_saat": 3,
       "risk": {
-        "sembol_kaldirac": 3.0,
-        "toplam_kaldirac": 8.0
+        "sembol_kaldirac": 2.0,
+        "toplam_kaldirac": 6.0
       }
     }
   }

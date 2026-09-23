@@ -6796,3 +6796,43 @@ biri aday olursa K-039 sayımına eklenir.
 - MT5 adaptörü gerçek terminalde henüz koşmadı (sahte modülle test edildi); sembol adları aracı kuruma göre değişir
   (`sq aktif baglanti`).
 - Backtest ağırlıkları bar içinde sabit kabul eder; paper dolumunda emir defteri derinliği yok.
+
+---
+
+## K-135 — MT5 demo: Integral Yatırım algoritmik emri kapalı tutuyor; `MT5Paper` (gerçek fiyat/spread, simüle dolum)
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne (MT5 terminali + Integral Yatırım demo hesabı açıldı; K-134
+"mt5 de demo parayla devam etsin") · **Tabi:** K-004, K-007, K-134 · **Kaynak:** `aktif/araci.py` (`PaperHesap`,
+`MT5Paper`), `config/aktif.json` (`mt5-demo`), `tests/unit/test_aktif.py`
+
+### Ölçülen
+
+- Hesap `IntegralYatirim-MT5` demo, USD, 1:10, hedging. Sembol adları kuruma özgü: `S&P` (E-mini S&P 500, sözleşme 50),
+  `NASDAQ` (E-mini Nasdaq 100, sözleşme 20), vadeli tabanlı, vade 10.12.2026. Asgari lot 0,05. Sunucu saati UTC+3.
+- Spread (2026-09-23 18:00 UTC): EURUSD 0,70 · GBPUSD 1,06 · XAUUSD 1,54 · S&P 0,96 · NASDAQ 0,49 bps. Komisyon ölçülmedi.
+- **Emir yolu kapalı:** `order_send` → retcode 10026 "AutoTrading disabled by server"; `account_info().trade_expert` False.
+  Terminal tarafı açık (`tradeapi_disabled` False). Kısıt aracı sunucusunda.
+- Geriye bakış (365 gün, 5 sembol, taraf başı 1,5 bps, sembol kaldıracı 2 / toplam 6):
+
+  | | 15m | 1h |
+  |---|---|---|
+  | `ema_trend` | −81 % (maliyetsiz −44 %) | −50 % (−12 %) |
+  | `kirilim` | −89 % (−33 %) | −42 % (−8 %) |
+  | `rsi_donus` | −91 % (+4 %) | −13 % (**+61 %**, kârlı hafta %50) |
+
+  Trend aileleri maliyetsiz de negatif. Brüt pozitif tek satır 1h `rsi_donus`. Kaldıraçla maliyet de büyüyor
+  (~30 işlem/hafta × 2 ağırlık × 1,5 bps ≈ haftada %0,9).
+
+### Karar
+
+1. `MT5Paper`: veri, bid/ask ve sembol kuralları MT5'ten; alış ask'tan, satış bid'den (gerçek spread) + aleyhte
+   `kayma_bps` + `ucret_bps`. Hesap koşu dizininde (`PaperHesap`, kripto paper ile ortak). Demo denetimi her emirde
+   sürüyor, tick bayatsa dolum yok. MT5 hesabında emir açılmaz.
+2. `mt5-demo` = `mt5_paper`, 100.000 USD, EURUSD/GBPUSD/XAUUSD/S&P/NASDAQ, **1h `rsi_donus`**. Bu, 6 geriye bakışın
+   brüt pozitif olanıdır. Seçim çoklu denemeden geldiği için demo onun dışarıdaki sınavıdır, kanıt sayılmaz.
+3. Integral algoritmik emri açarsa `araci` `"mt5"` yapılır; `MT5Araci` aynı döngüyle demo hesaba emir gönderir.
+
+### Bilinen sınırlar
+
+- Swap/finansman ve komisyon simüle edilmiyor (iyimser yönde). Vadeli tabanlı endeks CFD'lerinde vade geçişi fiyat
+  sıçraması üretebilir. Döngü ilk turda stratejinin o anki pozisyonuna girer.

@@ -8,6 +8,8 @@
 - `MT5Araci`: MetaTrader 5 terminali üzerinden. **Yalnız demo hesapta çalışır**: bağlanırken
   ve her emirden önce `trade_mode == DEMO` denetlenir; gerçek hesapta istisna atar.
   Pozisyonlar `magic` numarasıyla ayrılır; elle açılan işlemlere dokunulmaz.
+- `MT5Paper`: MT5'in gerçek fiyatı/spread'i, dolum simüle — aracı sunucusu algoritmik emri
+  kapattığında (Integral demo: `trade_expert=False`, retcode 10026) kullanılan yol.
 
 Yazma (emir) çağrıları yeniden denenmez; belirsiz sonuçta istisna atılır, bir sonraki tur
 durumu aracıdan yeniden okur (tahmin yürütülmez).
@@ -66,6 +68,47 @@ def _bar_df(open_time_ms: Any, o: Any, h: Any, lo: Any, c: Any) -> pd.DataFrame:
     return df[~df.index.duplicated(keep="last")].sort_index()
 
 
+# ------------------------------------------------------------------ simüle hesap
+
+
+class PaperHesap:
+    """Simüle hesap: nakit + işaretli adet, koşu dizininde `paper.json` (atomik yazım).
+
+    Muhasebe nakit tabanlı: alış nakdi düşürür, satış (açığa satış dahil) artırır;
+    özkaynak = nakit + Σ adet × birim_notional(fiyat). Finansman/swap yok (iyimser yönde,
+    bilinen sınır, K-134).
+    """
+
+    def __init__(self, dizin: Path, sermaye: float) -> None:
+        self._yol = Path(dizin) / "paper.json"
+        self.adet: dict[str, float] = {}
+        if self._yol.is_file():
+            d = json.loads(self._yol.read_text(encoding="utf-8"))
+            self.nakit = float(d["nakit"])
+            self.adet = {k: float(v) for k, v in d["adet"].items()}
+        else:
+            self.nakit = float(sermaye)
+            self._yaz()
+
+    def _yaz(self) -> None:
+        self._yol.parent.mkdir(parents=True, exist_ok=True)
+        gecici = self._yol.with_suffix(".tmp")
+        gecici.write_text(
+            json.dumps({"nakit": self.nakit, "adet": self.adet}, indent=1), encoding="utf-8"
+        )
+        os.replace(gecici, self._yol)
+
+    def uygula(self, sembol: str, delta: float, birim: float, ucret: float) -> None:
+        """`birim`: bir adetin dolum fiyatındaki hesap para birimi değeri."""
+        self.nakit -= delta * birim + ucret
+        yeni = round(self.adet.get(sembol, 0.0) + delta, 12)
+        if abs(yeni) < 1e-12:
+            self.adet.pop(sembol, None)
+        else:
+            self.adet[sembol] = yeni
+        self._yaz()
+
+
 # ------------------------------------------------------------------ kripto paper
 
 
@@ -92,24 +135,8 @@ class KriptoPaper:
         self.yalniz_long = yalniz_long
         self._ucret = ucret_bps / 10_000
         self._kayma = kayma_bps / 10_000
-        self._yol = Path(dizin) / "paper.json"
-        if self._yol.is_file():
-            d = json.loads(self._yol.read_text(encoding="utf-8"))
-            self._nakit = float(d["nakit"])
-            self._adet = {k: float(v) for k, v in d["adet"].items()}
-        else:
-            self._nakit = float(sermaye)
-            self._adet = {}
-            self._yaz()
+        self._hesap = PaperHesap(Path(dizin), sermaye)
         self._fiyat_onbellek: dict[str, tuple[float, float]] = {}
-
-    def _yaz(self) -> None:
-        self._yol.parent.mkdir(parents=True, exist_ok=True)
-        gecici = self._yol.with_suffix(".tmp")
-        gecici.write_text(
-            json.dumps({"nakit": self._nakit, "adet": self._adet}, indent=1), encoding="utf-8"
-        )
-        os.replace(gecici, self._yol)
 
     def barlar(self, sembol: str, timeframe: str, adet: int) -> pd.DataFrame:
         adim = timeframe_ms(timeframe)
@@ -126,10 +153,10 @@ class KriptoPaper:
         return f
 
     def ozkaynak(self) -> float:
-        return self._nakit + sum(a * self.fiyat(s) for s, a in self._adet.items() if a)
+        return self._hesap.nakit + sum(a * self.fiyat(s) for s, a in self._hesap.adet.items())
 
     def pozisyonlar(self) -> dict[str, float]:
-        return {s: a for s, a in self._adet.items() if a}
+        return dict(self._hesap.adet)
 
     def birim_notional(self, sembol: str, fiyat: float) -> float:
         return fiyat
@@ -140,19 +167,13 @@ class KriptoPaper:
     def emir(self, sembol: str, delta: float, neden: str) -> Dolum:
         if delta == 0:
             raise AraciHatasi("sıfır adetli emir")
-        mevcut = self._adet.get(sembol, 0.0)
+        mevcut = self._hesap.adet.get(sembol, 0.0)
         if self.yalniz_long and mevcut + delta < -1e-12:
             raise AraciHatasi(f"{sembol}: spot hesapta açığa satış yok")
         ref = float(self._veri.son_fiyat(sembol))
         fiyat = ref * (1 + self._kayma) if delta > 0 else ref * (1 - self._kayma)
         ucret = abs(delta) * fiyat * self._ucret
-        self._nakit -= delta * fiyat + ucret
-        yeni = round(mevcut + delta, 12)
-        if abs(yeni) < 1e-12:
-            self._adet.pop(sembol, None)
-        else:
-            self._adet[sembol] = yeni
-        self._yaz()
+        self._hesap.uygula(sembol, delta, fiyat, ucret)
         return Dolum(sembol, delta, fiyat, ucret)
 
 
@@ -374,3 +395,54 @@ class MT5Araci:
         toplam = sum(abs(d.adet) for d in dolumlar)
         ort = sum(abs(d.adet) * d.fiyat for d in dolumlar) / toplam
         return Dolum(sembol, delta, ort, sum(d.ucret for d in dolumlar))
+
+
+class MT5Paper(MT5Araci):
+    """MT5'in gerçek fiyatı ve sembol kuralları, dolum simüle. (K-134)
+
+    Aracı sunucusu algoritmik emri kapatmışsa (`trade_expert=False`, retcode 10026) demo yine
+    koşar: veri ve bid/ask MT5'ten, hesap koşu dizininde. Alış ask'tan, satış bid'den (gerçek
+    spread) + `kayma_bps` aleyhte + `ucret_bps` komisyon. Swap/finansman yok (iyimser).
+    MT5 hesabında hiçbir emir açılmaz.
+    """
+
+    ad = "mt5_paper"
+
+    def __init__(
+        self,
+        dizin: Path,
+        *,
+        sermaye: float,
+        ucret_bps: float,
+        kayma_bps: float,
+        sunucu_utc_farki_saat: float | None = None,
+        mt5: Any | None = None,
+    ) -> None:
+        super().__init__(sunucu_utc_farki_saat=sunucu_utc_farki_saat, mt5=mt5)
+        self._ucret = ucret_bps / 10_000
+        self._kayma = kayma_bps / 10_000
+        self._hesap = PaperHesap(Path(dizin), sermaye)
+
+    def ozkaynak(self) -> float:
+        return self._hesap.nakit + sum(
+            a * self.birim_notional(s, self.fiyat(s)) for s, a in self._hesap.adet.items()
+        )
+
+    def pozisyonlar(self) -> dict[str, float]:
+        return dict(self._hesap.adet)
+
+    def emir(self, sembol: str, delta: float, neden: str) -> Dolum:
+        self._demo_denetle()
+        if delta == 0:
+            raise AraciHatasi("sıfır adetli emir")
+        tick = self._mt5.symbol_info_tick(sembol)
+        if tick is None or not tick.bid > 0:
+            raise AraciHatasi(f"{sembol}: fiyat yok")
+        if abs(float(tick.time) - self.sunucu_farki_s(sembol) - time.time()) > 300:
+            raise AraciHatasi(f"{sembol}: tick bayat (piyasa kapalı?), dolum yapılmadı")
+        ref = float(tick.ask) if delta > 0 else float(tick.bid)
+        fiyat = ref * (1 + self._kayma) if delta > 0 else ref * (1 - self._kayma)
+        birim = self.birim_notional(sembol, fiyat)
+        ucret = abs(delta) * birim * self._ucret
+        self._hesap.uygula(sembol, delta, birim, ucret)
+        return Dolum(sembol, delta, fiyat, ucret)
