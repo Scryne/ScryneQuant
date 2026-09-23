@@ -54,8 +54,8 @@ Yeni/değişen kapı **iki yönlü** doğrulanır (null + `tools/pozitif_kontrol
 - **Gösterim dönemi (2026-09-23 →):** `gosterim-testnet` (sanal para, gerçek borsa emri) ve
   `gosterim-shadow` (gerçek hesap, salt okunur) bu bilgisayarda; `tools/gosterim_gozetmen.ps1` +
   zamanlanmış görev `ScryneQuant-Gosterim` (10 dk) ayakta tutar; durdurmak `runs/gosterim/DURDUR`.
-  Shadow bekliyor: `BINANCE_API_KEY` işlem yetkili (salt okunur olmalı) — Scryne Binance'te
-  "Enable Spot & Margin Trading"i kapatınca gözetmen kendiliğinden başlatır.
+  İkisi de 2026-09-23'te başladı (testnet 07:31, shadow 07:38 UTC; `BINANCE_API_KEY` salt okunura
+  çekildi ve shadow yetki denetimi geçti).
 - **Mikro pilot (K-115/K-116):** 100 USDT, 10 USDT kayıpta SAFE_MODE, `sma_kesisim` BTCUSDT 1h,
   alfa iddiası yok; K-122 hükümleri sağlanmadan açılmaz. Yordam `docs/Execution-Runbook.md` §4.3.
 - **R8:** `r8-kiyas` gözlem koşusu, host-1, 2026-09-25 başlar, 14 gün, kriterler dondurulmuş
