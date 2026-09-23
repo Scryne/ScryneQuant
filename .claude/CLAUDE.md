@@ -110,6 +110,8 @@ raporları ve eski kayıtlar tarihseldir. Aşağıdaki liste yalnız **nereye ba
 - `research/degerlendirme.py` (tek sembol), `research/evren_degerlendirme.py` (evren);
   motorlar `backtest/motor.py` → `backtest/coklu_motor.py` (tek döngü, K-057).
 - `risk/promotion.py` — zincir hash'li promotion; `ZORUNLU_KAPILAR` (12) tam liste ister (K-118).
+- **Hedef K-125:** riski yönetilen sistematik yatırım. Promotion protokolü `docs/research/Risk-Yonetimli-Protokol.md`
+  + `research/risk_protokolu.py` (PASS/FAIL/INCONCLUSIVE, plasebo = kendi takviminin kaydırılmışı). Alfa yolu aynen durur.
 
 **Veri**
 - `data/evren/` arşiv deposu (2017-08→, PIT tablo `_evren/27b7a16ed0ed.parquet`); `data/market/`

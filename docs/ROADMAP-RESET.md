@@ -44,6 +44,9 @@ Bekleme tek bir izi durdurur, projeyi durdurmaz.
 | R10 | **Jev araştırma asistanı (yönetişim)** | ⏳ | Jev **sinyal değil**; roller: gizli tekrar (var), deney sözleşmesi doğrulama, gerekçe-rapor tutarlılığı, program kapanış özet kontrolü — hepsi K-049 içinde; gölge açık kalır; yeniden açma yalnız K-074 geri dönüş koşulu | R5 |
 | R11 | **Ürün / dashboard** | ⏳ | Tek pano (8787/8788 birleşimi ya da açık ayrım); çok varlık görünümü; a11y/motion/metadata pasları; frontend test; izleme için ikinci bağımsız kanal | R1, R2 |
 | R12 | **Kontrollü üretim hazırlığı** | ⛔ tetikli | Tetik: promotion geçen ≥1 strateji **ve** R9. İş: shadow kodu (`Faz-8-Hazirlik.md` §1.3), 7 karar K olarak, `Venue-Statu.md`, compliance soruları cevaplı, kademe tablosu, drift ölçümü. Canlı aktivasyon = elle onay (K-010) | R8, R9, insan |
+| R13 | **Hedef yeniden tanımı + RYPP (B fazı)** | 🔄 | K-125: hedef "riski yönetilen sistematik yatırım"; Risk Yönetimli Promotion Protokolü kodda ve testli (`research/risk_protokolu.py`, 18 test: pozitif kontrol PASS, yalnız maruziyet düşürme / rastgele zamanlama / tek olay / maliyet çöküşü FAIL, eksik kanıt INCONCLUSIVE). **Kalan:** promotion zincirine bağlama (protokol türü) + bağımsız doğrulama verisi (French) yükleyicisi | K-117…K-124, A fazı sürerken tasarım serbest |
+| R14 | **Kripto risk yönetimli strateji (C fazı)** | ⏳ | Ön kayıtlı program (K-051), PIT evren kuralı, kıyas brüt tavanda; dondurma → RYPP doğrulama (kripto OOS + bağımsız veri) → PASS/FAIL/INCONCLUSIVE kaydı | R13, R8 (promotion'a sokmak için) |
+| R15 | **Paper/shadow strateji gösterimi (D fazı)** | ⏳ | K-122 `sq execution hazirlik` → STRATEJİ HAZIR + SİSTEM HAZIR; sonra E (gerçek para) yalnız Scryne onayıyla (K-115 pilot tavanları) | R14 PASS, R8 PASS |
 
 **Eski fazlarla eşleme:** Faz 8 → R12 · Faz 13 (haber/ML) → R6 içinde program olarak, ayrı
 faz değil · Faz 14 → 25 Eylül'de kapanır, kalanı R8/R11 · Faz 15 (ikinci varlık sınıfı) → R2+R3

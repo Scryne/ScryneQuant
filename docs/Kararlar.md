@@ -6100,3 +6100,52 @@ yıllarda trendin tersine dönüşlerinde kaybettiriyor ve long-only'nin risk-ay
    görülmüyor; belgelenmiş en iyi yöntem (trend) riski iyileştiriyor, getiriyi değil.
 4. Hedef tanımı (alfa mı, riski yönetilen yatırım mı) Scryne'ın kararına sunuldu; bu karar verilmeden hisse veri
    hattı yazılmaz.
+
+---
+
+## K-125 — Hedef yeniden tanımı: "riski yönetilen sistematik yatırım"; Risk Yönetimli Promotion Protokolü (RYPP)
+
+**Durum:** kabul (protokol; strateji yok) · **Tarih:** 2026-09-23 · **Onay:** Scryne (B fazı talimatı: "yüksek
+getirili alfa makinesi yerine riski yönetilen sistematik yatırım botu … eski promotion kapıları gevşetilmeyecek; ayrı,
+önceden tanımlanmış, OOS doğrulanabilir protokol") · **Tabi:** K-010, K-030, K-039, K-044, K-051, K-052, K-072, K-110,
+K-117…K-124 · **Kaynak:** `docs/research/Risk-Yonetimli-Protokol.md`, `src/scryne_quant/research/risk_protokolu.py`,
+`tests/unit/test_risk_protokolu.py`
+
+### Ana tez
+
+ScryneQuant'ın amacı piyasayı sürekli yenmek değil: önceden tanımlanmış risk kurallarıyla piyasaya sistematik
+maruziyet sağlamak, büyük düşüşlerde riski azaltmayı hedeflemek ve bunu ölçülebilir, denetlenebilir, otomatik bir
+yürütme sistemi olarak yapmak. Bilimsel sınır: "piyasada alfa yok" iddia edilmez. İddia yalnızca şudur: mevcut veri,
+hipotezler, test kapsamı ve doğrulama protokolü altında promotion edilebilir, tekrarlanabilir bir alfa kanıtı
+bulunmadı (K-110, K-121, K-123, K-124).
+
+### Denetim bulguları (B fazı öncesi)
+
+| ID | Dosya | Bulgu | Önem | Düzeltme |
+| --- | --- | --- | --- | --- |
+| B-1 | `backtest/metrikler.py` (`hesapla`) | Sortino'nun aşağı yönlü sapması yalnız negatif gözlemlerle ortalanıyor (standart: tüm gözlemler) → Sortino ≈ √(N_neg/N) kadar düşük | Düşük (hiçbir kapı/karar kullanmıyor) | Eski alan `sonuc_hash`e girdiği için **değiştirilmedi** (bütün kayıtların yeniden üretimi kırılırdı); RYPP standart tanımı kullanır (`sortino_standart`), fark testle belgelendi |
+| B-2 | `tests/unit/test_metrikler.py` | Sortino testi yalnız sıralamayı ("Sortino > Sharpe") ölçüyor; yanlış formül yeşil kalıyordu | Düşük | Formülü sabitleyen test RYPP'de |
+| B-3 | kripto evren OOS (`27b7a16ed0ed`, bar 55.678→) | 18 çekiliş aynı OOS'a baktı; penceredeki 2025-26 düşüşü biliniyor → risk-off tasarımı için hindsight avantajı | **Yüksek** (yeni hedef için) | P3 plasebo (aynı maruziyet bütçesi, rastgele zaman) + bağımsız veride (French, 2004-05 sonrası, bakılmamış) ek doğrulama zorunlu |
+| B-4 | kıyaslar (`al_tut`, `evren_esit_agirlik`) | brüt 0,2; nakit getirisi 0 | Orta (yeni hedef için) | RYPP kıyası stratejinin brüt tavanında; nakit 0 her iki tarafta (tutucu, belgelendi) |
+| B-5 | `research/kapilar.py` `max_drawdown` ≤ 0,25 | 0,2 brütlü stratejiler için kalibre; tam maruziyetli dağılımda anlamsız | Orta | Alfa yolunda aynen; RYPP göreli düşüş kullanır |
+| B-6 | `docs/ROADMAP-RESET.md` | K-116…K-124 ve hedef değişikliği yoktu | Orta (doküman) | Güncellendi (R13-R15) |
+| B-7 | K-123 | 12 sembol bugünkü listeden (hayatta kalma) | Düşük (yalnız fizibilite; K-123'te yazılı) | RYPP evreni PIT kural zorunlu |
+
+Kanıtla kontrol edilip sorun bulunmayanlar: azami düşüş hesabı; IS/OOS/walk-forward bölmesi; look-ahead (kayıttan
+otomatik test, K-118); delist ele alınışı (`SIFIRA_YAZ_BAR` + testler); PIT evren hayatta kalma testleri; çoklu test
+FWER'i (K-121 eki, yanlış pozitif 0,042); maliyet/kayma ve K-004 dolumu (bağımsız hesapla, K-117); canlı/paper/shadow/
+testnet ayrımı (K-114/K-122).
+
+### Karar
+
+1. **Hedef yeniden tanımlandı**; alfa yolu (12 kapı, K-119) **değişmeden** durur. RYPP ayrı bir promotion yoludur:
+   kıyas (§1), P1-P3/S1/R1-R3/B koşulları, PASS/FAIL/INCONCLUSIVE, plasebo, aile içi Bonferroni, dondurma →
+   doğrulama → promotion ayrımı (`docs/research/Risk-Yonetimli-Protokol.md`). Bütün eşikler **tasarım kararı**
+   olarak işaretli, sonuç görülmeden yazıldı; sonuca göre değiştirilemez (değişiklik yeni K + iki yönlü test).
+2. **Kendini kandırma korumaları testle sabit:** yalnız maruziyet düşürmek FAIL; rastgele zamanlama FAIL; tek olay
+   FAIL; 2x maliyette çöken FAIL; kısa OOS / tek epizot / eksik kanıt INCONCLUSIVE; aile büyüdükçe eşik sıkılaşır.
+3. **Sıra (A→B→C→D→E):** A (sistem gösterimi + R8) sürüyor. B = bu protokol. C (kripto strateji) ancak RYPP promotion
+   zincirine bağlandıktan sonra açılır. Promotion'a/canlıya hiçbir şey A ve R8 kapanmadan girmez. Gerçek para
+   yalnız K-122'nin iki hükmü ve Scryne'ın açık onayıyla.
+4. **Açık (bir sonraki adım):** RYPP'nin promotion zincirine bağlanması (`Kanit` için protokol türü; RYPP yolunda
+   `ZORUNLU_KAPILAR` yerine RYPP koşul listesi) ve bağımsız veri (French) yükleyicisi. İkisi de strateji değil.

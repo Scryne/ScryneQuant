@@ -5,6 +5,11 @@ type: durum
 ---
 # ScryneQuant — şu anki gerçek
 
+**Hedef (K-125, 2026-09-23):** riski yönetilen sistematik yatırım — piyasayı yenmek değil, önceden
+tanımlı kurallarla maruziyet sağlayıp büyük düşüşlerde riski azaltmak. Promotion yolu: Risk Yönetimli
+Promotion Protokolü (`docs/research/Risk-Yonetimli-Protokol.md`); alfa yolu (12 kapı) aynen durur.
+Faz sırası A (sistem gösterimi + R8) → B (RYPP, R13) → C (kripto strateji, R14) → D (paper, R15) → E (gerçek para).
+
 Tek sayfa, **yürürlükteki** durum. "Neden böyle" için `docs/Kararlar.md`, sayılar için
 `docs/research/records/` ve faz raporları. Bu sayfa ile başka bir doküman çelişirse bu sayfa ve
 en yeni K kazanır; eski doküman tarihsel kayıttır.
