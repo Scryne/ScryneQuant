@@ -6967,3 +6967,17 @@ K-136/K-137'nin "FAIL → demoya eklenmez" hükmü (yalnız demo kademesi için)
    (tatil yok sayılır) ve 16:00 ET'de işlem yapar (araştırma D1 kapanışı ≈ 17:00 ET).
 4. **Yer:** bütün demo hattı (6 hesap + pano) ikinci bilgisayara (host, 192.168.1.4) taşınır; ana makinede
    durdurulur. Ayrıntı ve doğrulama bu kararın altında (host kurulumu).
+
+### Host kurulumu (2026-09-23, K-138/4)
+
+- Host `192.168.1.4` (`Scryne\scryn`, SSH anahtarı `~/.ssh/scrynequant_vps`). Eski görevler (`ScryneQuant-Evren*`,
+  `-Izleme`, `-Jev`, `-Ozet`, `-Pano`, `-Paper`, `-Yedek`) **devre dışı** (silinmedi), süreçleri durduruldu. Hosttaki
+  izlenmeyen, çakışan dosyalar `yedek-oncesi-k138/` altına taşındı; kod bundle ile `3420e21`e ilerletildi,
+  `uv sync --frozen --extra mt5 --group dev`, `test_aktif` + `test_bot_panosu` geçti.
+- Yeni görev `ScryneQuant-Aktif`: açılışta + 10 dakikada bir `tools/gosterim_gozetmen.ps1 -PanoHost 0.0.0.0`, oturum
+  içinde (Interactive; MT5 terminaliyle aynı oturum gerekir). Güvenlik duvarı kuralı `ScryneQuant Pano 8790`:
+  yalnız LocalSubnet. Pano: **http://192.168.1.4:8790** (ev ağından).
+- Hesap durumları (`paper.json`, `defter.sqlite`) ana makineden kopyalandı; ana makinede botlar `kapali` ile
+  durduruldu, `ScryneQuant-Gosterim` görevi devre dışı.
+- **Açık:** hostta MT5 terminali yok → `mt5-demo`, `mt5-gece`, `mt5-aydonumu` başlayamıyor ("MetaTrader 5 x64 not
+  found"). Scryne hosta Integral MT5'i kurup demo hesaba giriş yapınca gözetmen 10 dakika içinde kendiliğinden başlatır.

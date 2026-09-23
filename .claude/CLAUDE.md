@@ -101,8 +101,10 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   `runs/aktif/<hesap>/`; testler `tests/unit/test_aktif.py`.
 - Takip ekranı `sq execution pano` → http://127.0.0.1:8790 (`trader/aktif_panosu.py` →
   `/api/aktif`, `apps/web/aktif.html` + `src/aktif/`; derleme `cd apps/web && npm run build`).
-- Süreçleri `tools/gosterim_gozetmen.ps1` (zamanlanmış görev `ScryneQuant-Gosterim`, 10 dk) ayakta
-  tutar: dört demo hesap + pano. `sq aktif durdur` kalıcı kapatır (`kapali`).
+- **Çalıştığı yer host (192.168.1.4, K-138):** görev `ScryneQuant-Aktif` (oturumda, 10 dk) →
+  `tools/gosterim_gozetmen.ps1 -PanoHost 0.0.0.0`; pano http://192.168.1.4:8790. Erişim
+  `ssh -i ~/.ssh/scrynequant_vps scryn@192.168.1.4`; kod güncelleme `git bundle` + `git merge --ff-only`.
+  Ana makinede `ScryneQuant-Gosterim` devre dışı. `sq aktif durdur` kalıcı kapatır (`kapali`).
 - Araştırma: `tools/aktif_arastirma.py` + ön kayıt/sonuç `docs/research/records/2026-09-23-aktif-donus-*`.
 
 **Dondurulmuş (kod ve testler duruyor, çalışan süreç yok, K-136)**

@@ -1,4 +1,4 @@
-"""Kanonik enstrüman kimliği ve kimlik kırılması tespiti. (K-052/4, Spike 6 §4a, Faz 9)
+r"""Kanonik enstrüman kimliği ve kimlik kırılması tespiti. (K-052/4, Spike 6 §4a, Faz 9)
 
 **Enstrüman kimliği ticker değildir.** `LUNAUSDT` arşivde 2020-08'den bugüne tek bir seri
 gibi duruyor; ama 2022-05-13 00:00 kapanışı 0,00005, ardından 17 gün satır yok, 2022-05-31

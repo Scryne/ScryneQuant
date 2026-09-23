@@ -24,10 +24,13 @@ ve en fazla 1:10 kaldıraç.
 | `kripto-donus` | aynı | RSI 3 ortalamaya dönüş | aynı |
 | `mt5-demo` | EURUSD, GBPUSD, USDCHF, USDJPY, AUDUSD, NZDUSD, USDCAD, XAUUSD, S&P, NASDAQ, DJI · 1 saat · alış + açığa satış | RSI 3 ortalamaya dönüş | Integral MT5 demo fiyatı/spread'i, simüle dolum, kur çevrimi, gecelik swap |
 
-- Takip: http://127.0.0.1:8790 (`sq execution pano`). Karne: `sq aktif karne --hesap <ad>`.
+- **Yer: ikinci bilgisayar (host, 192.168.1.4), K-138.** Takip: **http://192.168.1.4:8790** (ev ağından).
+  Ana makinede bot çalışmaz. Karne hostta: `sq aktif karne --hesap <ad>`.
+- Ek demo hesaplar (K-138, doğrulanmamış aday): `mt5-gece` (16:00→09:00 ET), `mt5-aydonumu` (ay sonu → 3. gün).
+- Hostta MT5 terminali kurulup Integral demo hesabına giriş yapılana kadar üç MT5 hesabı başlayamaz.
 - Kayıp freni: gün başına göre %3, hafta başına göre %8 düşüşte her şey kapanır.
-- Gözetmen (`ScryneQuant-Gosterim`, 10 dk) dört hesabı ve panoyu ayakta tutar; MT5 terminali açık
-  kalmalı. Kalıcı durdurma `sq aktif durdur --hesap <ad>`.
+- Gözetmen hostta `ScryneQuant-Aktif` (oturumda, 10 dk) altı hesabı ve panoyu ayakta tutar; MT5 terminali
+  açık kalmalı. Kalıcı durdurma `sq aktif durdur --hesap <ad>`.
 - Integral demo sunucusu algoritmik emri kapalı tutuyor (retcode 10026). Açılırsa `mt5-demo`
   `araci: "mt5"` yapılır ve emirler demo hesaba gider.
 
