@@ -325,3 +325,20 @@ def test_ay_donumu_son_is_gunu_ile_ucuncu_is_gunu() -> None:
     # 3. hafta içi günü Cuma ise (Nisan 2026: 1 Çarşamba → 3 Cuma) hafta sonu yeniden girilmez.
     nisan = _gecisler("ay_donumu", _saatlik("2026-03-27 00:00", 10))
     assert nisan[1:] == ["31.03 16->1", "03.04 16->0"]
+
+
+def test_mt5_fiyat_sembolu_secer_ve_ilk_tiki_bekler(tmp_path: Path) -> None:
+    """Yeni hesapta sembol Market Watch'ta değil: fiyat önce seçer, ilk tick gelene kadar bekler."""
+    m = sahte_mt5(0)
+    secilen: list[str] = []
+    bilgi = SimpleNamespace(visible=False, currency_profit="USD", trade_contract_size=50.0)
+    m.symbol_info = lambda s: bilgi
+    m.symbol_select = lambda s, a: secilen.append(s) or True
+    cevaplar = iter([None, SimpleNamespace(bid=0.0, ask=0.0), SimpleNamespace(bid=10.0, ask=10.2)])
+    m.symbol_info_tick = lambda s: next(cevaplar)
+    a = MT5Araci(mt5=m)
+    assert a.fiyat("S&P") == pytest.approx(10.1)
+    assert "S&P" in secilen
+    m.symbol_info_tick = lambda s: None
+    with pytest.raises(AraciHatasi, match="fiyat yok"):
+        a.fiyat("S&P")

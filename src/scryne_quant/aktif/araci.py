@@ -311,10 +311,19 @@ class MT5Araci:
         acilis = (df["time"].astype("int64") - fark) * 1000
         return _bar_df(acilis, df["open"], df["high"], df["low"], df["close"])
 
+    def _tick(self, sembol: str) -> Any:
+        """Güncel tick. Sembol Market Watch'ta değilse önce seçilir; yeni seçilen sembolün ilk
+        tick'i birkaç yüz ms sürebilir (yeni hesapta ölçüldü) → kısa bekleme. Yalnız okuma."""
+        self._sembol(sembol)
+        for _ in range(10):
+            tick = self._mt5.symbol_info_tick(sembol)
+            if tick is not None and tick.bid > 0:
+                return tick
+            time.sleep(0.3)
+        raise AraciHatasi(f"{sembol}: fiyat yok")
+
     def fiyat(self, sembol: str) -> float:
-        tick = self._mt5.symbol_info_tick(sembol)
-        if tick is None or not tick.bid > 0:
-            raise AraciHatasi(f"{sembol}: fiyat yok")
+        tick = self._tick(sembol)
         return (float(tick.bid) + float(tick.ask)) / 2.0
 
     def ozkaynak(self) -> float:
@@ -521,9 +530,7 @@ class MT5Paper(MT5Araci):
         self._demo_denetle()
         if delta == 0:
             raise AraciHatasi("sıfır adetli emir")
-        tick = self._mt5.symbol_info_tick(sembol)
-        if tick is None or not tick.bid > 0:
-            raise AraciHatasi(f"{sembol}: fiyat yok")
+        tick = self._tick(sembol)
         if abs(float(tick.time) - self.sunucu_farki_s(sembol) - time.time()) > 300:
             raise AraciHatasi(f"{sembol}: tick bayat (piyasa kapalı?), dolum yapılmadı")
         ref = float(tick.ask) if delta > 0 else float(tick.bid)
