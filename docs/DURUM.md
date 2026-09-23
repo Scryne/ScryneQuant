@@ -27,7 +27,8 @@ ve en fazla 1:10 kaldıraç.
 - **Yer: ikinci bilgisayar (host, 192.168.1.4), K-138.** Takip: **http://192.168.1.4:8790** (ev ağından).
   Ana makinede bot çalışmaz. Karne hostta: `sq aktif karne --hesap <ad>`.
 - Ek demo hesaplar (K-138, doğrulanmamış aday): `mt5-gece` (16:00→09:00 ET), `mt5-aydonumu` (ay sonu → 3. gün).
-- Hostta MT5 terminali kurulup Integral demo hesabına giriş yapılana kadar üç MT5 hesabı başlayamaz.
+- Hostta MT5 terminali Integral demo hesabı **50545513**'e bağlı (yalnız fiyat kaynağı); terminal ve Windows
+  oturumu açık kalmalı.
 - Kayıp freni: gün başına göre %3, hafta başına göre %8 düşüşte her şey kapanır.
 - Gözetmen hostta `ScryneQuant-Aktif` (oturumda, 10 dk) altı hesabı ve panoyu ayakta tutar; MT5 terminali
   açık kalmalı. Kalıcı durdurma `sq aktif durdur --hesap <ad>`.

@@ -6981,3 +6981,12 @@ K-136/K-137'nin "FAIL → demoya eklenmez" hükmü (yalnız demo kademesi için)
   durduruldu, `ScryneQuant-Gosterim` görevi devre dışı.
 - **Açık:** hostta MT5 terminali yok → `mt5-demo`, `mt5-gece`, `mt5-aydonumu` başlayamıyor ("MetaTrader 5 x64 not
   found"). Scryne hosta Integral MT5'i kurup demo hesaba giriş yapınca gözetmen 10 dakika içinde kendiliğinden başlatır.
+- **MT5 hostta (aynı gün kapandı):** Scryne MT5'i kurdu. Hosttaki `servers.dat` Integral erişim noktalarını
+  içermiyordu → ana makinenin `servers.dat`ı kopyalandı (hosttaki `servers.dat.yedek`). Kayıtlı şifre taşınamıyor
+  (`accounts.dat` makineye bağlı, terminal "deleted due security reason" ile siliyor); eski şifre hatalı girildi
+  ("Invalid account") → hostta **yeni demo hesap 50545513** (IntegralYatirim-MT5, hedging) açıldı. Paper hesaplar
+  aracı hesabından yalnız fiyat okur; hesap numarası sonucu değiştirmez.
+- Yeni hesapta semboller Market Watch'ta seçili değildi → `MT5Araci.fiyat` önce seçip ilk tick'i bekliyor
+  (`10cd5c0`). Üç MT5 hesabı 20:18 UTC'de turda doğrulandı (`/api/aktif`).
+- Operasyon notu: SSH üzerinden satır içi PowerShell komutlarında `$değişken` yol parçaları güvenilir biçimde
+  geçmiyor (bir `kapali` silme adımı sessizce boşa gitti). Host komutları betik dosyası (`-File`) olarak gönderilir.
