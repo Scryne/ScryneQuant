@@ -394,7 +394,19 @@ class Yurutucu:
         # 4-5) Karar + execution.
         karar = self._karar(bar, canli=canli, ozkaynak=h.ozkaynak, maruziyet=h.maruziyet,
                             miktar=h.miktar)
+        self._egri_ekle(bar, h.ozkaynak, h.maruziyet)
         return {"bar_ms": bar.open_time, "canli": canli, "ozkaynak": h.ozkaynak, **karar}
+
+    def _egri_ekle(self, bar: Bar, ozkaynak: float, maruziyet: float) -> None:
+        """`egri.jsonl`: bar başına özkaynak, maruziyet ve kapanış (pano grafiği, K-133). Yalnız
+        okuma için bir iz; karar yolu onu okumaz. Yazılamazsa koşu durmaz, hata günlüğe düşer."""
+        satir = {"bar_ms": bar.open_time, "ozkaynak": round(float(ozkaynak), 8),
+                 "maruziyet": round(float(maruziyet), 6), "fiyat": float(bar.close)}
+        try:
+            with (self.ayar.kosu_dizini / "egri.jsonl").open("a", encoding="utf-8") as f:
+                f.write(json.dumps(satir) + "\n")
+        except OSError as hata:
+            self._hata_kaydet("egri", str(hata))
 
     def _karar(
         self, bar: Bar, *, canli: bool, ozkaynak: float, maruziyet: float, miktar: float

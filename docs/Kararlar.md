@@ -6694,3 +6694,38 @@ BTC 1h arşivi 2017-08-17 → 2026-09-19, 100 USDT, ölçülmüş maliyet modeli
   borsaya gitmeden reddedilir; bir sonraki barda yeniden denenir.
 - Çıkış (`SELL`) risk motorunda engellenmez, alım (`BUY`) günlük zarar ve volatilite kontrollerinden geçer. Sert bir
   düşüş gününde "düşüşte alım" ertesi güne kayabilir.
+
+## K-133 — Bot takip ekranı (`/api/bot` + `apps/web/bot.html`) ve yürütücünün `egri.jsonl` izi
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("siteyi şöyle bişey yap ben buradan güzelce takip
+edeyim") · **Tabi:** K-036, K-043, K-114, K-129, K-132 · **Kaynak:** `trader/bot_panosu.py`, `trader/pano.py`,
+`trader/yurutucu.py` (`_egri_ekle`), `apps/web/bot.html`, `apps/web/src/bot/`, `DESIGN.md` (`bot-*` token'ları),
+`tests/unit/test_bot_panosu.py`
+
+### Gerekçe
+
+- K-114 panosu on bölümlü bir denetim ekranı: her şeyi gösterir, "bot şu an ne yapıyor, param ne durumda" sorusunu
+  tek bakışta cevaplamaz. Scryne botu günlük takip edeceği bir ekran istedi.
+- Hesap değerinin zaman içindeki seyri diskte yoktu (yalnız son `durum.json`). Grafik için bir iz gerekiyordu.
+
+### Karar
+
+1. **İz (`egri.jsonl`):** yürütücü her işlenen barda `{bar_ms, ozkaynak, maruziyet, fiyat}` satırı ekler.
+   - Yalnız okuma içindir; karar yolu, toparlanma ve mutabakat onu okumaz (K-038'in "yeniden üretim" iddiası
+     değişmez).
+   - Yazılamazsa koşu durmaz, hata `hatalar.jsonl`e düşer.
+   - Aynı bar yeniden yazılırsa (toparlanma) okuyucu sonuncusunu alır.
+2. **Uç (`GET /api/bot`):** koşu özetleri, seçili koşunun hesabı, eğrisi, son 40 emri, risk durumu, sabit oranın bant
+   tetikleri (P = x·c / (q·(1 − x))), pilot tavanları, hazırlık kontrolü, sistem sürümü.
+   - Salt okuma (K-036/K-043): emir, onay, durdurma ucu yok; SQLite `mode=ro` açılır; test dosya yazılmadığını ölçer.
+   - Acil durdurma ekranda bir düğme değil, kopyalanan bir komuttur (`sq execution kill`).
+3. **Sayfa:** `sq execution pano` kökte derlenmiş `apps/web/dist/bot.html`i verir; derleme yoksa klasik pano.
+   Klasik pano `/klasik`te her zaman durur.
+4. **Görsel kimlik:** `DESIGN.md` `bot-*` token'ları. Kâr/marka nane yeşili, zarar mercan, risk ayrı tek bir kehribar;
+   ekranda glassmorphism yok (yalnız yapışkan üst çubukta statik blur).
+
+### Bilinen sınırlar
+
+- K-133'ten önce başlamış koşular yeniden başlatılana kadar `egri.jsonl` yazmaz; grafik o ana kadar boş kalır.
+- Pano sunucusu çalışırken derlenen yeni sayfa bir sonraki yüklemede görünür; `/api/bot` değişiklikleri sunucunun
+  yeniden başlatılmasını ister.

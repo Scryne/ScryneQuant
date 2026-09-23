@@ -13,7 +13,7 @@ Bu doküman sistemin **nasıl çalıştırılacağını** anlatır. Neden böyle
 
 ```
 sq execution durum                     # CURRENT MODE + koşular + son raporlar
-sq execution pano                      # http://127.0.0.1:8790 — SYSTEM…AUDIT, salt okuma
+sq execution pano                      # http://127.0.0.1:8790 — bot ekranı (K-133); /klasik: SYSTEM…AUDIT, salt okuma
 sq execution preflight --hedef <MOD> [--strateji S] [--ag]   # kontrol listesi, hiçbir şey yazmaz
 ```
 

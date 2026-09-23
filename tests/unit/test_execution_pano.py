@@ -21,7 +21,7 @@ def test_pano_bos_kurulumda_disabled_ve_bolumler(tmp_path):
     assert d["sistem"]["mod"] == "DISABLED"
     assert d["sistem"]["r8"]["kriter_sozlesmesi"] == "dondurulmuş"
     assert d["secili"] is None and d["kosular"] == []
-    html = c.get("/").text
+    html = c.get("/klasik").text
     for bolum in ("SYSTEM", "MARKET", "STRATEGY", "SIGNAL", "PORTFOLIO", "RISK", "ORDERS",
                   "EXECUTION", "JEV", "AUDIT", "CURRENT MODE"):
         assert bolum in html

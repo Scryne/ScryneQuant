@@ -39,6 +39,25 @@ colors:
   # --- cam: yalnızca üst katman yüzeyleri (bkz. "Elevation & Depth") -------
   overlay-surface: "#12141ECC"
   overlay-border: "#FFFFFF1A"
+  # --- bot takip ekranı (K-132, `apps/web/bot.html`): koyu yeşil zemin, nane marka -----
+  bot-bg: "#070A09"
+  bot-surface: "#0E1312"
+  bot-surface-2: "#131A18"
+  bot-surface-3: "#1A2320"
+  bot-line: "#1F2A27"
+  bot-line-strong: "#2C3935"
+  bot-text: "#E7F0EC"
+  bot-text-2: "#9FAEA8"
+  bot-text-3: "#7C8C86"
+  bot-mint: "#2FE3A0"
+  bot-mint-ink: "#03140D"
+  bot-mint-soft: "#2FE3A01F"
+  bot-mint-deep: "#1BB77E"
+  bot-down: "#F2766D"
+  bot-risk: "#FFB23E"
+  bot-risk-ink: "#1A1204"
+  bot-risk-surface: "#2B1F0A"
+  bot-sky: "#7FB2FF"
 typography:
   # Fira Sans etiket ve başlık; Fira Code sayı, zaman ve kod. İki aile, daha fazlası değil.
   # Sayısal her token `tnum` + `zero` taşıyor: sütunda ondalık hizası tutar ve sayı
@@ -88,6 +107,29 @@ typography:
     fontSize: 12px
     fontWeight: 400
     lineHeight: 1.35
+    fontFeature: "'tnum' 1, 'zero' 1"
+  bot-display:
+    fontFamily: Manrope
+    fontSize: 40px
+    fontWeight: 700
+    lineHeight: 1.05
+    letterSpacing: -0.03em
+    fontFeature: "'tnum' 1"
+  bot-title:
+    fontFamily: Manrope
+    fontSize: 15px
+    fontWeight: 650
+    lineHeight: 1.3
+  bot-body:
+    fontFamily: Manrope
+    fontSize: 14px
+    fontWeight: 450
+    lineHeight: 1.5
+  bot-numeric:
+    fontFamily: Fira Code
+    fontSize: 13px
+    fontWeight: 450
+    lineHeight: 1.45
     fontFeature: "'tnum' 1, 'zero' 1"
 spacing:
   # Yoğun ölçek (8-32px). Bu bir dashboard; boşluk bilgiyi değil, sayfayı büyütür.
@@ -290,6 +332,28 @@ sınırları görünmez yapar.
   butonlarla aynı görsel ağırlıkta olamaz.
 - **Boş durumlar bir sonraki adımı söyler.** "Henüz backtest yok" değil; hangi komutun
   backtest üreteceğini söyler — Faz 1-5'te arayüz CLI'ın önünde değil yanındadır.
+
+## Bot takip ekranı (K-133)
+
+`apps/web/bot.html` (`sq execution pano`, 8790) sabit oranlı yatırım botunu (`sabit_oran`) takip
+ekranıdır; `bot-` önekli token'lar yalnız orada kullanılır. Kimlik Scryne'ın referansından geliyor
+(koyu zemin + nane yeşili, 2026-09-23) ve yukarıdaki "doygunluk yalnız risk" ilkesini **bu ekranda
+bilerek daraltıyor**: nane (`bot-mint`) marka, etkin gezinme ve kâr rengidir; ama **risk hâlâ tek
+ve ayrı bir renkte** (`bot-risk` kehribar) ve başka hiçbir şeye verilmez. Zarar mercan
+(`bot-down`), riskle karışmaz. Yön her zaman işaretle (+/−) yazılır.
+
+- **İmza öğesi — Denge:** %50 hedefin, ±5 puan bandın ve anlık BTC oranının tek bir yatay
+  ölçekte gösterimi; altında botun bir sonraki alış ve satış yapacağı BTC fiyatları. Kullanıcının
+  "bot ne zaman bir şey yapacak" sorusunu tek bakışta cevaplar.
+- **Sayılar:** büyük bakiye Manrope `tnum`; tablo ve fiyatlar Fira Code. Sayılar anlık değişir,
+  sayma animasyonu yok.
+- **Yeşil gradient** yalnız iki yerde: grafik alan dolgusu ve pilot kartı (`bot-mint` → `bot-mint-deep`; referansın "öne çıkan
+  kart"ı). Başka yüzeyde gradient yok; kartlar opak (`bot-surface`), cam yok.
+- **Salt okuma:** ekranda emir/onay/kill düğmesi yoktur (K-036, K-043). Acil durdurma kartı
+  CLI komutunu gösterir ve kopyalar.
+- Ölçülmüş kontrastlar (zemin `bot-surface`): `bot-text` 16,1:1 · `bot-text-2` 8,1:1 ·
+  `bot-text-3` 5,3:1 · `bot-mint` 11,3:1 · `bot-down` 6,8:1 · `bot-risk` 10,4:1 · `bot-sky` 8,7:1;
+  en kötü durum `bot-text-3` / `bot-surface-3` 4,56:1.
 
 ## Do's and Don'ts
 

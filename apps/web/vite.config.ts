@@ -14,7 +14,11 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
-    proxy: { "/api": { target: "http://127.0.0.1:8787", changeOrigin: true } },
+    proxy: {
+      // Bot paneli (`bot.html`) `sq execution pano` (8790) sunucusunu okur; önce eşleşmeli.
+      "/api/bot": { target: "http://127.0.0.1:8790", changeOrigin: true },
+      "/api": { target: "http://127.0.0.1:8787", changeOrigin: true },
+    },
   },
   build: {
     outDir: "dist",
@@ -23,6 +27,7 @@ export default defineConfig({
       input: {
         index: fileURLToPath(new URL("index.html", import.meta.url)),
         pano: fileURLToPath(new URL("pano.html", import.meta.url)),
+        bot: fileURLToPath(new URL("bot.html", import.meta.url)),
       },
     },
   },

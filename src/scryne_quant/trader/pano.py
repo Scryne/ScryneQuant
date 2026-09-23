@@ -146,17 +146,37 @@ def durum_topla(kok: Path, kosu: str | None = None) -> dict[str, Any]:
     }
 
 
-def uygulama(kok: Path) -> FastAPI:
+#: Bot takip ekranının derlenmiş hâli (`apps/web` → `npm run build`). Yoksa `/` klasik ekrana düşer.
+WEB_DIST = Path(__file__).resolve().parents[3] / "apps" / "web" / "dist"
+
+
+def uygulama(kok: Path, web_dist: Path | None = None) -> FastAPI:
+    from fastapi.staticfiles import StaticFiles
+
+    from scryne_quant.trader.bot_panosu import bot_topla
+
     app = FastAPI(title="ScryneQuant execution panosu", docs_url=None, redoc_url=None)
+    dist = web_dist or WEB_DIST
 
     @app.get("/api/durum")
     def api_durum(kosu: str | None = None) -> JSONResponse:
         return JSONResponse(durum_topla(kok, kosu))
 
-    @app.get("/", response_class=HTMLResponse)
-    def sayfa() -> str:
+    @app.get("/api/bot")
+    def api_bot(kosu: str | None = None) -> JSONResponse:
+        return JSONResponse(bot_topla(kok, kosu))
+
+    @app.get("/klasik", response_class=HTMLResponse)
+    def klasik() -> str:
         return SAYFA
 
+    @app.get("/", response_class=HTMLResponse)
+    def sayfa() -> str:
+        bot = dist / "bot.html"
+        return bot.read_text(encoding="utf-8") if bot.is_file() else SAYFA
+
+    if (dist / "assets").is_dir():
+        app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
     return app
 
 

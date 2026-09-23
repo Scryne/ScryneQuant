@@ -19,6 +19,9 @@ P3 k'sı = RYPP programının bütçesi.
 **C ilk programı (K-130/K-131):** h64 `evren_risk_kapisi` (evren kıyası + BTC 100g kapısı) RYPP **FAIL** — kripto OOS'ta
 düşüşü %21 azalttı ama zamanlama plasebodan iyi değil (maruziyet düşürme etkisi); French iki vintage da FAIL. Program kapandı.
 
+**Takip ekranı (K-133):** `sq execution pano` → http://127.0.0.1:8790 bot ekranı (hesap değeri, denge/tetikler,
+eğri, emirler, risk, pilot hazırlığı); klasik on bölümlü pano `/klasik`. Derleme: `cd apps/web && npm run build`.
+
 Tek sayfa, **yürürlükteki** durum. "Neden böyle" için `docs/Kararlar.md`, sayılar için
 `docs/research/records/` ve faz raporları. Bu sayfa ile başka bir doküman çelişirse bu sayfa ve
 en yeni K kazanır; eski doküman tarihsel kayıttır.

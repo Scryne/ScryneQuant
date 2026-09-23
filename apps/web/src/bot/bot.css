@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+/* Token'lar DESIGN.md'den üretiliyor (`npm run tokens`); bu ekran yalnız `bot-` önekli olanları
+   kullanır (DESIGN.md "Bot takip ekranı"). */
+@import "../tokens.css";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    /* Sabit z ekseni (baseline-ui): rastgele z-index yok. */
+    --z-icerik: 0;
+    --z-yapiskan: 10;
+    --z-gezinme: 20;
+    --z-bildirim: 40;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--color-bot-bg);
+    color: var(--color-bot-text);
+    font-family: var(--font-bot-body), ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--text-bot-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Tek ışık kaynağı: sol üstten gelen çok düşük alfalı nane parıltısı. Ayrı sabit katman,
+     kaydırmada yeniden boyanmaz; veri yüzeyleri opak kaldığı için okunurluğu etkilemez. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(52rem 34rem at 12% -10%, oklch(0.62 0.14 165 / 0.10), transparent 60%),
+      radial-gradient(40rem 30rem at 100% 110%, oklch(0.45 0.08 170 / 0.08), transparent 62%);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-bot-mint);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .kart {
+    background-color: var(--color-bot-surface);
+    border: 1px solid var(--color-bot-line);
+    border-radius: 20px;
+  }
+
+  .sayi {
+    font-family: var(--font-bot-numeric), ui-monospace, monospace;
+    font-feature-settings: "tnum" 1, "zero" 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Canlı nabız: yalnız transform + opacity (compositor). Koşu ölü ise hiç çalışmaz. */
+  .nabiz {
+    position: relative;
+  }
+  .nabiz::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: currentColor;
+    animation: nabiz 2.4s ease-out infinite;
+  }
+  @keyframes nabiz {
+    0% {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    70%,
+    100% {
+      transform: scale(2.6);
+      opacity: 0;
+    }
+  }
+}

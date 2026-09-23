@@ -140,7 +140,7 @@ raporları ve eski kayıtlar tarihseldir. Aşağıdaki liste yalnız **nereye ba
   edemez (`test_jev_izolasyon.py`); Jev'den `Sinyal` üreten fonksiyon yok. `config/jev.json`.
 
 **Diğer**
-- `.github/workflows/test.yml` CI (ruff + `pytest -m "not network"`). `apps/web/` pano;
+- `.github/workflows/test.yml` CI (ruff + `pytest -m "not network"`). `apps/web/` pano (bot ekranı `bot.html` + `src/bot/`, uç `/api/bot`, K-133);
   `DESIGN.md` normatif token'lar (`npx --package @google/design.md -c "designmd lint DESIGN.md"`).
 - Tarihsel: `docs/Proje-Fikri*.md`, `docs/Denetim*.md`, `docs/Roadmap.md`, `docs/Faz-*.md`,
   `docs/audit/`, `docs/spikes/`.
