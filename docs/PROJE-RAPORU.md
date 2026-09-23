@@ -553,7 +553,7 @@ Her satır kararın özüdür. Ayrıntı, gerekçe ve ölçümler `docs/Kararlar
 | Gösterim | Testnet + shadow 2026-09-23 07:31/07:38 UTC'den beri çalışıyor |
 | Pilot hazırlığı | Canlı kapıda 15 kontrolün 12'si geçiyor. Kalanlar: 7 gün gösterim, işlem anahtarı, hesap değeri/bağlantı (ağ yoklaması) |
 | R8 | 2026-09-25 başlıyor, 14 gün |
-| C fazı | Açılabilir; aday yok |
+| C fazı | İlk program (h64 `evren_risk_kapisi`) RYPP FAIL, kapandı (K-130/K-131) — ek bölüm 14 |
 
 ---
 
@@ -607,3 +607,26 @@ Her satır kararın özüdür. Ayrıntı, gerekçe ve ölçümler `docs/Kararlar
 | Bağımsız veri | `src/scryne_quant/data/french.py`, `config/bagimsiz_veri.json`, `sq data bagimsiz-dogrula` |
 | Ölçüm kayıtları | `docs/research/records/` |
 | Tarihsel denetimler | `docs/audit/`, `docs/Denetim*.md`, `docs/Faz-*.md`, `docs/spikes/` |
+
+---
+
+## 14. Ek (aynı gün): C fazının ilk sonucu — K-130 / K-131
+
+- **Aday (`evren_risk_kapisi`):** Kripto evren kıyası (hacimde ilk 10, eşit ağırlık, haftalık, brüt 1,0). BTC 100
+  günlük ortalamasının altına inince nakde geçiyor. Pencere IS'te 50/100/200 gün arasından önceden yazılı kuralla
+  seçildi; 200 gün IS'te P1'i geçemediği için OOS'a sokulmadı.
+- **Ön kayıt:** Program `kripto_risk_kapisi` (bütçe 1, k = 1) ve hipotez 64 commit'lendi, sonra OOS tek sefer koşuldu.
+- **Kripto OOS (2,7 yıl):**
+  - Aday −%16,6, azami düşüş %59,8. Kıyas −%31,2, azami düşüş %75,7.
+  - Düşüş %21 azaldı; eşik %25.
+  - Zamanlama rastgele takvimden iyi değil: gerçek MAR −0,06, plasebonun %95 persentili 0,64.
+  - Kazanç maruziyet düşürmekten geliyor, zamanlamadan değil.
+- **Bağımsız veri (ABD sektörleri):**
+  - Düşüş yarıya iniyor: %24 karşı %54.
+  - 202607 vintage'ında sonuç başlangıç tarihine duyarlı.
+  - 201705 vintage'ında plasebo ve 2x maliyet kalıyor.
+- **Hüküm:** RYPP FAIL. Program kapandı, tuning yok.
+- **Süreç ve hata:**
+  - Promotion zinciri ilk kez gerçek RYPP kanıtıyla uçtan uca çalıştı ve FAIL'i kaydetti.
+  - Kripto P3 hesabında bir birim hatası bulundu ve düzeltildi. Hükmü değiştirmiyor, ders kayıtta.
+- **Pilot:** Bu sonuç mikro pilotu etkilemiyor; pilot `sma_kesisim` ile ~2026-09-30'da açılabilir.

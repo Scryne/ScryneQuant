@@ -1,10 +1,10 @@
 {
-  "uretildi": "2026-09-23 07:03:55 UTC",
+  "uretildi": "2026-09-23 14:38:35 UTC",
   "fotograf": {
     "yol": "docs\\research\\coklu-test-olcum.json",
-    "sha256": "14af1f6ad3c3bb616a70899bc60d6e55c2b58984bd76d7d2f7185cc53ce04498",
+    "sha256": "cdf71a3a10805b75435e33e265c30db4456ad439b5b023ab98ea9865d50be831",
     "olculebilir": 49,
-    "defter_sayisi": 63
+    "defter_sayisi": 64
   },
   "cekilis_sayisi": 49,
   "asgari_oos_gun": 569.6666666666666,

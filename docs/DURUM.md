@@ -10,7 +10,9 @@ tanımlı kurallarla maruziyet sağlayıp büyük düşüşlerde riski azaltmak.
 Promotion Protokolü (`docs/research/Risk-Yonetimli-Protokol.md`); alfa yolu (12 kapı) aynen durur.
 Faz sırası A (sistem gösterimi + R8) → B (RYPP, R13) → C (kripto strateji, R14) → D (paper, R15) → E (gerçek para).
 **B kapandı (K-128):** RYPP zincirde (K-126); B-3 French verisi vintage dayanıklılığı şartıyla (202607 + 201705 eşi);
-P3 k'sı = RYPP programının bütçesi. Sıradaki: C (R14) — tek ön kayıtlı RYPP programı. Hiçbir strateji henüz RYPP'den geçmedi.
+P3 k'sı = RYPP programının bütçesi.
+**C ilk programı (K-130/K-131):** h64 `evren_risk_kapisi` (evren kıyası + BTC 100g kapısı) RYPP **FAIL** — kripto OOS'ta
+düşüşü %21 azalttı ama zamanlama plasebodan iyi değil (maruziyet düşürme etkisi); French iki vintage da FAIL. Program kapandı.
 
 Tek sayfa, **yürürlükteki** durum. "Neden böyle" için `docs/Kararlar.md`, sayılar için
 `docs/research/records/` ve faz raporları. Bu sayfa ile başka bir doküman çelişirse bu sayfa ve
@@ -31,7 +33,7 @@ en yeni K kazanır; eski doküman tarihsel kayıttır.
 
 ## 2. Strateji durumu
 
-- **Promotion'u geçen strateji: yok.** Defter 63 çekiliş.
+- **Promotion'u geçen strateji: yok.** Defter 64 çekiliş (63 alfa + 1 RYPP, h64 FAIL).
 - 62 çekilişin OOS sonuçları gerçek ölçümdür: null persentili medyan 0,50 (K-110), en iyi OOS
   Sharpe 0,46. Eski kapıların güçsüzlüğü (K-117) bu sonuçları değiştirmiyor.
 - h63 (kripto evren zaman serisi trend, K-120): OOS Sharpe −0,54 vs kıyas 0,30 → elendi.

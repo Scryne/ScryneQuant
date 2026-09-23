@@ -6552,3 +6552,63 @@ temiz koşu ilk ölçümle birebir aynı çıktı.
 5. **Parametre duyarlılığı.** IS ızgarası monoton değil: komşu pencereler (50 ve 200 gün) P1'i geçemiyor. Sonuç
    pencereye duyarlı olabilir. RYPP'nin R1 (başlangıç tarihi) ve R2 (alt dönem) koşulları ile bağımsız veri bunu
    kısmen sınar. Canlıya geçmeden önce ayrıca not edilmeli.
+
+---
+
+## K-131 — h64 `evren_risk_kapisi` RYPP FAIL; `kripto_risk_kapisi` programı kapandı; kripto P3 takvim hatası düzeltildi
+
+**Durum:** kabul (sonuç kaydı) · **Tarih:** 2026-09-23 · **Tabi:** K-125, K-128, K-130 · **Kaynak:**
+`runs/rypp/kripto_risk_kapisi/{ozet,ana,bagimsiz,vintage,ana_tani_k131}.json`, `runs/promotion/evren_risk_kapisi.json`
+
+### Sonuç (tek sefer, ön kayıttan sonra, temiz ağaç `e8924bf`)
+
+**Kripto OOS** (2023-12-30 → 2026-09-19, 2,72 yıl, 23.861 bar; kıyasta 3 epizot):
+
+| | Toplam getiri | CAGR | Azami düşüş | MAR | Sharpe |
+| --- | --- | --- | --- | --- | --- |
+| Kıyas (ilk 10, eşit ağırlık, brüt 1,0) | −%31,2 | −%12,8 | %75,7 | −0,17 | 0,17 |
+| Aday (BTC 100g kapısı) | −%16,6 | −%6,4 | %59,8 | −0,11 | 0,16 |
+| Aday, 2x maliyet | −%23,7 | −%9,5 | %61,0 | −0,16 | 0,10 |
+
+- **Kalan koşullar:**
+  - P1 düşüş azaltımı 0,21 (< 0,25).
+  - R3: yalnız 1 epizotta iyileşme (< 2).
+  - P3: düzeltilmiş tanıda gerçek MAR −0,06, plasebonun %95 persentili 0,64. Zamanlama şanstan iyi değil.
+- **Geçen koşullar:** P2a, P2b, S1, R1, R2.
+- Aday kıyastan daha az kaybetti, ama bunu zamanlamayla değil maruziyeti yaklaşık %56'ya indirerek yaptı. K-125'in
+  tam olarak ayırt etmek için tasarlandığı durum bu.
+
+**Bağımsız veri (K-128/4 eşlemesi):**
+
+| Veri | Aday CAGR / düşüş / MAR | Kıyas CAGR / düşüş / MAR | Hüküm |
+| --- | --- | --- | --- |
+| French 202607 (2004-09 → 2026-07) | %6,0 / %24,1 / 0,25 | %10,8 / %54,1 / 0,20 | FAIL (R1 başlangıç tarihi) |
+| French 201705 (2004-09 → 2017-05) | %4,8 / %24,0 / 0,20 | %9,4 / %54,0 / 0,18 | FAIL (P3, S1, R1) |
+
+İki vintage da FAIL olduğu için birleşik sonuç FAIL. ABD'de kapı düşüşü yarıya indiriyor ve 202607'de plaseboyu da
+geçiyor. Ama sonuç başlangıç tarihine bağlı; eski vintage'da plaseboyu geçemiyor.
+
+**Hüküm: RYPP FAIL** (üç yolun üçünde). Promotion zincirinde `out_of_sample` = FAIL olarak kayıtlı: zincir K-126/K-128
+kanıt yolunu CLI'dan uçtan uca ilk kez gerçek kanıtla çalıştırdı; program bütçesi k = 1 doğrulandı, hipotez sırası 64.
+
+### Kripto P3 hatası (K-131/1)
+
+`rypp_kosu.kripto_girdi`, motorun zaten kesir olan brüt maruziyetini bir kez daha özkaynağa bölüyordu. Takvim hep 0
+çıktı ve `ana.json`'daki P3 anlamsız hesaplandı.
+
+- **Birim testi neden yakalamadı:** Test de aynı yanlış varsayımla (tutar cinsinden maruziyet) yazılmıştı.
+- **Düzeltme:** Kesir okunuyor. İki bekçi eklendi: maruziyet > 1,5 ise hata; işlem varken takvim boşsa hata.
+- **Hükme etkisi yok:** P1 ve R3 motorun gerçek özkaynağından hesaplanıyor ve ikisi de kaldı. Düzeltilmiş P3 aynı
+  deterministik OOS koşularıyla tanı olarak kaydedildi (`ana_tani_k131.json`); o da kaldı. Kanonik kanıt `ana.json`,
+  hüküm değişmez.
+- **Ders:** Yeni bir hesap yolunun birim testi motorun gerçek çıktısıyla (en az bir kez) sınanmalı; sentetik girdi
+  yazarın varsayımını tekrarlar. Bu, projenin "bilinen cevapla denetim" kuralının bir uygulaması.
+
+### Durma kuralı
+
+Bütçe 1/1 harcandı ve program kapandı. Aynı OOS'ta pencere, sembol ya da brüt ayarı yapılmaz. Yeni bir RYPP adayı yeni
+bir program ve yeni bir IS araştırması ister.
+
+**Öğrenilen:**
+1. Kripto alt coin sepetinde tek piyasa trend kapısı, maruziyet düşürmenin ötesinde zamanlama değeri üretmedi.
+2. ABD sektörlerinde aynı kural düşüşü belirgin azaltıyor, ama sağlamlık (başlangıç tarihi, vintage) yetmiyor.
