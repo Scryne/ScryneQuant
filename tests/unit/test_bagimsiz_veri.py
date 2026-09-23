@@ -31,6 +31,14 @@ GERCEK_KOK: Final = Path("data/bagimsiz/french")
 
 SET: Final = "french_12ind_vw_gunluk_202607"
 VERI_SHA: Final = "2448dddc19747d1138675c461b214279e27beda8a4e2867e43ff51be1c21dbc1"
+VINTAGE_SET: Final = "french_12ind_vw_gunluk_201705"
+VINTAGE_SHA: Final = "10256f9182bf8155d187c969b92da9a9c960329252a934b5fbe412c1ed5ad0b5"
+VINTAGE_ZIPLER: Final = {
+    "12_Industry_Portfolios_Daily_CSV.zip":
+        "44d2e5856a534ccc81170501d76ff1f567fc07d50dd0ea95f882eac58fa195f7",
+    "F-F_Research_Data_Factors_daily_CSV.zip":
+        "f929700fe922f9937f0e0b8273382d8451a56f0b049ff108de8cb8d9dde94add",
+}
 ZIPLER: Final = {
     "12_Industry_Portfolios_Daily_CSV.zip":
         "ff4f0b6c4bd6fe13950f9cd80adbf474de6040f9b4fe254ecfaad6a3dcdbf1c3",
@@ -39,18 +47,24 @@ ZIPLER: Final = {
 }
 
 
-def test_manifest_dondurulmus_ve_promotion_icin_uygun_degil():
+def test_manifest_dondurulmus_ve_vintage_sartiyla_uygun():
     """Pencere/kaynak/şema/hash değiştirilerek doğrulama yeniden seçilemez: değişiklik bu testi
-    kırar ve yeni bir K ister (K-127 §5)."""
+    kırar ve yeni bir K ister (K-127 §5). K-128: PIT değil ama vintage eşiyle uygun."""
     m = fr.manifest_oku(SET)
     assert m["veri_sha256"] == VERI_SHA
     assert {a: d["zip_sha256"] for a, d in m["kaynak"]["dosyalar"].items()} == ZIPLER
     assert m["donem"]["baslangic"] == "2004-06-01" and m["donem"]["bitis"] == "2026-07-31"
     assert m["satir"] == 5577 and m["ilk_islem_gunu"] == "2004-06-01"
     assert m["sema"]["sutunlar"] == list(fr.KANONIK_SUTUNLAR)
-    assert m["promotion_uygun"] is False and "PIT" in m["engel"]
     assert m["pit"]["sonuc"].startswith("PIT değil")
-    assert [v["dataset_id"] for v in fr.veri_setleri()] == [SET]
+    assert m["promotion_uygun"] is True and m["rol"] == "birincil"
+    assert m["vintage_eslesi"] == VINTAGE_SET and "K-128" in m["kabul"]
+    v = fr.manifest_oku(VINTAGE_SET)
+    assert v["veri_sha256"] == VINTAGE_SHA and v["rol"] == "ikinci_vintage"
+    assert v["donem"]["baslangic"] == "2004-06-01" and v["donem"]["bitis"] == "2017-05-31"
+    assert v["satir"] == 3273
+    assert {a: d["zip_sha256"] for a, d in v["kaynak"]["dosyalar"].items()} == VINTAGE_ZIPLER
+    assert [x["dataset_id"] for x in fr.veri_setleri()] == [SET, VINTAGE_SET]
 
 
 # ------------------------------------------------------------------ sentetik kaynak dosyalar
@@ -285,32 +299,39 @@ def test_gercek_defterde_bu_veriyle_cekilis_yok():
 # ------------------------------------------------------------------ promotion kilidi
 
 
-def test_uygun_olmayan_set_promotion_kanitina_giremez():
-    with pytest.raises(fr.FrenchHatasi, match="uygun değil"):
-        fr.promotion_icin_kayit(VERI_SHA, SET)
+def test_promotion_kaydi_rol_ve_kimlik_ister():
+    assert fr.promotion_icin_kayit(VERI_SHA, SET)["dataset_id"] == SET
+    assert fr.promotion_icin_kayit(VINTAGE_SHA, VINTAGE_SET, rol="ikinci_vintage")
+    with pytest.raises(fr.FrenchHatasi, match="rolü"):
+        fr.promotion_icin_kayit(VINTAGE_SHA, VINTAGE_SET)  # vintage eşi birincil olamaz
+    with pytest.raises(fr.FrenchHatasi, match="rolü"):
+        fr.promotion_icin_kayit(VERI_SHA, SET, rol="ikinci_vintage")
     with pytest.raises(fr.FrenchHatasi, match="kayıtlı"):
         fr.promotion_icin_kayit("b" * 64, SET)
     with pytest.raises(fr.FrenchHatasi, match="kayıtlı"):
         fr.promotion_icin_kayit(VERI_SHA, "baska_set")
 
 
-def test_uygun_isaretli_kayitli_set_kabul_edilir(tmp_path, monkeypatch):
+def test_uygun_olmayan_isaretli_set_reddedilir(tmp_path, monkeypatch):
     kayit = json.loads(fr.MANIFEST_YOLU.read_text(encoding="utf-8"))
-    kayit["veri_setleri"][0]["promotion_uygun"] = True
+    kayit["veri_setleri"][0]["promotion_uygun"] = False
+    kayit["veri_setleri"][0]["engel"] = "test"
     y = tmp_path / "bagimsiz_veri.json"
     y.write_text(json.dumps(kayit), encoding="utf-8")
     monkeypatch.setattr(fr, "MANIFEST_YOLU", y)
-    assert fr.promotion_icin_kayit(VERI_SHA, SET)["dataset_id"] == SET
+    with pytest.raises(fr.FrenchHatasi, match="uygun değil"):
+        fr.promotion_icin_kayit(VERI_SHA, SET)
 
 
-def test_cli_uygun_olmayan_bagimsiz_kaniti_reddeder(tmp_path):
+def test_cli_kayitsiz_ya_da_yanlis_rollu_bagimsiz_kaniti_reddeder(tmp_path):
     import typer
 
     from scryne_quant.cli.main import _kanit_kur
 
     b = tmp_path / "bagimsiz.json"
-    b.write_text(json.dumps({"dataset_id": SET, "veri_sha256": VERI_SHA}), encoding="utf-8")
-    with pytest.raises(typer.BadParameter, match="uygun değil"):
+    b.write_text(json.dumps({"dataset_id": VINTAGE_SET, "veri_sha256": VINTAGE_SHA}),
+                 encoding="utf-8")
+    with pytest.raises(typer.BadParameter, match="rolü"):
         _kanit_kur(None, None, "x", protokol="rypp", bagimsiz_yolu=b)
     b.write_text(json.dumps({"veri_sha256": "b" * 64}), encoding="utf-8")
     with pytest.raises(typer.BadParameter, match="kayıtlı"):
@@ -334,3 +355,16 @@ def test_gercek_veri_kimligi_yeniden_uretiliyor():
     assert a.kimlik() == {"dataset_id": SET, "kaynak": fr.manifest_oku(SET)["kaynak"]["ad"],
                           "period_start": "2004-06-01", "period_end": "2026-07-31",
                           "veri_sha256": VERI_SHA}
+
+
+gercek_vintage = pytest.mark.skipif(
+    not (Path("data/bagimsiz/french_201707/ham") / fr.SEKTOR_ZIP).is_file(),
+    reason="vintage eşi indirilmemiş (`sq data bagimsiz-indir french_12ind_vw_gunluk_201705`)",
+)
+
+
+@gercek_vintage
+def test_gercek_vintage_esi_kimligi_yeniden_uretiliyor():
+    v = fr.yukle(manifest=fr.manifest_oku(VINTAGE_SET))
+    assert v.veri_sha256 == VINTAGE_SHA and len(v.satirlar) == 3273
+    assert v.satirlar[-1][0] == "20170531"

@@ -123,14 +123,15 @@ def test_pilot_kapisi_promotion_r8_shadow_istemez_digerleri_durur(kok):
     for yok in ("strateji_onayi", "operasyon_r8", "shadow_live_kaniti"):
         assert yok not in k
     for var in ("paper_kaniti", "testnet_kaniti", "kademe", "acik_kararlar", "venue_statusu",
-                "kill_tatbikati", "testler", "kritik_hata_yok", "islem_anahtari_yetkisi",
-                "canli_baglanti"):
+                "kill_tatbikati", "pilot_gosterim", "testler", "kritik_hata_yok",
+                "islem_anahtari_yetkisi", "canli_baglanti"):
         assert var in k, var
     assert k["pilot_siniri"]["gecti"] is True
     assert k["pilot_hesap_degeri"]["gecti"] is True
     assert k["kademe"]["gecti"] is True
     assert k["acik_kararlar"]["gecti"] is True  # Kademe 2 kararları pilotu tutmaz
     assert r["pilot"] is True and r["azami_kayip_usdt"] == 10.0
+    assert k["pilot_gosterim"]["gecti"] is False  # K-129: gösterim koşusu bu tmp kökte yok
     assert not r["gecti"]  # venue/anahtar/kill/testler bu tmp kökte yok
 
 

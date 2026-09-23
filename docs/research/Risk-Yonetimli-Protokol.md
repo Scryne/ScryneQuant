@@ -94,6 +94,11 @@ tolere edilen tek belirsizlik bootstrap. Bağımsız veri kayıtlı ve `promotio
 (`config/bagimsiz_veri.json`); French 202607 seti PIT değil (revizyon) ve bugün uygun değil. §4'teki k,
 değerlendirme anındaki defter önekinden sayılıp kanıta donar; promotion yeniden sayar (K-127/2).
 
+**K-128 (B kapanışı):** French 202607 vintage dayanıklılığı şartıyla bağımsız doğrulama: aynı donmuş kural
+201705 vintage'ında (2004-06 → 2017-05) da değerlendirilir; ikisi de geçmeli, ayrışırsa INCONCLUSIVE. §4'teki k
+artık **RYPP programının açılış bütçesi**dir (birikimli sayım değil). Bağımsız veride kuralın uygulanışı
+(takvim süresi, 12 VW sektör, taraf başı 5 bps, epizot 0,10, nakit 0) K-128/4'te dondurulmuştur.
+
 **Zincire bağlantı (K-126):** `sq promotion degerlendir --protokol rypp --rypp … --bagimsiz …`.
 RYPP yalnız `out_of_sample` aşamasının ölçütünü değiştirir; temiz ağaç, veri kalitesi, K-039 sayımı,
 risk incelemesi, paper ve elle onay alfa yoluyla ortaktır. Bağımsız doğrulama yoksa sonuç

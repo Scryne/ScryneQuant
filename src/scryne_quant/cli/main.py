@@ -2596,7 +2596,10 @@ def _kanit_kur(
     protokol: str = "alfa",
     rypp_yolu: Path | None = None,
     bagimsiz_yolu: Path | None = None,
+    vintage_yolu: Path | None = None,
+    hipotez_kimlik: str | None = None,
     defter_yolu: Path | None = None,
+    program_yolu: Path | None = None,
 ) -> promotion_mod.Kanit:
     """Sonuç kaydı ve kapı değerlendirmesinden promotion kanıtı kurar.
 
@@ -2607,37 +2610,84 @@ def _kanit_kur(
     Protokol (K-126): `alfa` kapı kayıtlarını, `rypp` RYPP değerlendirmesini
     (`RyppSonucu.sozluk()` JSON'u) ve B-3 bağımsız doğrulamasını (aynı biçim + `veri_sha256`)
     okur. Karışık girdi reddedilir; bir protokolün kanıtı ötekinin yerine geçmez.
+
+    K-128: `hipotez_kimlik` defterdeki satırı bulur ve `hipotez_sirasi`nı doldurur (önceden CLI
+    bu alanı hiç doldurmuyordu, `out_of_sample` CLI'dan hep ölçülemedi kalıyordu). RYPP'de P3'ün
+    k'sı adayın programının açılış bütçesinden okunur; bağımsız doğrulama birincil kayıtlı setle,
+    vintage eşi onun `vintage_eslesi` setiyle birebir eşleşmeli.
     """
     try:
         protokol_ = promotion_mod.Protokol(protokol)
     except ValueError:
         raise typer.BadParameter(f"bilinmeyen protokol {protokol!r} (alfa | rypp)") from None
-    if protokol_ is promotion_mod.Protokol.ALFA and (rypp_yolu or bagimsiz_yolu):
-        raise typer.BadParameter("--rypp/--bagimsiz yalnız `--protokol rypp` ile (K-126)")
+    if protokol_ is promotion_mod.Protokol.ALFA and (rypp_yolu or bagimsiz_yolu or vintage_yolu):
+        raise typer.BadParameter(
+            "--rypp/--bagimsiz/--bagimsiz-vintage yalnız `--protokol rypp` ile (K-126)"
+        )
     if protokol_ is promotion_mod.Protokol.RYPP and kapi_yollari:
         raise typer.BadParameter(
             "--kapilar alfa kanıtıdır; `--protokol rypp` ile verilemez (K-126)"
         )
     alanlar: dict[str, Any] = {"protokol": protokol_}
+    program_adi: str | None = None
     if rypp_yolu is not None:
         alanlar["rypp_sonucu"] = json.loads(rypp_yolu.read_text(encoding="utf-8"))
-        # K-127: P3'ün k'sı promotion'da seçilmez; kanıtın dondurduğu defter önekinden
-        # yeniden sayılır ve `Kanit` ikisinin eşitliğini ister.
-        satir = (alanlar["rypp_sonucu"].get("aile") or {}).get("defter_satir")
-        if type(satir) is int:
-            defter = hipotez_mod.HipotezDefteri(defter_yolu or hipotez_mod.VARSAYILAN_YOL)
-            alanlar["rypp_aile_sayisi"] = defter.rypp_aile_sayisi(satir)
-    if bagimsiz_yolu is not None:
-        bag = json.loads(bagimsiz_yolu.read_text(encoding="utf-8"))
-        # K-127 §4: bağımsız veri, kaydı `promotion_uygun` olan bir setle birebir eşleşmeli.
-        # Kanıtın kendi `veri_sha256` beyanı bağımsızlık/PIT kanıtı değildir.
+        # K-128: P3'ün k'sı promotion'da seçilmez; adayın programının açılış bütçesi okunur ve
+        # `Kanit` kanıttaki k ile eşitliğini ister.
+        program_adi = (alanlar["rypp_sonucu"].get("aile") or {}).get("program")
+        if isinstance(program_adi, str) and program_adi:
+            butce = _program_butcesi(program_adi, program_yolu)
+            if butce is not None:
+                alanlar["rypp_aile_sayisi"] = butce
+    if bagimsiz_yolu is not None or vintage_yolu is not None:
+        # K-127 §4 / K-128: bağımsız veri, kaydı `promotion_uygun` olan bir setle birebir
+        # eşleşmeli. Kanıtın kendi `veri_sha256` beyanı bağımsızlık/PIT kanıtı değildir.
         from scryne_quant.data import french as french_mod
 
-        try:
-            french_mod.promotion_icin_kayit(bag.get("veri_sha256"), bag.get("dataset_id"))
-        except french_mod.FrenchHatasi as e:
-            raise typer.BadParameter(f"--bagimsiz: {e}") from None
-        alanlar["bagimsiz_dogrulama"] = bag
+        birincil: dict[str, Any] | None = None
+        if bagimsiz_yolu is not None:
+            bag = json.loads(bagimsiz_yolu.read_text(encoding="utf-8"))
+            try:
+                birincil = french_mod.promotion_icin_kayit(
+                    bag.get("veri_sha256"), bag.get("dataset_id"), rol="birincil")
+            except french_mod.FrenchHatasi as e:
+                raise typer.BadParameter(f"--bagimsiz: {e}") from None
+            alanlar["bagimsiz_dogrulama"] = bag
+        if vintage_yolu is not None:
+            if birincil is None:
+                raise typer.BadParameter("--bagimsiz-vintage yalnız --bagimsiz ile (K-128)")
+            vin = json.loads(vintage_yolu.read_text(encoding="utf-8"))
+            if vin.get("dataset_id") != birincil.get("vintage_eslesi"):
+                raise typer.BadParameter(
+                    f"--bagimsiz-vintage: {vin.get('dataset_id')!r} birincil setin vintage eşi "
+                    f"değil ({birincil.get('vintage_eslesi')!r}, K-128)"
+                )
+            try:
+                french_mod.promotion_icin_kayit(
+                    vin.get("veri_sha256"), vin.get("dataset_id"), rol="ikinci_vintage")
+            except french_mod.FrenchHatasi as e:
+                raise typer.BadParameter(f"--bagimsiz-vintage: {e}") from None
+            alanlar["bagimsiz_vintage"] = vin
+
+    if hipotez_kimlik is not None:
+        satirlar = hipotez_mod.HipotezDefteri(defter_yolu or hipotez_mod.VARSAYILAN_YOL).tumu()
+        eslesen = [(i, h) for i, h in enumerate(satirlar, start=1) if h["kimlik"] == hipotez_kimlik]
+        if len(eslesen) != 1:
+            raise typer.BadParameter(f"--hipotez {hipotez_kimlik[:12]}… defterde yok (K-039)")
+        sira, h = eslesen[0]
+        if h["strateji"] != strateji:
+            raise typer.BadParameter(
+                f"--hipotez başka bir stratejinin kaydı ({h['strateji']!r} ≠ {strateji!r})"
+            )
+        if protokol_ is promotion_mod.Protokol.RYPP:
+            if h.get("protokol") != "rypp":
+                raise typer.BadParameter("--hipotez RYPP protokolüyle kaydedilmemiş (K-127)")
+            if program_adi is not None and h.get("program") != program_adi:
+                raise typer.BadParameter(
+                    f"--hipotez `{h.get('program')}` programında; RYPP kanıtının k'sı "
+                    f"`{program_adi}` programından (K-128)"
+                )
+        alanlar |= {"hipotez_sirasi": sira, "hipotez_toplami": len(satirlar)}
 
     if sonuc_yolu is not None:
         kayit = json.loads(sonuc_yolu.read_text(encoding="utf-8"))
@@ -2685,6 +2735,18 @@ def _kanit_kur(
         }
 
     return promotion_mod.Kanit(**alanlar)
+
+
+def _program_butcesi(ad: str, yol: Path | None = None) -> int | None:
+    """RYPP programının **açılış** kaydındaki bütçe (`azami_cekilis`); program yoksa `None`.
+    Kapanmış program da okunur: k açılışta sabittir (K-128)."""
+    acilislar = [
+        g for g in program_mod.ProgramDefteri(yol or program_mod.VARSAYILAN_YOL).tumu()
+        if g.get("ad") == ad and g.get("tur") == "acilis"
+    ]
+    if len(acilislar) > 1:
+        raise typer.BadParameter(f"`{ad}` programı defterde birden çok kez açılmış (K-051)")
+    return int(acilislar[0]["azami_cekilis"]) if acilislar else None
 
 
 def _kapi_satiri(deney: dict[str, Any], strateji: str) -> dict[str, Any] | None:
@@ -2764,8 +2826,16 @@ def promotion_degerlendir(
     ] = None,
     bagimsiz: Annotated[
         Path | None,
-        typer.Option("--bagimsiz", help="B-3 bağımsız doğrulama (aynı biçim + veri_sha256). "
-                     "Yoksa RYPP PASS üretilemez."),
+        typer.Option("--bagimsiz", help="B-3 bağımsız doğrulama (aynı biçim + dataset_id + "
+                     "veri_sha256). Yoksa RYPP PASS üretilemez."),
+    ] = None,
+    bagimsiz_vintage: Annotated[
+        Path | None,
+        typer.Option("--bagimsiz-vintage", help="B-3 vintage eşi (K-128). Yoksa PASS yok."),
+    ] = None,
+    hipotez: Annotated[
+        str | None,
+        typer.Option("--hipotez", help="Defterdeki hipotez kimliği (K-039 sırası)."),
     ] = None,
     kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
     audit: AuditYolu = VARSAYILAN_AUDIT,
@@ -2782,7 +2852,8 @@ def promotion_degerlendir(
         # audit'e, sonra dosyaya (K-082 P1/P2).
         kayit = defter.oku(strateji, audit=audit_defteri)
         kanit = _kanit_kur(sonuc, kapilar, strateji, protokol=protokol, rypp_yolu=rypp,
-                           bagimsiz_yolu=bagimsiz)
+                           bagimsiz_yolu=bagimsiz, vintage_yolu=bagimsiz_vintage,
+                           hipotez_kimlik=hipotez)
 
         adimlar: list[dict[str, Any]] = []
         while True:

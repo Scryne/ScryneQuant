@@ -10,6 +10,12 @@ Scryne'ın ölçütü: *"her şey hazır olduğundan emin olmadan hesaba gerçek
    risk incelemesi + paper). Bu hükmü sistem hazırlığı değiştiremez; biri olmadan öteki "hazır"
    değildir.
 
+3. **Mikro pilot hazır (K-129):** yalnız K-115 pilotu (100 USDT sermaye, 10 USDT kayıpta SAFE_MODE,
+   tavanlar kodda) için: test takımı yeşil, testnet + shadow gösterimi `PILOT_GOSTERIM_GUN` gün aynı
+   ölçütlerle temiz, kill tatbikatı geçti. R8 ve promotion **istemez**: pilot alfa iddiası taşımaz,
+   promotion kanıtı üretmez ve kaybı kodda sabit tavanla sınırlı. Sermaye büyütme (Kademe ≥ 2) iki
+   hükmün ikisini de ister; bu gevşetme yalnız pilot içindir (Scryne, 2026-09-23).
+
 Hiçbir eşik sonuca bakılarak konmadı; hepsi gösterim döneminden **önce** yazıldı (K-122). Rapor
 yalnızca okur: koşu dosyaları (`kosu.json`, `yurutucu.json`, `durum.json`, `rapor.json`,
 `kill.json`), test kaydı, R8 sonucu, promotion kayıtları. Hiçbir şey yazmaz, hiçbir şey başlatmaz.
@@ -43,6 +49,9 @@ GOSTERIM_KOSULARI: Final[dict[str, str]] = {
 #: Kesintisiz gösterim süresi (gün). R8 ile aynı: iki haftalık dengeleme turu + ay sınırı
 #: görecek kadar uzun, bekleme olarak katlanılabilecek kadar kısa (K-111/2).
 GOSTERIM_GUN: Final = 14.0
+#: Mikro pilot için gösterim süresi (K-129): bir haftalık dengeleme turu + hafta sonu; pilotun
+#: kaybı kodda 10 USDT ile sınırlı olduğu için 14 günün yarısı.
+PILOT_GOSTERIM_GUN: Final = 7.0
 #: Testnet'te dolan emir (en az iki tam tur: aç-kapa, aç-kapa). Shadow'da GOLGE emir.
 ASGARI_DOLAN: Final = 4
 ASGARI_GOLGE: Final = 4
@@ -59,6 +68,7 @@ ASGARI_YENIDEN_BASLATMA: Final = 1
 class HazirlikRaporu:
     sistem: list[Kontrol] = field(default_factory=list)
     strateji: list[Kontrol] = field(default_factory=list)
+    pilot: list[Kontrol] = field(default_factory=list)
     zaman_ms: int = 0
 
     @property
@@ -73,13 +83,20 @@ class HazirlikRaporu:
     def gercek_paraya_hazir(self) -> bool:
         return self.sistem_hazir and self.strateji_hazir
 
+    @property
+    def pilot_hazir(self) -> bool:
+        """K-129: mikro pilotun hazırlık hükmü (R8 ve promotion'dan bağımsız)."""
+        return bool(self.pilot) and all(k.gecti is True for k in self.pilot)
+
     def sozluk(self) -> dict[str, Any]:
         return {
             "zaman_utc": utc_str(self.zaman_ms),
             "sistem_hazir": self.sistem_hazir,
             "strateji_hazir": self.strateji_hazir,
             "gercek_paraya_hazir": self.gercek_paraya_hazir,
+            "pilot_hazir": self.pilot_hazir,
             "sistem": [k.sozluk() for k in self.sistem],
+            "pilot": [k.sozluk() for k in self.pilot],
             "strateji": [k.sozluk() for k in self.strateji],
         }
 
@@ -91,7 +108,9 @@ def _json(p: Path) -> dict[str, Any] | None:
         return None
 
 
-def kosu_kontrolu(kok: Path, ad: str, mod: str, *, simdi: int) -> Kontrol:
+def kosu_kontrolu(
+    kok: Path, ad: str, mod: str, *, simdi: int, asgari_gun: float = GOSTERIM_GUN
+) -> Kontrol:
     """Bir gösterim koşusunun tüm ölçütleri tek kontrolde; kalan her madde ayrıntıda."""
     dizin = kok / KOSU_KOKU / ad
     kimlik, yur, durum = (_json(dizin / f) for f in ("kosu.json", "yurutucu.json", "durum.json"))
@@ -106,8 +125,8 @@ def kosu_kontrolu(kok: Path, ad: str, mod: str, *, simdi: int) -> Kontrol:
 
     bas = int(yur.get("baslangic_ms") or 0)
     gun = (simdi - bas) / 86_400_000 if bas else 0.0
-    if gun < GOSTERIM_GUN:
-        eksik.append(f"süre {gun:.1f}/{GOSTERIM_GUN:.0f} gün")
+    if gun < asgari_gun:
+        eksik.append(f"süre {gun:.1f}/{asgari_gun:.0f} gün")
     try:
         pid = kill_mod.pid_oku(dizin / "kosu")
     except TypeError:
@@ -197,6 +216,10 @@ def rapor(kok: str | Path = ".", *, simdi: int | None = None) -> HazirlikRaporu:
     r.sistem.append(kill_tatbikati_kontrolu(b))
     r.sistem.append(operasyon_kontrolu(b))
     r.strateji.append(strateji_kontrolu(kok))
+    r.pilot.append(testler_kontrolu(b))
+    for ad, mod in GOSTERIM_KOSULARI.items():
+        r.pilot.append(kosu_kontrolu(kok, ad, mod, simdi=zaman, asgari_gun=PILOT_GOSTERIM_GUN))
+    r.pilot.append(kill_tatbikati_kontrolu(b))
     return r
 
 
@@ -206,6 +229,7 @@ __all__ = [
     "AZAMI_KACIRILAN_ORAN",
     "GOSTERIM_GUN",
     "GOSTERIM_KOSULARI",
+    "PILOT_GOSTERIM_GUN",
     "HazirlikRaporu",
     "kosu_kontrolu",
     "rapor",

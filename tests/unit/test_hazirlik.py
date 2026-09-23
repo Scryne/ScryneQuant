@@ -115,3 +115,45 @@ def test_bozuk_pid_dosyasi_calismiyor_sayilir(tmp_path):
     (d / "kosu.pid").write_text("12345", encoding="utf-8")  # JSON ama nesne değil
     k = _k(tmp_path)
     assert k.gecti is False and "süreç çalışmıyor" in k.ayrinti
+
+
+# ------------------------------------------------------------------ K-129: mikro pilot hükmü
+
+
+def test_pilot_gosterimi_7_gunle_yetiyor_sistem_icin_14_gun_gerekli(tmp_path):
+    _kosu(tmp_path, "gosterim-testnet", "TESTNET", gun=7.2)
+    assert hz.kosu_kontrolu(tmp_path, "gosterim-testnet", "TESTNET", simdi=SIMDI,
+                            asgari_gun=hz.PILOT_GOSTERIM_GUN).gecti is True
+    k = _k(tmp_path)
+    assert k.gecti is False and "süre" in k.ayrinti
+    assert hz.PILOT_GOSTERIM_GUN == 7.0 and hz.GOSTERIM_GUN == 14.0
+
+
+def test_pilot_7_gunden_kisa_gosterimde_hazir_degil(tmp_path):
+    _kosu(tmp_path, "gosterim-testnet", "TESTNET", gun=6.9)
+    k = hz.kosu_kontrolu(tmp_path, "gosterim-testnet", "TESTNET", simdi=SIMDI,
+                         asgari_gun=hz.PILOT_GOSTERIM_GUN)
+    assert k.gecti is False and "süre" in k.ayrinti
+
+
+def test_pilot_hukmu_r8_ve_promotion_istemez(tmp_path):
+    """K-129: pilot hükmü testler + 7 günlük gösterim + kill tatbikatı; R8 ve promotion yok."""
+    r = hz.rapor(tmp_path, simdi=SIMDI)
+    adlar = {k.ad for k in r.pilot}
+    assert adlar == {"testler", "kosu:gosterim-testnet", "kosu:gosterim-shadow", "kill_tatbikati"}
+    assert "operasyon_r8" not in adlar and "promotion" not in adlar
+    assert r.pilot_hazir is False  # boş kök
+    assert "pilot_hazir" in r.sozluk() and "pilot" in r.sozluk()
+
+
+def test_pilot_hazir_yalniz_hepsi_gectiyse(tmp_path, monkeypatch):
+    from scryne_quant.execution.canli_kapi import Kontrol
+
+    gec = Kontrol("x", True, "")
+    monkeypatch.setattr(hz, "testler_kontrolu", lambda b: gec)
+    monkeypatch.setattr(hz, "kill_tatbikati_kontrolu", lambda b: gec)
+    monkeypatch.setattr(hz, "kosu_kontrolu", lambda *a, **k: gec)
+    r = hz.rapor(tmp_path, simdi=SIMDI)
+    assert r.pilot_hazir is True
+    assert r.gercek_paraya_hazir is False  # R8 ve promotion hâlâ yok: sermaye büyütme kapalı
+

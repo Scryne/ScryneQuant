@@ -111,9 +111,11 @@ raporları ve eski kayıtlar tarihseldir. Aşağıdaki liste yalnız **nereye ba
   motorlar `backtest/motor.py` → `backtest/coklu_motor.py` (tek döngü, K-057).
 - `risk/promotion.py` — zincir hash'li promotion; `Kanit.protokol` alfa → `ZORUNLU_KAPILAR` (12, K-118),
   rypp → `RYPP_KOSULLARI` (13) + B-3 bağımsız doğrulama (K-126); diğer aşamalar iki yolda ortak.
-  P3 k'sı defter önekinden sayılıp kanıta donar, promotion yeniden sayar (K-127).
-- B-3 bağımsız veri: `data/french.py` + `config/bagimsiz_veri.json` (dondurulmuş kimlik, `promotion_uygun`);
-  `sq data bagimsiz-dogrula`. French 202607 PIT değil → promotion'a kapalı (K-127).
+  P3 k'sı = RYPP programının açılış bütçesi; kanıta donar, CLI program defterinden okur (K-128).
+  `sq promotion degerlendir --hipotez <kimlik>` K-039 sırasını doldurur.
+- B-3 bağımsız veri: `data/french.py` + `config/bagimsiz_veri.json` (dondurulmuş kimlik, rol, vintage eşi);
+  `sq data bagimsiz-dogrula [dataset]`. French 202607 + 201705 vintage eşi (K-128).
+- Mikro pilot hükmü: `sq execution hazirlik` → MİKRO PİLOT (K-129: testler + 7 gün gösterim + kill).
 - **Hedef K-125:** riski yönetilen sistematik yatırım. Promotion protokolü `docs/research/Risk-Yonetimli-Protokol.md`
   + `research/risk_protokolu.py` (PASS/FAIL/INCONCLUSIVE, plasebo = kendi takviminin kaydırılmışı). Alfa yolu aynen durur.
 

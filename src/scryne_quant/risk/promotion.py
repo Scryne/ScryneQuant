@@ -261,11 +261,16 @@ class Kanit:
     """B-3 bağımsız doğrulaması (K-125 §5): aynı donmuş kuralın, OOS'una bu projede hiç
     bakılmamış veride RYPP değerlendirmesi + `veri_sha256`. Yoksa RYPP PASS üretilemez."""
 
+    bagimsiz_vintage: dict[str, Any] | None = None
+    """B-3 vintage eşi (K-128): aynı donmuş kuralın, birincil bağımsız verinin **başka bir
+    revizyonunda** (French 201705) değerlendirmesi. Birincil set PIT değil (revize edilir);
+    sonuç revizyona dayanıklı değilse PASS yok (`vintage_hukmu`)."""
+
     rypp_aile_sayisi: int | None = None
-    """P3'ün k'sı, **promotion tarafında** hipotez defterinden yeniden sayılmış hâli (K-127):
-    defterin ilk `rypp_sonucu.aile.defter_satir` satırındaki RYPP satırları. Kanıttaki k ile
-    aynı olmak zorunda; farklıysa kanıt kurulmaz, yoksa `out_of_sample` ölçülemedi. `risk/`
-    defteri okumaz (`research/` bağımlılığı); sayımı CLI yapar."""
+    """P3'ün k'sı, **promotion tarafında** yeniden okunmuş hâli (K-128): kanıttaki
+    `aile.program` araştırma programının açılışta yazılan bütçesi (`azami_cekilis`). Kanıttaki k
+    ile aynı olmak zorunda; farklıysa kanıt kurulmaz, yoksa `out_of_sample` ölçülemedi. `risk/`
+    program defterini okumaz (`research/` bağımlılığı); okumayı CLI yapar."""
 
     def __post_init__(self) -> None:
         """Kanıtın **kurulmasını** engelleyen kontroller. Değerlendirmeye bırakılmadı.
@@ -281,6 +286,7 @@ class Kanit:
             raise PromotionHatasi(f"bilinmeyen promotion protokolü: {self.protokol!r}") from None
         if self.protokol is Protokol.ALFA and (
             self.rypp_sonucu is not None or self.bagimsiz_dogrulama is not None
+            or self.bagimsiz_vintage is not None
         ):
             raise PromotionHatasi(
                 "alfa kanıtı RYPP değerlendirmesi taşıyamaz: RYPP sonucu alfa kapısı yerine "
@@ -296,7 +302,7 @@ class Kanit:
             # ana OOS verisiyle aynı "bağımsız" veri) burada, kurulurken patlar.
             if self.rypp_sonucu is not None:
                 rypp_hukmu(self.rypp_sonucu)
-            bagimsiz_hukmu(self.bagimsiz_dogrulama, self.veri_sha256)
+            vintage_hukmu(self.bagimsiz_dogrulama, self.bagimsiz_vintage, self.veri_sha256)
             self._aile_tutarliligi()
 
         if self.paper_gun is None and self.paper_kesinti is None:
@@ -308,9 +314,9 @@ class Kanit:
             )
 
     def _aile_tutarliligi(self) -> None:
-        """k üç yerde aynı olmalı (K-127): ana kanıt (araştırmanın P3'te kullandığı), bağımsız
-        doğrulama (aynı çekilişin parçası) ve promotion'ın defterden yeniden sayımı. Aday,
-        k sayıldığında defterde kayıtlı olmalı (sonradan kayıt = k'yı adaydan önce saymak)."""
+        """k her yerde aynı olmalı (K-127/K-128): ana kanıt (araştırmanın P3'te kullandığı),
+        bağımsız doğrulama ve vintage eşi (aynı çekilişin parçaları, aynı program) ve
+        promotion'ın program defterinden okuduğu bütçe."""
         if self.rypp_aile_sayisi is not None and (
             type(self.rypp_aile_sayisi) is not int or self.rypp_aile_sayisi < 1
         ):
@@ -319,24 +325,22 @@ class Kanit:
             )
         if self.rypp_sonucu is None:
             return
-        k, satir = rypp_ailesi(self.rypp_sonucu)
+        k, program = rypp_ailesi(self.rypp_sonucu)
         if self.rypp_aile_sayisi is not None and self.rypp_aile_sayisi != k:
             raise PromotionHatasi(
-                f"P3'ün k'sı uyuşmuyor: kanıt k={k}, defterden yeniden sayılan "
-                f"k={self.rypp_aile_sayisi} (ilk {satir} satır) — k promotion'da seçilemez (K-127)"
+                f"P3'ün k'sı uyuşmuyor: kanıt k={k}, `{program}` programının bütçesi "
+                f"{self.rypp_aile_sayisi} — k promotion'da seçilemez (K-128)"
             )
-        if self.bagimsiz_dogrulama is not None:
-            k_b, _ = rypp_ailesi(self.bagimsiz_dogrulama, ne="B-3 bağımsız doğrulama")
-            if k_b != k:
+        for ne, govde in (("B-3 bağımsız doğrulama", self.bagimsiz_dogrulama),
+                          ("B-3 vintage eşi", self.bagimsiz_vintage)):
+            if govde is None:
+                continue
+            aile_b = rypp_ailesi(govde, ne=ne)
+            if aile_b != (k, program):
                 raise PromotionHatasi(
-                    f"bağımsız doğrulama k={k_b}, ana kanıt k={k}: aynı çekilişin parçası, aynı "
-                    "k ile değerlendirilmeli (K-127)"
+                    f"{ne} (k, program)={aile_b}, ana kanıt {(k, program)}: aynı çekilişin "
+                    "parçası, aynı k ile değerlendirilmeli (K-127/K-128)"
                 )
-        if self.hipotez_sirasi is not None and self.hipotez_sirasi > satir:
-            raise PromotionHatasi(
-                f"aday defterin {self.hipotez_sirasi}. satırında ama k ilk {satir} satırdan "
-                "sayılmış: k adayın kaydından önce sayılamaz (K-127)"
-            )
 
     def sozluk(self) -> dict[str, Any]:
         """Satıra (dolayısıyla zincir hash'ine ve audit'e) giren kanıt özeti. `protokol` her
@@ -346,7 +350,7 @@ class Kanit:
         d = self._alfa_sozlugu()
         d["protokol"] = str(self.protokol)
         if self.protokol is Protokol.RYPP:
-            r, b = self.rypp_sonucu, self.bagimsiz_dogrulama
+            r, b, v = self.rypp_sonucu, self.bagimsiz_dogrulama, self.bagimsiz_vintage
             d |= {
                 "rypp_durum": None if r is None else r.get("durum"),
                 "rypp_hash": None if r is None else nesne_hash(r),
@@ -354,6 +358,9 @@ class Kanit:
                 "bagimsiz_durum": None if b is None else b.get("durum"),
                 "bagimsiz_veri_sha256": None if b is None else b.get("veri_sha256"),
                 "bagimsiz_hash": None if b is None else nesne_hash(b),
+                "vintage_durum": None if v is None else v.get("durum"),
+                "vintage_veri_sha256": None if v is None else v.get("veri_sha256"),
+                "vintage_hash": None if v is None else nesne_hash(v),
             }
         return d
 
@@ -421,23 +428,25 @@ def _rypp_satirlari(sonuc: dict[str, Any], ne: str) -> dict[str, Any]:
     return satirlar
 
 
-def rypp_ailesi(sonuc: dict[str, Any], *, ne: str = "RYPP kanıtı") -> tuple[int, int]:
-    """Kanıttaki P3 çoklu test bağlamı `(k, defter_satir)`; yapısal hata → `PromotionHatasi`.
+def rypp_ailesi(sonuc: dict[str, Any], *, ne: str = "RYPP kanıtı") -> tuple[int, str]:
+    """Kanıttaki P3 çoklu test bağlamı `(k, program)`; yapısal hata → `PromotionHatasi`.
 
-    K-127: k kanıt üretilirken defterden sayılıp donar; promotion onu seçmez, yalnız doğrular.
+    K-128: k, adayın ait olduğu RYPP araştırma programının **açılışta** yazılan bütçesidir
+    (`azami_cekilis`): önceden sabit, sonuçtan bağımsız ve programın bütün çekilişleri için aynı
+    (aile içi Bonferroni tam kontrol; K-127'nin birikimli sayımı aile hatasını α·H(n)'e kadar
+    kaçırıyordu). Promotion k'yı seçmez, program defterinden okuyup doğrular.
     `aile.persentil` = 1 − α/k ve P3 satırının kullandığı `persentil` aynı olmalı (araştırmanın
     P3'te gerçekten bu k'yı kullandığı). Tip katı: `bool`, `float`, `str` k değildir.
     """
     aile = sonuc.get("aile")
     if not isinstance(aile, dict):
         raise PromotionHatasi(f"{ne}: `aile` (P3'ün k'sı) yok — k yeniden sayılamaz (K-127)")
-    k, satir = aile.get("sayi"), aile.get("defter_satir")
+    k, program = aile.get("sayi"), aile.get("program")
     if type(k) is not int or k < 1:
         raise PromotionHatasi(f"{ne}: k ≥ 1 tam sayı olmalı, verilen: {k!r} (K-127)")
-    if type(satir) is not int or satir < k:
+    if not isinstance(program, str) or not program:
         raise PromotionHatasi(
-            f"{ne}: aile.defter_satir ≥ k tam sayı olmalı, verilen: {satir!r} — k defterden "
-            "yeniden sayılamaz (K-127)"
+            f"{ne}: aile.program yok — k'nın kaynağı (program bütçesi) doğrulanamaz (K-128)"
         )
     beklenen = 1 - RYPP_ESIKLER["alfa"] / k
     if aile.get("persentil") != beklenen:
@@ -448,7 +457,7 @@ def rypp_ailesi(sonuc: dict[str, Any], *, ne: str = "RYPP kanıtı") -> tuple[in
                 f"{ne}: P3 persentil {satir_.get('persentil')!r} ile uygulanmış, kanıt k={k} "
                 "diyor (1 − α/k farklı) — araştırmanın k'sı ile kanıtın k'sı aynı değil (K-127)"
             )
-    return k, satir
+    return k, program
 
 
 def _gecti(v: Any) -> bool:
@@ -540,6 +549,35 @@ def bagimsiz_hukmu(
         # doğrulamayı geçmek mümkün olurdu. Tolere edilen tek belirsizlik bootstrap'tır.
         return None, f"B-3: bağımsız veride ölçülmemiş koşul ({gerekce})"
     return True, f"B-3 bağımsız veride {RYPP_ETIKET[hukum]} (FAIL değil, K-125 §5)"
+
+
+def vintage_hukmu(
+    bagimsiz: dict[str, Any] | None, vintage: dict[str, Any] | None, ana_veri_sha256: str | None
+) -> tuple[bool | None, str]:
+    """B-3'ün vintage dayanıklılığı (K-128). Birincil bağımsız veri PIT değil (French her ay
+    geçmişi yeniden üretir); aynı donmuş kural başka bir revizyonda da değerlendirilir.
+
+    Her biri `bagimsiz_hukmu` ile (yapıldı-ve-FAIL-değil / FAIL / yapılmadı). Birleşim:
+    ikisi de geçti → `True`; ikisi de FAIL → `False`; biri FAIL öteki geçti → `None`
+    (revizyona duyarlı: FAIL ölçülmüş ama tutarlı değil); biri FAIL öteki yapılmadı → `False`;
+    aksi hâlde (biri yok/yapılmadı) → `None`. İki gövde aynı veride olamaz.
+    """
+    h_b, g_b = bagimsiz_hukmu(bagimsiz, ana_veri_sha256)
+    if vintage is None:
+        return (False, g_b) if h_b is False else (None, f"{g_b}; B-3 vintage eşi yok (K-128)")
+    if bagimsiz is not None and vintage.get("veri_sha256") == bagimsiz.get("veri_sha256"):
+        raise PromotionHatasi("B-3 vintage eşi birincil bağımsız veriyle aynı veride (K-128)")
+    h_v, g_v = bagimsiz_hukmu(vintage, ana_veri_sha256)
+    g = f"{g_b}; vintage eşi: {g_v}"
+    if h_b is True and h_v is True:
+        return True, g
+    if h_b is False and h_v is False:
+        return False, g
+    if {h_b, h_v} == {True, False}:
+        return None, f"{g} — revizyona duyarlı (iki vintage farklı hüküm, K-128)"
+    if False in (h_b, h_v):
+        return False, g
+    return None, g
 
 
 def _ve(*hukumler: bool | None) -> bool | None:
@@ -639,7 +677,7 @@ def _out_of_sample_rypp(k: Kanit) -> AsamaSonucu:
             "doğrulanamıyor (K-127)",
         )
     ana, g_ana = rypp_hukmu(k.rypp_sonucu)
-    bag, g_bag = bagimsiz_hukmu(k.bagimsiz_dogrulama, k.veri_sha256)
+    bag, g_bag = vintage_hukmu(k.bagimsiz_dogrulama, k.bagimsiz_vintage, k.veri_sha256)
     hukum = _ve(ana, bag)
     toplam = k.hipotez_toplami or k.hipotez_sirasi
     return AsamaSonucu(
@@ -1092,6 +1130,7 @@ __all__ = [
     "bagimsiz_hukmu",
     "beklenen_asama",
     "rypp_ailesi",
+    "vintage_hukmu",
     "rypp_hukmu",
     "satir_hashi",
     "sonraki",

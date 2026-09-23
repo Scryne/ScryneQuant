@@ -212,7 +212,7 @@ def manifest_oku(dataset_id: str = VARSAYILAN_SET, yol: str | Path | None = None
 
 
 def promotion_icin_kayit(
-    veri_sha256_: Any, dataset_id: Any, yol: str | Path | None = None
+    veri_sha256_: Any, dataset_id: Any, yol: str | Path | None = None, *, rol: str = "birincil"
 ) -> dict[str, Any]:
     """Bağımsız doğrulama kanıtının veri kimliği, `promotion_uygun` işaretli **kayıtlı** bir
     setle birebir eşleşiyor mu? Eşleşmiyorsa `FrenchHatasi` (K-127 §4): kanıtın kendi beyanı
@@ -221,6 +221,9 @@ def promotion_icin_kayit(
         if m["dataset_id"] == dataset_id and m["veri_sha256"] == veri_sha256_:
             if m.get("promotion_uygun") is not True:
                 raise FrenchHatasi(f"{dataset_id}: promotion için uygun değil — {m.get('engel')}")
+            if m.get("rol", "birincil") != rol:
+                raise FrenchHatasi(f"{dataset_id}: rolü {m.get('rol')!r}, burada {rol!r} gerekli "
+                                   "(vintage eşi tek başına bağımsız doğrulama sayılmaz, K-128)")
             return m
     raise FrenchHatasi(f"bağımsız veri ({dataset_id!r}, {str(veri_sha256_)[:12]}) kayıtlı bir "
                        "doğrulama veri seti değil (config/bagimsiz_veri.json)")
@@ -246,12 +249,12 @@ class BagimsizVeri:
         return cerceve(self.satirlar)
 
 
-def yukle(kok: str | Path = VARSAYILAN_KOK, manifest: dict[str, Any] | None = None) -> BagimsizVeri:
+def yukle(kok: str | Path | None = None, manifest: dict[str, Any] | None = None) -> BagimsizVeri:
     """Dondurulmuş bağımsız veriyi yükler; kimliğin her parçası yeniden hesaplanıp manifestle
     karşılaştırılır. Tutmayan bir şey varsa `FrenchHatasi` — farklı vintage/pencere/şema, veri
     değişikliği ya da bozulma. Veri yolu yoksa aynı hata: indirilen yeni dosya kilidi geçemez."""
     m = manifest if manifest is not None else manifest_oku()
-    ham = Path(kok) / "ham"
+    ham = Path(kok or m.get("yerel_kok") or VARSAYILAN_KOK) / "ham"
     baytlar: dict[str, bytes] = {}
     for ad, beklenen in m["kaynak"]["dosyalar"].items():
         yol = ham / ad
@@ -283,7 +286,7 @@ def yukle(kok: str | Path = VARSAYILAN_KOK, manifest: dict[str, Any] | None = No
 
 
 def indir(
-    kok: str | Path = VARSAYILAN_KOK, manifest: dict[str, Any] | None = None
+    kok: str | Path | None = None, manifest: dict[str, Any] | None = None
 ) -> dict[str, str]:
     """Kaynak zip'leri indirir; **yalnız manifestteki vintage'la aynıysa** `ham/` altına yazar.
 
@@ -293,11 +296,12 @@ def indir(
     import requests
 
     m = manifest if manifest is not None else manifest_oku()
-    ham = Path(kok) / "ham"
+    ham = Path(kok or m.get("yerel_kok") or VARSAYILAN_KOK) / "ham"
     ham.mkdir(parents=True, exist_ok=True)
     out: dict[str, str] = {}
     for ad, beklenen in m["kaynak"]["dosyalar"].items():
-        r = requests.get(KAYNAK_KOK + ad, timeout=120)
+        # Arşiv vintage'ları (Wayback) dosya başına kendi URL'sini taşır (K-128).
+        r = requests.get(beklenen.get("url") or KAYNAK_KOK + ad, timeout=120)
         r.raise_for_status()
         h = sha256(r.content)
         out[ad] = h

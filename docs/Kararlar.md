@@ -6367,3 +6367,122 @@ yeni K ve yeni doğrulama döngüsü ister. Bağımsız veri üzerinde **stratej
 - R13 (B) açık kalıyor, C açılmıyor.
 - Açık karar: revize edilmiş French verisinin koşullu kabulü (ör. aynı donmuş kuralın iki farklı vintage'da aynı hükmü
   vermesi şartı; 201611 FIZ görüntüsü 2004-06 → 2016-11'i kapsar) ya da PIT vintage'lı başka bir veri seti.
+
+---
+
+## K-128 — B fazı kararı: French vintage dayanıklılığı şartıyla kabul; P3'ün k'sı program bütçesi; CLI hipotez sırası; B kapandı
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("tamam onaylıyorum ve her şeyi sana bırakıyorum … geçilmesi
+gereken adımları biraz düşür") · **Tabi:** K-051, K-125, K-126, K-127 · **Kaynak:** `risk/promotion.py`
+(`vintage_hukmu`, `rypp_ailesi`), `research/risk_protokolu.py`, `data/french.py`, `config/bagimsiz_veri.json`,
+`cli/main.py` (`--bagimsiz-vintage`, `--hipotez`, `_program_butcesi`), `tests/unit/test_promotion_rypp.py`,
+`tests/unit/test_bagimsiz_veri.py`
+
+### 1. B-3: French verisi vintage dayanıklılığı şartıyla kabul
+
+K-127 French 202607'nin PIT olmadığını ölçtü: her ay revize ediliyor, hücrelerin %1,5-2,5'i ≥ 10 bp değişiyor. PIT
+vintage'lı ücretsiz bir ABD hisse verisi yok (abonelik yok, K-124). Revizyonun doğası da düzeltme; getiri bilgisi
+taşımıyor. Bu yüzden revizyon riski bir argümanla geçiştirilmiyor, **test edilen bir şarta** çevriliyor:
+
+- **İkinci vintage:** `french_12ind_vw_gunluk_201705`. Wayback görüntüsü 2017-07-09; sektör ve faktör dosyası aynı
+  CRSP 201705 sürümünde. Pencere 2004-06-01 → 2017-05-31, 3.273 gün, kanonik `10256f91…`. 202607'ye göre hücrelerin
+  %2,46'sı ≥ 10 bp farklı: gerçekten başka bir revizyon.
+- **Kural (`vintage_hukmu`):**
+
+  | Birincil | Vintage eşi | Sonuç |
+  | --- | --- | --- |
+  | geçti | geçti | PASS'a izin |
+  | FAIL | FAIL | FAIL |
+  | FAIL | geçti (ya da tersi) | INCONCLUSIVE (revizyona duyarlı) |
+  | FAIL | yapılmadı | FAIL |
+  | diğer | diğer | INCONCLUSIVE |
+
+  İki gövde aynı veride olamaz ve aynı k'yı taşımalı.
+- **Kayıt:** Birincil set `promotion_uygun: true`, `rol: birincil`, `vintage_eslesi`. İkinci set yalnız `rol:
+  ikinci_vintage` olarak; tek başına bağımsız doğrulama sayılmaz.
+- **CLI:** `--bagimsiz` birincil rolde, `--bagimsiz-vintage` onun eşi olmak zorunda.
+
+### 2. P3'ün k'sı: program bütçesi (K-125 §4 ve K-127/2'nin yerine)
+
+K-127'nin birikimli sayımı (her çekiliş kendi anındaki k ile) aile hatasını α ile değil α·H(n) ile sınırlıyordu.
+Yeni tanım: **k = adayın RYPP araştırma programının açılışta yazılan bütçesi** (`azami_cekilis`, K-051).
+
+- Önceden sabit, sonuçtan bağımsız. Programın bütün çekilişleri aynı k'yı kullanır; bütçe aşılamaz. Böylece aile
+  içi Bonferroni tam kontrol sağlar.
+- `aile = {sayi, program, persentil}`. Promotion (CLI `_program_butcesi`) açılış satırını okur ve kanıttaki k ile
+  eşitliğini ister. Kapanmış program da okunur; iki kez açılmış program hata verir.
+- `HipotezDefteri.rypp_aile_sayisi` (defter öneki sayımı) kaldırıldı. `Hipotez.protokol` kalıyor: RYPP adayı onunla
+  tanınır.
+
+### 3. CLI `hipotez_sirasi` (açık K-126'dan beri)
+
+`sq promotion degerlendir --hipotez <kimlik>` defterdeki satırı bulur ve `hipotez_sirasi`/`hipotez_toplami`ni doldurur.
+Satır adayın stratejisine ait olmalı. RYPP'de ayrıca `protokol: rypp` taşımalı ve kanıttaki k'nın programında olmalı.
+Önceden CLI bu alanı hiç doldurmuyordu; `out_of_sample` CLI'dan iki protokolde de hep ölçülemedi kalıyordu.
+
+### 4. "Aynı donmuş kural" eşleme sözleşmesi (bağımsız veride)
+
+RYPP hipotezi **kripto OOS'una bakılmadan önce** şunları dondurur (`gerekce`/ızgara kaydında). B-3 değerlendirmesi
+yalnız bu eşlemeyle yapılır:
+
+| Konu | Eşleme |
+| --- | --- |
+| Enstrümanlar | 12 VW sektör portföyü, hepsi her zaman listeli (evren kuralı gerekmez) |
+| Zaman | Karar gün kapanışı, dolum ertesi gün (K-004). Kripto parametreleri **takvim süresi** olarak taşınır (ör. 30 gün → 21 işlem günü), bar sayısı olarak değil |
+| Kıyas | 12 sektör eşit ağırlık, stratejinin brüt tavanında, aynı dengeleme takvimi (K-125 §1) |
+| Maliyet | Taraf başı 5 bps (ETF komisyon + spread); S1 stresi 2x |
+| Epizot eşiği | 0,10 (K-125, hisse endeksi) |
+| Nakit getirisi | İki tarafta 0 (RF verilmez, K-125 tutucu yön) |
+
+Bu tasarım kararı sonuç görülmeden yazıldı.
+
+### 5. B fazı kararı
+
+B'nin kapanış şartları:
+- RYPP entegre (K-126).
+- Metodoloji açıkları kapandı (K-127/1, K-128/2-3).
+- Bağımsız veri yolu, kimliği ve vintage kilidi hazır (K-127/K-128).
+- Testler yeşil.
+- Bu karar.
+
+**R13 kapandı.** C (R14) açılabilir: tek RYPP programı, küçük bütçe, ön kayıt. Hiçbir aday henüz yok.
+
+---
+
+## K-129 — Mikro pilot K-122'nin "strateji hazır" ve R8 şartından ayrıldı; 7 günlük gösterim yeter
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("artık elimde çalışan bir trade bot'umun olmasını istiyorum.
+eğer gerekliyse geçilmesi gereken adımları biraz düşür") · **Tabi:** K-010, K-050, K-115, K-116, K-122 · **Kaynak:**
+`execution/hazirlik.py` (`PILOT_GOSTERIM_GUN`, `pilot_hazir`), `execution/canli_kapi.py` (`pilot_gosterim_kontrolu`),
+`cli/execution.py` (`hazirlik`), `tests/unit/test_hazirlik.py`, `tests/unit/test_pilot.py`
+
+K-122'de Scryne'ın kuralı "iki hüküm birden olmadan gerçek para yok, pilot dahil" idi. Kod düzeyinde pilotun canlı
+kapısı (K-115) R8 ve promotion istemiyordu; şart yalnız karar metnindeydi. Karar:
+
+1. **Mikro pilot (Kademe 1: 100 USDT sermaye, 10 USDT kayıpta SAFE_MODE; tavanlar kodda sabit) için** "strateji hazır"
+   (promotion), R8 ve 14 günlük gösterim şartları **kalkar**.
+2. **Yerine** üç şart gelir; hepsi `sq execution hazirlik` altında "MİKRO PİLOT" hükmü olarak görünür:
+   - HEAD'de yeşil test takımı.
+   - Testnet + shadow gösterimi **7 gün** aynı ölçütlerle temiz: kaçırılan karar ≤ %2, dolan emir/GOLGE ≥ 4,
+     yeniden başlatma tatbikatı, mutabakat temiz.
+   - Kill tatbikatı.
+
+   Gösterim şartı **pilot canlı kapısına da eklendi** (`pilot_gosterim`). Bu, K-115 kapısını K-122'nin kaldırılan
+   kısmına göre bir tık **sıkılaştırır**.
+3. **Değişmeyenler:**
+   - Koddaki pilot tavanları.
+   - Risk motoru, kill switch, SAFE_MODE.
+   - İşlem anahtarı yetki denetimi (çekim/transfer/margin/futures kapalı, IP kısıtlı).
+   - Hesap değeri bandı [90, 150] USDT.
+   - `sq execution onayla` ile elle onay (K-010).
+   - Tavanı büyütmek kod + test + yeni K ister.
+   - **Kademe ≥ 2 (sermaye büyütme) K-122'nin iki hükmünü aynen ister.**
+4. **Beklenti (dürüst):** Pilot stratejisi `sma_kesisim` ve alfa iddiası taşımıyor (K-115). Amaç gerçek parayla
+   execution, mutabakat ve kayma ölçümü. Bekleneni küçük bir maliyet kaybı, kazanç değil. Kayıp 10 USDT'de durur.
+   Pilotun stratejisi C fazından çıkan bir RYPP adayıyla değiştirilebilir; bu yeni kademe kaydı ve onay ister.
+5. **Takvim:** Gösterim 2026-09-23'te başladı. En erken pilot yaklaşık 2026-09-30.
+
+   Scryne'dan gerekenler:
+   - Binance'ta işlem yetkili, IP kısıtlı, çekimsiz bir API anahtarı.
+   - Hesapta ~100 USDT.
+   - `sq execution preflight --hedef live --ag` geçtikten sonra `sq execution onayla`.

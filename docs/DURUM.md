@@ -9,9 +9,8 @@ type: durum
 tanımlı kurallarla maruziyet sağlayıp büyük düşüşlerde riski azaltmak. Promotion yolu: Risk Yönetimli
 Promotion Protokolü (`docs/research/Risk-Yonetimli-Protokol.md`); alfa yolu (12 kapı) aynen durur.
 Faz sırası A (sistem gösterimi + R8) → B (RYPP, R13) → C (kripto strateji, R14) → D (paper, R15) → E (gerçek para).
-B durumu: RYPP promotion zincirine bağlı (K-126). K-127: P3 k'sı kanıta donuk; B-3 kuralı açık karar; French veri hattı
-kilitli ama veri PIT değil (revizyon) → `promotion_uygun: false` → hiçbir RYPP kanıtı PASS olamaz. Sıradaki: B-3 veri
-kararı (Scryne). **B kapanmadı, C açılmaz.**
+**B kapandı (K-128):** RYPP zincirde (K-126); B-3 French verisi vintage dayanıklılığı şartıyla (202607 + 201705 eşi);
+P3 k'sı = RYPP programının bütçesi. Sıradaki: C (R14) — tek ön kayıtlı RYPP programı. Hiçbir strateji henüz RYPP'den geçmedi.
 
 Tek sayfa, **yürürlükteki** durum. "Neden böyle" için `docs/Kararlar.md`, sayılar için
 `docs/research/records/` ve faz raporları. Bu sayfa ile başka bir doküman çelişirse bu sayfa ve
@@ -57,10 +56,12 @@ Yeni/değişen kapı **iki yönlü** doğrulanır (null + `tools/pozitif_kontrol
 
 ## 4. Canlı / operasyon
 
-- **Gerçek para kuralı (K-122):** `sq execution hazirlik` iki hüküm verir — **sistem hazır**
+- **Gerçek para kuralı (K-122 → K-129):** sermaye büyütme (Kademe ≥ 2) iki hüküm ister — **sistem hazır**
   (14 günlük testnet + shadow gösterimi, kill tatbikatı, R8 PASS, HEAD'de yeşil testler) ve
-  **strateji hazır** (promotion `live_adayi`). Scryne'ın kararı: ikisi birden olmadan gerçek para
-  yok (pilot dahil).
+  **strateji hazır** (promotion `live_adayi`). **Mikro pilot (100 USDT, 10 USDT kayıp tavanı) K-129 ile
+  ayrıldı:** yeşil testler + 7 günlük temiz gösterim + kill tatbikatı yeter (`sq execution hazirlik` →
+  MİKRO PİLOT; canlı kapıda `pilot_gosterim`). En erken ~2026-09-30; işlem anahtarı + ~100 USDT + elle
+  onay Scryne'da.
 - **Gösterim dönemi (2026-09-23 →):** `gosterim-testnet` (sanal para, gerçek borsa emri) ve
   `gosterim-shadow` (gerçek hesap, salt okunur) bu bilgisayarda; `tools/gosterim_gozetmen.ps1` +
   zamanlanmış görev `ScryneQuant-Gosterim` (10 dk) ayakta tutar; durdurmak `runs/gosterim/DURDUR`.

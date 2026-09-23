@@ -52,7 +52,7 @@ VARSAYILAN_YOL: Final = Path("docs/Hipotez-Defteri.jsonl")
 SECIM_YONTEMLERI: Final[tuple[str, ...]] = ("tepe", "plato")
 
 #: Çekilişin hangi promotion protokolüyle değerlendirileceği (K-127). Boş = alfa (K-126 öncesi
-#: bütün satırlar); `rypp` = K-125. RYPP'nin P3 Bonferroni k'sı bu alandan sayılır.
+#: bütün satırlar); `rypp` = K-125. RYPP adayı promotion'da bu alanla tanınır (K-128).
 PROTOKOLLER: Final[tuple[str, ...]] = ("", "rypp")
 
 
@@ -285,25 +285,6 @@ class HipotezDefteri:
                 "kanıt değildir (K-039)"
             )
         return sira
-
-    def rypp_aile_sayisi(self, satir: int | None = None) -> int:
-        """RYPP ailesinin Bonferroni k'sı (K-125 §4, K-127): defterin ilk `satir` satırındaki
-        (`None` = hepsi) `protokol == "rypp"` satır sayısı.
-
-        Defter append-only olduğu için aynı `satir` her zaman aynı k'yı verir: değerlendirme
-        anındaki k, kanıttaki `aile.defter_satir` ile sonradan yeniden sayılabilir (replay).
-        Sonuca bakmaz; geçen/kalan ayrımı yok. `satir` defterden uzunsa defter kısalmıştır →
-        hata (sayım uydurulmaz).
-        """
-        kayitlar = self.tumu()
-        if satir is not None:
-            if type(satir) is not int or satir < 0 or satir > len(kayitlar):
-                raise HipotezHatasi(
-                    f"defter {len(kayitlar)} satır; istenen önek {satir!r} — defter kısalmış ya "
-                    "da sayım geleceğe bakıyor (K-127)"
-                )
-            kayitlar = kayitlar[:satir]
-        return sum(1 for k in kayitlar if k.get("protokol") == "rypp")
 
     def ozet(self) -> dict[str, Any]:
         kayitlar = self.tumu()

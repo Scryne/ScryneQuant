@@ -1,7 +1,7 @@
 {
   "surum": 1,
-  "karar": "K-127",
-  "aciklama": "B-3 bağımsız doğrulama veri setleri (K-125 §5). Her kayıt donmuştur: pencere, kaynak dosya hash'leri, şema ve kanonik veri hash'i değiştirilemez; yeni vintage/pencere/şema yeni K ister. `promotion_uygun` yalnız bir K ile true yapılır ve sq promotion degerlendir --bagimsiz yalnız promotion_uygun=true bir setin kanıtını kabul eder.",
+  "karar": "K-127, K-128",
+  "aciklama": "B-3 bağımsız doğrulama veri setleri (K-125 §5). Her kayıt donmuştur: pencere, kaynak dosya hash'leri, şema ve kanonik veri hash'i değiştirilemez; yeni vintage/pencere/şema yeni K ister. `promotion_uygun` yalnız bir K ile değişir. K-128: French 202607 revize edilmiş tek vintage (PIT değil) ama vintage dayanıklılığı şartıyla kabul: aynı donmuş kural `vintage_eslesi` setinde de değerlendirilir; promotion ikisini birden ister.",
   "veri_setleri": [
     {
       "dataset_id": "french_12ind_vw_gunluk_202607",
@@ -33,7 +33,23 @@
       "ilk_islem_gunu": "2004-06-01",
       "satir": 5577,
       "sema": {
-        "sutunlar": ["tarih", "NoDur", "Durbl", "Manuf", "Enrgy", "Chems", "BusEq", "Telcm", "Utils", "Shops", "Hlth", "Money", "Other", "Mkt-RF", "RF"],
+        "sutunlar": [
+          "tarih",
+          "NoDur",
+          "Durbl",
+          "Manuf",
+          "Enrgy",
+          "Chems",
+          "BusEq",
+          "Telcm",
+          "Utils",
+          "Shops",
+          "Hlth",
+          "Money",
+          "Other",
+          "Mkt-RF",
+          "RF"
+        ],
         "birim": "günlük getiri, yüzde; sektörler değer ağırlıklı (VW bölümü); Mkt-RF piyasa fazla getirisi; RF günlük risksiz",
         "siklik": "işlem günü",
         "kanonik": "kaynak ondalık metinleri, virgülle ayrılmış, LF, UTF-8"
@@ -46,8 +62,73 @@
         "revizyon": "UYGUN DEĞİL: kaynak 'We reconstruct the full history of returns each month ... Historical returns can change' diyor; yayımlandığı hâliyle (as-published) vintage geçmişi yok. Ölçüldü (K-127): 201611→202607 hücrelerin %58,3'ü değişmiş, %2,50'si ≥10 bp, azami 1,19 yüzde puan; 202202→202607 %31,6 / %1,54 / 3,44 yp; 202406→202607 %32,2 / %1,50 / 3,44 yp; 202601→202607 %0,25 / %0 / 0,02 yp (2025-01 FIZ→CIZ geçişi)",
         "sonuc": "PIT değil (revize edilmiş tek vintage)"
       },
-      "promotion_uygun": false,
-      "engel": "PIT revizyon koşulu sağlanmıyor (K-127 §4). Kullanımı Scryne'ın ayrı kararına bağlı (ör. vintage dayanıklılığı şartı); o karar verilmeden bu set RYPP PASS'ına girdi olamaz."
+      "promotion_uygun": true,
+      "yerel_kok": "data/bagimsiz/french",
+      "rol": "birincil",
+      "kabul": "K-128: PIT değil (revizyon) ama vintage dayanıklılığı şartıyla uygun. Değerlendirme `vintage_eslesi` setinde de yapılır; biri FAIL öteki FAIL değilse sonuç INCONCLUSIVE (revizyona duyarlı), ikisi FAIL ise FAIL.",
+      "vintage_eslesi": "french_12ind_vw_gunluk_201705"
+    },
+    {
+      "dataset_id": "french_12ind_vw_gunluk_201705",
+      "yerel_kok": "data/bagimsiz/french_201707",
+      "rol": "ikinci_vintage",
+      "kaynak": {
+        "ad": "Kenneth R. French Data Library, 201705 CRSP vintage (FIZ), Internet Archive Wayback görüntüsü 2017-07-09",
+        "url_kok": "http://web.archive.org/web/",
+        "vintage": "201705 CRSP database (FIZ biçimi)",
+        "indirme_utc": "2026-09-23",
+        "lisans": "Copyright Eugene F. Fama and Kenneth R. French; ücretsiz erişim, açık lisans yazılı değil — ham dosya repoya girmez (data/ gitignore)",
+        "dosyalar": {
+          "12_Industry_Portfolios_Daily_CSV.zip": {
+            "url": "http://web.archive.org/web/20170709214843id_/https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/12_Industry_Portfolios_Daily_CSV.zip",
+            "zip_sha256": "44d2e5856a534ccc81170501d76ff1f567fc07d50dd0ea95f882eac58fa195f7",
+            "csv": "12_Industry_Portfolios_Daily.CSV",
+            "csv_sha256": "303260569f71aa6cf7cdda2e07c9dd9f01e493edee6ec80159aabf5768aaa77d"
+          },
+          "F-F_Research_Data_Factors_daily_CSV.zip": {
+            "url": "http://web.archive.org/web/20170709190455id_/https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip",
+            "zip_sha256": "f929700fe922f9937f0e0b8273382d8451a56f0b049ff108de8cb8d9dde94add",
+            "csv": "F-F_Research_Data_Factors_daily.CSV",
+            "csv_sha256": "333fb9fe945a5fed95c60a9d425dd522d35a0fbe06a9b312659f76945e8b4b75"
+          }
+        }
+      },
+      "donem": {
+        "baslangic": "2004-06-01",
+        "bitis": "2017-05-31",
+        "gerekce": "Birincil setle aynı başlangıç; bu vintage'ın son günü. Sektör ve faktör dosyası aynı CRSP sürümü (201705)."
+      },
+      "ilk_islem_gunu": "2004-06-01",
+      "satir": 3273,
+      "sema": {
+        "sutunlar": [
+          "tarih",
+          "NoDur",
+          "Durbl",
+          "Manuf",
+          "Enrgy",
+          "Chems",
+          "BusEq",
+          "Telcm",
+          "Utils",
+          "Shops",
+          "Hlth",
+          "Money",
+          "Other",
+          "Mkt-RF",
+          "RF"
+        ],
+        "birim": "günlük getiri, yüzde; sektörler değer ağırlıklı (VW bölümü); Mkt-RF piyasa fazla getirisi; RF günlük risksiz",
+        "siklik": "işlem günü",
+        "kanonik": "kaynak ondalık metinleri, virgülle ayrılmış, LF, UTF-8"
+      },
+      "veri_sha256": "10256f9182bf8155d187c969b92da9a9c960329252a934b5fbe412c1ed5ad0b5",
+      "pit": {
+        "revizyon": "202607'ye göre 2004-06 → 2017-05'te hücrelerin %58,8'i değişmiş, %2,46'sı ≥10 bp, azami 1,19 yp (K-128)",
+        "sonuc": "PIT değil (başka bir revizyon); birincil setin revizyona duyarlılığını ölçmek için"
+      },
+      "promotion_uygun": true,
+      "kabul": "K-128: yalnız `french_12ind_vw_gunluk_202607`in vintage eşi olarak; tek başına bağımsız doğrulama sayılmaz."
     }
   ]
 }

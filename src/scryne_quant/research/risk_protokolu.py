@@ -309,13 +309,12 @@ class RyppGirdisi:
     plasebo: tuple[float, np.ndarray] | None
     """`plasebo_mar` çıktısı; yoksa P3 ölçülemez → INCONCLUSIVE."""
     aile_sayisi: int
-    """P3'ün Bonferroni k'sı (K-125 §4, K-127): değerlendirme anında hipotez defterindeki
-    **RYPP satırlarının birikimli sayısı** (`HipotezDefteri.rypp_aile_sayisi`), adayın kendi
-    satırı dahil. Sonuca göre seçilmez, "başarılı aile" sayısı değildir; varsayılanı yok (eksik
-    k dolu görünmesin). `int` ≥ 1; `bool`/`float`/`str` hata."""
-    aile_defter_satir: int | None = None
-    """k'nın sayıldığı andaki defter satır sayısı (K-127). Promotion k'yı defterin bu ilk
-    satırlarından **yeniden sayar**; yoksa RYPP kanıtı promotion'da kabul edilmez."""
+    """P3'ün Bonferroni k'sı (K-128): adayın RYPP araştırma programının **açılışta** yazılan
+    bütçesi (`azami_cekilis`). Önceden sabit; sonuca göre seçilmez, "başarılı aile" sayısı
+    değildir; varsayılanı yok (eksik k dolu görünmesin). `int` ≥ 1; `bool`/`float`/`str` hata."""
+    aile_program: str | None = None
+    """k'nın kaynağı olan RYPP programının adı (K-128). Promotion bütçeyi program defterinden
+    okuyup k ile karşılaştırır; yoksa RYPP kanıtı promotion'da kabul edilmez."""
     tohum: int = 0
 
 
@@ -327,7 +326,7 @@ class RyppSonucu:
     kiyas: SeriOlcumu | None = None
     bootstrap: dict[str, float] | None = None
     aile: dict[str, Any] | None = None
-    """P3'ün çoklu test bağlamı (K-127): `sayi` (k), `defter_satir`, `persentil` (1 − α/k)."""
+    """P3'ün çoklu test bağlamı (K-128): `sayi` (k), `program`, `persentil` (1 − α/k)."""
 
     def sozluk(self) -> dict[str, Any]:
         return {
@@ -341,16 +340,14 @@ class RyppSonucu:
         }
 
 
-def _dogrula_aile(sayi: Any, defter_satir: Any) -> dict[str, Any]:
-    """k sözleşmesi (K-127). Eskiden `max(1, k)` k=0'ı sessizce 1 yapıyordu: yanlış k,
+def _dogrula_aile(sayi: Any, program: Any) -> dict[str, Any]:
+    """k sözleşmesi (K-127/K-128). Eskiden `max(1, k)` k=0'ı sessizce 1 yapıyordu: yanlış k,
     eşiği gevşeten bir düzeltme olmadan reddedilir."""
     if type(sayi) is not int or sayi < 1:
         raise ProtokolHatasi(f"aile_sayisi (k) ≥ 1 tam sayı olmalı, verilen: {sayi!r}")
-    if defter_satir is not None and (type(defter_satir) is not int or defter_satir < sayi):
-        raise ProtokolHatasi(
-            f"aile_defter_satir ≥ k tam sayı olmalı (k={sayi}), verilen: {defter_satir!r}"
-        )
-    return {"sayi": sayi, "defter_satir": defter_satir, "persentil": 1 - ALFA / sayi}
+    if program is not None and (not isinstance(program, str) or not program):
+        raise ProtokolHatasi(f"aile_program boş olmayan bir ad olmalı, verilen: {program!r}")
+    return {"sayi": sayi, "program": program, "persentil": 1 - ALFA / sayi}
 
 
 def _p1_p2(s: SeriOlcumu, k: SeriOlcumu) -> tuple[bool, bool, bool]:
@@ -365,7 +362,7 @@ def degerlendir(g: RyppGirdisi) -> RyppSonucu:
     k_oz = _dogrula_seri(g.kiyas, "kiyas")
     if s_oz.size != k_oz.size:
         raise ProtokolHatasi("strateji ve kıyas özkaynağı aynı barlarda olmalı (hizasız)")
-    aile = _dogrula_aile(g.aile_sayisi, g.aile_defter_satir)
+    aile = _dogrula_aile(g.aile_sayisi, g.aile_program)
     s, k = olc(s_oz, g.yil_bar), olc(k_oz, g.yil_bar)
     sonuc = RyppSonucu(Durum.INCONCLUSIVE, strateji=s, kiyas=k, aile=aile)
 

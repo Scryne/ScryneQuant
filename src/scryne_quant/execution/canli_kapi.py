@@ -492,6 +492,25 @@ def golge_olcutu(b: KapiBaglami) -> Callable[[dict[str, Any]], str | None]:
     return olc
 
 
+def pilot_gosterim_kontrolu(b: KapiBaglami) -> Kontrol:
+    """K-129: pilot açılmadan testnet + shadow gösterimi `PILOT_GOSTERIM_GUN` gün temiz olmalı
+    (K-122'nin 14 gün + R8 + promotion şartının pilot için yerine geçen hâli)."""
+    from scryne_quant.execution import hazirlik as hz
+
+    simdi = simdi_ms()
+    kontroller = [hz.kosu_kontrolu(b.kok, ad, mod, simdi=simdi, asgari_gun=hz.PILOT_GOSTERIM_GUN)
+                  for ad, mod in hz.GOSTERIM_KOSULARI.items()]
+    kalan = [k for k in kontroller if k.gecti is not True]
+    if kalan:
+        ayrinti = " | ".join(f"{k.ad}: {k.ayrinti}" for k in kalan)
+        return Kontrol("pilot_gosterim", False, ayrinti,
+                       f"testnet + shadow gösterimi ≥ {hz.PILOT_GOSTERIM_GUN:.0f} gün temiz "
+                       "(K-129)")
+    # Kanıt koşu kimliği + başlangıcı; bar sayısı girmez (her saat değişir, onayı bozmasın).
+    return Kontrol("pilot_gosterim", True, " | ".join(k.ayrinti for k in kontroller),
+                   kanit="|".join(k.kanit.rsplit(":", 1)[0] for k in kontroller))
+
+
 def kill_tatbikati_kontrolu(b: KapiBaglami) -> Kontrol:
     """Canlı host'a karşı kill tatbikatı (K-065, Faz-8-Hazirlik §1.3/6)."""
     kok = b.yol(KOSU_KOKU)
@@ -644,6 +663,7 @@ def _kontroller(hedef: CalismaModu, b: KapiBaglami) -> list[Kontrol]:
             kademe_kararlari_kontrolu(b),
             venue_kontrolu(b),
             kill_tatbikati_kontrolu(b),
+            pilot_gosterim_kontrolu(b),
             testler_kontrolu(b),
             kritik_hata_kontrolu(b),
             _ag_kontrolu("islem_anahtari_yetkisi", b.ag.islem_anahtari_kisitlari,

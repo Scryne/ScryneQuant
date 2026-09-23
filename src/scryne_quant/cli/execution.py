@@ -174,10 +174,10 @@ def preflight(
 
 @execution_app.command("hazirlik")
 def hazirlik(json_cikti: JsonCikti = False) -> None:
-    """Proje gerçek paraya hazır mı? İki hüküm: sistem hazır ve strateji hazır. (K-122)
+    """Proje gerçek paraya hazır mı? Sistem + strateji (K-122) ve mikro pilot (K-129) hükümleri.
 
     Salt okuma: koşu dosyaları, test kaydı, R8 sonucu, promotion kayıtları. Hiçbir şey başlatmaz.
-    Çıkış kodu 0 yalnız **ikisi birden** hazırsa.
+    Çıkış kodu 0 yalnız sistem ve strateji **ikisi birden** hazırsa (sermaye büyütme şartı).
     """
     from scryne_quant.execution import hazirlik as hz
 
@@ -187,6 +187,7 @@ def hazirlik(json_cikti: JsonCikti = False) -> None:
         raise typer.Exit(0 if r.gercek_paraya_hazir else 1)
     for baslik, kontroller, hazir in (
         ("SİSTEM", r.sistem, r.sistem_hazir), ("STRATEJİ", r.strateji, r.strateji_hazir),
+        ("MİKRO PİLOT (100 USDT, K-129)", r.pilot, r.pilot_hazir),
     ):
         typer.secho(f"{baslik}: {'HAZIR' if hazir else 'HAZIR DEĞİL'}", bold=True,
                     fg=typer.colors.GREEN if hazir else typer.colors.RED)
@@ -196,8 +197,14 @@ def hazirlik(json_cikti: JsonCikti = False) -> None:
             if k.gecti is not True and k.engel:
                 typer.echo(f"      → {k.engel}")
     typer.secho(
-        "GERÇEK PARA: " + ("koşullar sağlandı (son karar yine senin)" if r.gercek_paraya_hazir
-                           else "HAYIR — yukarıdaki eksikler kapanmadan konmaz"),
+        "MİKRO PİLOT: " + ("hazırlık tamam; açılış `sq execution preflight --hedef live --ag` + "
+                           "`sq execution onayla` (son karar senin)" if r.pilot_hazir
+                           else "henüz değil — PİLOT bölümündeki eksikler"),
+        bold=True, fg=typer.colors.GREEN if r.pilot_hazir else typer.colors.YELLOW,
+    )
+    typer.secho(
+        "SERMAYE BÜYÜTME: " + ("koşullar sağlandı (son karar yine senin)" if r.gercek_paraya_hazir
+                               else "HAYIR — sistem + strateji hükümleri gerekli"),
         bold=True, fg=typer.colors.GREEN if r.gercek_paraya_hazir else typer.colors.YELLOW,
     )
     raise typer.Exit(0 if r.gercek_paraya_hazir else 1)
