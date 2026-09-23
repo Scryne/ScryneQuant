@@ -9,8 +9,9 @@ type: durum
 **aktif demo bot** (`scryne_quant.aktif`, `sq aktif …`); gerçek para yok.
 - Kripto paper: `kripto-trend` / `kripto-kirilim` / `kripto-donus` (15m, 10 sembol, long-only, 10.000 USDT simüle)
   gözetmenle ayakta; karne `sq aktif karne --hesap <ad>`, durdurma `sq aktif durdur --hesap <ad>`.
-- MT5 demo: adaptör hazır (yalnız demo hesapta çalışır); Scryne MT5 terminali + demo hesap açınca
-  `sq aktif baglanti --hesap mt5-demo`. TR'de kaldıraçlı FX/CFD gerçek parası ≥ 50.000 TL teminat + 1:10 (SPK).
+- MT5 demo (K-135): Integral Yatırım demo, `mt5-demo` = `mt5_paper` (gerçek fiyat/spread, simüle dolum; kurum
+  algoritmik emri kapalı tutuyor, 10026), EURUSD/GBPUSD/XAUUSD/S&P/NASDAQ, 1h `rsi_donus`, 100.000 USD, gözetmenle
+  ayakta. TR'de kaldıraçlı FX/CFD gerçek parası ≥ 50.000 TL teminat + 1:10 (SPK).
 - İlk geriye bakış: 3 strateji × 3 zaman dilimi, **9/9 maliyet sonrası negatif**; 15m dönüşün brüt etkisi spot
   ücretine gidiyor. Sık işlemin asıl engeli maliyet (K-134 tablosu).
 - `urun-testnet` durduruldu (gösterim hesabını paylaşıyordu). Aşağıdaki K-125/K-132 BTC yatırım hattı tarihsel/ikincil.
