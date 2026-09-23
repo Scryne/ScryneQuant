@@ -597,7 +597,10 @@ def degerlendir(
     if rejim_kiyasi not in veri.diziler:
         raise EvrenDegerlendirmeHatasi(f"rejim kıyası {rejim_kiyasi} evren verisinde yok")
     kosucu = kosucu or seri_kosucu(maliyet, veri)
-    yil_bar = bar_yili(timeframe_ms(veri.timeframe))
+    # Yıllıklandırma verinin takviminden (K-124): önceden takvim yok sayılıyordu ve FX'te rejim
+    # Sharpe'ı ile PBO bozulması 24x7 (8.766/yıl) yerine 6.261/yıl olması gerekirken ~%18 şişikti.
+    # Kripto (takvim None) bit-aynı.
+    yil_bar = bar_yili(timeframe_ms(veri.timeframe), motor_ayarlari(veri).takvim)
     ins, oos, tam, katmanlar = pencereler(
         veri, oos_orani=oos_orani, egitim_bar=egitim_bar, test_bar=test_bar,
         isinma_bar=isinma_bar,

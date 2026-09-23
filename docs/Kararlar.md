@@ -6075,3 +6075,28 @@ yıllarda trendin tersine dönüşlerinde kaybettiriyor ve long-only'nin risk-ay
    sembollük evren) OOS'ta −0,54'tü. Bu IS sayısı bir hipotez **değildir**. OOS'a bakılmadı, bakılmayacak; majör
    evreniyle bir çekiliş ancak K-051 program kaydı ve ön kayıtla açılabilir (h63'le aynı aile → K-110/K-121 gereği
    tükenen aile listesinde; yeniden açmak yeni gerekçe ister).
+
+---
+
+## K-124 — Evren değerlendirmesinde yıllıklandırma takvimi yok sayıyordu (düzeltildi); hisse/sektör trendinin IS ön ölçümü
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("abonelik almak istemiyorum, başka yolu yok mu") ·
+**Tabi:** K-089, K-093, K-102, K-119, K-122 · **Kaynak:** `tests/unit/test_evren_degerlendirme.py`,
+`docs/research/records/2026-09-23-hisse-etf-yol-secimi.md`
+
+1. **Hata (düzeltildi):** `evren_degerlendirme.degerlendir` `yil_bar`ı `bar_yili(timeframe)` ile, yani takvimsiz (24x7)
+   hesaplıyordu. Seanslı veride (FX) rejim kapısının Sharpe'ı ve PBO performans bozulması √(8.766/6.261) ≈ %18
+   şişik çıkıyordu. Motor metrikleri takvimi zaten kullanıyordu. Artık `motor_ayarlari(veri).takvim`'den geliyor;
+   kripto (takvim yok) bit-aynı. h53-h59 FX çekilişlerinin hükmü değişmez (hepsi `oos_sharpe`'ta ve rejimde kaldı).
+2. **Ücretsiz veri kaynağı:** Kenneth French veri kütüphanesi (Dartmouth; CRSP'den): ABD piyasası + 12 sektör, günlük
+   toplam getiri 1926-07 → 2026-07, risksiz faiz dahil; otomasyona açık (zip). EODHD free plan yalnız 1 yıl
+   (ölçüldü: "Data is limited by one year"); Stooq bot korumalı; Scryne abonelik istemiyor. Sınırlar: yalnız
+   getiri (bar yok → dolum ertesi gün kapanışı, K-004'ten tutucu); sektör portföyü ≠ ETF; 1952 öncesi cumartesi
+   seansı var (seri 1952-07'den başlar; yıllık işlem günü 1953-2025 ortalaması **251,68**).
+3. **IS ön ölçümü (çekiliş değil; 1952-07 → 2004-05, OOS'a bakılmadı):** Sharpe (risksiz üstü): piyasa al-tut
+   0,49; piyasa trend 0,46-0,59; 12 sektör al-tut 0,56; **12 sektör trend 0,64-0,73**. Trend al-tut'a göre ~0,1-0,17
+   Sharpe ekliyor; promotion eşiği 1,04'ün çok altında. Kripto (K-110/K-121), FX (K-106) ve carry/vadeli (K-116,
+   K-123) sonuçlarıyla tutarlı: halka açık fiyat verisiyle bireysel ölçekte maliyet sonrası güçlü üstünlük
+   görülmüyor; belgelenmiş en iyi yöntem (trend) riski iyileştiriyor, getiriyi değil.
+4. Hedef tanımı (alfa mı, riski yönetilen yatırım mı) Scryne'ın kararına sunuldu; bu karar verilmeden hisse veri
+   hattı yazılmaz.

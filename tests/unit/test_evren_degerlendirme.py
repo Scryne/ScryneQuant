@@ -272,3 +272,29 @@ class TestEvrenIzgaralari:
                 EVREN_AILELER[strateji](**p)
             assert secenekler["hedef_brut"] == (0.2,)
             assert len(secenekler["yeniden_dengele_bar"]) == 1
+
+
+def test_rejim_ve_pbo_yilliklandirmasi_verinin_takviminden(monkeypatch):
+    """K-124 regresyonu: `yil_bar` takvimi yok sayıyordu (FX'te 24x7 → Sharpe ~%18 şişik)."""
+    from dataclasses import replace
+
+    from scryne_quant.backtest.metrikler import bar_yili
+    from scryne_quant.data.takvim import takvim as takvim_al
+    from scryne_quant.research import pbo as pbo_mod
+    from scryne_quant.research import rejim as rejim_mod
+
+    fx = takvim_al("fx-5x24")
+    gercek = ed.motor_ayarlari
+    monkeypatch.setattr(ed, "motor_ayarlari", lambda v: replace(gercek(v), takvim=fx))
+    gorulen: list[float] = []
+    asil_olc, asil_cscv = rejim_mod.olc, pbo_mod.cscv
+    monkeypatch.setattr(ed.rejim_mod, "olc",
+                        lambda *a, **k: (gorulen.append(k["yil_bar"]), asil_olc(*a, **k))[1])
+    monkeypatch.setattr(ed.pbo_mod, "cscv",
+                        lambda *a, **k: (gorulen.append(k["yil_bar"]), asil_cscv(*a, **k))[1])
+    ed.degerlendir(KesitselGuc, IZGARA, MALIYET, _veri(), secim="plato",
+                   egitim_bar=500, test_bar=200, asgari_islem=1)
+    beklenen = bar_yili(3_600_000, fx)
+    assert gorulen and all(y == pytest.approx(beklenen) for y in gorulen)
+    assert beklenen < bar_yili(3_600_000)
+
