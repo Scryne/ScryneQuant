@@ -51,14 +51,23 @@ BAGIMSIZ = ("french_12ind_vw_gunluk_202607", "french_12ind_vw_gunluk_201705")
 
 GEREKCE_HIPOTEZ = (
     "K-130 (C fazı, RYPP): evren kıyası (hacimde ilk 10, eşit ağırlık, haftalık, brüt 1,0) + "
-    "BTCUSDT 200 günlük SMA rejim kapısı (altındayken nakit), günde bir kontrol. Izgara yok: "
-    "literatür standardı tek nokta, sonuca bakılmadan. Soru: düşüşü zamanlamayla azaltıyor mu "
-    "(P3 plasebo), getiriyi koruyor mu, bağımsız veride (French iki vintage) tutuyor mu."
+    "BTCUSDT 100 günlük SMA rejim kapısı (altındayken nakit), günde bir kontrol. IS ızgarası "
+    "50/100/200 gün, kural: IS düşüş azaltımı >= %25 içinde en yüksek IS MAR. Soru: düşüşü "
+    "zamanlamayla azaltıyor mu (P3 plasebo), getiriyi koruyor mu, bağımsız veride (French iki "
+    "vintage) tutuyor mu."
 )
 
 
-def _strateji() -> EvrenRiskKapisi:
-    return EvrenRiskKapisi()
+#: IS ızgarası (K-130): yalnız rejim penceresi; seçim kuralı önceden yazılı —
+#: IS düşüş azaltımı ≥ ASGARI_DD_AZALTIM olanlar arasında en yüksek IS MAR (`tepe`); hiçbiri
+#: geçmezse program açılmaz. Izgaranın tamamı hipotez kimliğine girer.
+IS_IZGARA: dict[str, list[Any]] = {"rejim_pencere": [1200, 2400, 4800]}
+#: IS seçiminin sonucu (`is-izgara` çıktısından elle değil, kuralla; K-130'da kayıtlı).
+SECILEN: dict[str, Any] = {"rejim_pencere": 2400}
+
+
+def _strateji(**p: Any) -> EvrenRiskKapisi:
+    return EvrenRiskKapisi(**(SECILEN | p))
 
 
 def _kiyas(s: EvrenRiskKapisi) -> EvrenEsitAgirlik:
@@ -80,9 +89,10 @@ def _pencereler(veri: evren_kosu.EvrenVerisi):
 
 def _hipotez(veri: evren_kosu.EvrenVerisi) -> hipotez_mod.Hipotez:
     s = _strateji()
+    izgara = {a: [v] for a, v in s.parametreler.items()} | IS_IZGARA
     return hipotez_mod.Hipotez.kur(
         s.ad, veri.timeframe, ed.veri_kimligi(veri),
-        {a: [v] for a, v in sorted(s.parametreler.items())}, GEREKCE_HIPOTEZ,
+        dict(sorted(izgara.items())), GEREKCE_HIPOTEZ,
         secim="tepe", program=PROGRAM, evren=veri.kural_kimligi, portfoy=PORTFOY,
         protokol="rypp", veri_son_ms=int(veri.zamanlar[-1]),
     )
@@ -137,6 +147,31 @@ def is_olc() -> int:
     }
     _yaz(CIKTI / "is_olcum.json", govde)
     print(json.dumps(govde, ensure_ascii=False, indent=1))
+    return 0
+
+
+def is_izgara() -> int:
+    """IS ızgarası ve önceden yazılı seçim kuralı; yalnız in-sample."""
+    bas = time.perf_counter()
+    veri = _veri()
+    ins, oos = _pencereler(veri)
+    maliyet = maliyet_mod.yukle()
+    k = _olcum(ed.kosu(_kiyas(_strateji()), maliyet, veri, ins))
+    satirlar = []
+    for pencere in IS_IZGARA["rejim_pencere"]:
+        st = EvrenRiskKapisi(rejim_pencere=pencere)
+        a = _olcum(ed.kosu(st, maliyet, veri, ins))
+        azaltim = 1 - a["mdd"] / k["mdd"]
+        satirlar.append({"rejim_pencere": pencere, "aday": a, "dd_azaltim": azaltim,
+                         "gecis": st.gecis, "uygun": azaltim >= rp.ASGARI_DD_AZALTIM})
+    uygun = [x for x in satirlar if x["uygun"]]
+    secilen = max(uygun, key=lambda x: x["aday"]["mar"])["rejim_pencere"] if uygun else None
+    govde = {"kiyas": k, "satirlar": satirlar, "secilen_rejim_pencere": secilen,
+             "kural": "IS dd_azaltim >= 0.25 olanlar arasında en yüksek IS MAR",
+             "not": "yalnız in-sample; OOS'a bakılmadı", "git": git_durumu(KOK),
+             "zaman_utc": utc_str(simdi_ms()), "sure_sn": round(time.perf_counter() - bas, 1)}
+    _yaz(CIKTI / "is_izgara.json", _temiz(govde))
+    print(json.dumps(_temiz(govde), ensure_ascii=False, indent=1))
     return 0
 
 
@@ -267,10 +302,11 @@ def kos() -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     alt = ap.add_subparsers(dest="komut", required=True)
-    for ad in ("is-olc", "program-ac", "kaydet", "kos"):
+    for ad in ("is-olc", "is-izgara", "program-ac", "kaydet", "kos"):
         alt.add_parser(ad)
     a = ap.parse_args()
-    return {"is-olc": is_olc, "program-ac": program_ac, "kaydet": kaydet, "kos": kos}[a.komut]()
+    return {"is-olc": is_olc, "is-izgara": is_izgara, "program-ac": program_ac,
+            "kaydet": kaydet, "kos": kos}[a.komut]()
 
 
 if __name__ == "__main__":
