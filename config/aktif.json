@@ -1,0 +1,59 @@
+{
+  "_aciklama": "Aktif çok varlıklı DEMO bot ayarı (K-134). Gerçek para yolu yok: kripto hesapları simüle (Binance public fiyat), MT5 hesabı yalnız demo hesapta çalışır (kodda denetlenir). Her hesap ayrı dizinde ve ayrı durumda; iki hesap aynı aracı hesabını paylaşmaz.",
+  "risk": {
+    "_not": "islem_riski: atr_carpan × ATR'lik aleyhte hareketin özkaynaktan götüreceği pay. Fren: gün başına göre gunluk_kayip, hafta başına göre haftalik_kayip düşüşte her şey kapanır, takvim dönene kadar giriş yok.",
+    "islem_riski": 0.01,
+    "atr_carpan": 2.0,
+    "sembol_kaldirac": 0.3,
+    "toplam_kaldirac": 1.0,
+    "gunluk_kayip": 0.03,
+    "haftalik_kayip": 0.08
+  },
+  "hesaplar": {
+    "kripto-trend": {
+      "araci": "kripto_paper",
+      "sermaye": 10000,
+      "ucret_bps": 10,
+      "kayma_bps": 5,
+      "yalniz_long": true,
+      "semboller": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT", "ADAUSDT", "LINKUSDT", "AVAXUSDT", "LTCUSDT"],
+      "timeframe": "15m",
+      "strateji": "ema_trend"
+    },
+    "kripto-kirilim": {
+      "araci": "kripto_paper",
+      "sermaye": 10000,
+      "ucret_bps": 10,
+      "kayma_bps": 5,
+      "yalniz_long": true,
+      "semboller": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT", "ADAUSDT", "LINKUSDT", "AVAXUSDT", "LTCUSDT"],
+      "timeframe": "15m",
+      "strateji": "kirilim"
+    },
+    "kripto-donus": {
+      "araci": "kripto_paper",
+      "sermaye": 10000,
+      "ucret_bps": 10,
+      "kayma_bps": 5,
+      "yalniz_long": true,
+      "semboller": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT", "ADAUSDT", "LINKUSDT", "AVAXUSDT", "LTCUSDT"],
+      "timeframe": "15m",
+      "strateji": "rsi_donus"
+    },
+    "mt5-demo": {
+      "araci": "mt5",
+      "_not": "Sembol adları aracı kuruma göre değişir (US500 / SPX500 / US500.cash). `sq aktif baglanti --hesap mt5-demo` doğru adları listeler. ucret/kayma yalnız backtest tahmini; demoda gerçek spread ve komisyon uygulanır.",
+      "semboller": ["EURUSD", "US500", "NAS100"],
+      "timeframe": "15m",
+      "strateji": "kirilim",
+      "asgari_emir": 0,
+      "ucret_bps": 0.5,
+      "kayma_bps": 1.5,
+      "sunucu_utc_farki_saat": null,
+      "risk": {
+        "sembol_kaldirac": 3.0,
+        "toplam_kaldirac": 8.0
+      }
+    }
+  }
+}

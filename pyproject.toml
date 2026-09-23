@@ -29,6 +29,10 @@ dependencies = [
 # sorgu DuckDB ile yapilmiyor (0 import; tek atif ortam kaydindaki surum listesiydi);
 # `structlog` — 0 import, projede logging cercevesi yok (cikti typer.echo + SQLite olay tablolari).
 
+[project.optional-dependencies]
+# K-134: aktif demo botun MT5 aracısı (yalnız Windows; terminal gerekir). CI kurmaz.
+mt5 = ["MetaTrader5>=5.0.5; sys_platform == 'win32'"]
+
 [project.scripts]
 sq = "scryne_quant.cli.main:main"
 

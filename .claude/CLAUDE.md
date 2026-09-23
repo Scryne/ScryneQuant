@@ -135,6 +135,11 @@ raporları ve eski kayıtlar tarihseldir. Aşağıdaki liste yalnız **nereye ba
 - `config/kademe.json` (pilot Kademe 1: strateji + sembol bağlı), `config/risk.json`,
   `config/venue_statu.json`. R8 protokolü `docs/research/records/2026-09-22-R8-paper-protokol.md`.
 
+**Aktif demo bot (K-134, yürürlükteki hat)**
+- `src/scryne_quant/aktif/` (strateji, risk/fren, araci: `KriptoPaper` + `MT5Araci` yalnız demo, dongu, geriye,
+  defter), CLI `sq aktif geriye|calistir|karne|durdur|baglanti`, ayar `config/aktif.json`, koşular `runs/aktif/<hesap>/`.
+  Gözetmen `tools/gosterim_gozetmen.ps1` kripto hesaplarını ayakta tutar. Gerçek paraya geçiş yeni K ister.
+
 **Jev**
 - `src/scryne_quant/jev/` — yalnız gölge/ölçüm (K-074); işlem katmanı `jev`/`typesafe` import
   edemez (`test_jev_izolasyon.py`); Jev'den `Sinyal` üreten fonksiyon yok. `config/jev.json`.

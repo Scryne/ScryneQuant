@@ -218,6 +218,19 @@ class BinanceAdaptoru(BorsaAdaptoru):
 
         return df.reset_index(drop=True)
 
+    def son_fiyat(self, sembol: str) -> float:
+        """Son işlem fiyatı (public `ticker/price`). Aktif demo botun dolum fiyatı (K-134)."""
+        yanit = self._dene(
+            "tickerPrice", self._borsa.publicGetTickerPrice, {"symbol": sembol.upper()}
+        )
+        try:
+            fiyat = float(yanit["price"])
+        except (KeyError, TypeError, ValueError) as hata:
+            raise BorsaHatasi(f"ticker/price okunamadı: {yanit!r}") from hata
+        if not fiyat > 0:
+            raise BorsaHatasi(f"ticker/price geçersiz: {yanit!r}")
+        return fiyat
+
     # ------------------------------------------------------------- kurallar
 
     def sembol_kurallari(self, sembol: str) -> SembolKurallari:

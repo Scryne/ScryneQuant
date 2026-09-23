@@ -27,9 +27,10 @@ if (Test-Path (Join-Path $Gosterim "DURDUR")) { exit 0 }
 
 $Kosular = @(
     @{ Ad = "gosterim-testnet"; Arg = "execution calistir --mod testnet --kosu gosterim-testnet --strateji sma_kesisim --timeframe 1h --sermaye 100 --bekleme 20" },
-    @{ Ad = "gosterim-shadow";  Arg = "execution calistir --mod shadow --kosu gosterim-shadow --strateji sma_kesisim --timeframe 1h --sermaye 100 --bekleme 20" },
-    # K-132: yatirim kurali (sabit_oran, %50 BTC) testnet'te; risk profili config/risk_profilleri.json.
-    @{ Ad = "urun-testnet";     Arg = "execution calistir --mod testnet --kosu urun-testnet --strateji sabit_oran --timeframe 1h --sermaye 100 --bekleme 20" }
+    @{ Ad = "gosterim-shadow";  Arg = "execution calistir --mod shadow --kosu gosterim-shadow --strateji sma_kesisim --timeframe 1h --sermaye 100 --bekleme 20" }
+    # K-134: `urun-testnet` cikarildi — gosterim-testnet ile ayni testnet hesabini paylasiyordu;
+    # 49,58 USDT'lik alimi gosterim-testnet'in mutabakatini "aciklanamayan fark"la durdurdu.
+    # Bir testnet hesabinda tek kosu.
 )
 
 $Calisan = Get-CimInstance Win32_Process -Filter "name='python.exe' or name='sq.exe'" |
@@ -46,4 +47,20 @@ foreach ($k in $Kosular) {
         -RedirectStandardOutput (Join-Path $dizin "cikti.log") `
         -RedirectStandardError (Join-Path $dizin "hata.log") | Out-Null
     Yaz "başlatıldı: $ad"
+}
+
+# K-134: aktif çok varlıklı DEMO bot hesapları (config/aktif.json). Her hesap kendi dizininde,
+# kendi simüle/demo hesabında; `sq aktif durdur` `kapali` bırakır ve gözetmen onu başlatmaz.
+$Aktif = @("kripto-trend", "kripto-kirilim", "kripto-donus")
+foreach ($ad in $Aktif) {
+    if ($Calisan | Where-Object { $_ -match "aktif calistir --hesap $ad( |$)" }) { continue }
+    $dizin = Join-Path $Kok "runs\aktif\$ad"
+    if (Test-Path (Join-Path $dizin "kapali")) { continue }
+    New-Item -ItemType Directory -Force -Path $dizin | Out-Null
+    $env:PYTHONIOENCODING = "utf-8"
+    Start-Process -FilePath $Sq -ArgumentList "aktif calistir --hesap $ad" -WorkingDirectory $Kok `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput (Join-Path $dizin "cikti.log") `
+        -RedirectStandardError (Join-Path $dizin "hata.log") | Out-Null
+    Yaz "başlatıldı: aktif/$ad"
 }

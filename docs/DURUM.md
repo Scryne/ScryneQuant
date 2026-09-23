@@ -5,6 +5,16 @@ type: durum
 ---
 # ScryneQuant — şu anki gerçek
 
+**Asıl hedef (K-134, 2026-09-23):** çok varlıkta (kripto, EURUSD, US500, NAS100) sık işlem. Yürürlükteki hat
+**aktif demo bot** (`scryne_quant.aktif`, `sq aktif …`); gerçek para yok.
+- Kripto paper: `kripto-trend` / `kripto-kirilim` / `kripto-donus` (15m, 10 sembol, long-only, 10.000 USDT simüle)
+  gözetmenle ayakta; karne `sq aktif karne --hesap <ad>`, durdurma `sq aktif durdur --hesap <ad>`.
+- MT5 demo: adaptör hazır (yalnız demo hesapta çalışır); Scryne MT5 terminali + demo hesap açınca
+  `sq aktif baglanti --hesap mt5-demo`. TR'de kaldıraçlı FX/CFD gerçek parası ≥ 50.000 TL teminat + 1:10 (SPK).
+- İlk geriye bakış: 3 strateji × 3 zaman dilimi, **9/9 maliyet sonrası negatif**; 15m dönüşün brüt etkisi spot
+  ücretine gidiyor. Sık işlemin asıl engeli maliyet (K-134 tablosu).
+- `urun-testnet` durduruldu (gösterim hesabını paylaşıyordu). Aşağıdaki K-125/K-132 BTC yatırım hattı tarihsel/ikincil.
+
 **Ürün (K-132, 2026-09-23):** sabit risk bütçeli sistematik yatırım — `sabit_oran`: hesabın %50'si BTC, %50 USDT,
 ±5 puan bant dışında yeniden dengeleme; risk profili `config/risk_yatirim.json` (yalnız maruziyet tavanı 0,5 ve işlem
 başı risk 0,05 farklı). Mikro pilotun stratejisi bu kural; alfa/zamanlama iddiası yok. Geçmişte (2017-2026) azami

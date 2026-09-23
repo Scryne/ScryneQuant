@@ -6729,3 +6729,70 @@ edeyim") · **Tabi:** K-036, K-043, K-114, K-129, K-132 · **Kaynak:** `trader/b
 - K-133'ten önce başlamış koşular yeniden başlatılana kadar `egri.jsonl` yazmaz; grafik o ana kadar boş kalır.
 - Pano sunucusu çalışırken derlenen yeni sayfa bir sonraki yüklemede görünür; `/api/bot` değişiklikleri sunucunun
   yeniden başlatılmasını ister.
+
+---
+
+## K-134 — Asıl hedef: çok varlıkta sık işlem; aktif demo hattı (`aktif/`), kripto paper + MT5 demo; gerçek para yok
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("sadece btc de değil çok fazla (işte eurusd, spx500,
+nas100 gibi) çok fazla işlem yaparak 1 haftada max gelir elde etmek. asıl amacım hep buydu"; "bu iki hatlı plan
+uygun. kripto da demo parayla kalsın. mt5 de demo parayla devam etsin") · **Tabi:** K-002…K-009, K-037, K-050,
+K-079, K-110, K-117, K-118, K-132 · **Kaynak:** `src/scryne_quant/aktif/`, `src/scryne_quant/cli/aktif.py`,
+`config/aktif.json`, `tests/unit/test_aktif.py`, `tools/gosterim_gozetmen.ps1`
+
+### Gerekçe (aynı gün eleştirel denetim)
+
+- **Tıkanmanın ana sebebi kapılar değil, sinyal yokluğu.** 64 çekilişin en iyi OOS Sharpe'ı 0,46; null persentil
+  medyanı 0,50 (K-110). Bağımsız hesap (BTC 2017-2026, 15 bps): trend filtreleri al-tut ile aynı Sharpe (0,75-1,01 vs
+  0,82), kârlı hafta oranı %27-53. Kapılar kaldırılsa geçecek bir aday yoktu. Kapıların gücü K-117/K-118'e kadar
+  sıfıra yakındı (bu da doğru), ama o çekilişlerin sonucunu değiştirmiyor.
+- **Süreç şişkinliği:** 15 günde 232 commit, 133 K, 105 doküman (29 bin satır), 52 bin satır kod; yönetilecek aday
+  yokken yönetişim (RYPP, French vintage, zincir hash'li promotion) büyüdü. Scryne bunu tıkanma olarak yaşadı.
+- **Hedef kayması:** K-125/K-132 projeyi "tek BTC, yılda ~6-11 dengeleme" ürününe çevirdi; Scryne'ın hedefi çok
+  varlıkta sık işlem. `sabit_oran` 30 günlük pilotta 10 USDT tavanına olağan bir düşüşle %12 olasılıkla dokunuyor.
+- **Operasyon hatası:** `urun-testnet` ile `gosterim-testnet` aynı testnet hesabındaydı; 0,00059 BTC alımı
+  (49,58 USDT) gösterim koşusunun mutabakatını "açıklanamayan fark"la durdurdu (K-038 doğru davrandı).
+- **Yasal sınır:** Türkiye'de kaldıraçlı FX/CFD (EURUSD, US500, NAS100) SPK kuralıyla asgari 50.000 TL başlangıç
+  teminatı ve azami 1:10 kaldıraç ister (Tebliğ III-37.1 m.27, 2017). Küçük gerçek parayla bu piyasalar lisanslı
+  kurumda mümkün değil; lisanssız yabancı aracı önerilmez.
+
+### Karar
+
+1. **Aktif demo hattı (`scryne_quant.aktif`)**, mevcut `execution/` ve promotion zincirinden ayrı:
+   - `strateji`: saf yön serileri (`ema_trend`, `kirilim`, `rsi_donus`); canlı ve backtest aynı fonksiyon.
+   - `risk`: ATR'ye göre giriş boyutu, sembol/toplam kaldıraç tavanı, boyut yalnız girişte; günlük %3 / haftalık %8
+     kayıp freni (her şeyi kapatır, takvim dönene kadar giriş yok — K-050 asimetrisi).
+   - `araci`: `KriptoPaper` (Binance public fiyat, dolum ticker ± 5 bps aleyhte + 10 bps ücret, hesap durumu koşu
+     dizininde, paylaşılmaz) ve `MT5Araci` (**yalnız demo hesap**: bağlanırken ve her emirden önce `trade_mode`
+     denetlenir; pozisyonlar `magic` ile ayrılır; yazma yeniden denenmez).
+   - `dongu` / `geriye` / `defter`: bar kapanışında tur, aynı kurallarla backtest, haftalık karne.
+2. **Hesaplar (`config/aktif.json`):** `kripto-trend`, `kripto-kirilim`, `kripto-donus` (10 büyük USDT paritesi,
+   15m, long-only spot, 10.000 USDT simüle) gözetmenle ayakta; `mt5-demo` (EURUSD/US500/NAS100, long+short,
+   sembol kaldıracı 3, toplam 8 ≤ SPK 1:10) Scryne MT5 demo hesabını açınca.
+3. **Gerçek para yok.** Bu hattın gerçek paraya geçmesi yeni K + önceden yazılmış sayısal ölçüt (maliyet sonrası
+   N hafta) + elle onay ister (K-010/K-050). Demo sonucu promotion kanıtı değildir.
+4. **Short ve kaldıraç yalnız MT5 demoda.** K-008'in "spot'ta likidasyon yok" gerekçesi gerçek para içindir; demoda
+   para riski yok. Gerçek paraya taşımak likidasyon-bilinçli yeni K ister.
+5. **Korunan çekirdek:** UTC epoch ms ve açılış zamanlı bar (K-005), karar kapanmış barla / dolum sonraki açılışta
+   (K-004), aleyhte kayma (K-007), strateji I/O yapmaz ve geleceği görmez (K-002/K-003, `test_aktif.py` kesme +
+   bozma testi), determinizm (K-009), engelleyen katman işlem yaptırmaz (K-037).
+6. **`urun-testnet` gözetmenden çıkarıldı ve durduruldu:** bir testnet hesabında tek koşu.
+
+### İlk ölçüm (geriye bakış, maliyet dahil, 10 sembol, long-only)
+
+| | 15m (180 gün) | 1h (365 gün) | 4h (365 gün) |
+|---|---|---|---|
+| `ema_trend` | −47 % · 104 işlem/hafta | −53 % · 28 | −40 % · 11 |
+| `kirilim` | −69 % · 149 | −36 % · 42 | −32 % · 12 |
+| `rsi_donus` | −72 % · 156 | −50 % · 34 | −18 % · 8 |
+
+Dokuz denemenin dokuzu maliyet sonrası negatif. 15m `rsi_donus` maliyetsiz +%23 (DD %4,6, kârlı hafta %56):
+brüt bir kısa vadeli dönüş etkisi var, spot ücreti (taraf başı 10 + 5 bps) onu tamamen yiyor. Sık işlemin önündeki
+asıl engel maliyet. Bu dokuz geriye bakış hipotez defterine girmedi, çünkü promotion adayı değiller. Aynı ailelerden
+biri aday olursa K-039 sayımına eklenir.
+
+### Bilinen sınırlar
+
+- MT5 adaptörü gerçek terminalde henüz koşmadı (sahte modülle test edildi); sembol adları aracı kuruma göre değişir
+  (`sq aktif baglanti`).
+- Backtest ağırlıkları bar içinde sabit kabul eder; paper dolumunda emir defteri derinliği yok.
