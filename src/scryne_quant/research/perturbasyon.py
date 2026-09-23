@@ -68,9 +68,23 @@ class PerturbasyonOlcumu:
     eksenler: list[str]
     """Komşuluk üretebilen (birden fazla değer taşıyan) parametre eksenleri."""
 
+    @property
+    def koruma(self) -> float | None:
+        """Komşuların medyan skoru / seçilenin skoru (K-119 `parametre_perturbasyonu`).
+
+        "Parametre bir adım oynayınca performansın ne kadarı kalıyor?" Seçilenin kendi
+        ölçeğinde: `dusus` farkı ızgaranın **aralığına** bölüyordu ve düz, sağlam bir platoda
+        aralık küçüldükçe büyüyordu — en sağlam ızgarayı en çok cezalandırıyordu (K-118:
+        güçlü trendde m=5 ile m=0 arasında fark yok). Seçilenin skoru pozitif değilse korunacak
+        bir şey yok: `None` (ölçülemedi, kapı geçmez)."""
+        if self.komsu_medyan is None or not self.secilen_skor > 0.0:
+            return None
+        return self.komsu_medyan / self.secilen_skor
+
     def sozluk(self) -> dict[str, Any]:
         return {
             "perturbasyon_dusus": self.dusus,
+            "perturbasyon_koruma": self.koruma,
             "komsu_sayisi": self.komsu_sayisi,
             "secilen_skor": self.secilen_skor,
             "komsu_medyan": self.komsu_medyan,

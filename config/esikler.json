@@ -82,36 +82,36 @@
     },
     {
       "ad": "stres_dayanikliligi",
-      "alan": "stres_bozulma",
-      "deger": 0.15,
-      "yon": "<=",
+      "alan": "stres_sharpe_orani",
+      "deger": 0.5,
+      "yon": ">=",
       "kaynak": "politika",
-      "karar": "K-019",
-      "gerekce": "Temel senaryodan en kötü stres senaryosuna getiri farkı (yüzde puan); maliyet kalibrasyonunun doğruluğuna bahis oynanmaz (K-021)."
+      "karar": "K-119",
+      "gerekce": "OOS'ta en kötü maliyet senaryosu (2x slippage/fee) Sharpe'ı / temel OOS Sharpe ≥ 0,5: maliyet iki katına çıkınca risk-ayarlı performansın en az yarısı kalır. Önceki tanım (tüm dönem yüzde puan farkı ≤ 0,15) işlem sayısı/süre/getiriyle büyüyordu, güçlü stratejileri eliyordu (K-117). Gücü pozitif kontrolle ölçüldü (K-119)."
     },
     {
       "ad": "pbo",
-      "alan": "pbo",
-      "deger": 0.0087,
+      "alan": "pbo_zarar_olasiligi",
+      "deger": 0.05,
       "yon": "<=",
-      "kaynak": "null-kalibre",
-      "karar": "K-058",
-      "gerekce": "CSCV backtest overfitting olasılığı; iki ızgarada null (donchian 0,0087, rsi_donus 0,0462), sıkı olanı. Izgara biçimine bağlı.",
-      "olcum_tarihi": "2026-09-16",
-      "kayit": "docs/Faz-11-Dogrulama-Raporu.md",
-      "yeniden_olcum": "Yeni ızgara biçimi → `tools/kalibrasyon_v2_kos.py`."
+      "kaynak": "olculdu",
+      "karar": "K-119",
+      "gerekce": "CSCV içinde IS'te en iyi seçilen adayın OOS Sharpe'ının negatif çıktığı kombinasyon oranı (Bailey ve ark. 'zarar olasılığı'). Sıralama PBO'su gerçek üstünlüğü ayırt etmiyordu (K-118). İki yönlü ölçüm: gömülü trendli sentetik evren m≥3 → 0,000-0,007 (12/12 geçer); trendsiz m=0 → medyan 0,143.",
+      "olcum_tarihi": "2026-09-23",
+      "kayit": "docs/research/records/2026-09-23-kapi-yeniden-tasarim.md",
+      "yeniden_olcum": "Izgara biçimi ya da kapı tanımı değişince `tools/pozitif_kontrol_evren.py` + `tools/pozitif_kontrol_tam.py`."
     },
     {
       "ad": "parametre_perturbasyonu",
-      "alan": "perturbasyon_dusus",
-      "deger": 0.0565,
-      "yon": "<=",
-      "kaynak": "null-kalibre",
-      "karar": "K-058",
-      "gerekce": "Seçilen noktanın komşu medyanına göre yüksekliği; null donchian 0,0752 / rsi_donus 0,0565, sıkı olanı.",
-      "olcum_tarihi": "2026-09-16",
-      "kayit": "docs/Faz-11-Dogrulama-Raporu.md",
-      "yeniden_olcum": "Yeni ızgara biçimi → `tools/kalibrasyon_v2_kos.py`."
+      "alan": "perturbasyon_koruma",
+      "deger": 0.8,
+      "yon": ">=",
+      "kaynak": "olculdu",
+      "karar": "K-119",
+      "gerekce": "Tek eksende bir adım komşuların medyan IS skoru / seçilenin IS skoru. Eski ölçü (aralığa bölünen düşüş) düz, sağlam platoyu cezalandırıyor ve üstünlüğü ayırt etmiyordu (K-118). İki yönlü ölçüm: sentetik evren m≥3 → 0,855-1,02 (12/12 geçer); m=0 → medyan 0,650.",
+      "olcum_tarihi": "2026-09-23",
+      "kayit": "docs/research/records/2026-09-23-kapi-yeniden-tasarim.md",
+      "yeniden_olcum": "Izgara biçimi ya da kapı tanımı değişince `tools/pozitif_kontrol_evren.py` + `tools/pozitif_kontrol_tam.py`."
     },
     {
       "ad": "rejim_kararliligi",

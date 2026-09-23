@@ -37,6 +37,18 @@ from scryne_quant.strategy.temel import Strateji
 #: olabilir. Daha azı için "bu strateji kazanıyor" cümlesi kurulamaz. Kesin eşik K-019'da.
 ASGARI_ISLEM: Final = 20
 
+#: Walk-forward eğitim penceresinin asgari işlemi, **pencere uzunluğuna** göre (K-119). Sabit 20,
+#: 1 yıllık eğitimde haftalık bir stratejiyi (yılda ~13 tur) üstünlüğü ne olursa olsun
+#: "geçerli aday yok"a düşürüyordu (K-117: haftalık kahin her p'de 0/20). Yılda 6 tur ≈ IS
+#: penceresindeki 20'nin (≈ 3,6 yıl) yıllık karşılığı; kural aynı, ölçek pencereye göre.
+ASGARI_ISLEM_YILLIK: Final = 6.0
+
+
+def asgari_islem_pencere(bar_sayisi: int, timeframe_ms: int) -> int:
+    """`bar_sayisi` barlık pencere için asgari işlem: yılda `ASGARI_ISLEM_YILLIK`, en az 1."""
+    yil = bar_sayisi * timeframe_ms / (365.25 * 86_400_000)
+    return max(1, round(ASGARI_ISLEM_YILLIK * yil))
+
 #: Plato bölgesinin genişliği: en iyi skorun bu kadarlık bir oranı kadar altındaki
 #: adaylar "plato" sayılır (skor aralığına oranla). %10 keyfi değil — `ust_yuzde_plato`
 #: Faz 4'ten beri aynı sayıyı raporluyor ve K-019'un duyarlılık kapısı o rapora bakıyor.

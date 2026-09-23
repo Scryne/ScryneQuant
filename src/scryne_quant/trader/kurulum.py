@@ -247,6 +247,12 @@ def kosu_kur(
             )
         if rapor.get("pilot"):
             azami_kayip = float(rapor["azami_kayip_usdt"])
+            # Onay kademedeki sembole verildi (raporun hash'inde); başka sembolde pilot yok.
+            if istek.sembol.upper() != str(rapor.get("sembol") or "").upper():
+                raise KurulumHatasi(
+                    f"pilot kademesi {rapor.get('sembol')!r} için onaylı; istenen "
+                    f"{istek.sembol!r} (K-115)"
+                )
         anahtar, sir = canli.islem_anahtari_oku(yetki, istek.env_dosyasi)
         adaptor = canli.canli_emir_adaptoru(yetki, anahtar, sir)
         # Canlı sermaye **kademe** sermayesidir; istek bunu aşamaz.

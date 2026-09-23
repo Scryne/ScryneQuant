@@ -25,6 +25,7 @@ import pytest
 from scryne_quant.risk.promotion import (
     ASGARI_PAPER_GUN,
     SIRA,
+    ZORUNLU_KAPILAR,
     Asama,
     Kanit,
     PromotionDefteri,
@@ -43,7 +44,8 @@ TAM_KANIT: Final = Kanit(
     commit="a" * 40,
     dirty=False,
     mutlak_engeller=(),
-    kapi_sonucu={"gecti": True, "kalan_kapilar": [], "kapilar": {}},
+    kapi_sonucu={"gecti": True, "kalan_kapilar": [],
+                 "kapilar": {a: {"gecti": True} for a in ZORUNLU_KAPILAR}},
     risk_limit_kimligi="r" * 64,
     risk_max_drawdown=0.12,
     risk_drawdown_limiti=0.20,
@@ -402,3 +404,66 @@ class TestHipotezSayisi:
         g = TAM_KANIT.sozluk()
         assert g["hipotez_sirasi"] == 3
         assert g["hipotez_toplami"] == 7
+
+
+# ============================================================ K-118: tam kapı listesi
+
+
+def test_zorunlu_kapilar_arastirma_kapilariyla_ayni():
+    """`risk/` `research/`i import edemez; liste kopya, eşitliği burada korunur."""
+    from scryne_quant.research import kapilar, kapilar_v2
+
+    assert {e.ad for e in (*kapilar.ESIKLER, *kapilar_v2.ESIKLER_V2)} == ZORUNLU_KAPILAR
+
+
+def test_eksik_kapili_kanit_out_of_sample_gecmez():
+    """Önce yalnız `gecti` okunuyordu: K-054'ün dört kapısını taşımayan bir kanıt geçerdi."""
+    yalniz_k019 = {a: {"gecti": True} for a in ZORUNLU_KAPILAR
+                   if a not in {"pbo", "parametre_perturbasyonu", "rejim_kararliligi",
+                                "evren_dayanikliligi"}}
+    kanit = Kanit(**{**_alanlar(TAM_KANIT),
+                     "kapi_sonucu": {"gecti": True, "kalan_kapilar": [],
+                                     "kapilar": yalniz_k019}})
+    k = kayit()
+    assert tam_ilerlet(k, kanit) == ["backtest", "kalite_kontrol"]
+    assert "evren_dayanikliligi" in k.gecmis[-1]["gerekce"]
+
+
+def test_satirda_gecmeyen_kapi_ust_gecti_dogru_olsa_da_gecmez():
+    satirlar = {a: {"gecti": True} for a in ZORUNLU_KAPILAR}
+    satirlar["pbo"] = {"gecti": None}
+    kanit = Kanit(**{**_alanlar(TAM_KANIT),
+                     "kapi_sonucu": {"gecti": True, "kalan_kapilar": [], "kapilar": satirlar}})
+    assert tam_ilerlet(kayit(), kanit) == ["backtest", "kalite_kontrol"]
+
+
+def _kapi_kaydi(yol, satir_bicimi: bool, kapilar: dict) -> None:
+    import json
+
+    govde = {"strateji": "s", "gecti": all(r["gecti"] for r in kapilar.values()),
+             "kalan_kapilar": [], "mutlak_engeller": [], "kapilar": kapilar}
+    cikti = ({"cekilisler": [{"kimlik": "h1", "strateji": "s", "kapilar": govde}]}
+             if satir_bicimi else {"stratejiler": {"s": {"kapilar": govde}}})
+    yol.write_text(json.dumps({"cikti": cikti}), encoding="utf-8")
+
+
+def test_cli_iki_kapi_kaydini_birlestirir(tmp_path):
+    from scryne_quant.cli.main import _kanit_kur
+
+    v2 = {"pbo", "parametre_perturbasyonu", "rejim_kararliligi", "evren_dayanikliligi"}
+    _kapi_kaydi(tmp_path / "k019.json", False,
+                {a: {"gecti": True} for a in ZORUNLU_KAPILAR - v2})
+    _kapi_kaydi(tmp_path / "v2.json", True, {a: {"gecti": True} for a in v2})
+    tek = _kanit_kur(None, [tmp_path / "k019.json"], "s")
+    assert set(tek.kapi_sonucu["kapilar"]) == ZORUNLU_KAPILAR - v2
+    iki = _kanit_kur(None, [tmp_path / "k019.json", tmp_path / "v2.json"], "s")
+    assert set(iki.kapi_sonucu["kapilar"]) == ZORUNLU_KAPILAR and iki.kapi_sonucu["gecti"]
+
+
+def test_cli_birlesimde_bir_kayitta_kalan_kapi_kalir(tmp_path):
+    from scryne_quant.cli.main import _kanit_kur
+
+    _kapi_kaydi(tmp_path / "a.json", False, {"pbo": {"gecti": True}})
+    _kapi_kaydi(tmp_path / "b.json", True, {"pbo": {"gecti": False}})
+    k = _kanit_kur(None, [tmp_path / "a.json", tmp_path / "b.json"], "s")
+    assert k.kapi_sonucu["gecti"] is False and k.kapi_sonucu["kalan_kapilar"] == ["pbo"]

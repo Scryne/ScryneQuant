@@ -274,7 +274,7 @@ class TestLeakRiski:
             "wf_kararsizlik": 0.0,
             "oos_islem": 1_000,
             "oos_max_drawdown": 0.0,
-            "stres_bozulma": 0.0,
+            "stres_sharpe_orani": 1.0,  # K-119
         }
         temiz = kapilar_mod.degerlendir("x", kusursuz)
         assert temiz.gecti is True

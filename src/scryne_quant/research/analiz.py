@@ -167,6 +167,22 @@ class StresSonucu:
         en_kotu = min(s["toplam_getiri"] for s in self.senaryolar.values())
         return temel - en_kotu
 
+    def sharpe_orani(self) -> float:
+        """En kötü senaryonun Sharpe'ı / temel Sharpe. (K-119 `stres_dayanikliligi`)
+
+        "Maliyet iki katına çıkınca risk-ayarlı performansın ne kadarı kalıyor?" Oran stratejinin
+        kendi ölçeğinde: `bozulma`nın aksine işlem sayısı, dönem uzunluğu ya da stratejinin
+        kendi getirisi büyüdükçe kendiliğinden büyümez (K-117). Temel Sharpe pozitif değilse
+        korunacak bir performans yok: `nan` (ölçülemedi, kapı geçmez).
+        """
+        if "temel" not in self.senaryolar:
+            return float("nan")
+        temel = float(self.senaryolar["temel"].get("sharpe", float("nan")))
+        if not temel > 0.0:
+            return float("nan")
+        en_kotu = min(float(s.get("sharpe", float("nan"))) for s in self.senaryolar.values())
+        return en_kotu / temel
+
     def sozluk(self) -> dict[str, Any]:
         return {
             "strateji": self.strateji_adi,

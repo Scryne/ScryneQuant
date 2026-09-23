@@ -43,9 +43,9 @@ komisyonu, 24x7 yıllıklandırma ve **sıfır** finansmanla "neredeyse doğru" 
 
 ## Stres neden seçilen parametreyle
 
-Tek sembollü `degerlendirme.py` stresi stratejinin **varsayılan** parametreleriyle
-koşturuyor. Portföy stratejisinde varsayılan parametre sözleşmenin parçası değil; promotion'a
-aday olan şey seçilen parametre olduğu için stres onunla ve **tam** pencerede koşulur.
+Promotion'a aday olan şey seçilen parametre olduğu için stres onunla koşulur (tek sembollü
+yol da K-117'den beri böyle; önce varsayılanla koşuyordu). K-119'dan beri pencere **OOS**:
+kapı `stres_sharpe_orani` (en kötü senaryo OOS Sharpe / temel OOS Sharpe).
 """
 
 from __future__ import annotations
@@ -88,6 +88,7 @@ from scryne_quant.research.tarama import (
     Aday,
     TaramaHatasi,
     TaramaSonucu,
+    asgari_islem_pencere,
     izgara,
 )
 from scryne_quant.research.walkforward import (
@@ -619,6 +620,7 @@ def degerlendir(
         detay["secim"] = {"yontem": secim, "secilen": parametreler}
         pert = pert_mod.olc(tarama, secilen)
         olcumler["perturbasyon_dusus"] = pert.dusus
+        olcumler["perturbasyon_koruma"] = pert.koruma  # K-119 kapı alanı
         detay["perturbasyon"] = pert.sozluk()
 
         bildir("out-of-sample")
@@ -665,9 +667,11 @@ def degerlendir(
         detay["evren_dayanikliligi"] = day.sozluk()
 
         bildir("stres")
-        st = stres(lambda: sinif(**parametreler), maliyet, veri, tam,
+        # K-119: stres OOS'ta; kapı `stres_sharpe_orani`, `stres_bozulma` yalnız rapor.
+        st = stres(lambda: sinif(**parametreler), maliyet, veri, oos,
                    baslangic_sermaye=baslangic_sermaye)
         olcumler["stres_bozulma"] = st.bozulma()
+        olcumler["stres_sharpe_orani"] = st.sharpe_orani()
         detay["stres"] = st.sozluk()
     else:
         detay["secim"] = {"yontem": secim, "secilen": None, "sebep": "geçerli aday yok"}
@@ -675,9 +679,12 @@ def degerlendir(
     # --- walk-forward
     bildir("walk-forward")
     try:
+        # K-119: eğitim penceresinin asgarisi pencere uzunluğuna göre (yılda 6 tur).
+        asgari_wf = (0 if asgari_islem == 0
+                     else asgari_islem_pencere(egitim_bar, timeframe_ms(veri.timeframe)))
         wf = walkforward(
             sinif, secenekler, maliyet, veri, katmanlar, olcut=olcut, secim=secim,
-            baslangic_sermaye=baslangic_sermaye, asgari_islem=asgari_islem, kosucu=kosucu,
+            baslangic_sermaye=baslangic_sermaye, asgari_islem=asgari_wf, kosucu=kosucu,
         )
         basarili = wf.basarili_katmanlar
         pozitif = sum(1 for k in basarili if k.test_metrikler.toplam_getiri > 0.0)
@@ -710,9 +717,11 @@ def degerlendir(
             raise pbo_mod.PboHatasi(f"{len(satirlar)} geçerli aday: PBO ölçülemez")
         pbo_sonucu = pbo_mod.cscv(np.vstack(satirlar), yil_bar=yil_bar)
         olcumler["pbo"] = pbo_sonucu.pbo
+        olcumler["pbo_zarar_olasiligi"] = pbo_sonucu.zarar_olasiligi  # K-119 kapı alanı
         detay["pbo"] = pbo_sonucu.sozluk()
     except pbo_mod.PboHatasi as hata:
         olcumler["pbo"] = None
+        olcumler["pbo_zarar_olasiligi"] = None
         detay["pbo"] = {"olculemedi": str(hata)}
 
     kapi = kapilar_v2.butun_kapilar(

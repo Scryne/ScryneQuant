@@ -32,7 +32,7 @@ GECEN = {
     "wf_kararsizlik": 0.1,
     "oos_islem": 120,
     "oos_max_drawdown": 0.12,
-    "stres_bozulma": 0.05,
+    "stres_sharpe_orani": 0.8,  # K-119
 }
 
 

@@ -2553,7 +2553,7 @@ def risk_serbest(
 
 
 def _kanit_kur(
-    sonuc_yolu: Path | None, kapi_yolu: Path | None, strateji: str
+    sonuc_yolu: Path | None, kapi_yollari: Path | list[Path] | None, strateji: str
 ) -> promotion_mod.Kanit:
     """Sonuç kaydı ve kapı değerlendirmesinden promotion kanıtı kurar.
 
@@ -2582,16 +2582,51 @@ def _kanit_kur(
                 "risk_drawdown_limiti": risk_govdesi.get("limitler", {}).get("drawdown_limiti"),
             }
 
-    if kapi_yolu is not None:
-        deney = json.loads(kapi_yolu.read_text(encoding="utf-8"))
-        satir = deney.get("cikti", {}).get("stratejiler", {}).get(strateji)
-        if satir is None:
-            raise typer.BadParameter(
-                f"{kapi_yolu} içinde {strateji!r} için kapı değerlendirmesi yok"
-            )
-        alanlar["kapi_sonucu"] = satir["kapilar"]
+    if isinstance(kapi_yollari, Path):
+        kapi_yollari = [kapi_yollari]
+    if kapi_yollari:
+        # Birden çok kayıt birleştirilir (K-118): tek sembollü `sq lab kapilar` K-019 + K-113'ü,
+        # `sq lab kapilar-v2` K-054'ü taşır. Aynı kapı iki kayıtta varsa ikisi de geçmeli.
+        birlesik: dict[str, Any] = {}
+        mutlak: list[str] = []
+        for yol in kapi_yollari:
+            deney = json.loads(yol.read_text(encoding="utf-8"))
+            satir = _kapi_satiri(deney, strateji)
+            if satir is None:
+                raise typer.BadParameter(f"{yol} içinde {strateji!r} için kapı değerlendirmesi yok")
+            for ad, row in (satir.get("kapilar") or {}).items():
+                onceki = birlesik.get(ad)
+                if onceki is None or (onceki or {}).get("gecti") is True:
+                    birlesik[ad] = row
+            mutlak += list(satir.get("mutlak_engeller") or [])
+        kalan = sorted(a for a, r in birlesik.items() if (r or {}).get("gecti") is not True)
+        alanlar["kapi_sonucu"] = {
+            "strateji": strateji,
+            "gecti": not kalan and not mutlak,
+            "kalan_kapilar": kalan,
+            "mutlak_engeller": sorted(set(mutlak)),
+            "kapilar": birlesik,
+        }
 
     return promotion_mod.Kanit(**alanlar)
+
+
+def _kapi_satiri(deney: dict[str, Any], strateji: str) -> dict[str, Any] | None:
+    """Bir kapı kaydından stratejinin `KapiSonucu` gövdesi. İki biçim: `sq lab kapilar`
+    (`cikti.stratejiler.<ad>.kapilar`) ve `sq lab kapilar-v2` (`cikti.cekilisler[].kapilar`)."""
+    cikti = deney.get("cikti", {})
+    satir = (cikti.get("stratejiler") or {}).get(strateji)
+    if satir is not None:
+        return satir.get("kapilar")
+    eslesen = [s for s in cikti.get("cekilisler") or [] if s.get("strateji") == strateji]
+    if len(eslesen) > 1:
+        # Aynı strateji birden çok timeframe/seçimle kayıtlı: hangisinin kanıt olduğu tahmin
+        # edilmez (K-038 kalıbı); kayıt tek çekilişe daraltılarak verilmeli.
+        raise typer.BadParameter(
+            f"{strateji!r} kayıtta {len(eslesen)} satırla var "
+            f"({', '.join(str(s.get('kimlik')) for s in eslesen)}); tek çekiliş verilmeli"
+        )
+    return eslesen[0].get("kapilar") if eslesen else None
 
 
 @promotion_app.command("durum")
@@ -2635,7 +2670,12 @@ def promotion_degerlendir(
         Path | None, typer.Option("--sonuc", help="Backtest sonuç kaydı (runs/*.json).")
     ] = None,
     kapilar: Annotated[
-        Path | None, typer.Option("--kapilar", help="`sq lab kapilar` deney kaydı.")
+        list[Path] | None,
+        typer.Option(
+            "--kapilar",
+            help="Kapı deney kaydı; birden çok verilebilir (`sq lab kapilar` + "
+            "`sq lab kapilar-v2`). 12 kapının tamamı gerekir (K-118).",
+        ),
     ] = None,
     kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
     audit: AuditYolu = VARSAYILAN_AUDIT,
@@ -4177,8 +4217,20 @@ def lab_kapilar_v2(
     diziler_ob: dict[str, Any] = {}
     satirlar: list[dict[str, Any]] = []
 
+    tek_sembollu = {**KUTUPHANE, **KIYAS}
     for h in kayitlar:
         ad, tf = h["strateji"], h["timeframe"]
+        if ad not in tek_sembollu:
+            # Evren (portföy) çekilişi: 12 kapısı `evren_degerlendirme` ile ölçülür (K-058).
+            # Önceden burada `KeyError` ile bütün komut düşüyordu (K-118 denetimi).
+            satirlar.append({
+                "kimlik": h["kimlik"], "strateji": ad, "timeframe": tf,
+                "secim": h.get("secim", ""), "program": h.get("program", ""),
+                "olcumler": {}, "kapilar": None,
+                "hata": "evren çekilişi: tek sembollü kapılar-v2 yolunda ölçülmez",
+                "detay": {},
+            })
+            continue
         if tf not in diziler_ob:
             diziler_ob[tf], _, _ = _lab_veri(depo, sembol, tf)
         diziler = diziler_ob[tf]
@@ -4234,7 +4286,7 @@ def lab_kapilar_v2(
         ara.parent.mkdir(parents=True, exist_ok=True)
         ara.write_text(json.dumps(satirlar, ensure_ascii=False, default=str), encoding="utf-8")
 
-    gecen = [s for s in satirlar if s["kapilar"]["gecti"]]
+    gecen = [s for s in satirlar if s["kapilar"] and s["kapilar"]["gecti"]]
     govde = {
         "defter_sayisi": len(kayitlar),
         "esikler": kapilar_v2_mod.esik_tablosu(),
@@ -4257,15 +4309,19 @@ def lab_kapilar_v2(
 
     typer.echo(f"defter {len(kayitlar)} çekiliş · yeni kapılar (K-054)")
     typer.echo(
-        f"  {'çekiliş':<28} {'pbo':>7} {'perturbasyon':>13} {'rejim':>8} {'evren':>7}  kalan"
+        f"  {'çekiliş':<28} {'zarar':>7} {'koruma':>7} {'rejim':>8} {'evren':>7}  kalan"
     )
     for s in satirlar:
         o = s["olcumler"]
         etiket = f"{s['strateji']}/{s['timeframe']}/{s['secim']}"
+        if s["kapilar"] is None:
+            typer.echo(f"  {etiket:<28} {s['hata']}")
+            continue
         typer.echo(
-            f"  {etiket:<28} {_sayi(o['pbo']):>7} {_sayi(o['perturbasyon_dusus']):>13} "
-            f"{_sayi(o['en_kotu_rejim_sharpe']):>8} "
-            f"{_sayi(o['evren_dayaniklilik_orani']):>7}  "
+            f"  {etiket:<28} {_sayi(o.get('pbo_zarar_olasiligi')):>7} "
+            f"{_sayi(o.get('perturbasyon_koruma')):>7} "
+            f"{_sayi(o.get('en_kotu_rejim_sharpe')):>8} "
+            f"{_sayi(o.get('evren_dayaniklilik_orani')):>7}  "
             f"{len(s['kapilar']['kalan_kapilar'])}"
         )
     typer.echo("")

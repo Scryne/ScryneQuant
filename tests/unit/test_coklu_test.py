@@ -377,13 +377,15 @@ class TestEsigiDefteBagla:
     """
 
     @pytest.fixture(scope="class")
-    def foto(self) -> dict:
+    @classmethod
+    def foto(cls) -> dict:
         from scryne_quant.research import coklu_test_fotograf
 
         return coklu_test_fotograf.oku(KOK / coklu_test_fotograf.VARSAYILAN_YOL)
 
     @pytest.fixture(scope="class")
-    def defter(self) -> list[dict]:
+    @classmethod
+    def defter(cls) -> list[dict]:
         from scryne_quant.research.hipotez import HipotezDefteri
 
         return HipotezDefteri(KOK / "docs" / "Hipotez-Defteri.jsonl").tumu()

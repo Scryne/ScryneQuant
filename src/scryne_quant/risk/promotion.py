@@ -57,6 +57,17 @@ from scryne_quant.risk.audit import KOK_HASH, Defter, Olay, OlayTuru
 #: `nesne_hash` (sort_keys, ensure_ascii=False, ayırıcısız) — audit ile aynı.
 HASH_DISI: Final[frozenset[str]] = frozenset({"onceki_hash", "satir_hash", "audit_hash"})
 
+#: `out_of_sample` aşamasının istediği kapıların **tam** listesi: K-019 yedi + K-113 bir + K-054
+#: dört (K-118). Kanıtta bunlardan biri yoksa aşama geçilmez. Önceden yalnız kanıttaki `gecti`
+#: okunuyordu ve tek sembollü `sq lab kapilar` çıktısı K-054'ün dört kapısını hiç taşımıyordu:
+#: promotion, K-054'ü uygulamadan ilerleyebilirdi. `risk/` `research/`i import edemediği için
+#: liste burada; `research.kapilar` + `research.kapilar_v2` ile eşitliğini test korur.
+ZORUNLU_KAPILAR: Final[frozenset[str]] = frozenset({
+    "oos_suresi", "oos_sharpe", "oos_is_orani", "wf_katman_basari", "parametre_kararliligi",
+    "asgari_islem", "max_drawdown", "stres_dayanikliligi",
+    "pbo", "parametre_perturbasyonu", "rejim_kararliligi", "evren_dayanikliligi",
+})
+
 
 class Asama(StrEnum):
     """K-010'un zinciri, sırayla. Değer sırası anlamlıdır (`SIRA` listesi)."""
@@ -150,7 +161,8 @@ class Kanit:
     """`Sonuc.promotion_engelleri` — dirty, data_quality_warning, gecici_maliyet_modeli."""
 
     kapi_sonucu: dict[str, Any] | None = None
-    """`research.kapilar.degerlendir(...).sozluk()` çıktısı. K-019'un yedi eşiği."""
+    """Kapı değerlendirmesi (`KapiSonucu.sozluk()` biçimi). `kapilar` alanı `ZORUNLU_KAPILAR`ın
+    tamamını taşımalı (K-118); birden çok kayıt CLI'da birleştirilir."""
 
     risk_limit_kimligi: str | None = None
     """Sonucu üreten koşudaki risk limitlerinin hash'i. Yoksa risk motoru devrede değildi."""
@@ -285,12 +297,21 @@ def _out_of_sample(k: Kanit) -> AsamaSonucu:
             "bilinmiyor (K-039)",
         )
 
-    if k.kapi_sonucu.get("gecti") is True:
+    satirlar = k.kapi_sonucu.get("kapilar") or {}
+    eksik = sorted(ZORUNLU_KAPILAR - set(satirlar))
+    if eksik:
+        return AsamaSonucu(
+            Asama.OUT_OF_SAMPLE, False,
+            f"kanıtta değerlendirilmemiş kapı(lar): {', '.join(eksik)} (K-118: tam liste zorunlu)",
+        )
+    if k.kapi_sonucu.get("gecti") is True and all(
+        (satirlar[a] or {}).get("gecti") is True for a in ZORUNLU_KAPILAR
+    ):
         toplam = k.hipotez_toplami or k.hipotez_sirasi
         return AsamaSonucu(
             Asama.OUT_OF_SAMPLE,
             True,
-            f"K-019'un yedi eşiği geçildi — {k.hipotez_sirasi}. hipotez "
+            f"{len(ZORUNLU_KAPILAR)} kapının tamamı geçildi — {k.hipotez_sirasi}. hipotez "
             f"(defterde toplam {toplam})",
         )
     kalan = k.kapi_sonucu.get("kalan_kapilar") or []

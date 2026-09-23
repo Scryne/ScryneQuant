@@ -343,6 +343,14 @@ def pilot_siniri_kontrolu(b: KapiBaglami) -> Kontrol:
         return Kontrol("pilot_siniri", False, f"azami kayıp {kayip!r}", engel)
     if kayip >= ks:
         return Kontrol("pilot_siniri", False, f"azami kayıp {kayip} ≥ sermaye {ks}", engel)
+    # Kademe pilotu **bir** stratejiye ve **bir** sembole bağlar (K-115/1); ikisi kayıtta
+    # yazılı değilse ya da istenen strateji kayıttakinden farklıysa onay başka bir şeye
+    # verilmiş olur. Sembol raporun hash'ine girer, kurulum koşu sembolünü ona eşitler.
+    if k.get("strateji") != b.strateji:
+        return Kontrol("pilot_siniri", False,
+                       f"kademe stratejisi {k.get('strateji')!r} ≠ istenen {b.strateji!r}", engel)
+    if not isinstance(k.get("sembol"), str) or not k["sembol"]:
+        return Kontrol("pilot_siniri", False, f"kademe sembolü {k.get('sembol')!r}", engel)
     return Kontrol("pilot_siniri", True,
                    f"{b.strateji}: sermaye {ks} USDT, {kayip} USDT kayıpta SAFE_MODE (K-115)",
                    kanit=nesne_hash({"strateji": b.strateji, "kademe": k}))
@@ -696,6 +704,7 @@ def kapi_raporu(hedef: CalismaModu, b: KapiBaglami) -> dict[str, Any]:
         "sermaye_usdt": None if k is None else k.get("sermaye_usdt"),
         "pilot": pilot,
         "azami_kayip_usdt": k.get("azami_kayip_usdt") if (k and pilot) else None,
+        "sembol": k.get("sembol") if (k and pilot) else None,
         "kontroller": [(x.ad, x.gecti, x.kanit) for x in kontroller],
     }
     gecti = all(x.gecti is True for x in kontroller)
@@ -706,6 +715,7 @@ def kapi_raporu(hedef: CalismaModu, b: KapiBaglami) -> dict[str, Any]:
         "sermaye_usdt": govde["sermaye_usdt"],
         "pilot": pilot,
         "azami_kayip_usdt": govde["azami_kayip_usdt"],
+        "sembol": govde["sembol"],
         "gecti": gecti,
         "kontroller": [x.sozluk() for x in kontroller],
         "engeller": [

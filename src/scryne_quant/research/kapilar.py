@@ -274,13 +274,16 @@ ESIKLER: Final[tuple[Esik, ...]] = (
     ),
     Esik(
         ad="stres_dayanikliligi",
-        alan="stres_bozulma",
-        sinir=0.15,
-        yon="<=",
+        alan="stres_sharpe_orani",
+        sinir=0.5,
+        yon=">=",
         gerekce=(
-            "Temel senaryodan en kötü stres senaryosuna getiri farkı (yüzde puan). "
-            "Maliyet kalibrasyonu (K-021) bir tahmindir; slippage iki katına çıkınca "
-            "çöken bir strateji, kalibrasyonun doğruluğuna bahis oynamaktır."
+            "OOS'ta en kötü maliyet senaryosunun Sharpe'ı / temel OOS Sharpe (K-119). "
+            "Maliyet kalibrasyonu (K-021) bir tahmindir; maliyet iki katına çıkınca "
+            "risk-ayarlı performansının yarısından fazlasını kaybeden strateji, "
+            "kalibrasyonun doğruluğuna bahis oynamaktır. Önceki tanım (tüm dönem yüzde puan "
+            "farkı ≤ 0,15) işlem sayısı, süre ve getiriyle büyüyüp güçlü stratejileri "
+            "eliyordu (K-117: %65 kahin 0/20)."
         ),
     ),
 )

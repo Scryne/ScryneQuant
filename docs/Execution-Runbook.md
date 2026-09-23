@@ -113,7 +113,8 @@ Onaydan sonra kodda commit, kademe, strateji aşaması, anahtar yetkisi gibi **k
 ### 4.3 Mikro canlı pilot (K-115) — bugün açılabilen tek canlı yol
 
 `config/kademe.json` aktif kademe 1 = `pilot`: sermaye 100 USDT, **10 USDT kayıpta SAFE_MODE**, strateji
-`sma_kesisim` BTCUSDT 1h. Promotion, R8 ve shadow kanıtı istenmez; yerine kodda sabit tavanlar
+`sma_kesisim` BTCUSDT 1h. Onay kademedeki strateji ve sembole bağlıdır (K-116): başka strateji
+`pilot_siniri`nde kalır, başka `--sembol` kurulumda reddedilir. Promotion, R8 ve shadow kanıtı istenmez; yerine kodda sabit tavanlar
 (`canli_kapi.PILOT_*`) ve hesap değeri kontrolü. Alfa iddiası yok — beklenen getiri ≈ −komisyon; amaç
 gerçek emir yolunu ölçmek.
 

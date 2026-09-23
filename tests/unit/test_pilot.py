@@ -48,7 +48,8 @@ REPO = Path(__file__).resolve().parents[2]
 
 def _kademe(**pilot_alanlari) -> dict:
     pilot = {"kademe": 1, "ad": "pilot", "pilot": True, "sermaye_usdt": 100.0,
-             "azami_kayip_usdt": 10.0, "onay": {"gerekli": True, "not": "test", "tarih": "t"}}
+             "azami_kayip_usdt": 10.0, "strateji": "sma_kesisim", "sembol": "BTCUSDT",
+             "onay": {"gerekli": True, "not": "test", "tarih": "t"}}
     pilot.update(pilot_alanlari)
     return {
         "risk_sermayesi_usdt": 100.0,
@@ -153,8 +154,32 @@ def test_pilot_olmayan_kademe_hala_promotion_ister(kok):
 ])
 def test_pilot_siniri_tavani_asan_kademeyi_reddeder(kok, alanlar):
     _yaz(kok, _kademe(**alanlar))
-    k = _k(kapi_raporu(CalismaModu.LIVE, KapiBaglami(kok=kok, strateji="s", ag=_hesap(100.0))))
+    k = _k(kapi_raporu(CalismaModu.LIVE,
+                       KapiBaglami(kok=kok, strateji="sma_kesisim", ag=_hesap(100.0))))
     assert k["pilot_siniri"]["gecti"] is False
+
+
+@pytest.mark.parametrize(("alanlar", "strateji"), [
+    ({}, "baska_strateji"),                 # onay kademedeki stratejiye verildi
+    ({"strateji": None}, "sma_kesisim"),    # kayıtta strateji yok
+    ({"sembol": None}, "sma_kesisim"),      # kayıtta sembol yok
+    ({"sembol": ""}, "sma_kesisim"),
+])
+def test_pilot_siniri_kademe_strateji_ve_sembolune_bagli(kok, alanlar, strateji):
+    _yaz(kok, _kademe(**alanlar))
+    k = _k(kapi_raporu(CalismaModu.LIVE,
+                       KapiBaglami(kok=kok, strateji=strateji, ag=_hesap(100.0))))
+    assert k["pilot_siniri"]["gecti"] is False
+
+
+def test_pilot_raporu_sembolu_tasir_ve_hash_sembole_bagli(kok):
+    _yaz(kok, _kademe())
+    b = KapiBaglami(kok=kok, strateji="sma_kesisim", ag=_hesap(100.0))
+    r1 = kapi_raporu(CalismaModu.LIVE, b)
+    assert r1["sembol"] == "BTCUSDT"
+    _yaz(kok, _kademe(sembol="ETHUSDT"))
+    r2 = kapi_raporu(CalismaModu.LIVE, b)
+    assert r2["sembol"] == "ETHUSDT" and r2["hash"] != r1["hash"]
 
 
 def test_pilot_siniri_strateji_ister(kok):
@@ -309,19 +334,20 @@ class _CanliMod:
         return CalismaModu.LIVE
 
 
-def _canli_kur(monkeypatch, tmp_path, *, pilot: bool, risk_modu: str):
+def _canli_kur(monkeypatch, tmp_path, *, pilot: bool, risk_modu: str, sembol: str = "BTCUSDT"):
     from scryne_quant.trader import kurulum
     from scryne_quant.trader.kurulum import KosuIstegi
 
     y = yetki.ver(host=CANLI_HOST, kanit_hash="k", onay_hash="o", strateji="sma_kesisim",
                   kademe=1, sermaye_usdt=100.0)
-    rapor = {"pilot": pilot, "azami_kayip_usdt": 10.0 if pilot else None}
+    rapor = {"pilot": pilot, "azami_kayip_usdt": 10.0 if pilot else None,
+             "sembol": "BTCUSDT" if pilot else None}
     monkeypatch.setattr(kurulum, "canli_yetki_ver", lambda b: (y, rapor))
     env = tmp_path / ".env"
     env.write_text("SQ_BINANCE_LIVE_API_KEY=a\nSQ_BINANCE_LIVE_API_SECRET=b\n", encoding="utf-8")
     istek = KosuIstegi(mod=CalismaModu.LIVE, kosu="p1", strateji="sma_kesisim", parametreler={},
-                       sermaye_usdt=10_000.0, risk_modu=risk_modu, kok=tmp_path / "runs",
-                       env_dosyasi=env, kurallar=K)
+                       sembol=sembol, sermaye_usdt=10_000.0, risk_modu=risk_modu,
+                       kok=tmp_path / "runs", env_dosyasi=env, kurallar=K)
     return kurulum.kosu_kur(istek, mod_defteri=_CanliMod(),
                             kapi_baglami=KapiBaglami(strateji="sma_kesisim"))
 
@@ -340,3 +366,10 @@ def test_kurulum_pilot_hat_kayip_tavanini_ve_kademe_sermayesini_tasir(monkeypatc
     assert y.hat.limitler.azami_kayip_usdt == 10.0
     assert y.hat.limitler.sermaye_usdt == 100.0  # istek 10.000 idi; kademe tavanı bağlar
     assert y.risk.mod == "pilot" and y.ayar.risk_modu == "pilot"
+
+
+def test_kurulum_pilot_baska_sembolde_kurulmaz(monkeypatch, tmp_path):
+    from scryne_quant.trader.kurulum import KurulumHatasi
+
+    with pytest.raises(KurulumHatasi, match="pilot kademesi 'BTCUSDT' için onaylı"):
+        _canli_kur(monkeypatch, tmp_path, pilot=True, risk_modu="pilot", sembol="ETHUSDT")

@@ -114,3 +114,84 @@ def test_kimlik_degisirse_baslamaz(tmp_path, barlar):
     kur(tmp_path / "a", barlar)
     with pytest.raises(YurutucuHatasi, match="kimliği değişti"):
         kur(tmp_path / "a", barlar, param={"hizli": 6, "yavas": 20, "maruziyet": 0.2})
+
+
+# ================================================================ K-118: kapanan tur → risk
+
+
+from types import SimpleNamespace  # noqa: E402
+
+from scryne_quant.trader.yurutucu import kapanan_turlar  # noqa: E402
+
+
+def _e(yon, q, fiyat, t, komisyon=()):
+    return SimpleNamespace(sembol="BTCUSDT", yon=yon, dolan_miktar=q, ortalama_fiyat=fiyat,
+                           karar_ms=t, olusturuldu_ms=t, guncellendi_ms=t + 1,
+                           komisyon=komisyon)
+
+
+def test_kapanan_turlar_komisyon_ve_kirinti():
+    # Alış 0,001 BTC @ 100.000, komisyon taban varlıkta 0,000001 → elde 0,000999.
+    # Satış 0,00099 @ 101.000 (adım 1e-5'e yuvarlandı), komisyon 0,1 USDT → kırıntı 0,000009.
+    em = [_e("BUY", 0.001, 100_000.0, 1, (("BTC", 0.000001),)),
+          _e("SELL", 0.00099, 101_000.0, 2, (("USDT", 0.1),))]
+    (z, pnl), = kapanan_turlar(em, "BTCUSDT", min_notional=5.0, taban="BTC", kote="USDT")
+    beklenen = -100.0 + 0.00099 * 101_000.0 - 0.1 + 0.000009 * 101_000.0
+    assert z == 3 and pnl == pytest.approx(beklenen, rel=1e-12)
+
+
+def test_kismi_satis_turu_kapatmaz_ve_flat_kapatir():
+    em = [_e("BUY", 0.002, 100_000.0, 1), _e("SELL", 0.001, 99_000.0, 2),
+          _e("FLAT", 0.001, 98_000.0, 3), _e("BUY", 0.001, 98_000.0, 4)]
+    turlar = kapanan_turlar(em, "BTCUSDT", min_notional=5.0, taban="BTC", kote="USDT")
+    assert len(turlar) == 1 and turlar[0][1] == pytest.approx(-200.0 + 99.0 + 98.0)
+
+
+def _risk_sayimi(y):
+    turlar = kapanan_turlar(y.hat.defter.tumu(), "BTCUSDT", min_notional=K.min_notional,
+                            taban="BTC", kote="USDT")
+    return turlar
+
+
+def test_yurutucu_kapanan_turlari_risk_motoruna_bildirir(tmp_path, barlar):
+    y, k = kur(tmp_path / "a", barlar)
+    y.tekrar_oynat(k, isinma=100)
+    turlar = _risk_sayimi(y)
+    assert turlar, "test anlamsız: hiç tur kapanmadı"
+    assert y.islenen_tur == len(turlar)
+    # Ardışık kayıp sayacı, turların sonundaki kesintisiz kayıp serisiyle aynı.
+    seri = 0
+    for _, pnl in turlar:
+        seri = 0 if pnl > 0 else seri + 1
+    assert y.risk.durum.ardisik_kayip == seri % y.risk.limitler.ardisik_kayip_limiti
+
+
+def test_cooldown_canli_yolda_emri_engeller(tmp_path, barlar):
+    y, k = kur(tmp_path / "a", barlar)
+    y.risk.limitler = y.risk.limitler.model_copy(update={"ardisik_kayip_limiti": 1})
+    y.tekrar_oynat(k, isinma=100)
+    kayipli = [p for _, p in _risk_sayimi(y) if p <= 0]
+    assert kayipli, "test anlamsız: kaybeden tur yok"
+    assert y.risk.red_sayimi.get("cooldown", 0) > 0
+
+
+def test_yeniden_baslatmada_tur_iki_kez_sayilmaz(tmp_path, barlar):
+    tam, kt = kur(tmp_path / "tam", barlar)
+    tam.tekrar_oynat(kt, isinma=100)
+    adim = timeframe_ms("1h")
+    y1, k1 = kur(tmp_path / "kes", barlar)
+    k1.simdi = barlar[99].open_time + adim
+    y1.baslat()
+    for b in barlar[100:300]:
+        k1.simdi = b.open_time + adim
+        y1.adim()
+    del y1
+    y2, k2 = kur(tmp_path / "kes", barlar)
+    k2.simdi = barlar[299].open_time + adim
+    y2.baslat()
+    for b in barlar[300:]:
+        k2.simdi = b.open_time + adim
+        y2.adim()
+    y2.kapat()
+    assert y2.islenen_tur == tam.islenen_tur
+    assert y2.risk.durum.ardisik_kayip == tam.risk.durum.ardisik_kayip

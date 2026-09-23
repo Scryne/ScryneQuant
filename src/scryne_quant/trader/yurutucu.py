@@ -42,6 +42,7 @@ from scryne_quant.common.hash import git_durumu
 from scryne_quant.common.zaman import bar_acilisi, simdi_ms, timeframe_ms, utc_str
 from scryne_quant.data.semalar import KaliteDurumu
 from scryne_quant.exchange.akis import df_barlara
+from scryne_quant.exchange.emir_adaptoru import BORSA_YONU
 from scryne_quant.exchange.hatalar import BorsaHatasi, SaatSapmasi
 from scryne_quant.exchange.paper_adaptoru import PaperBorsa
 from scryne_quant.execution.hat import ExecutionHatti
@@ -197,6 +198,9 @@ class Yurutucu:
     son_karar: dict[str, Any] = field(default_factory=dict)
     son_bar: dict[str, Any] = field(default_factory=dict)
     son_hata: str = ""
+    islenen_tur: int = 0
+    """Risk motoruna bildirilmiş kapanmış tur sayısı (K-118). Kalıcı: yeniden başlatmada aynı
+    tur iki kez sayılmaz."""
     tekrar: bool = False
     """Tekrar oynatma koşusu mu (saat barlarla ilerler). Raporda `veri` alanı olarak görünür."""
 
@@ -251,6 +255,7 @@ class Yurutucu:
             self.son_islenen_ms = d.get("son_islenen_ms")
             self.baslangic_ms = int(d.get("baslangic_ms", 0))
             self.sayac = Sayac(**{**Sayac().sozluk(), **d.get("sayac", {})})
+            self.islenen_tur = int(d.get("islenen_tur", 0))
             self.sayac.yeniden_baslatma += 1
             if not d.get("temiz_kapanis", False):
                 self.sayac.plansiz_kesinti += 1
@@ -267,6 +272,7 @@ class Yurutucu:
             "son_islenen_utc": utc_str(self.son_islenen_ms) if self.son_islenen_ms else None,
             "baslangic_ms": self.baslangic_ms,
             "sayac": self.sayac.sozluk(),
+            "islenen_tur": self.islenen_tur,
             "temiz_kapanis": temiz_kapanis,
             "yazildi_ms": self.saat(),
         }
@@ -350,6 +356,9 @@ class Yurutucu:
             self.sayac.saat_sicramasi += 1
             self.son_hata = str(hata)
 
+        # 2b) Kapanan turlar risk motoruna (ardışık kayıp → cooldown, K-118).
+        self._turlari_isle()
+
         self.pencere.ekle(bar)
         self.sayac.bar += 1
         self.son_islenen_ms = bar.open_time
@@ -432,6 +441,27 @@ class Yurutucu:
         if alan:
             setattr(self.sayac, alan, getattr(self.sayac, alan) + 1)
         return {"karar": "onay", "execution": u.sonuc, "engel": u.engel}
+
+    def _turlari_isle(self) -> None:
+        """Defterde yeni kapanan turları `RiskMotoru.islem_kapandi`ye bildirir. (K-118)
+
+        Backtest bunu `backtest/defter.py`de yapıyordu; execution yolunda hiç yapılmıyordu ve
+        `config/risk.json`'daki ardışık kayıp → cooldown limiti paper/testnet/canlıda **hiç**
+        devreye girmiyordu. Kurallar okunamazsa bu bar atlanır, sonraki barda yeniden denenir
+        (sayaç ilerlemez; kayıp tur atlanmaz).
+        """
+        try:
+            kurallar = self.hat.adaptor.sembol_kurallari(self.ayar.sembol)
+        except BorsaHatasi as hata:
+            self.son_hata = f"kurallar: {hata}"
+            return
+        turlar = kapanan_turlar(
+            self.hat.defter.tumu(), self.ayar.sembol, min_notional=kurallar.min_notional,
+            taban=kurallar.taban_varlik, kote=kurallar.kote_varlik,
+        )
+        for zaman_ms, net_pnl in turlar[self.islenen_tur:]:
+            self.risk.islem_kapandi(net_pnl, zaman_ms)
+        self.islenen_tur = max(self.islenen_tur, len(turlar))
 
     def _atr(self, diziler: dict[str, np.ndarray], i: int) -> float | None:
         """Risk motorunun kendi ATR'si (`live/motor._olcum` ile aynı kural: kısa pencere → None)."""
@@ -635,6 +665,46 @@ class Yurutucu:
         }
 
 
+def kapanan_turlar(
+    emirler: Iterable[Any], sembol: str, *, min_notional: float, taban: str, kote: str
+) -> list[tuple[int, float]]:
+    """Dolan emirlerden kapanmış turlar: `(kapanış zamanı ms, net PnL kote)`. (K-118)
+
+    Tur, pozisyonun (taban varlık) minNotional'ın altına inen satışla kapanır: spot'ta taban
+    varlıkla ödenen komisyon yüzünden satıştan sonra adım altı bir kırıntı kalır ve pozisyon
+    tam sıfıra inmez. Net PnL = turun nakit akışı (kote komisyonlar dahil) + kapanışta kalan
+    kırıntının değeri − turun başındaki kırıntının değeri. Taban varlıkla ödenen komisyon
+    miktarı azaltır; nakitten ayrıca düşülmez (çift sayılmasın). Sıra: `(karar_ms,
+    olusturuldu_ms)` — `_ortalama_maliyet` ile aynı.
+    """
+    dolanlar = sorted(
+        (e for e in emirler if e.sembol == sembol and e.dolan_miktar > 0.0),
+        key=lambda e: (e.karar_ms, e.olusturuldu_ms),
+    )
+    out: list[tuple[int, float]] = []
+    miktar = 0.0
+    nakit = 0.0
+    acik = False
+    for e in dolanlar:
+        fiyat = float(e.ortalama_fiyat)
+        alis = BORSA_YONU.get(e.yon.upper()) == "BUY"
+        if alis and not acik:
+            acik, nakit = True, -miktar * fiyat  # önceki kırıntı turun maliyetine girer
+        q = float(e.dolan_miktar)
+        miktar += q if alis else -q
+        nakit += -q * fiyat if alis else q * fiyat
+        for varlik, m in e.komisyon:
+            if varlik == kote:
+                nakit -= m
+            elif varlik == taban:
+                miktar -= m
+        if acik and not alis and miktar * fiyat < min_notional:
+            zaman = int(e.guncellendi_ms or e.olusturuldu_ms or e.karar_ms)
+            out.append((zaman, nakit + max(miktar, 0.0) * fiyat))
+            acik, nakit = False, 0.0
+    return out
+
+
 def _backfill(b: Bar) -> Bar:
     if b.kaynak is Kaynak.BACKFILL:
         return b
@@ -655,4 +725,5 @@ __all__ = [
     "YurutucuAyari",
     "YurutucuHatasi",
     "canli_bar",
+    "kapanan_turlar",
 ]

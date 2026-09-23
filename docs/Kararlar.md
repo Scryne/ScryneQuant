@@ -5752,3 +5752,181 @@ K-111, K-114 · **Açık bırakır:** §6/1-2 shadow, §6/4 kademe artışı, §
 > Promotion'u geçmemiş bir stratejiyle gerçek paraya dokunan tek yol, kodda sabit bir sermaye ve kayıp
 > tavanının içinde, bir insanın o anki kapı raporunu onaylamasıyla açılan pilottur; pilot hiçbir
 > promotion kanıtı üretmez ve tavanını kendisi büyütemez.
+
+---
+
+## K-116 — 2026-09-23 denetimi: pilot kapısı kademenin strateji + sembolüne bağlandı; funding carry'nin güncel düzeyi ölçüldü (Hat B ekonomik tabanı çöktü)
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("projemin tamamını baştan sona denetleyip,
+test edip … hatalı, eksik, iyileştirilmesi gereken yerleri profesyonel bir şekilde yap") · **Tabi:**
+K-010, K-050, K-079, K-110, K-111, K-114, K-115 · **Kaynak:** `tests/unit/test_pilot.py`,
+`docs/research/records/2026-09-23-funding-carry-guncel.md`, `tools/funding_guncel.py`
+
+### Bulgu 1 — pilot onayı kademede yazılı strateji ve sembole bağlı değildi
+
+`config/kademe.json` pilot kademesi `strateji: sma_kesisim`, `sembol: BTCUSDT` taşıyor (K-115/1), ama
+`pilot_siniri` yalnız "strateji verildi mi" diye bakıyordu ve kapı raporunda sembol yoktu: `sq execution
+onayla --strateji <herhangi>` ve `sq execution calistir --mod live --sembol <herhangi>` pilot tavanları
+içinde başka bir strateji/sembolle canlı koşu açabiliyordu. Tavanlar (100/10 USDT, hesap ≤ 150) yine
+bağlıydı; delinen şey onayın **neye** verildiğiydi.
+
+**Düzeltme (yalnız sıkılaştırır, K-050):** `pilot_siniri` kademe stratejisi ≠ istenen strateji ya da kademe
+sembolü boşsa kalır; kapı raporu `sembol` alanını taşır ve **hash'e girer** (sembol değişirse onay geçersiz);
+`trader/kurulum.py` pilot kademede koşu sembolünü rapordakine eşitler, değilse `KurulumHatasi`. Testler:
+`test_pilot_siniri_kademe_strateji_ve_sembolune_bagli`, `test_pilot_raporu_sembolu_tasir_ve_hash_sembole_bagli`,
+`test_kurulum_pilot_baska_sembolde_kurulmaz`. Parametreler (`-p`) bağlanmadı: pilot tavanları içinde kalır ve
+Kademe ≥ 2 zaten promotion ister — ama bir sonraki kademede parametre bağının kapıya girmesi açık kalem.
+
+### Bulgu 2 — Hat B (carry) tabanı çöktü
+
+Son 12 ay funding: BTC %3,37, ETH %2,38, SOL −%1,83, XRP %0,11 (notional'a oranla, maliyetsiz; IS tavanı
+BTC %14,2). Sermaye verimi ≈ yarı → BTC ≈ %1,7-2,5/yıl < DTB3 %3,97. K-110'un "tek kilit K-079/2" dediği
+hat bugün vadeli hesap açılsa da risksiz getirinin altında. **K-079/2 sorusu bugünkü piyasada ekonomik
+olarak anlamsız**; yeniden açılma işareti: son 90 gün BTC funding ≥ %8/yıl (`tools/funding_guncel.py`,
+bugün %6,53 — toparlanıyor, işaretin altında). Bu işaret bir karar değil, K-079/2'yi yeniden sormanın zamanı.
+
+### Değişmeyen
+
+Kapılar, eşikler, defter 62, K-111 askısı, pilot tavanları, R8 kriterleri. Kod değişikliği yalnız pilot
+bağında (sıkılaştırma).
+
+---
+
+## K-117 — Pozitif kontrol: kapı sisteminin gücü ölçüldü, iyi stratejiyi de reddediyor; stres parametre hatası düzeltildi
+
+**Durum:** kabul (ölçüm + hata düzeltmesi; eşik/kapı tanımı **değişmedi**) · **Tarih:** 2026-09-23 · **Onay:**
+Scryne ("bu kadar hipotez denenip hiç kapıdan geçen olmaması garip değil mi? bir yerlerde hata mı yapıyoruz?
+… her şeyin gerçekten doğru ve sağlam olduğuna inanmanı istemiyorum") · **Tabi:** K-019, K-039, K-044, K-050,
+K-054, K-058, K-081, K-110, K-113 · **Kaynak:** `docs/research/records/2026-09-23-pozitif-kontrol.md`,
+`tools/pozitif_kontrol.py`, `tests/unit/test_degerlendirme_stres.py`
+
+### Ölçülen
+
+1. **Motor doğru:** bağımsız vektörel hesapla getiri/Sharpe 4/4 senaryoda eşit (±%4).
+2. **Kapıların gücü o güne kadar hiç ölçülmemişti.** Bilinen üstünlüklü kahin (gerçek motor, maliyet, bölme,
+   K-019 + K-113): %65 isabetli günlük (OOS Sharpe medyanı 2,06) **0/20**; haftalık ufukta her p'de **0/20**.
+   Null (p = 0,50) 0/60 — yanlış pozitif tarafı sağlam.
+3. **Yapısal kusurlar:** (a) `stres_dayanikliligi` tüm dönem yüzde puan farkını ölçüyor; işlem sayısı, süre ve
+   stratejinin kendi getirisiyle büyüyor, güçlü günlük stratejilerin %100'ünü eliyor. (b) `asgari_islem` 30 +
+   walk-forward eğitimde ≥ 20 işlem: tutma süresi ≳ 1 hafta olan her strateji üç kapıda "ölçülemedi". (c)
+   `evren_dayanikliligi` tek sembolde tanım gereği ölçülemiyor. (d) Kapılar ayrı ayrı %5'e kalibre, birlikte
+   uygulanınca güç sıfıra yakın.
+4. **0/62 bu yüzden "alfa yok" kanıtı değildi — ama 62 çekiliş yine de zayıf:** en iyi OOS Sharpe 0,46, null
+   persentil medyanı 0,50 (K-110); kahin ölçeğinde isabet ≤ %55 düzeyi. Düzeltilmiş kapılar bu çekilişleri
+   geçirmezdi (hepsi `oos_sharpe` 1,04'ün altında). Asıl kayıp: yavaş aileler hiç ölçülemedi.
+
+### Karar
+
+1. **Hata düzeltildi:** tek sembollü `research/degerlendirme.degerlendir` stresi seçilen parametrelerle koşuyor
+   (önce `sinif()`, varsayılan). Seçilen yoksa stres ölçülmez, kapı kalır. Evren yolu zaten doğruydu.
+2. **Her yeni ya da değişen kapı iki yönlü doğrulanır:** yanlış pozitif (null kalibrasyonu) **ve** güç
+   (`tools/pozitif_kontrol.py`). Tek yönlü kalibrasyon K-117'den sonra kabul edilmez.
+3. **DECISION REQUIRED (Scryne, K-050: gevşetme yönü elle onay + yeni K):**
+   - `stres_dayanikliligi`: pp farkı yerine stres senaryosunda risk-ayarlı ölçü (öneri: `hepsi_2x` OOS Sharpe
+     ≥ 0,5 × temel OOS Sharpe ve `hepsi_2x` OOS getirisi > 0).
+   - `asgari_islem` + walk-forward asgari işlemi: işlem sayısı yerine bağımsız karar dönemi / zaman-farkında
+     tanım (Threshold-Policy'de zaten DECISION REQUIRED).
+   - Birleşik kapı sisteminin hedef gücü (öneri: OOS Sharpe ≈ 1,5 düzeyindeki üstünlükte ≥ %50 geçiş).
+   Bu kalemlerin hiçbiri bu kararla uygulanmadı.
+4. Eşikler, defter (62), K-111 askısı ve promotion değişmedi.
+
+---
+
+## K-118 — Sistematik denetim (bilinen-cevaplı sınama): execution yolunda cooldown hiç çalışmıyordu; look-ahead kapsamı kayıttan; K-054'ün üç kapısının gücü sıfıra yakın
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("projenin tamamını dikkatli bir şekilde denetle …
+projede vereceğin tüm kararları en iyi şekilde nasıl olacak ise o yönde kararlar ver") · **Tabi:** K-002, K-008,
+K-033, K-054, K-058, K-114, K-115, K-117 · **Kaynak:** `tools/pozitif_kontrol_tam.py`,
+`runs/pozitif_kontrol/tam.json`, `tests/unit/test_look_ahead_genel.py`, `tests/unit/test_trader_yurutucu.py`
+
+### Yöntem
+
+K-117'nin kök nedeni "ölçüm aletleri tek yönde doğrulanmış" olduğu için denetim her ölçüm/karar bileşenini
+**cevabı bilinen girdiyle** sınar: bağımsız yeniden hesap, negatif kontrol (üstünlük yok → geçmemeli), pozitif
+kontrol (bilinen üstünlük → geçmeli).
+
+### Bulgular
+
+1. **Execution yolunda (paper/testnet/canlı/pilot, `trader/yurutucu.py`) ardışık kayıp → cooldown limiti hiç
+   çalışmıyordu.** `RiskMotoru.islem_kapandi` yalnız backtest defterinden çağrılıyordu; K-114 yürütücüsü
+   çağırmıyordu. `config/risk.json` `ardisik_kayip_limiti` 10 / `cooldown_bar` 24 gerçek parada ölü limitti
+   (K-115'in "her risk limiti tam uygulanır" cümlesi bu limit için yanlıştı). **Düzeltildi:**
+   `yurutucu.kapanan_turlar` (pozisyon minNotional altına inen satışla kapanan tur; taban-varlık komisyonu
+   miktardan, kote komisyonu nakitten, kırıntı değeri dahil), `_turlari_isle` her barda yeni turları bildirir,
+   `islenen_tur` `yurutucu.json`'da kalıcı (yeniden başlatmada çift sayım yok). Testler: tur hesabı, cooldown'ın
+   paper yolunda emri gerçekten reddetmesi, kesintili koşunun kesintisizle aynı sayacı vermesi. R8 evren paper
+   yolu (`CokluAdimci` → `backtest/defter.py`) etkilenmemişti.
+2. **Look-ahead kapsamı elle seçilmişti** (`sma_kesisim` + 3 funding stratejisi + 11 gösterge). Göstergeler
+   koşu başında tüm seride önceden hesaplandığı için listede olmayan nedensel-olmayan bir gösterge `ctx`
+   kesmesine rağmen sızardı. `test_look_ahead_genel.py` listeyi kayıttan (`motor.DEFTER`, `KUTUPHANE`,
+   `KIYAS`) kurar: her gösterge × 3 bozma, her strateji × 3 bozma + "sinyal var" kontrolü. **Sonuç: hepsi
+   temiz** — sızıntı yok; koruma artık otomatik.
+3. **K-054 kapılarının gücü (tam hat, gerçek kütüphane stratejileri ve ızgaraları, gömülü rejim-trendli sentetik
+   seri, m ∈ {0, 3, 5} × 4 tohum × 3 strateji):**
+
+   | Kapı | m=0 medyan | m=5 medyan | Eşik | m=5 geçen |
+   | --- | ---: | ---: | ---: | ---: |
+   | `parametre_perturbasyonu` | 0,155 | 0,146 | ≤ 0,0565 | 2/12 (m=0: 2/12) |
+   | `pbo` | 0,173 | 0,097 | ≤ 0,0087 | 0/12 |
+   | `rejim_kararliligi` | −1,23 | −1,19 | ≥ 0,685 | 0/12 |
+   | `oos_sharpe` | −0,75 | 0,38 | ≥ 1,04 | 5/12 |
+
+   Pertürbasyon ve rejim üstünlüğü yokluğundan **ayırt etmiyor**; PBO kısmen ayırt ediyor ama eşik ulaşılamaz.
+   Eşikler null'ın %5 kuyruğundan seçilmiş, gücü ölçülmemiş (K-117'nin aynı hatası). m=5'te 12 kapıyı geçen
+   0/36; K-019'u geçen 1/12.
+4. **Doğrulanan (hata yok):** tek sembollü motor bağımsız hesapla eşit (K-117); çok enstrümanlı motorun Decimal
+   referans testi mevcut; çoklu-test null'u kavramsal olarak aile-bazında doğru (p = 0,50 kahin 0/60).
+
+### Karar
+
+1. Bulgu 1 ve 2'nin düzeltmeleri uygulandı (yalnız sıkılaştırır: ölü limit canlandı, test kapsamı genişledi).
+2. K-054'ün `pbo`, `parametre_perturbasyonu`, `rejim_kararliligi` kapıları ve K-019'un `stres_dayanikliligi`,
+   `asgari_islem` tanımları **yeniden tasarlanacak** (K-119); tasarım yalnız cevabı bilinen veride (kahin +
+   sentetik) doğrulanır, dondurulur, **sonra** gerçek hipotezlere uygulanır — sonuca bakıp kapı ayarlamanın
+   önü böyle kesilir.
+
+---
+
+## K-119 — Promotion kapıları iki yönlü doğrulamayla yeniden tanımlandı; tek sembollü araştırma 9 yıllık arşiv verisini kullanır
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("projede vereceğin tüm kararları en iyi şekilde nasıl
+olacak ise o yönde kararlar ver") · **Değiştirir:** K-019 `stres_dayanikliligi` tanımı; K-054/K-058 `pbo` ve
+`parametre_perturbasyonu` ölçüsü ve eşiği; `tarama` walk-forward asgari işlemi · **Tabi:** K-007, K-010, K-018,
+K-039, K-044, K-050, K-054, K-058, K-081, K-113, K-117, K-118 · **Kaynak:**
+`docs/research/records/2026-09-23-kapi-yeniden-tasarim.md`, `tools/pozitif_kontrol.py`,
+`tools/pozitif_kontrol_tam.py`, `tools/pozitif_kontrol_evren.py`
+
+### Bağlam
+
+K-117/K-118 ölçtü: eşikler yalnız null'ın %5 kuyruğundan seçilmişti ve gücü hiç ölçülmemişti. Sonuç olarak
+gerçek bir üstünlüğün 12 kapıyı geçme olasılığı fiilen sıfırdı: %65 isabetli kahin 0/20, güçlü gömülü trend 0/36.
+0/62'nin bir kısmı "alfa yok" değil, "alet göremez"di. Kapı gevşetmek K-050'ye göre gerekçeli ve elle onaylı olmalı;
+onay Scryne'ın açık yetkisiyle burada veriliyor. Gerekçe, sonuca bakıp eşik oynatma değil: her tanım **cevabı bilinen**
+veride (kahin + sentetik) doğrulandı, gerçek hipotezlere bakılmadan donduruldu. Gerçek defterde sonuç değişmedi
+(0/38).
+
+### Karar
+
+1. **`stres_dayanikliligi`:** alan `stres_sharpe_orani` ≥ 0,5 (OOS'ta en kötü maliyet senaryosu Sharpe / temel OOS
+   Sharpe; seçilen parametreyle). Eski tüm dönem yüzde puan farkı yalnız rapor (`stres_bozulma`).
+2. **`pbo`:** alan `pbo_zarar_olasiligi` ≤ 0,05 (CSCV içinde IS-en iyisinin OOS'ta zarar etme olasılığı). Sıralama
+   PBO'su yalnız rapor.
+3. **`parametre_perturbasyonu`:** alan `perturbasyon_koruma` ≥ 0,80 (komşu medyanı / seçilen, IS). Aralığa bölünen
+   düşüş yalnız rapor.
+4. **Walk-forward asgari işlem** pencereye göre: `tarama.asgari_islem_pencere` (yılda 6 tur). IS taraması (20) ve
+   OOS `asgari_islem` kapısı (30) değişmedi.
+5. **Değişmeyen kapılar:** `oos_sharpe` 1,04, `oos_suresi`, `oos_is_orani`, `wf_katman_basari`,
+   `parametre_kararliligi`, `asgari_islem`, `max_drawdown`, `rejim_kararliligi`, `evren_dayanikliligi`. Rejim ve
+   evren kapılarının evren yolunda gücü ölçüldü (güçlü trendde 6/6, trendsizde rejim 0/6).
+6. **Tek sembollü araştırma verisi:** yeni hipotezler `data/evren/<sembol>/1h` (arşiv, 2017-08→) üzerinde; OOS 1,57
+   → 2,72 yıl. Veri kimliği hipotez kimliğinin parçası (K-009); eski kayıtlar kendi verileriyle tarihsel kalır.
+7. **Kalıcı kural:** yeni ya da değişen her kapı iki yönlü doğrulanır: yanlış pozitif (null / üstünlüksüz örnek)
+   **ve** güç (pozitif kontrol). `test_kapilar_v2.py` eşiği iki ölçüme bağlar (pozitif kontrolün uç değeri geçer,
+   null medyanı geçmez).
+8. **Promotion, 12 kapının tamamını ister** (K-118 `ZORUNLU_KAPILAR`); tek sembollü strateji `evren_dayanikliligi`
+   yüzünden hâlâ promotion alamaz (K-054). Gerçek bir aday evren yolundan gelir.
+
+### Açık
+
+Çoklu test eşiği 1,04, 1,57 yıllık OOS'ta kalibre edildi. 9 yıllık seride yeniden ölçülmeli; uzun OOS'ta null daha
+dar olacağı için mevcut değer tutucu yönde kalır (K-050 yönü).

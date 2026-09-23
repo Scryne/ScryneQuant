@@ -7,7 +7,8 @@ Faz 4'ün son adımı. Her strateji için üç ayrı ölçüm zincirini koşturu
    `oos_is_orani`, `oos_islem`, `oos_max_drawdown` buradan.
 2. **Walk-forward** — her katmanda yeniden optimize. `wf_pozitif_katman_orani` ve
    `wf_kararsizlik` buradan.
-3. **Stres** — maliyet varsayımlarını bozarak. `stres_bozulma` buradan.
+3. **Stres** — maliyet varsayımlarını bozarak (OOS, seçilen parametre). `stres_sharpe_orani`
+   buradan (K-119); `stres_bozulma` yalnız rapor.
 
 Üçünü tek bir komutta toplamanın sebebi, kapıların **birlikte** anlamlı olması: yüksek
 OOS Sharpe'ı olan ama her katmanda başka parametre seçen bir strateji, tek bir sayıya
@@ -30,7 +31,7 @@ from scryne_quant.research import analiz, kapilar, walkforward
 from scryne_quant.research.bolme import Pencere, walk_forward
 from scryne_quant.research.izgaralar import izgara
 from scryne_quant.research.karsilastirma import ortak_isinma, ortak_pencereler
-from scryne_quant.research.tarama import ASGARI_ISLEM, kosu, tara
+from scryne_quant.research.tarama import ASGARI_ISLEM, asgari_islem_pencere, kosu, tara
 from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE
 
 #: Varsayılan walk-forward pencereleri: 1 yıl eğitim, 3 ay test (1h barda).
@@ -80,7 +81,6 @@ def degerlendir(
     isinma = ortak_isinma(adlar)
     ins_pencere, oos_pencere = ortak_pencereler(n, adlar, oos_orani=oos_orani)
     katmanlar = walk_forward(n, isinma, egitim_bar, test_bar, kaydirmali=True)
-    tam = Pencere("tam", baslangic=isinma, bitis=n, isinma_baslangic=0)
 
     satirlar: dict[str, Any] = {}
     for ad in adlar:
@@ -120,10 +120,12 @@ def degerlendir(
                 "plato_orani": tarama_sonucu.ust_yuzde_plato(),
             }
 
+        # K-119: eğitim penceresinin asgarisi pencere uzunluğuna göre (yılda 6 tur).
+        asgari_wf = 0 if kiyas_mi else asgari_islem_pencere(egitim_bar, timeframe_ms(timeframe))
         wf = walkforward.calistir(
             sinif, izgara(ad), maliyet, sembol, timeframe, bar_dizileri, katmanlar,
             olcut=olcut, secim=secim, baslangic_sermaye=baslangic_sermaye,
-            asgari_islem=asgari,
+            asgari_islem=asgari_wf,
         )
         basarili = wf.basarili_katmanlar
         pozitif = sum(1 for k in basarili if k.test_metrikler.toplam_getiri > 0.0)
@@ -138,11 +140,18 @@ def degerlendir(
             "wf_kararsizlik": _kararsizlik(wf.parametre_kararliligi()),
         }
 
-        stres = analiz.stres(
-            sinif(), maliyet, sembol, timeframe, bar_dizileri, tam,
-            baslangic_sermaye=baslangic_sermaye,
-        )
-        olcumler["stres_bozulma"] = stres.bozulma()
+        # Stres, kapıya aday olan **seçilen** parametrelerle (K-117) ve **OOS** penceresinde
+        # ölçülür (K-119): kapı `stres_sharpe_orani` = en kötü maliyet senaryosunun OOS
+        # Sharpe'ı / temel OOS Sharpe. `stres_bozulma` (tüm dönem yüzde puan farkı) yalnız
+        # rapor: işlem sayısı, süre ve stratejinin kendi getirisiyle büyüdüğü için güçlü
+        # stratejileri eliyordu. Seçilen yoksa ölçülmez, kapı geçmez.
+        if en_iyi is not None:
+            stres = analiz.stres(
+                sinif(**en_iyi.sozluk_parametreler), maliyet, sembol, timeframe,
+                bar_dizileri, oos_pencere, baslangic_sermaye=baslangic_sermaye,
+            )
+            olcumler["stres_bozulma"] = stres.bozulma()
+            olcumler["stres_sharpe_orani"] = stres.sharpe_orani()
 
         engeller = ["gecici_maliyet_modeli"] if maliyet.gecici else []
         satirlar[ad] = {

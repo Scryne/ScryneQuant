@@ -295,6 +295,15 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
   salt okunur anahtarla). Risk modu `pilot` (`MOD_ESIGI` YOK, `Kanit` reddeder); hat `GuvenlikLimitleri.
   azami_kayip_usdt` → SAFE_MODE (`Engel.KAYIP_TAVANI`). Venue kaydı `config/venue_statu.json` (arşiv
   `data/hukuki/`). Testler `tests/unit/test_pilot.py`; açılış yordamı runbook §4.3. Alfa iddiası yok.
+  **K-116:** pilot onayı kademedeki `strateji` + `sembol`e bağlı (sembol kapı hash'inde; kurulum başka
+  sembolü reddeder). Funding carry güncel: son 12 ay BTC %3,4/yıl (IS %14,2), son 90 gün %6,5
+  (yeniden açılma işareti ≥ %8; sermayeye oranla ≈ DTB3) → Hat B bugün ekonomik değil (`tools/funding_guncel.py`,
+  `docs/research/records/2026-09-23-funding-carry-guncel.md`).
+- **Pozitif kontrol (K-117):** `tools/pozitif_kontrol.py` kapıların **gücünü** ölçer (bilinen üstünlüklü
+  kahin, gerçek motor/maliyet/kapılar). %65 günlük kahin (OOS Sharpe 2,06) K-019'dan 0/20; haftalık ufuk her
+  p'de 0/20 — stres (pp) ve `asgari_islem`/WF işlem şartı yapısal kusur. Motor bağımsız hesapla doğrulandı.
+  Yeni/değişen her kapı iki yönlü doğrulanır (null + güç). Kapı düzeltmeleri DECISION REQUIRED.
+  Kayıt `docs/research/records/2026-09-23-pozitif-kontrol.md`.
 - `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
   **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
 - `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor

@@ -94,6 +94,8 @@ def olc(
         detay["secim"] = {"secilen": None, "sebep": "geçerli aday yok"}
         return {
             "perturbasyon_dusus": None,
+            "perturbasyon_koruma": None,
+            "pbo_zarar_olasiligi": None,
             "en_kotu_rejim_sharpe": None,
             "pbo": None,
             "evren_dayaniklilik_orani": None,
@@ -102,6 +104,7 @@ def olc(
 
     pert = pert_mod.olc(tarama, secilen)
     olcumler["perturbasyon_dusus"] = pert.dusus
+    olcumler["perturbasyon_koruma"] = pert.koruma  # K-119 kapı alanı
     detay["perturbasyon"] = pert.sozluk()
     detay["secim"] = {"yontem": secim, "secilen": secilen.sozluk_parametreler}
 
@@ -137,9 +140,11 @@ def olc(
         )
         pbo_sonucu = pbo_mod.cscv(matris, yil_bar=yil_bar)
         olcumler["pbo"] = pbo_sonucu.pbo
+        olcumler["pbo_zarar_olasiligi"] = pbo_sonucu.zarar_olasiligi  # K-119 kapı alanı
         detay["pbo"] = pbo_sonucu.sozluk() | {"aday_parametreleri": parametreler}
     except pbo_mod.PboHatasi as hata:
         olcumler["pbo"] = None
+        olcumler["pbo_zarar_olasiligi"] = None
         detay["pbo"] = {"olculemedi": str(hata)}
 
     # --- evren dayanıklılığı: tek sembolde ölçülemez (K-054)
@@ -167,41 +172,44 @@ def olc(
 #: Ham örnekler `runs/kalibrasyon-v2/`, rapor `docs/Faz-11-Dogrulama-Raporu.md`.
 YANLIS_POZITIF: Final = 0.05
 
-PBO_ESIGI: Final = 0.0087
-PERTURBASYON_ESIGI: Final = 0.0565
+#: K-119: `pbo` ve `parametre_perturbasyonu` kapılarının ölçüsü değişti (sıralama PBO'su →
+#: CSCV zarar olasılığı; aralığa bölünen düşüş → koruma oranı). Eşikler iki yönlü doğrulandı:
+#: pozitif kontrol (gömülü trendli sentetik evren ve tek sembol, `tools/pozitif_kontrol_*.py`) ve
+#: üstünlüksüz örnek (m = 0 sentetik + defterdeki gerçek çekilişler). Eski sabitler raporda
+#: kalan ölçüler için tarihsel: PBO 0,0087, düşüş 0,0565 (K-058).
+PBO_ZARAR_ESIGI: Final = 0.05
+PERTURBASYON_KORUMA_ESIGI: Final = 0.80
 REJIM_ESIGI: Final = 0.6850
 EVREN_DAYANIKLILIK_ESIGI: Final = 0.75
 
 ESIKLER_V2: Final[tuple[Esik, ...]] = (
     Esik(
         ad="pbo",
-        alan="pbo",
-        sinir=PBO_ESIGI,
+        alan="pbo_zarar_olasiligi",
+        sinir=PBO_ZARAR_ESIGI,
         yon="<=",
         gerekce=(
-            "Backtest overfitting olasılığı (CSCV, 16 dilim, 12.870 kombinasyon). Literatürün "
-            "referansı 0,5 ve iid gürültüde ortalama gerçekten 0,503 çıktı — ama tek ölçüm "
-            "±0,20 sapıyor ve **gerçek ızgaralarda null çok daha düşük**: komşu noktalar "
-            "neredeyse aynı strateji olduğu için IS-en iyisi edge olmadan da OOS'ta iyi "
-            "kalıyor. Kaydırma null'ında medyan 0,237 (donchian); yani 0,5 eşiği edge'siz "
-            "ızgaraların %90'ından fazlasını geçirirdi. Ölçülen %5 sınırı donchian 0,0087 "
-            "(GA 0,006-0,017, 200 iterasyon), rsi_donus 0,0462 (GA 0,022-0,060, 100 "
-            "iterasyon); sıkı olanı alındı. Eşik ızgara şekline bağlı: yeni bir ızgara "
-            "biçimi yeniden ölçüm ister."
+            "CSCV (16 dilim, 12.870 kombinasyon) içinde IS'te en iyi seçilen adayın OOS "
+            "Sharpe'ının negatif çıktığı kombinasyonların oranı — Bailey ve ark.'nın PBO ile "
+            "birlikte verdiği 'zarar olasılığı' (K-119). Sıralama PBO'su (`pbo` alanı, raporda "
+            "kalır) ızgaradaki noktaların birbirine göre sırasını ölçer; ızgaranın tamamı aynı "
+            "üstünlüğü paylaştığında sıra gürültüdür ve gerçek stratejide de 0,5'e yakın çıkar: "
+            "gömülü trendli sentetik evrende m ≥ 3 için PBO 0,01-0,82, eski eşik 0,0087 → 0/12 "
+            "(K-118). Zarar olasılığı aynı örnekte 0,000-0,007, trendsiz evrende medyan ~0,14."
         ),
     ),
     Esik(
         ad="parametre_perturbasyonu",
-        alan="perturbasyon_dusus",
-        sinir=PERTURBASYON_ESIGI,
-        yon="<=",
+        alan="perturbasyon_koruma",
+        sinir=PERTURBASYON_KORUMA_ESIGI,
+        yon=">=",
         gerekce=(
-            "Seçilen noktanın, ızgarada tek eksende bir adım uzaktaki komşularının "
-            "medyanından ne kadar yüksek olduğu (ızgaranın skor aralığına oranla). Edge'siz "
-            "bir ızgarada argmax tanımı gereği bir zirvedir: null medyanı 0,246 (donchian). "
-            "Ölçülen %5 sınırı donchian 0,0752 (GA 0,062-0,097), rsi_donus 0,0565 (GA "
-            "0,048-0,078); sıkı olanı alındı. `parametre_kararliligi` başka bir şey ölçüyor "
-            "(katmanlar arası seçim değişkenliği, K-054)."
+            "Tek eksende bir adım uzaktaki komşuların medyan IS skoru / seçilenin IS skoru: "
+            "parametre bir adım oynayınca performansın ne kadarı kalıyor (K-119). Önceki ölçü "
+            "farkı ızgaranın skor aralığına bölüyordu; düz, sağlam platoda aralık küçüldükçe "
+            "büyüyüp en sağlam ızgarayı en çok cezalandırıyordu ve üstünlüğü yokluğundan ayırt "
+            "etmiyordu (K-118: m=5 medyan 0,146 / m=0 0,155). `parametre_kararliligi` başka "
+            "bir şey ölçüyor (katmanlar arası seçim değişkenliği, K-054)."
         ),
     ),
     Esik(
