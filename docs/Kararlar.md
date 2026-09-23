@@ -6943,3 +6943,27 @@ bps (t 3,7).
 komisyonu, gerçekleşen kayma) ölçülürse A1 ve A3 **aynı tanımla** yeni ön kayıtla yeniden değerlendirilebilir;
 bu, sonuçtan sonra kural değiştirmek değil, varsayım olan bir girdiyi ölçümle değiştirmektir ve ön kayıtta
 açıkça öyle yazılır.
+
+---
+
+## K-138 — İki kademeli kural: demoya giriş gevşek, gerçek para sıkı; gece ve ay dönümü demoya; host'a taşıma
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("bence kurallar çok sıkı ya"; önerilen iki kademeli
+kural ve iki adayın demoya eklenmesi için "tamam"; "bunu host-1'e taşı yani diğer bilgisayarıma") · **Değiştirir:**
+K-136/K-137'nin "FAIL → demoya eklenmez" hükmü (yalnız demo kademesi için) · **Tabi:** K-010, K-039, K-050, K-137
+
+### Karar
+
+1. **Demo kademesi (gevşek):** bir aday demoya girebilir, eğer (a) maliyet sonrası geriye bakışta ≥ 0 ya da
+   brüt pozitif ve maliyeti ölçülmemiş, ve (b) etki bağımsız uzun geçmişte ya da literatürde belgelenmiş. Holm
+   eşiği aranmaz. Demo hesap **doğrulanmamış aday** olarak etiketlenir; demo sonucu kanıt değil ölçümdür.
+2. **Gerçek para kademesi (sıkı, değişmedi):** ön kayıt + çoklu test düzeltmesi + demoda önceden yazılmış
+   sayısal ölçüt + elle onay + yeni K. Gevşek kapıdan geçen şans eseri aday canlıda para kaybettirir ve bu
+   aylarca fark edilmez; bu kapı gevşetilmez.
+3. **Demoya eklenen:** `mt5-gece` (K-137 A1: 16:00 ET long → 09:00 ET) ve `mt5-aydonumu` (A3: ayın son hafta
+   içi günü 16:00 ET → yeni ayın 3. hafta içi günü 16:00 ET); S&P, NASDAQ, DJI; `MT5Paper`, 100.000 USD, sembol
+   kaldıracı 1, toplam 3. Strateji fonksiyonları `aktif/strateji.py` (`gece`, `ay_donumu`) yalnız takvim/saat
+   kullanır; ET dönüşümü DST dahil. Araştırmadan sapma: ay dönümü işlem günü yerine hafta içi günü sayar
+   (tatil yok sayılır) ve 16:00 ET'de işlem yapar (araştırma D1 kapanışı ≈ 17:00 ET).
+4. **Yer:** bütün demo hattı (6 hesap + pano) ikinci bilgisayara (host, 192.168.1.4) taşınır; ana makinede
+   durdurulur. Ayrıntı ve doğrulama bu kararın altında (host kurulumu).

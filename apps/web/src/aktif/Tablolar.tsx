@@ -153,6 +153,8 @@ const STRATEJI: Record<string, string> = {
   ema_trend: "Trend takibi (EMA 20/50)",
   kirilim: "Kırılım (20 bar kanal)",
   rsi_donus: "Ortalamaya dönüş (RSI 3)",
+  gece: "Gece getirisi (16:00 → 09:00 ET)",
+  ay_donumu: "Ay dönümü (son gün → 3. gün)",
 };
 
 export function Ayar({ h, risk }: { h: HesapOzeti; risk: Record<string, number> }) {

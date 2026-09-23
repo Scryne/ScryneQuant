@@ -13,6 +13,8 @@ const HESAP_ADI: Record<string, { ad: string; piyasa: string }> = {
   "kripto-kirilim": { ad: "Kripto · Kırılım", piyasa: "10 coin" },
   "kripto-donus": { ad: "Kripto · Dönüş", piyasa: "10 coin" },
   "mt5-demo": { ad: "MT5 · FX ve endeks", piyasa: "7 parite, altın, S&P, Nasdaq, Dow" },
+  "mt5-gece": { ad: "MT5 · Gece", piyasa: "S&P, Nasdaq, Dow · 16:00-09:00 ET" },
+  "mt5-aydonumu": { ad: "MT5 · Ay dönümü", piyasa: "S&P, Nasdaq, Dow · ay sonu → 3. gün" },
 };
 
 function hesapAdi(ad: string) {
@@ -106,11 +108,11 @@ export function App() {
         ) : null}
 
         {!veri ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
               <Iskelet key={i} className="h-40" />
             ))}
-            <Iskelet className="h-96 sm:col-span-2 xl:col-span-4" />
+            <Iskelet className="h-96 sm:col-span-2 lg:col-span-3" />
           </div>
         ) : !hesaplar.length ? (
           <div className="kart p-10 text-center text-[13px] text-bot-text-3">
@@ -118,7 +120,7 @@ export function App() {
           </div>
         ) : (
           <>
-            <div role="group" aria-label="Bot hesapları" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div role="group" aria-label="Bot hesapları" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {hesaplar.map((h) => (
                 <HesapKarti key={h.ad} h={h} secili={secili?.ad === h.ad} sec={sec} />
               ))}

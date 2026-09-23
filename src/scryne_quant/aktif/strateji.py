@@ -106,14 +106,57 @@ def rsi_donus(
     return pd.Series(sonuc, index=df.index)
 
 
+NY: Final = "America/New_York"
+
+
+def _sonraki_bar_et(df: pd.DataFrame, adim_ms: int) -> pd.DatetimeIndex:
+    """Her barın kapanışında açılacak bir sonraki barın New York saati. Yalnız takvim/saat
+    bilgisi kullanır (veri değil): t'nin kararı t sonrası fiyata bağlı olamaz."""
+    return pd.to_datetime(df.index.to_numpy() + adim_ms, unit="ms", utc=True).tz_convert(NY)
+
+
+def gece(
+    df: pd.DataFrame, adim_ms: int = 3_600_000, giris: int = 16, cikis: int = 9
+) -> pd.Series:
+    """Gece getirisi (K-137 A1, K-138): 16:00 ET'de long gir, 09:00 ET'de çık; hafta sonu
+    tutulur."""
+    saat = _sonraki_bar_et(df, adim_ms).hour
+    return pd.Series(np.where((saat >= giris) | (saat < cikis), 1.0, 0.0), index=df.index)
+
+
+def ay_donumu(
+    df: pd.DataFrame, adim_ms: int = 3_600_000, gun: int = 3, saat: int = 16
+) -> pd.Series:
+    """Ay dönümü (K-137 A3, K-138): ayın son hafta içi günü 16:00 ET'de long gir, yeni ayın
+    `gun`. hafta içi günü 16:00 ET'de çık. Tatiller yok sayılır (hafta içi = işlem günü)."""
+    et = _sonraki_bar_et(df, adim_ms)
+    tarih = et.tz_localize(None).normalize()
+    ay_bas = tarih.to_period("M").to_timestamp()
+    ay_son = (tarih.to_period("M") + 1).to_timestamp() - pd.Timedelta(days=1)
+    son_hafta_ici = ay_son - pd.to_timedelta(np.maximum(ay_son.weekday - 4, 0), unit="D")
+    # Ay başından bu yana (bugün dahil) hafta içi gün sayısı.
+    onceki = np.array([np.busday_count(b.date(), t.date())
+                       for b, t in zip(ay_bas, tarih, strict=True)])
+    bugun_is = tarih.weekday < 5
+    sira = onceki + bugun_is.astype(int)
+    # Yeni ay: `gun`. hafta içi gününden önce, ya da o gün `saat`ten önce. O günden sonraki
+    # hafta sonu (Pazar akşamı barları) dışarıda kalır.
+    yeni_ay = (sira < gun) | ((sira == gun) & bugun_is & (et.hour < saat))
+    eski_ay = ((tarih == son_hafta_ici) & (et.hour >= saat)) | (tarih > son_hafta_ici)
+    return pd.Series(np.where(yeni_ay | eski_ay, 1.0, 0.0), index=df.index)
+
+
 STRATEJILER: Final[dict[str, StratejiFn]] = {
     "ema_trend": ema_trend,
     "kirilim": kirilim,
     "rsi_donus": rsi_donus,
+    "gece": gece,
+    "ay_donumu": ay_donumu,
 }
 
 #: Serinin anlamlı olması için gereken asgari bar (en uzun pencere + ATR payı).
-ISINMA: Final[dict[str, int]] = {"ema_trend": 60, "kirilim": 30, "rsi_donus": 210}
+ISINMA: Final[dict[str, int]] = {"ema_trend": 60, "kirilim": 30, "rsi_donus": 210,
+                                  "gece": 15, "ay_donumu": 15}
 
 
 def yon_serisi(

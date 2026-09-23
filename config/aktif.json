@@ -56,6 +56,32 @@
         "sembol_kaldirac": 2.0,
         "toplam_kaldirac": 6.0
       }
+    },
+    "mt5-gece": {
+      "araci": "mt5_paper",
+      "sermaye": 100000,
+      "_not": "K-138 (demo kademesi, doğrulanmamış aday): K-137 A1 gece getirisi. 16:00 ET long, 09:00 ET çıkış. 30 yıllık referansta gerçek (SPY t 6), MT5'te maliyet sonrası ≈ 0. Demo gerçek spread ile gerçek maliyeti ölçer.",
+      "semboller": ["S&P", "NASDAQ", "DJI"],
+      "timeframe": "1h",
+      "strateji": "gece",
+      "asgari_emir": 0,
+      "ucret_bps": 0.5,
+      "kayma_bps": 1.0,
+      "sunucu_utc_farki_saat": 3,
+      "risk": {"sembol_kaldirac": 1.0, "toplam_kaldirac": 3.0}
+    },
+    "mt5-aydonumu": {
+      "araci": "mt5_paper",
+      "sermaye": 100000,
+      "_not": "K-138 (demo kademesi, doğrulanmamış aday): K-137 A3 ay dönümü. Ayın son hafta içi günü 16:00 ET long, yeni ayın 3. hafta içi günü 16:00 ET çıkış. MT5 2014-26 3/3 endeks pozitif, t 1,35 (Holm eşiği altında).",
+      "semboller": ["S&P", "NASDAQ", "DJI"],
+      "timeframe": "1h",
+      "strateji": "ay_donumu",
+      "asgari_emir": 0,
+      "ucret_bps": 0.5,
+      "kayma_bps": 1.0,
+      "sunucu_utc_farki_saat": 3,
+      "risk": {"sembol_kaldirac": 1.0, "toplam_kaldirac": 3.0}
     }
   }
 }

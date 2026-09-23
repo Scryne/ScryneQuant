@@ -36,7 +36,7 @@ def seri(n: int = 600, tohum: int = 0, t0: int = 1_700_000_000_000) -> pd.DataFr
 @pytest.mark.parametrize("ad", sorted(st.STRATEJILER))
 def test_strateji_gelecegi_gormez(ad: str) -> None:
     """t'ye kadar kesilmiş veriyle t'nin kararı, tüm veriyle aynı; t sonrası bozulsa da."""
-    df = seri()
+    df = seri(t0=1_701_200_000_000)  # 2023-11-28 → ay sonunu kapsar (ay_donumu sinyal üretsin)
     tam = st.yon_serisi(ad, df, yalniz_long=False)
     assert (tam != 0).any(), "strateji hiç sinyal üretmiyor — test anlamsız olur"
     for t in (250, 400, 599):
@@ -290,3 +290,38 @@ def test_geriye_swap_gece_yarisi() -> None:
     # geceleri (sunucu gece yarısı 21:00 UTC); Cumartesi/Pazar yok → 1+3+1+1+1 = 7 gece.
     assert s["ozkaynak"].iloc[-1] == pytest.approx((1 - 0.0001) ** 4 * (1 - 0.0003))
     assert int(s.index[-1].timestamp() * 1000) - t0 == 7 * gun
+
+
+def _saatlik(bas: str, gun: int) -> pd.DataFrame:
+    idx = pd.date_range(bas, periods=24 * gun, freq="h", tz="UTC")
+    ms = np.array([int(t.timestamp() * 1000) for t in idx])
+    return pd.DataFrame({"open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0},
+                        index=pd.Index(ms, name="open_time"))
+
+
+def _gecisler(ad: str, df: pd.DataFrame) -> list[str]:
+    y = st.yon_serisi(ad, df, yalniz_long=False)
+    et = pd.to_datetime(df.index.to_numpy() + 3_600_000, unit="ms", utc=True).tz_convert(
+        "America/New_York")
+    acik = pd.Series(y.to_numpy(), index=et)
+    return [f"{t:%d.%m %H}->{int(v)}" for t, v in acik[acik.diff() != 0].items()]
+
+
+def test_gece_16_giris_09_cikis_et() -> None:
+    """K-138: pozisyon 16:00 ET'de açılır, 09:00 ET'de kapanır (EST ve EDT'de aynı ET saati)."""
+    kis = _gecisler("gece", _saatlik("2026-01-26 00:00", 3))
+    assert "26.01 09->0" in kis and "26.01 16->1" in kis and "27.01 09->0" in kis
+    yaz = _gecisler("gece", _saatlik("2026-07-13 00:00", 2))
+    assert "13.07 09->0" in yaz and "13.07 16->1" in yaz
+
+
+def test_ay_donumu_son_is_gunu_ile_ucuncu_is_gunu() -> None:
+    """K-138: Ocak 2026 son hafta içi Cuma 30 16:00 → Şubat'ın 3. hafta içi günü Çarşamba 4."""
+    ocak = _gecisler("ay_donumu", _saatlik("2026-01-26 00:00", 14))
+    assert ocak[1:] == ["30.01 16->1", "04.02 16->0"]
+    # Ay Pazar biterse (Mayıs 2026: 31 Pazar): Cuma 29 16:00 giriş, hafta sonu tutulur.
+    mayis = _gecisler("ay_donumu", _saatlik("2026-05-25 00:00", 10))
+    assert mayis[1:] == ["29.05 16->1", "03.06 16->0"]
+    # 3. hafta içi günü Cuma ise (Nisan 2026: 1 Çarşamba → 3 Cuma) hafta sonu yeniden girilmez.
+    nisan = _gecisler("ay_donumu", _saatlik("2026-03-27 00:00", 10))
+    assert nisan[1:] == ["31.03 16->1", "03.04 16->0"]
