@@ -6039,3 +6039,39 @@ koşu yeri: "bu bilgisayar") · **Tabi:** K-008, K-010, K-028, K-035, K-038, K-0
    - `live.kill.pid_oku` bozuk pid dosyasında `TypeError` ile çöküyor. `live/` R8 için dondurulmuş olduğundan
      (K-111, bekçi testi) orada düzeltilmedi; hazırlık raporu hatayı yakalar ve "süreç çalışmıyor" der. R8
      kapanışından sonra `live/`de düzeltilecek.
+
+---
+
+## K-123 — Vadeli (long/short) tavanı yalnız IS'te ölçüldü: short bacak değer katmıyor; K-079/2 veriyle desteklendi
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne (K-122 planı: "vadeli tavan ölçümü, hesap açmadan") ·
+**Tabi:** K-039, K-079, K-110, K-116, K-120, K-121 · **Kaynak:** `tools/vadeli_tavan.py`, `runs/vadeli_tavan.json`
+
+### Ölçüm (çekiliş değil; OOS'a bakılmadı; karar kuralı ölçümden önce aracın başına yazıldı)
+
+12 sembol (funding geçmişi olanlar), ortak haftalık takvim, sinyal = kendi `pencere` getirisinin işareti; long bacak
+spot, short bacak perp (gerçek funding alınır/ödenir), taraf başı 15,3 bps (perp ücreti public'in 2 katı). IS
+2019-09 → 2023-12-24 (222 hafta):
+
+| Pencere | Long-only Sharpe | Long/short Sharpe | Short bacak pozitif yıl (2020-23) |
+| --- | ---: | ---: | --- |
+| 336 | 1,50 | 1,09 | 2020, 2022 |
+| 720 | 1,56 | 1,42 | 2021 (+0,02), 2022 |
+| 1440 | 0,93 | 0,33 | 2022 |
+| 2160 | 0,98 | 0,36 | 2022 |
+
+Kural (1)+(2) 0/4 pencere (≥ 3 gerekli); kural (3) short bacak dört pencere ortalamasında yalnız 2022'de pozitif
+(≥ 3 yıl gerekli). **Vadeli hesap gerekçesi: YOK.** Short bacak yalnız 2022 ayısında kazanıyor; boğa ve yatay
+yıllarda trendin tersine dönüşlerinde kaybettiriyor ve long-only'nin risk-ayarlı getirisini her pencerede düşürüyor.
+
+İlk koşuda araç hatası yakalandı ve düzeltildi: sembol başına ayrı karar takvimi tarihleri hizalamıyordu (1.815
+"hafta", %100 düşüş). Sonuç ortak takvimle yeniden ölçüldü.
+
+### Karar
+
+1. K-079/2 (vadeli hesap açılmıyor) artık yalnız bir tercih değil, **ölçümle destekleniyor**; short mimarisi
+   (çift bacak, marjin, likidasyon, perp emir yolu) yazılmaz.
+2. Not (tarafsız, sonuç değil): 12 majörde yalnız-long zaman serisi trendin IS Sharpe'ı 1,5 mertebesinde; h63 (429
+   sembollük evren) OOS'ta −0,54'tü. Bu IS sayısı bir hipotez **değildir**. OOS'a bakılmadı, bakılmayacak; majör
+   evreniyle bir çekiliş ancak K-051 program kaydı ve ön kayıtla açılabilir (h63'le aynı aile → K-110/K-121 gereği
+   tükenen aile listesinde; yeniden açmak yeni gerekçe ister).
