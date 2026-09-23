@@ -10,7 +10,7 @@ param([switch]$BotlariYenile)
 
 $ErrorActionPreference = "Continue"
 # Betik tools/ içinden ya da (ilk kez, bundle'dan önce) proje kökünden çalışabilir.
-$Kok = if (Test-Path (Join-Path $PSScriptRoot "configktif.json")) { $PSScriptRoot } else { Split-Path -Parent $PSScriptRoot }
+$Kok = if (Test-Path (Join-Path $PSScriptRoot "config/aktif.json")) { $PSScriptRoot } else { Split-Path -Parent $PSScriptRoot }
 Set-Location $Kok
 
 "== kod"
