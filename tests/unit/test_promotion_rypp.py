@@ -55,6 +55,10 @@ from tests.unit.test_risk_protokolu import _zamanlayici, girdi, piyasa
 
 ANA_VERI = "v" * 64
 BAGIMSIZ_VERI = "b" * 64
+#: Senaryoların P3 bağlamı (K-127): k=1, defterin ilk 10 satırından sayılmış. Aday
+#: (`TAM_KANIT.hipotez_sirasi` = 3) bu önekin içinde.
+K = 1
+DEFTER_SATIR = 10
 
 
 def _json(s: rp.RyppSonucu) -> dict[str, Any]:
@@ -67,13 +71,13 @@ def _uret(ad: str) -> str:
     """Senaryo → RYPP gövdesi (JSON metni; her çağıran kendi kopyasını açar)."""
     if ad in ("pass", "bagimsiz_pass"):
         r, rejim = piyasa(tohum=1 if ad == "pass" else 3)
-        s = rp.degerlendir(girdi(r, _zamanlayici(rejim)))
+        s = rp.degerlendir(girdi(r, _zamanlayici(rejim), aile_defter_satir=DEFTER_SATIR))
     elif ad == "fail_maruziyet":
         r, _ = piyasa()
-        s = rp.degerlendir(girdi(r, np.full_like(r, 0.5)))
+        s = rp.degerlendir(girdi(r, np.full_like(r, 0.5), aile_defter_satir=DEFTER_SATIR))
     elif ad == "fail_stres":
         r, rejim = piyasa()
-        g = girdi(r, _zamanlayici(rejim))
+        g = girdi(r, _zamanlayici(rejim), aile_defter_satir=DEFTER_SATIR)
         coken = np.linspace(1.0, 0.5, len(r) + 1)
         s = rp.degerlendir(rp.RyppGirdisi(**{**g.__dict__, "strateji_2x_maliyet": coken}))
     elif ad == "fail_tek_olay":
@@ -81,16 +85,18 @@ def _uret(ad: str) -> str:
         w = np.ones_like(r)
         bas = np.flatnonzero(~rejim)[0]
         w[bas + 1:bas + np.argmax(rejim[bas:]) + 1] = 0.0
-        s = rp.degerlendir(girdi(r, w))
+        s = rp.degerlendir(girdi(r, w, aile_defter_satir=DEFTER_SATIR))
     elif ad == "kisa_oos":
         r, rejim = piyasa(yil=1.2)
-        s = rp.degerlendir(girdi(r, _zamanlayici(rejim)))
+        s = rp.degerlendir(girdi(r, _zamanlayici(rejim), aile_defter_satir=DEFTER_SATIR))
     elif ad == "plasebo_yok":
         r, rejim = piyasa()
-        s = rp.degerlendir(girdi(r, _zamanlayici(rejim), plasebo=False))
+        s = rp.degerlendir(girdi(r, _zamanlayici(rejim), plasebo=False,
+                                   aile_defter_satir=DEFTER_SATIR))
     elif ad == "stres_yok":
         r, rejim = piyasa()
-        s = rp.degerlendir(girdi(r, _zamanlayici(rejim), stres=False))
+        s = rp.degerlendir(girdi(r, _zamanlayici(rejim), stres=False,
+                                   aile_defter_satir=DEFTER_SATIR))
     else:  # pragma: no cover
         raise KeyError(ad)
     return json.dumps(_json(s), ensure_ascii=False)
@@ -113,7 +119,7 @@ def rypp_kanit(rypp: Any = "pass", bag: Any = "bagimsiz_pass", **deg: Any) -> Ka
     b = bagimsiz(bag) if isinstance(bag, str) else bag
     alanlar = {**{a: getattr(TAM_KANIT, a) for a in TAM_KANIT.__dataclass_fields__},
                "kapi_sonucu": None, "protokol": Protokol.RYPP, "rypp_sonucu": r,
-               "bagimsiz_dogrulama": b, "veri_sha256": ANA_VERI, **deg}
+               "bagimsiz_dogrulama": b, "veri_sha256": ANA_VERI, "rypp_aile_sayisi": K, **deg}
     return Kanit(**alanlar)
 
 
@@ -534,16 +540,26 @@ def test_hukum_fonksiyonlari_saf():
 # ------------------------------------------------------------------ CLI giriş noktası
 
 
-def test_cli_rypp_kaniti_kurar_ve_karisik_girdiyi_reddeder(tmp_path):
+def test_cli_rypp_kaniti_kurar_ve_karisik_girdiyi_reddeder(tmp_path, monkeypatch):
     import typer
 
     from scryne_quant.cli.main import _kanit_kur
+    from scryne_quant.data import french
 
+    # K-127: --bagimsiz yalnız kayıtlı ve `promotion_uygun` bir setin kanıtını kabul eder.
+    kayit = tmp_path / "bagimsiz_veri.json"
+    kayit.write_text(json.dumps({"veri_setleri": [
+        {"dataset_id": "test_set", "veri_sha256": BAGIMSIZ_VERI, "promotion_uygun": True}]}),
+        encoding="utf-8")
+    monkeypatch.setattr(french, "MANIFEST_YOLU", kayit)
     r, b = tmp_path / "rypp.json", tmp_path / "bagimsiz.json"
     r.write_text(json.dumps(govde("pass")), encoding="utf-8")
-    b.write_text(json.dumps(bagimsiz()), encoding="utf-8")
-    k = _kanit_kur(None, None, "x", protokol="rypp", rypp_yolu=r, bagimsiz_yolu=b)
+    b.write_text(json.dumps({**bagimsiz(), "dataset_id": "test_set"}), encoding="utf-8")
+    d = _defter(tmp_path / "defter.jsonl", rypp_satirlari=(3,))
+    k = _kanit_kur(None, None, "x", protokol="rypp", rypp_yolu=r, bagimsiz_yolu=b,
+                   defter_yolu=d)
     assert k.protokol is Protokol.RYPP and k.rypp_sonucu["durum"] == "PASS"
+    assert k.rypp_aile_sayisi == K
     assert _kanit_kur(None, None, "x").protokol is Protokol.ALFA
 
     with pytest.raises(typer.BadParameter):
@@ -561,3 +577,208 @@ def test_E_bagimsiz_veride_olculmemis_plasebo_fail_degil_sayilmaz():
     assert b["durum"] == "INCONCLUSIVE"
     s = oos(rypp_kanit(bag=b))
     assert s.gecti is None and "ölçülmemiş" in s.gerekce
+
+
+# ------------------------------------------------------------------ K-127: P3'ün k'sı
+
+
+def _defter(yol, *, satir: int = DEFTER_SATIR, rypp_satirlari: tuple[int, ...] = (3,)):
+    """`satir` satırlık geçici defter; `rypp_satirlari` (1 tabanlı) RYPP protokollü."""
+    from scryne_quant.research.hipotez import Hipotez, HipotezDefteri
+
+    d = HipotezDefteri(yol)
+    for i in range(1, satir + 1):
+        d.kaydet(Hipotez.kur(f"s{i}", "1d", f"{i:064d}", {"n": [i]},
+                             "geçici defter satırı, test için yazıldı",
+                             protokol="rypp" if i in rypp_satirlari else ""))
+    return yol
+
+
+def _aile_degistir(g: dict[str, Any], **aile: Any) -> dict[str, Any]:
+    g = copy.deepcopy(g)
+    g["aile"] = {**g["aile"], **aile}
+    return g
+
+
+def test_k1_kanit_k_tasiyor_promotion_ayni_k_ile_geciyor():
+    g = govde("pass")
+    assert g["aile"] == {"sayi": K, "defter_satir": DEFTER_SATIR, "persentil": 1 - 0.05 / K}
+    p3 = next(s for s in g["kosullar"] if s["ad"] == "P3_plasebo")
+    assert p3["persentil"] == g["aile"]["persentil"]
+    kanit = rypp_kanit()
+    assert kanit.rypp_aile_sayisi == K and oos(kanit).gecti is True
+
+
+def test_k2_k_degisince_kanit_hashi_degisiyor():
+    """k farklı bir P3 eşiği demek: aynı serilerle k=1 ve k=5 ayrı kanıtlardır."""
+    from scryne_quant.common.hash import nesne_hash
+
+    r, rejim = piyasa()
+    k1 = _json(rp.degerlendir(girdi(r, _zamanlayici(rejim), k=1, aile_defter_satir=10)))
+    k5 = _json(rp.degerlendir(girdi(r, _zamanlayici(rejim), k=5, aile_defter_satir=10)))
+    assert nesne_hash(k1) != nesne_hash(k5)
+    assert k1["aile"]["sayi"] == 1 and k5["aile"]["sayi"] == 5
+    a = rypp_kanit(k1).sozluk()["rypp_hash"]
+    assert a == rypp_kanit().sozluk()["rypp_hash"]
+
+
+@pytest.mark.parametrize("disaridan", [2, 7])
+def test_k3_promotion_farkli_k_ile_calistirilirsa_hata(disaridan):
+    with pytest.raises(PromotionHatasi, match="k'sı uyuşmuyor"):
+        rypp_kanit(rypp_aile_sayisi=disaridan)
+
+
+def test_k4_eksik_k_pass_yok():
+    """Kanıtta `aile` yok → kurulmaz; promotion yeniden sayımı yok → ölçülemedi."""
+    g = govde("pass")
+    del g["aile"]
+    with pytest.raises(PromotionHatasi, match="aile"):
+        rypp_kanit(g)
+    assert oos(rypp_kanit(rypp_aile_sayisi=None)).gecti is None
+    with pytest.raises(PromotionHatasi, match="defter_satir"):
+        rypp_kanit(_aile_degistir(govde("pass"), defter_satir=None))
+
+
+@pytest.mark.parametrize("k", [0, -1, -5])
+def test_k5_k6_sifir_ve_negatif_k_reddedilir(k):
+    r, rejim = piyasa()
+    with pytest.raises(rp.ProtokolHatasi, match="aile_sayisi"):
+        rp.degerlendir(girdi(r, _zamanlayici(rejim), k=k))
+    with pytest.raises(PromotionHatasi):
+        rypp_kanit(_aile_degistir(govde("pass"), sayi=k))
+    with pytest.raises(PromotionHatasi):
+        rypp_kanit(rypp_aile_sayisi=k)
+
+
+@pytest.mark.parametrize("k", [1.0, 2.5, "1", True, None, [1]])
+def test_k7_yanlis_tipte_k_reddedilir(k):
+    r, rejim = piyasa()
+    with pytest.raises(rp.ProtokolHatasi, match="aile_sayisi"):
+        rp.degerlendir(girdi(r, _zamanlayici(rejim), k=k))
+    with pytest.raises(PromotionHatasi):
+        rypp_kanit(_aile_degistir(govde("pass"), sayi=k))
+    if k is not None:
+        with pytest.raises(PromotionHatasi):
+            rypp_kanit(rypp_aile_sayisi=k)
+
+
+def test_k8_arastirmanin_k_si_ile_kanitin_k_si_farkliysa_pass_yok():
+    """P3 k=1 ile (gevşek persentil) uygulanmış, kanıt k=5 diyor: araştırma farklı k kullandı."""
+    sahte = _aile_degistir(govde("pass"), sayi=5, persentil=1 - 0.05 / 5)
+    with pytest.raises(PromotionHatasi, match="P3 persentil"):
+        rypp_kanit(sahte, rypp_aile_sayisi=5)
+    with pytest.raises(PromotionHatasi, match="persentil"):
+        rypp_kanit(_aile_degistir(govde("pass"), persentil=0.9))
+    # bağımsız doğrulama başka k ile değerlendirilmiş
+    r, rejim = piyasa(tohum=3)
+    b5 = _json(rp.degerlendir(girdi(r, _zamanlayici(rejim), k=5, aile_defter_satir=10)))
+    b5["veri_sha256"] = BAGIMSIZ_VERI
+    with pytest.raises(PromotionHatasi, match="aynı k"):
+        rypp_kanit(bag=b5)
+
+
+def test_k8_aday_k_sayildiktan_sonra_kaydedildiyse_hata():
+    with pytest.raises(PromotionHatasi, match="kaydından önce"):
+        rypp_kanit(hipotez_sirasi=DEFTER_SATIR + 1)
+
+
+def test_k9_replay_defterden_ayni_k_ve_ayni_sonuc(tmp_path):
+    """Araştırma k'yı defterden sayar → kanıta donar → promotion aynı önekten yeniden sayar.
+    Sonradan eklenen RYPP satırları (birikimli sayı büyür) donmuş kanıtın k'sını değiştirmez."""
+    from scryne_quant.cli.main import _kanit_kur
+    from scryne_quant.research.hipotez import Hipotez, HipotezDefteri
+
+    d = _defter(tmp_path / "defter.jsonl", rypp_satirlari=(2, 3, 7))
+    arastirma_k = HipotezDefteri(d).rypp_aile_sayisi()
+    assert arastirma_k == 3
+    r, rejim = piyasa()
+    g = _json(rp.degerlendir(girdi(r, _zamanlayici(rejim), k=arastirma_k,
+                                   aile_defter_satir=DEFTER_SATIR)))
+    y = tmp_path / "rypp.json"
+    y.write_text(json.dumps(g), encoding="utf-8")
+    HipotezDefteri(d).kaydet(Hipotez.kur("sonra", "1d", "f" * 64, {"n": [1]},
+                                         "k sayıldıktan sonra kaydedildi, sayılmaz",
+                                         protokol="rypp"))
+    k1 = _kanit_kur(None, None, "x", protokol="rypp", rypp_yolu=y, defter_yolu=d)
+    k2 = _kanit_kur(None, None, "x", protokol="rypp", rypp_yolu=y, defter_yolu=d)
+    assert k1.rypp_aile_sayisi == k2.rypp_aile_sayisi == 3
+    assert k1.sozluk() == k2.sozluk()
+
+
+def test_k_gercek_defterde_rypp_cekilisi_yok_k_dogrulanamaz(tmp_path):
+    """Bugünkü defterde RYPP satırı yok: k=1 iddia eden bir kanıt promotion'da reddedilir."""
+    from scryne_quant.cli.main import _kanit_kur
+    from scryne_quant.research.hipotez import VARSAYILAN_YOL, HipotezDefteri
+
+    assert HipotezDefteri(VARSAYILAN_YOL).rypp_aile_sayisi() == 0
+    y = tmp_path / "rypp.json"
+    y.write_text(json.dumps(govde("pass")), encoding="utf-8")
+    with pytest.raises(PromotionHatasi):
+        _kanit_kur(None, None, "x", protokol="rypp", rypp_yolu=y, defter_yolu=VARSAYILAN_YOL)
+
+
+def test_defter_k_sayimi_onek_ve_kisalma(tmp_path):
+    from scryne_quant.research.hipotez import HipotezDefteri, HipotezHatasi
+
+    d = HipotezDefteri(_defter(tmp_path / "d.jsonl", rypp_satirlari=(2, 5)))
+    assert [d.rypp_aile_sayisi(n) for n in (0, 1, 2, 4, 5, 10)] == [0, 0, 1, 1, 2, 2]
+    with pytest.raises(HipotezHatasi, match="kısalmış"):
+        d.rypp_aile_sayisi(11)
+    with pytest.raises(HipotezHatasi):
+        d.rypp_aile_sayisi(-1)
+
+
+def test_protokol_hipotez_kimligine_girer_bos_iken_eski_kimlik_ayni():
+    from scryne_quant.research.hipotez import Hipotez, HipotezHatasi
+
+    ortak = ("s", "1d", "a" * 64, {"n": [1]}, "aynı soru, farklı kabul ölçütü")
+    alfa, rypp = Hipotez.kur(*ortak), Hipotez.kur(*ortak, protokol="rypp")
+    assert alfa.kimlik != rypp.kimlik
+    assert "protokol" not in alfa.sozluk() and rypp.sozluk()["protokol"] == "rypp"
+    with pytest.raises(HipotezHatasi):
+        Hipotez.kur(*ortak, protokol="alfa_gevsek")
+
+
+def test_gercek_defterin_kimlikleri_degismedi():
+    """`protokol` boşken kimliğe girmez: defterdeki bütün satırların kimliği yeniden üretilir."""
+    from scryne_quant.research.hipotez import VARSAYILAN_YOL, Hipotez, HipotezDefteri
+
+    alanlar = ("strateji", "timeframe", "veri_sha256", "izgara", "secim", "gerekce",
+               "program", "evren", "portfoy", "rejim")
+    satirlar = HipotezDefteri(VARSAYILAN_YOL).tumu()
+    assert len(satirlar) >= 63
+    for satir in satirlar:
+        h = Hipotez.kur(**{a: satir.get(a, "") for a in alanlar})
+        assert h.kimlik == satir["kimlik"]
+
+
+# ------------------------------------------------------------------ K-127 §1: B-3 karar tablosu
+
+
+@pytest.mark.parametrize(("senaryo", "beklenen"), [
+    ("yok", None),                        # doğrulama yapılmadı
+    ("kimliksiz", None),                  # bağımsızlığı gösterilemiyor
+    ("fail", False),                      # ölçüldü ve kaldı
+    ("yetersiz", None),                   # yeterlilik sağlanmadı = yapılmamış sayılır
+    ("olculmemis_nokta", None),           # bir nokta koşulu ölçülmedi = yapılmamış sayılır
+    ("yalniz_bootstrap_belirsiz", True),  # K-125 §5 "FAIL değil" → izin
+    ("pass", True),
+])
+def test_K127_bagimsiz_dogrulama_karar_tablosu(senaryo, beklenen):
+    """K-127 §1: K-125 §5'in "PASS için bağımsız veride en az FAIL olmamalı" cümlesinin
+    kodlanmış hâli. Bağımsız doğrulama ancak yeterlilik + 8 nokta koşulunun hepsi ölçülüp
+    geçtiyse "yapılmış ve FAIL değil" sayılır; tolere edilen tek belirsizlik bootstrap."""
+    b = {
+        "yok": lambda: None,
+        "kimliksiz": lambda: bagimsiz(veri=None),
+        "fail": lambda: bagimsiz("fail_maruziyet"),
+        "yetersiz": lambda: bagimsiz("kisa_oos"),
+        "olculmemis_nokta": lambda: _durum_yeniden(
+            _satir_degistir(bagimsiz(), "R2_alt_donem", sil=True)),
+        "yalniz_bootstrap_belirsiz": lambda: _durum_yeniden(
+            _satir_degistir(bagimsiz(), "B_bootstrap", False)),
+        "pass": bagimsiz,
+    }[senaryo]()
+    hukum, _ = bagimsiz_hukmu(b, ANA_VERI)
+    assert hukum is beklenen
+    assert oos(rypp_kanit(bag=b)).gecti is beklenen

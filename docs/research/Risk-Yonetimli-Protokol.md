@@ -88,6 +88,12 @@ nötralize eder: yalnız **zamanlama** ödüllendirilir.
 4. **Promotion:** PASS gerekli ama yeterli değil. Ardından K-122 zinciri gelir: paper/shadow
    gösterimi ve sistem hazır.
 
+**K-127 notu (metin değiştirilmedi):** Yukarıdaki "en az FAIL olmamalı" cümlesi K-127/1 ile açık karara bağlandı:
+bağımsız doğrulama ancak veri yeterliliği ve bütün nokta koşulları ölçülüp geçtiyse "yapıldı ve FAIL değil" sayılır;
+tolere edilen tek belirsizlik bootstrap. Bağımsız veri kayıtlı ve `promotion_uygun` bir set olmalı
+(`config/bagimsiz_veri.json`); French 202607 seti PIT değil (revizyon) ve bugün uygun değil. §4'teki k,
+değerlendirme anındaki defter önekinden sayılıp kanıta donar; promotion yeniden sayar (K-127/2).
+
 **Zincire bağlantı (K-126):** `sq promotion degerlendir --protokol rypp --rypp … --bagimsiz …`.
 RYPP yalnız `out_of_sample` aşamasının ölçütünü değiştirir; temiz ağaç, veri kalitesi, K-039 sayımı,
 risk incelemesi, paper ve elle onay alfa yoluyla ortaktır. Bağımsız doğrulama yoksa sonuç

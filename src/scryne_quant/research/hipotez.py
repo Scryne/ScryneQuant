@@ -51,6 +51,10 @@ VARSAYILAN_YOL: Final = Path("docs/Hipotez-Defteri.jsonl")
 #: **her strateji için yeni bir çekiliş** demektir.
 SECIM_YONTEMLERI: Final[tuple[str, ...]] = ("tepe", "plato")
 
+#: Çekilişin hangi promotion protokolüyle değerlendirileceği (K-127). Boş = alfa (K-126 öncesi
+#: bütün satırlar); `rypp` = K-125. RYPP'nin P3 Bonferroni k'sı bu alandan sayılır.
+PROTOKOLLER: Final[tuple[str, ...]] = ("", "rypp")
+
 
 class HipotezHatasi(ValueError):
     """Hipotez defteri kuralı ihlal edildi."""
@@ -105,7 +109,16 @@ class Hipotez:
     """Verinin son barının açılışı (K-080). Kimliğe girmez: `veri_sha256` veriyi zaten
     tanımlıyor, bu alan o veriye geri sarmanın adresi. Eski kayıtlarda yok."""
 
+    protokol: str = ""
+    """Değerlendirme protokolü (K-127): boş = alfa, `rypp` = K-125. Doluysa kimliğe girer:
+    aynı soruyu başka bir kabul ölçütüyle sormak yeni bir çekiliştir (`secim` gibi). Boşken
+    girmez: eski satırların kimliği değişmez."""
+
     def __post_init__(self) -> None:
+        if self.protokol not in PROTOKOLLER:
+            raise HipotezHatasi(
+                f"bilinmeyen protokol {self.protokol!r}; geçerli: boş (alfa) | rypp"
+            )
         if not self.strateji or not self.timeframe:
             raise HipotezHatasi("hipotez strateji ve timeframe taşımalı")
         if self.secim not in SECIM_YONTEMLERI:
@@ -141,12 +154,19 @@ class Hipotez:
             "izgara": {a: list(d) for a, d in sorted(self.izgara.items())},
             "secim": self.secim,
         }
-        for ad, deger in (("evren", self.evren), ("portfoy", self.portfoy), ("rejim", self.rejim)):
+        for ad, deger in (("evren", self.evren), ("portfoy", self.portfoy), ("rejim", self.rejim),
+                          ("protokol", self.protokol)):
             if deger:
                 govde[ad] = deger
         return nesne_hash(govde)
 
     def sozluk(self) -> dict[str, Any]:
+        d = self._sozluk()
+        if self.protokol:
+            d["protokol"] = self.protokol
+        return d
+
+    def _sozluk(self) -> dict[str, Any]:
         return {
             "kimlik": self.kimlik,
             "strateji": self.strateji,
@@ -178,6 +198,7 @@ class Hipotez:
         portfoy: str = "",
         rejim: str = "",
         veri_son_ms: int | None = None,
+        protokol: str = "",
     ) -> Hipotez:
         return cls(
             strateji=strateji,
@@ -191,6 +212,7 @@ class Hipotez:
             portfoy=portfoy,
             rejim=rejim,
             veri_son_ms=veri_son_ms,
+            protokol=protokol,
         )
 
 
@@ -264,6 +286,25 @@ class HipotezDefteri:
             )
         return sira
 
+    def rypp_aile_sayisi(self, satir: int | None = None) -> int:
+        """RYPP ailesinin Bonferroni k'sı (K-125 §4, K-127): defterin ilk `satir` satırındaki
+        (`None` = hepsi) `protokol == "rypp"` satır sayısı.
+
+        Defter append-only olduğu için aynı `satir` her zaman aynı k'yı verir: değerlendirme
+        anındaki k, kanıttaki `aile.defter_satir` ile sonradan yeniden sayılabilir (replay).
+        Sonuca bakmaz; geçen/kalan ayrımı yok. `satir` defterden uzunsa defter kısalmıştır →
+        hata (sayım uydurulmaz).
+        """
+        kayitlar = self.tumu()
+        if satir is not None:
+            if type(satir) is not int or satir < 0 or satir > len(kayitlar):
+                raise HipotezHatasi(
+                    f"defter {len(kayitlar)} satır; istenen önek {satir!r} — defter kısalmış ya "
+                    "da sayım geleceğe bakıyor (K-127)"
+                )
+            kayitlar = kayitlar[:satir]
+        return sum(1 for k in kayitlar if k.get("protokol") == "rypp")
+
     def ozet(self) -> dict[str, Any]:
         kayitlar = self.tumu()
         stratejiler: dict[str, int] = {}
@@ -282,6 +323,7 @@ class HipotezDefteri:
 
 
 __all__ = [
+    "PROTOKOLLER",
     "SECIM_YONTEMLERI",
     "VARSAYILAN_YOL",
     "Hipotez",

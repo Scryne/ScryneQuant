@@ -308,8 +308,14 @@ class RyppGirdisi:
     (kripto 0,20, hisse endeksi 0,10 — K-125 tasarım kararı)."""
     plasebo: tuple[float, np.ndarray] | None
     """`plasebo_mar` çıktısı; yoksa P3 ölçülemez → INCONCLUSIVE."""
-    aile_sayisi: int = 1
-    """Bu protokolle değerlendirilen çekiliş sayısı (Bonferroni k); defterden okunur."""
+    aile_sayisi: int
+    """P3'ün Bonferroni k'sı (K-125 §4, K-127): değerlendirme anında hipotez defterindeki
+    **RYPP satırlarının birikimli sayısı** (`HipotezDefteri.rypp_aile_sayisi`), adayın kendi
+    satırı dahil. Sonuca göre seçilmez, "başarılı aile" sayısı değildir; varsayılanı yok (eksik
+    k dolu görünmesin). `int` ≥ 1; `bool`/`float`/`str` hata."""
+    aile_defter_satir: int | None = None
+    """k'nın sayıldığı andaki defter satır sayısı (K-127). Promotion k'yı defterin bu ilk
+    satırlarından **yeniden sayar**; yoksa RYPP kanıtı promotion'da kabul edilmez."""
     tohum: int = 0
 
 
@@ -320,16 +326,31 @@ class RyppSonucu:
     strateji: SeriOlcumu | None = None
     kiyas: SeriOlcumu | None = None
     bootstrap: dict[str, float] | None = None
+    aile: dict[str, Any] | None = None
+    """P3'ün çoklu test bağlamı (K-127): `sayi` (k), `defter_satir`, `persentil` (1 − α/k)."""
 
     def sozluk(self) -> dict[str, Any]:
         return {
             "durum": str(self.durum),
+            "aile": self.aile,
             "kosullar": self.kosullar,
             "strateji": self.strateji.sozluk() if self.strateji else None,
             "kiyas": self.kiyas.sozluk() if self.kiyas else None,
             "bootstrap": self.bootstrap,
             "esikler": ESIKLER,
         }
+
+
+def _dogrula_aile(sayi: Any, defter_satir: Any) -> dict[str, Any]:
+    """k sözleşmesi (K-127). Eskiden `max(1, k)` k=0'ı sessizce 1 yapıyordu: yanlış k,
+    eşiği gevşeten bir düzeltme olmadan reddedilir."""
+    if type(sayi) is not int or sayi < 1:
+        raise ProtokolHatasi(f"aile_sayisi (k) ≥ 1 tam sayı olmalı, verilen: {sayi!r}")
+    if defter_satir is not None and (type(defter_satir) is not int or defter_satir < sayi):
+        raise ProtokolHatasi(
+            f"aile_defter_satir ≥ k tam sayı olmalı (k={sayi}), verilen: {defter_satir!r}"
+        )
+    return {"sayi": sayi, "defter_satir": defter_satir, "persentil": 1 - ALFA / sayi}
 
 
 def _p1_p2(s: SeriOlcumu, k: SeriOlcumu) -> tuple[bool, bool, bool]:
@@ -344,12 +365,14 @@ def degerlendir(g: RyppGirdisi) -> RyppSonucu:
     k_oz = _dogrula_seri(g.kiyas, "kiyas")
     if s_oz.size != k_oz.size:
         raise ProtokolHatasi("strateji ve kıyas özkaynağı aynı barlarda olmalı (hizasız)")
+    aile = _dogrula_aile(g.aile_sayisi, g.aile_defter_satir)
     s, k = olc(s_oz, g.yil_bar), olc(k_oz, g.yil_bar)
-    sonuc = RyppSonucu(Durum.INCONCLUSIVE, strateji=s, kiyas=k)
+    sonuc = RyppSonucu(Durum.INCONCLUSIVE, strateji=s, kiyas=k, aile=aile)
 
-    def kosul(ad: str, gecti: bool | None, deger: Any, esik: Any, aciklama: str) -> None:
+    def kosul(ad: str, gecti: bool | None, deger: Any, esik: Any, aciklama: str,
+              **ek: Any) -> None:
         sonuc.kosullar.append({"ad": ad, "gecti": gecti, "deger": deger, "esik": esik,
-                               "aciklama": aciklama})
+                               "aciklama": aciklama, **ek})
 
     # 1) Veri yeterliliği
     yil = (s_oz.size - 1) / g.yil_bar
@@ -377,10 +400,10 @@ def degerlendir(g: RyppGirdisi) -> RyppSonucu:
           round(ASGARI_GETIRI_KORUMA * k.cagr if k.cagr > 0 else k.cagr, 4), "CAGR_S")
     kosul("P2b_verimlilik", p2b, s.mar, k.mar, "MAR_S ≥ MAR_K")
     gercek_mar, plas = g.plasebo  # type: ignore[misc]
-    q = 1 - ALFA / max(1, g.aile_sayisi)
+    q = aile["persentil"]
     esik_p3 = float(np.nanquantile(plas, q))
     kosul("P3_plasebo", bool(gercek_mar > esik_p3), gercek_mar, esik_p3,
-          f"kaydırılmış takvim MAR persentili {q:.4f} (aile k={g.aile_sayisi})")
+          f"kaydırılmış takvim MAR persentili {q:.4f} (aile k={g.aile_sayisi})", persentil=q)
     s2 = olc(_dogrula_seri(g.strateji_2x_maliyet, "strateji_2x_maliyet"), g.yil_bar)
     kosul("S1_maliyet_stresi", (not math.isnan(s2.mar)) and (math.isnan(k.mar) or s2.mar >= k.mar),
           s2.mar, k.mar, "2x maliyette MAR_S ≥ MAR_K")

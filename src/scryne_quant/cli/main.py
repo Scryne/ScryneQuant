@@ -191,6 +191,42 @@ def _tarih_saat_ms(deger: str) -> int:
     return int(an.timestamp() * 1000)
 
 
+# ---------------------------------------------------------------- bağımsız doğrulama verisi (K-127)
+
+
+@data_app.command("bagimsiz-dogrula")
+def data_bagimsiz_dogrula(
+    dataset_id: Annotated[str, typer.Argument(help="config/bagimsiz_veri.json kaydı.")] = (
+        "french_12ind_vw_gunluk_202607"
+    ),
+    kok: Annotated[Path, typer.Option("--kok")] = Path("data/bagimsiz/french"),
+) -> None:
+    """B-3 verisinin kimliğini yeniden üretir: ham zip/CSV hash'i, şema, pencere, kanonik
+    SHA-256 ve defterle çakışma. Getiri ya da istatistik **basmaz** (K-127: strateji koşusu yok)."""
+    from scryne_quant.data import french as french_mod
+
+    m = french_mod.manifest_oku(dataset_id)
+    veri = french_mod.yukle(kok, m)
+    _yaz_json({
+        "kimlik": veri.kimlik(),
+        "satir": len(veri.satirlar),
+        "pit": m["pit"]["sonuc"],
+        "promotion_uygun": m["promotion_uygun"],
+        "bagimsizlik": french_mod.bagimsizlik_denetimi(hipotez_mod.HipotezDefteri().tumu(), m),
+    })
+
+
+@data_app.command("bagimsiz-indir")
+def data_bagimsiz_indir(
+    dataset_id: Annotated[str, typer.Argument()] = "french_12ind_vw_gunluk_202607",
+    kok: Annotated[Path, typer.Option("--kok")] = Path("data/bagimsiz/french"),
+) -> None:
+    """Kaynak dosyaları indirir; **yalnız dondurulmuş vintage'la aynıysa** yerine yazar."""
+    from scryne_quant.data import french as french_mod
+
+    _yaz_json(french_mod.indir(kok, french_mod.manifest_oku(dataset_id)))
+
+
 # ---------------------------------------------------------------- data indir
 
 
@@ -2560,6 +2596,7 @@ def _kanit_kur(
     protokol: str = "alfa",
     rypp_yolu: Path | None = None,
     bagimsiz_yolu: Path | None = None,
+    defter_yolu: Path | None = None,
 ) -> promotion_mod.Kanit:
     """Sonuç kaydı ve kapı değerlendirmesinden promotion kanıtı kurar.
 
@@ -2584,8 +2621,23 @@ def _kanit_kur(
     alanlar: dict[str, Any] = {"protokol": protokol_}
     if rypp_yolu is not None:
         alanlar["rypp_sonucu"] = json.loads(rypp_yolu.read_text(encoding="utf-8"))
+        # K-127: P3'ün k'sı promotion'da seçilmez; kanıtın dondurduğu defter önekinden
+        # yeniden sayılır ve `Kanit` ikisinin eşitliğini ister.
+        satir = (alanlar["rypp_sonucu"].get("aile") or {}).get("defter_satir")
+        if type(satir) is int:
+            defter = hipotez_mod.HipotezDefteri(defter_yolu or hipotez_mod.VARSAYILAN_YOL)
+            alanlar["rypp_aile_sayisi"] = defter.rypp_aile_sayisi(satir)
     if bagimsiz_yolu is not None:
-        alanlar["bagimsiz_dogrulama"] = json.loads(bagimsiz_yolu.read_text(encoding="utf-8"))
+        bag = json.loads(bagimsiz_yolu.read_text(encoding="utf-8"))
+        # K-127 §4: bağımsız veri, kaydı `promotion_uygun` olan bir setle birebir eşleşmeli.
+        # Kanıtın kendi `veri_sha256` beyanı bağımsızlık/PIT kanıtı değildir.
+        from scryne_quant.data import french as french_mod
+
+        try:
+            french_mod.promotion_icin_kayit(bag.get("veri_sha256"), bag.get("dataset_id"))
+        except french_mod.FrenchHatasi as e:
+            raise typer.BadParameter(f"--bagimsiz: {e}") from None
+        alanlar["bagimsiz_dogrulama"] = bag
 
     if sonuc_yolu is not None:
         kayit = json.loads(sonuc_yolu.read_text(encoding="utf-8"))
@@ -3525,6 +3577,10 @@ def lab_hipotez_kaydet(
     rejim: Annotated[
         str, typer.Option("--rejim", help="Rejim tanımının kimliği (K-051/4).")
     ] = "",
+    protokol: Annotated[
+        str,
+        typer.Option("--protokol", help="Boş = alfa; `rypp` = K-125 (P3 k'sına sayılır, K-127)."),
+    ] = "",
     depo: Depo = VARSAYILAN_DEPO,
     json_cikti: JsonCikti = False,
 ) -> None:
@@ -3560,6 +3616,7 @@ def lab_hipotez_kaydet(
         evren=evren,
         portfoy=portfoy,
         rejim=rejim,
+        protokol=protokol,
         # Geri sarma adresi (K-080): defter satırı hangi veri sonuyla yazıldıysa o.
         veri_son_ms=int(depo_nesnesi.oku(sembol, timeframe)["open_time"].iloc[-1]),
     )

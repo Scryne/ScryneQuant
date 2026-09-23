@@ -111,6 +111,9 @@ raporları ve eski kayıtlar tarihseldir. Aşağıdaki liste yalnız **nereye ba
   motorlar `backtest/motor.py` → `backtest/coklu_motor.py` (tek döngü, K-057).
 - `risk/promotion.py` — zincir hash'li promotion; `Kanit.protokol` alfa → `ZORUNLU_KAPILAR` (12, K-118),
   rypp → `RYPP_KOSULLARI` (13) + B-3 bağımsız doğrulama (K-126); diğer aşamalar iki yolda ortak.
+  P3 k'sı defter önekinden sayılıp kanıta donar, promotion yeniden sayar (K-127).
+- B-3 bağımsız veri: `data/french.py` + `config/bagimsiz_veri.json` (dondurulmuş kimlik, `promotion_uygun`);
+  `sq data bagimsiz-dogrula`. French 202607 PIT değil → promotion'a kapalı (K-127).
 - **Hedef K-125:** riski yönetilen sistematik yatırım. Promotion protokolü `docs/research/Risk-Yonetimli-Protokol.md`
   + `research/risk_protokolu.py` (PASS/FAIL/INCONCLUSIVE, plasebo = kendi takviminin kaydırılmışı). Alfa yolu aynen durur.
 

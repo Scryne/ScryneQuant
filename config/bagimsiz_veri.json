@@ -1,0 +1,53 @@
+{
+  "surum": 1,
+  "karar": "K-127",
+  "aciklama": "B-3 bağımsız doğrulama veri setleri (K-125 §5). Her kayıt donmuştur: pencere, kaynak dosya hash'leri, şema ve kanonik veri hash'i değiştirilemez; yeni vintage/pencere/şema yeni K ister. `promotion_uygun` yalnız bir K ile true yapılır ve sq promotion degerlendir --bagimsiz yalnız promotion_uygun=true bir setin kanıtını kabul eder.",
+  "veri_setleri": [
+    {
+      "dataset_id": "french_12ind_vw_gunluk_202607",
+      "kaynak": {
+        "ad": "Kenneth R. French Data Library (Dartmouth Tuck), CRSP tabanlı",
+        "url_kok": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/",
+        "vintage": "202607 CRSP database (CIZ biçimi)",
+        "indirme_utc": "2026-09-23",
+        "last_modified": "Fri, 04 Sep 2026 14:48:10 GMT",
+        "lisans": "Copyright Eugene F. Fama and Kenneth R. French; ücretsiz erişim, açık lisans yazılı değil — ham dosya repoya girmez (data/ gitignore)",
+        "dosyalar": {
+          "12_Industry_Portfolios_Daily_CSV.zip": {
+            "zip_sha256": "ff4f0b6c4bd6fe13950f9cd80adbf474de6040f9b4fe254ecfaad6a3dcdbf1c3",
+            "csv": "12_Industry_Portfolios_Daily.csv",
+            "csv_sha256": "20b066c1fcd81584e4192989f47994886094be9ef9271f5d2b46f17bae8aade1"
+          },
+          "F-F_Research_Data_Factors_daily_CSV.zip": {
+            "zip_sha256": "1916d331c2c51d2aee3d00215897d2b8e5995cb387f1f4569ba46bff5fb049a8",
+            "csv": "F-F_Research_Data_Factors_daily.csv",
+            "csv_sha256": "b324d858f6ba2065ca8bb6e5d421f71ae33d42d59c1e942b3b07fa82bc23849a"
+          }
+        }
+      },
+      "donem": {
+        "baslangic": "2004-06-01",
+        "bitis": "2026-07-31",
+        "gerekce": "K-124 IS ölçümü 1952-07 → 2004-05 idi; doğrulama penceresi onun hemen sonrası, dosyanın son günü dahil. Sonuca bakılmadan, K-124/K-125 metninden."
+      },
+      "ilk_islem_gunu": "2004-06-01",
+      "satir": 5577,
+      "sema": {
+        "sutunlar": ["tarih", "NoDur", "Durbl", "Manuf", "Enrgy", "Chems", "BusEq", "Telcm", "Utils", "Shops", "Hlth", "Money", "Other", "Mkt-RF", "RF"],
+        "birim": "günlük getiri, yüzde; sektörler değer ağırlıklı (VW bölümü); Mkt-RF piyasa fazla getirisi; RF günlük risksiz",
+        "siklik": "işlem günü",
+        "kanonik": "kaynak ondalık metinleri, virgülle ayrılmış, LF, UTF-8"
+      },
+      "veri_sha256": "2448dddc19747d1138675c461b214279e27beda8a4e2867e43ff51be1c21dbc1",
+      "pit": {
+        "deger_zamani": "uygun: t gününün getirisi t kapanışında bilinir (dolum t+1, K-004)",
+        "uyelik_zamani": "kaynağa göre uygun: her hisse t yılı Haziran sonunda o anki 4 haneli SIC ile atanır (Compustat SIC, t-1 mali yılı; yoksa CRSP SIC Haziran t); bileşen verisi yok, bağımsız doğrulanamadı",
+        "hayatta_kalma": "CRSP evreni (NYSE/AMEX/NASDAQ, delist dahil); kaynak sayfası delist getirisini açıkça yazmıyor, bağımsız doğrulanamadı",
+        "revizyon": "UYGUN DEĞİL: kaynak 'We reconstruct the full history of returns each month ... Historical returns can change' diyor; yayımlandığı hâliyle (as-published) vintage geçmişi yok. Ölçüldü (K-127): 201611→202607 hücrelerin %58,3'ü değişmiş, %2,50'si ≥10 bp, azami 1,19 yüzde puan; 202202→202607 %31,6 / %1,54 / 3,44 yp; 202406→202607 %32,2 / %1,50 / 3,44 yp; 202601→202607 %0,25 / %0 / 0,02 yp (2025-01 FIZ→CIZ geçişi)",
+        "sonuc": "PIT değil (revize edilmiş tek vintage)"
+      },
+      "promotion_uygun": false,
+      "engel": "PIT revizyon koşulu sağlanmıyor (K-127 §4). Kullanımı Scryne'ın ayrı kararına bağlı (ör. vintage dayanıklılığı şartı); o karar verilmeden bu set RYPP PASS'ına girdi olamaz."
+    }
+  ]
+}

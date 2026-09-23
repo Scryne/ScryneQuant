@@ -6221,3 +6221,149 @@ alan `"protokol": "alfa"` (yeni satırların içeriği, dolayısıyla hash'i, bu
 - B-3 bağımsız veri yolu (French, 2004-05 sonrası) **yok**; bu yüzden şu an hiçbir RYPP kanıtı PASS olamaz — tasarım gereği.
 - B fazı kapanmadı: RYPP entegre, ama bağımsız doğrulama veri yolu, metodolojinin yeniden denetimi ve B kararı eksik.
   **C fazı açılmaz.**
+
+---
+
+## K-127 — B-3 bağımsız doğrulama kuralı açık karar oldu; P3'ün k'sı kanıta donduruldu; French verisi kilitlendi ama PIT değil (promotion'a kapalı)
+
+**Durum:** kabul (altyapı + metodoloji; strateji yok, eşik değeri değişikliği yok) · **Tarih:** 2026-09-23 · **Onay:**
+Scryne (K-127 talimatı: "RYPP'yi PASS ettirmek değil; PASS'ın ancak yeniden üretilebilir, bağımsız ve metodolojik olarak
+kilitli kanıtla mümkün olmasını sağlamak") · **Tabi:** K-039, K-052, K-124, K-125, K-126 · **Kaynak:**
+`src/scryne_quant/risk/promotion.py`, `src/scryne_quant/research/risk_protokolu.py`, `src/scryne_quant/research/hipotez.py`,
+`src/scryne_quant/data/french.py`, `config/bagimsiz_veri.json`, `tests/unit/test_promotion_rypp.py`,
+`tests/unit/test_bagimsiz_veri.py`, `docs/research/records/2026-09-23-B3-bagimsiz-veri.md`
+
+### 1. K-125 §5 "Ek doğrulama" cümlesi ve K-126 kodu: doğal yorum değil, yeni karar
+
+Kayıtlı metin (`Risk-Yonetimli-Protokol.md` §5, 4. maddeden sonraki paragraf; değiştirilmedi):
+
+> **Ek doğrulama (kirlenme nedeniyle zorunlu):** kripto OOS'u (B-3) tek başına yeterli sayılmaz. Aynı donmuş kural, bu
+> projede OOS'una hiç bakılmamış bağımsız bir veride de raporlanır: ABD piyasası/sektörleri, French verisi, **2004-05
+> sonrası** (K-124'te yalnız öncesi ölçüldü). Bu veri promotion kararına INCONCLUSIVE/FAIL girdisi olarak girer: PASS için
+> bağımsız veride en az FAIL olmamalı.
+
+Son cümle harfiyen okunursa bağımsız sonucun **herhangi bir** INCONCLUSIVE'i (kısa seri, plasebo yok, stres yok) PASS'a
+izin verir. K-126 kodu daha sıkı: yeterlilik satırlarının ve 8 nokta koşulunun hepsi ölçülüp geçmiş olmalı; tolere edilen
+tek belirsizlik bootstrap. Bu, metnin doğal yorumu **değil**; "zorunlu" kelimesinden ve INCONCLUSIVE'in K-125 tanımından
+("kanıt karar vermeye yetmiyor") türetilmiş bir **sıkılaştırma kararı**. Sessiz kalmaması için burada açıkça karar olarak
+yazılıyor:
+
+- **Kural (K-127/1):** Bağımsız doğrulama ancak veri yeterliliği (`oos_suresi`, `kiyas_epizot`, `plasebo_var`,
+  `stres_var`) ve bütün nokta koşulları (P1, P2a, P2b, P3, S1, R1, R2, R3) ölçülüp geçtiyse "yapıldı ve FAIL değil"
+  sayılır. Bağımsız veride FAIL → FAIL. Yok, kimliksiz, yeterliliği sağlanmamış ya da ölçülmemiş nokta koşullu → yapılmamış →
+  INCONCLUSIVE. Yalnız bootstrap belirsizliği → izin (K-125 §5'in "FAIL değil" hükmü).
+- **Neden:** Harfi yorumla çok kısa bir seri ya da P3'ü hiç koşmamak B-3'ü boşa düşürür. B-3'ün tek amacı kirlenmiş
+  kripto OOS'unu bağımsız kanıtla dengelemek.
+- **Eşik değeri değişmedi**, kabul kuralı sıkılaştı. Bu yüzden K düzeyinde. Karar hiçbir RYPP sonucu yokken verildi
+  (defterde RYPP çekilişi 0). Test iki yönlü: pozitif (yalnız bootstrap belirsiz → PASS korunur) ve negatif (yetersiz veya
+  ölçülmemiş → PASS yok); `test_K127_bagimsiz_dogrulama_karar_tablosu`.
+- K-126/4'teki "yorum" ifadesinin yerine bu karar geçer. K-126 metni değiştirilmedi (append-only).
+
+### 2. P3'ün k'sı: anlamı, kaynağı, kanıttaki yeri
+
+**Anlam (K-125 §4, `RyppGirdisi.aile_sayisi`):** RYPP ailesi içi Bonferroni. k, **değerlendirme anında** hipotez defterindeki
+RYPP çekilişlerinin birikimli sayısı (adayın kendi satırı dahil). Aşağıdakilerden hiçbiri değil:
+- küresel K-039 sayısı (63; o ayrı sürüyor),
+- araştırma programı sayısı,
+- "başarılı aile" sayısı (sonuca bakan her tanım yasak).
+
+**Bulunan açıklar:**
+- Defterde RYPP satırını işaretleyen bir alan yoktu; k defterden sayılamıyordu.
+- `aile_sayisi` varsayılanı 1'di.
+- `max(1, k)`, k=0'ı sessizce düzeltiyordu.
+- Kanıtta k yapısal alan değildi; yalnız açıklama metninde geçiyordu.
+- Promotion k'yı doğrulayamıyordu.
+
+**Karar (K-127/2):**
+- `Hipotez.protokol` (`""` = alfa, `rypp`). Doluysa kimliğe girer. Boşken girmez: 63 eski satırın kimliği aynı
+  (`test_gercek_defterin_kimlikleri_degismedi`). `sq lab hipotez-kaydet --protokol rypp`.
+- `HipotezDefteri.rypp_aile_sayisi(satir)`: ilk `satir` satırdaki RYPP satırları. Defter append-only olduğu için aynı önek
+  her zaman aynı k'yı verir (replay). Kısalmış defter → hata.
+- `RyppGirdisi.aile_sayisi` zorunlu (varsayılan yok), `int` ≥ 1. `bool`, `float` ve `str` → `ProtokolHatasi`.
+  `aile_defter_satir` k'nın sayıldığı defter öneki.
+- `RyppSonucu.aile = {sayi, defter_satir, persentil}` ve P3 satırında `persentil`: araştırmanın gerçekten kullandığı
+  1 − α/k. Tam gövde `rypp_hash` ile satır hash'ine ve audit'e girer.
+- Promotion (`rypp_ailesi`, `Kanit._aile_tutarliligi`): k tip-katı ≥ 1, `defter_satir` ≥ k, `aile.persentil` = P3 satırının
+  `persentil`i = 1 − α/k. Bağımsız doğrulamanın k'sı ana kanıtınkiyle aynı. Aday k sayıldığında defterde kayıtlı olmalı
+  (`hipotez_sirasi` ≤ `defter_satir`).
+- `Kanit.rypp_aile_sayisi`: CLI'ın defter önekinden **yeniden** saydığı k. Kanıttakiyle farklı → kanıt kurulmaz; yok →
+  `out_of_sample` ölçülemedi. Akış: araştırma k'yı sayar → kanıta donar → promotion yeniden sayıp eşitliği ister;
+  promotion k seçemez.
+- Bugünkü gerçek defterde RYPP çekilişi 0. k=1 iddia eden her kanıt promotion'da reddedilir (test).
+
+### 3. B-3 veri seti: seçim ölçütleri (sonuca bakılmadan)
+
+Ölçütler:
+1. K-125 §5'te önceden adı konmuş ihtiyaç.
+2. Farklı varlık sınıfı; kripto evreniyle ortak enstrüman yok.
+3. Ücretsiz ve otomasyona açık (K-124: abonelik yok).
+4. CRSP tabanlı, uzun seri.
+5. Projede kullanılmamış pencere.
+
+Pencere K-124'ün IS'inin (1952-07 → 2004-05) hemen sonrası: **2004-06-01 → 2026-07-31** (dosyanın son günü). Pencere
+K-124/K-125 metninden alındı, sonuca bakılarak seçilmedi. Set: 12 sektörün değer ağırlıklı günlük getirisi + Mkt-RF + RF.
+EW, SMB ve HML dışarıda: EW küçük hisse ağırlıklı ve yatırılabilirliği düşük; SMB/HML gereksiz.
+
+### 4. B-3 veri seti: kimlik ve PIT denetimi (ayrıntı `records/2026-09-23-B3-bagimsiz-veri.md`)
+
+- **Kimlik (dondurulmuş, `config/bagimsiz_veri.json` + test sabitleri):**
+  - `dataset_id` `french_12ind_vw_gunluk_202607`, vintage "202607 CRSP (CIZ)", 5.577 işlem günü.
+  - zip SHA-256 `ff4f0b6c…` / `1916d331…`, CSV SHA-256 `20b066c1…` / `b324d858…`.
+  - Kanonik veri SHA-256 `2448dddc19747d1138675c461b214279e27beda8a4e2867e43ff51be1c21dbc1`. Kaynak ondalık metinleri,
+    float'a bağlı değil. İki kez yükleme aynı hash; tek hücre değişince hash değişir.
+  - `yukle` her okumada zip/CSV hash'ini, üye adını, şemayı, pencereyi, satır sayısını, ilk günü ve kanonik hash'i yeniden
+    hesaplar. `indir` farklı vintage'ı kilitli dosyanın yerine yazmaz.
+- **Bağımsızlık:** Hipotez defterinin 63 satırında bu verinin ya da kaynak dosyaların kimliği yok
+  (`sq data bagimsiz-dogrula`). Defterde French/ABD hisse çekilişi yok. Kayıt dışı tek kullanım K-124'ün IS ölçümü;
+  kodu repoda değil, "OOS'a bakılmadı" ifadesi yalnız karar metnine dayanıyor.
+- **PIT:**
+  - Değer zamanı uygun: t'nin getirisi t kapanışında bilinir.
+  - Üyelik zamanı kaynağa göre uygun: hisse, t yılı Haziran sonunda o anki SIC ile atanır. Bileşen verisi yok, bağımsız
+    doğrulanamadı.
+  - Hayatta kalma: CRSP evreni. Delist getirisi kaynak sayfada açık yazmıyor.
+  - **Revizyon uygun değil.** Kaynak: *"We reconstruct the full history of returns each month … Historical returns can
+    change"*. As-published vintage geçmişi yok; Wayback'te 9 anlık görüntü var. Ölçüm (yalnız hücre farkı, 2004-06 sonrası,
+    VW):
+
+    | Eski vintage | Değişen hücre | ≥10 bp | Azami fark |
+    | --- | --- | --- | --- |
+    | 201611 | %58,3 | %2,50 | 1,19 yp |
+    | 202202 | %31,6 | %1,54 | 3,44 yp |
+    | 202406 | %32,2 | %1,50 | 3,44 yp |
+    | 202601 | %0,25 | %0 | 0,02 yp |
+
+    2025-01'deki FIZ→CIZ geçişi bütün geçmişi yeniden üretti.
+- **Hüküm (K-127/4):** Veri **PIT değil** (revize edilmiş tek vintage). K-052/15 (`available_time`) ve NFCI'da vintage
+  kullanma emsali gereği set `promotion_uygun: false`. `sq promotion degerlendir --bagimsiz` yalnız kaydı
+  `promotion_uygun: true` olan bir setle birebir eşleşen (`dataset_id` + `veri_sha256`) kanıtı kabul eder.
+  `promotion_uygun` yalnız yeni bir K ile değişir.
+- Revizyonun doğası (düzeltme ve metodoloji değişikliği) gelecek getiri bilgisi taşıdığını göstermiyor. Büyüklüğü de
+  küçük: hücrelerin %1,5-2,5'i ≥ 10 bp. Yani risk büyük olasılıkla sızıntı değil gürültü. Yine de bu bir **ölçüm değil
+  argüman**; uygunluk Scryne'ın kararına bırakıldı.
+
+### 5. Kilit
+
+Pencere, kaynak, şema ya da hash değişirse `test_manifest_dondurulmus…` ve `yukle` kırılır. Yeni vintage, pencere ya da set
+yeni K ve yeni doğrulama döngüsü ister. Bağımsız veri üzerinde **strateji koşulmadı, getiri istatistiği hesaplanmadı**.
+
+### 6. Ek bulgular (açık)
+
+- **Bonferroni birikimli k:** Her çekiliş kendi değerlendirme anındaki k'yı kullanırsa ailenin toplam yanlış pozitifi α·H_n
+  ile sınırlıdır (H_n harmonik sayı; n=10'da ≈ 2,9α), α ile değil. Bu, K-125 §4'ün tanımı; değiştirilmedi. Kesin aile
+  kontrolü (ör. önceden sabit aile bütçesi) ayrı bir K ister.
+- **CLI `hipotez_sirasi` doldurmuyor:** `sq promotion degerlendir` kanıtında `hipotez_sirasi` hep `None`; iki protokolde de
+  CLI'dan `out_of_sample` ölçülemedi kalır (fail closed, K-126 öncesinden). C'den önce kapatılmalı.
+- **"Aynı donmuş kural" eşlemesi tanımsız:** Kripto evren kuralının ABD sektörlerine (günlük, 12 portföy, hisse maliyeti,
+  epizot eşiği 0,10) nasıl uygulanacağı hipotez kaydında, kripto OOS'undan **önce** donmalı.
+- **Makro rejim çekilişleri** (VIX/NFCI, 2017+) ABD stres zamanlamasını dolaylı olarak kripto filtresi olarak gördü; ABD
+  hisse getirisine bakılmadı. Zayıf örtüşme, kayıtta.
+
+### Sonuç
+
+- K-125 §5'in yorumu ve k açıkları kapandı.
+- B-3 veri **hattı** kuruldu ve test edildi (kimlik, kilit, bağımsızlık, replay).
+- B-3 veri **seti** PIT revizyon koşulunu karşılamıyor. Bu yüzden B-3 bağımsız doğrulama yolu PASS için **hazır değil**;
+  RYPP bugün de PASS üretemez.
+- R13 (B) açık kalıyor, C açılmıyor.
+- Açık karar: revize edilmiş French verisinin koşullu kabulü (ör. aynı donmuş kuralın iki farklı vintage'da aynı hükmü
+  vermesi şartı; 201611 FIZ görüntüsü 2004-06 → 2016-11'i kapsar) ya da PIT vintage'lı başka bir veri seti.
