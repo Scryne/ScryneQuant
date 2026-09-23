@@ -109,10 +109,11 @@ COKLU_TEST_ESIGI: Final = 1.04
 #: değişmedi. 2026-09-22'de 47 (K-108, R7): h60/h61 (portfoy_kurma) eklendi, 31 tek sembollü +
 #: 16 evren (h53-h59 FX ölçülemez, K-102/6); %5 sınırı 1,004 aynı; sabit değişmedi.
 #: 2026-09-22'de 48 (K-109): h62 (kesit_oynaklik) eklendi, 31 + 17 evren; %5 sınırı 1,004 aynı;
-#: sabit değişmedi.
+#: sabit değişmedi. 2026-09-23'te 49 (K-121): h63 (kripto_zs_trend) eklendi, 31 + 18 evren; %5
+#: sınırı 1,0039 aynı, mevcut eşiğin yanlış pozitifi 0,042; sabit değişmedi.
 #: Bu sayı bir **eşik değil**, eşiğin ölçüldüğü defter fotoğrafıdır ve git'teki
 #: `docs/research/coklu-test-olcum.json` ile eşit olmak zorundadır (`coklu_test_fotograf`).
-COKLU_TEST_CEKILIS_SAYISI: Final = 48
+COKLU_TEST_CEKILIS_SAYISI: Final = 49
 
 #: `oos_sharpe` eşiğinin **geçerli olduğu** en kısa OOS süresi, gün (bar-zamanı). (K-113)
 #:

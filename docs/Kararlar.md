@@ -6001,3 +6001,8 @@ t 2,64) OOS'ta risk-ayarlı getiriye dönüşmedi.
    commit.**
 3. Çoklu test fotoğrafı 63'e yeniden ölçülüyor (K-044). h63'ün OOS düşüşü %29 > %25 olduğu için null uygunluğunu
    geçmez; eşiği yükseltmesi beklenmez.
+
+**Ek (2026-09-23):** fotoğraf yeniden ölçüldü (`tools/faz12_coklu_test.py --deneme 500 --seed 0`): 63 çekiliş, 49
+ölçülebilir (31 tek sembollü + 18 evren); %5 sınırı 1,0039 (önce de 1,004), %90 GA 0,982–1,063; mevcut eşik 1,04'ün
+yanlış pozitifi 0,042. `COKLU_TEST_CEKILIS_SAYISI` 48 → 49; eşik değişmedi. `oos_suresi` kaydı yeniden üretildi
+(asgari 569,67 gün aynı).

@@ -146,9 +146,9 @@
     },
     {
       "ad": "coklu_test_cekilis_sayisi",
-      "deger": 48,
+      "deger": 49,
       "kaynak": "null-kalibre",
-      "karar": "K-109",
+      "karar": "K-121",
       "gerekce": "`oos_sharpe` eşiğinin ölçüldüğü defter fotoğrafı (ölçülebilir çekiliş sayısı); eşik değil, eşiğin geçerlilik koşulu. `coklu_test_fotograf` bekçisi git'teki fotoğrafla ve defterle sayar.",
       "kayit": "docs/research/coklu-test-olcum.json"
     },

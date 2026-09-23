@@ -1,12 +1,12 @@
 {
-  "uretildi": "2026-09-22 11:05:28 UTC",
+  "uretildi": "2026-09-23 07:03:55 UTC",
   "fotograf": {
     "yol": "docs\\research\\coklu-test-olcum.json",
-    "sha256": "4e427451b3ea56614bbfef62f30a1546273540a7223cdd271f504f3842563e07",
-    "olculebilir": 48,
-    "defter_sayisi": 62
+    "sha256": "14af1f6ad3c3bb616a70899bc60d6e55c2b58984bd76d7d2f7185cc53ce04498",
+    "olculebilir": 49,
+    "defter_sayisi": 63
   },
-  "cekilis_sayisi": 48,
+  "cekilis_sayisi": 49,
   "asgari_oos_gun": 569.6666666666666,
   "asgari_oos_bar": 13672,
   "asgari_oos_timeframe": "1h",
@@ -132,6 +132,14 @@
       "oos_bar": 23826,
       "oos_gun": 992.75,
       "kaynak": "runs\\faz12\\kurma_turnover.json"
+    },
+    {
+      "kimlik": "42f18a20b52c58257318dec33b3869608b3e8e6cf2a941b00f0635ae0666668d",
+      "sinif": "evren",
+      "timeframe": "1h",
+      "oos_bar": 23862,
+      "oos_gun": 994.25,
+      "kaynak": "runs\\faz12\\zs_trend_haftalik.json"
     },
     {
       "kimlik": "4bb5c0dcafdca8d57754b91d229d49c5a9d5dd858a221919d3d35952c1ef5f95",

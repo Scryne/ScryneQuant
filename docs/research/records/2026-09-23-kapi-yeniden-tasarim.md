@@ -12,7 +12,8 @@ type: rapor
 8). Tek sembollü araştırma artık 9 yıllık arşiv verisini kullanabiliyor. Yeni sistem üç koşulu
 birlikte sağlıyor:
 
-- **Yanlış pozitif yok:** üstünlüksüz kahin 0/60, trendsiz sentetik 0/n, gerçek defter 0/38.
+- **Yanlış pozitif yok:** üstünlüksüz kahin 0/60, trendsiz sentetik 0/24 (tek sembol 18 + evren 6),
+  gerçek defter 0/38.
 - **Güç üstünlükle artıyor:** tek sembollü kahinde %58 → %60 → %65 isabette geçiş kabaca
   %5-55 → %35-75 → %85-100; evren sentetiğinde güçlü trendde 12 kapının tamamı geçiliyor.
 - **Önce ölçülemeyen bölge açıldı:** haftalık ufuklu kahin 0/20'den 17/20'ye çıktı.
@@ -90,9 +91,22 @@ katına çıkınca Sharpe'ının yarısından fazlasını gerçekten kaybediyor.
 tanımlar gerçek veride gevşeklik açmıyor; yanlış pozitif kontrolünü yine çoklu testle düzeltilmiş
 `oos_sharpe` yapıyor, bu iki kapı sağlamlık teşhisi olarak ek eleme sağlıyor.
 
-### Tek sembol sentetik
+### Tek sembol sentetik (9 yıl, `sma_kesisim`/`donchian`/`momentum`, gerçek ızgaralar; 6 tohum × 3)
 
-Aşağıda, koşu bitince.
+| Ölçü | m = 5 (18) | m = 3 (18) | m = 0 (18) |
+| --- | ---: | ---: | ---: |
+| OOS Sharpe medyan | 0,77 | −0,02 | −0,69 |
+| `pbo_zarar_olasiligi` ≤ 0,05 | 14/18 | 4/18 | 1/18 |
+| `perturbasyon_koruma` ≥ 0,80 | 14/18 | 6/17 | 2/13 |
+| `stres_sharpe_orani` ≥ 0,5 | 10/16 | 2/9 | 0/4 |
+| K-019 + K-113 geçen | 3/18 | 0/18 | 0/18 |
+| `evren_dayanikliligi` dışındaki 11 kapı | 3/18 | 0/18 | 0/18 |
+
+Yeni ölçüler tek sembol yolunda da üstünlüğü ayırt ediyor. Kütüphanenin 1h trend stratejileri
+gömülü trendi zayıf yakalıyor (m = 5'te OOS medyan 0,77). Tek sembolde `rejim_kararliligi` güçlü
+trendde de çoğunlukla kalıyor (13/18): yalnız-long tek bir sembol düşen rejimde testere yiyor.
+Evren yolunda nakde çekilebildiği için geçiyor (6/6). `evren_dayanikliligi` tek sembolde tanım
+gereği 18/18 kalıyor (K-054).
 
 ## Veri
 

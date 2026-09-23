@@ -62,7 +62,8 @@ katman (K-037 izin verir; K-074 izolasyonu yeni K ister).
 
 ## 6. Açık işler
 
-1. Çoklu test fotoğrafı 63 çekilişe yeniden ölçülüyor (K-044); `oos_sharpe` eşiği 9 yıllık OOS'ta
-   yeniden kalibre edilmeli (şu an tutucu).
+1. Çoklu test fotoğrafı 63 çekilişe güncellendi (49 ölçülebilir; %5 sınırı 1,0039, mevcut 1,04'ün
+   yanlış pozitifi 0,042). `oos_sharpe` eşiği 9 yıllık tek sembollü OOS için ayrıca kalibre edilmedi
+   (uzun OOS'ta tutucu yönde).
 2. `asgari_islem` 30 aylık stratejileri dışarıda bırakıyor (bilinçli; null bu çekilişlerde kalibre değil).
 3. Maliyet modeli tutucu (taraf başı 10 + 5,3 bps); pilotun gerçek fill'leriyle yeniden kalibre edilir.
