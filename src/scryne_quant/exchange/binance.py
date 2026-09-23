@@ -39,6 +39,14 @@ from scryne_quant.exchange.temel import (
 #: weight havuzunu paylaşmaz. Faz 7'nin emir akışı bu host'u kullanmayacak.
 VERI_HOST: Final = "https://data-api.binance.vision"
 
+#: Veri ucu cevap vermezse aynı public verinin alındığı yedek uçlar (K-122). Gösterim öncesi
+#: ölçüldü: `testnet-surekli-1` 10 saatte 107 döngüde `data-api` `/time`a 5 denemede
+#: ulaşamadı; aynı anda ölçülen dört uç (data-api, api, api1, api-gcp) ayrı IP'lerde. Uç
+#: değişimi veriyi değiştirmez (aynı borsa, aynı kline); yalnız tek uca bağımlılığı kaldırır.
+YEDEK_HOSTLAR: Final[tuple[str, ...]] = (
+    VERI_HOST, "https://api.binance.com", "https://api-gcp.binance.com",
+)
+
 #: Ölçülen kuyruk gecikmesi 1,6 s; timeout ≥ 5 s olmalı (Spike 1/4). 15 s, kuyruğun ~10
 #: katı — geçici bir yavaşlamada boşuna hata üretmeyecek kadar geniş, asılı kalmayacak
 #: kadar dar.
@@ -97,6 +105,7 @@ class BinanceAdaptoru(BorsaAdaptoru):
         timeout_ms: int = TIMEOUT_MS,
         ipv4: bool = True,
         deneme_sayisi: int = DENEME_SAYISI,
+        yedek_hostlar: tuple[str, ...] | None = None,
     ) -> None:
         if ipv4:
             ipv4_zorla()
@@ -114,6 +123,12 @@ class BinanceAdaptoru(BorsaAdaptoru):
         # Tarihsel uçlar veri host'una yönlendirilir; ccxt'nin kalıcı session'ı korunur.
         self._borsa.urls["api"]["public"] = f"{host}/api/v3"
         self._deneme_sayisi = deneme_sayisi
+        # Varsayılan veri ucunda yedekler açık; açıkça başka bir host verilmişse (test, testnet)
+        # yalnız o host kullanılır — sessizce başka bir uca geçilmez.
+        if yedek_hostlar is None:
+            yedek_hostlar = YEDEK_HOSTLAR if host == VERI_HOST else (host,)
+        self._hostlar = tuple(yedek_hostlar)
+        self._host_sira = self._hostlar.index(host) if host in self._hostlar else 0
 
         self._zaman_onbellek: tuple[int, float] | None = None
         self._kural_onbellek: dict[str, SembolKurallari] = {}
@@ -133,6 +148,15 @@ class BinanceAdaptoru(BorsaAdaptoru):
                 return cagri(*args)
             except (ccxt.NetworkError, ccxt.RateLimitExceeded, ccxt.DDoSProtection) as hata:
                 son = hata
+                hiz = isinstance(hata, (ccxt.RateLimitExceeded, ccxt.DDoSProtection))
+                if not hiz and len(self._hostlar) > 1:
+                    # Ağ hatasında sıradaki uca geç ve orada kal (K-122). Hız sınırı hatası
+                    # (ccxt'de `NetworkError` alt sınıfı) uç değiştirmez: aynı IP'nin weight'i,
+                    # uç değişse de aynı borsada.
+                    self._host_sira = (self._host_sira + 1) % len(self._hostlar)
+                    self._borsa.urls["api"]["public"] = (
+                        f"{self._hostlar[self._host_sira]}/api/v3"
+                    )
                 if deneme + 1 < self._deneme_sayisi:
                     time.sleep(BEKLEME_TABANI_S * (2**deneme))
             except ccxt.BaseError as hata:

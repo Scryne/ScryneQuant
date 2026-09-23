@@ -172,6 +172,37 @@ def preflight(
     raise typer.Exit(0 if rapor["gecti"] else 1)
 
 
+@execution_app.command("hazirlik")
+def hazirlik(json_cikti: JsonCikti = False) -> None:
+    """Proje gerçek paraya hazır mı? İki hüküm: sistem hazır ve strateji hazır. (K-122)
+
+    Salt okuma: koşu dosyaları, test kaydı, R8 sonucu, promotion kayıtları. Hiçbir şey başlatmaz.
+    Çıkış kodu 0 yalnız **ikisi birden** hazırsa.
+    """
+    from scryne_quant.execution import hazirlik as hz
+
+    r = hz.rapor(".")
+    if json_cikti:
+        _yaz(r.sozluk())
+        raise typer.Exit(0 if r.gercek_paraya_hazir else 1)
+    for baslik, kontroller, hazir in (
+        ("SİSTEM", r.sistem, r.sistem_hazir), ("STRATEJİ", r.strateji, r.strateji_hazir),
+    ):
+        typer.secho(f"{baslik}: {'HAZIR' if hazir else 'HAZIR DEĞİL'}", bold=True,
+                    fg=typer.colors.GREEN if hazir else typer.colors.RED)
+        for k in kontroller:
+            isaret = {True: "✓", False: "✗", None: "?"}[k.gecti]
+            typer.echo(f"  {isaret} {k.ad:<24} {k.ayrinti}")
+            if k.gecti is not True and k.engel:
+                typer.echo(f"      → {k.engel}")
+    typer.secho(
+        "GERÇEK PARA: " + ("koşullar sağlandı (son karar yine senin)" if r.gercek_paraya_hazir
+                           else "HAYIR — yukarıdaki eksikler kapanmadan konmaz"),
+        bold=True, fg=typer.colors.GREEN if r.gercek_paraya_hazir else typer.colors.YELLOW,
+    )
+    raise typer.Exit(0 if r.gercek_paraya_hazir else 1)
+
+
 @execution_app.command("yukselt")
 def yukselt(
     hedef: Annotated[str, typer.Argument(help="Bir üst mod (LIVE hariç).")],

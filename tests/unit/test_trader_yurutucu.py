@@ -195,3 +195,45 @@ def test_yeniden_baslatmada_tur_iki_kez_sayilmaz(tmp_path, barlar):
     y2.kapat()
     assert y2.islenen_tur == tam.islenen_tur
     assert y2.risk.durum.ardisik_kayip == tam.risk.durum.ardisik_kayip
+
+
+# ================================================================ K-122: kesinti görünürlüğü
+
+
+def test_kesintide_kacirilan_karar_sayilir_ve_gunluge_yazilir(tmp_path, barlar):
+    import json
+
+    y, k = kur(tmp_path / "a", barlar)
+    adim = timeframe_ms("1h")
+    k.simdi = barlar[99].open_time + adim
+    y.baslat()
+    for b in barlar[100:110]:
+        k.simdi = b.open_time + adim
+        y.adim()
+    assert y.sayac.kacirilan_karar == 0
+    # Üç bar boyunca döngü koşamadı (kesinti): sonra üç bar birden gelir, yalnız sonuncusu canlı.
+    k.simdi = barlar[112].open_time + adim
+    y.adim()
+    assert y.sayac.kacirilan_karar == 2
+    satirlar = [json.loads(s) for s in
+                (tmp_path / "a" / "hatalar.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [s["tur"] for s in satirlar] == ["kacirilan_karar", "kacirilan_karar"]
+
+
+def test_bar_kaynagi_hatasi_zamaniyla_gunluge_yazilir(tmp_path, barlar):
+    import json
+
+    from scryne_quant.exchange.hatalar import BorsaHatasi
+
+    y, k = kur(tmp_path / "a", barlar)
+    k.simdi = barlar[99].open_time + timeframe_ms("1h")
+    y.baslat()
+
+    def patla(*a, **kw):
+        raise BorsaHatasi("serverTime: 5 denemede başarısız")
+
+    k.kapanmis_barlar = patla
+    assert y.adim() == []
+    assert y.sayac.baglanti_hatasi == 1
+    s = json.loads((tmp_path / "a" / "hatalar.jsonl").read_text(encoding="utf-8"))
+    assert s["tur"] == "bar_kaynagi" and "serverTime" in s["mesaj"] and s["zaman_ms"] > 0

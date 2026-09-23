@@ -176,6 +176,10 @@ class Sayac:
     saat_sicramasi: int = 0
     yeniden_baslatma: int = 0
     plansiz_kesinti: int = 0
+    kacirilan_karar: int = 0
+    """Koşu sırasında geç gelip `BACKFILL` işlenen, yani karar üretilmeyen bar (K-122).
+    Bağlantı kesintisi ya da süreç duruşu bir bar kapanışını kaçırtırsa karar **sessizce**
+    atlanıyordu (K-028 gereği doğru davranış: bayat barda karar verilmez); artık sayılıyor."""
 
     def sozluk(self) -> dict[str, int]:
         return dict(self.__dict__)
@@ -279,6 +283,14 @@ class Yurutucu:
         self._yaz("yurutucu.json", d)
         self._yaz("risk.json", self.risk.durum.sozluk())
 
+    def _hata_kaydet(self, tur: str, mesaj: str) -> None:
+        """`hatalar.jsonl`: zamanlı, append-only hata günlüğü (K-122). Sayaç kaç kez olduğunu,
+        günlük **ne zaman** olduğunu söyler; kesintinin bir döneme mi yığıldığı buradan okunur."""
+        simdi = self.saat()
+        satir = {"zaman_ms": simdi, "zaman_utc": utc_str(simdi), "tur": tur, "mesaj": mesaj[:500]}
+        with (self.ayar.kosu_dizini / "hatalar.jsonl").open("a", encoding="utf-8") as f:
+            f.write(json.dumps(satir, ensure_ascii=False) + "\n")
+
     def _yaz(self, ad: str, veri: dict[str, Any]) -> None:
         p = self.ayar.kosu_dizini / ad
         tmp = p.with_suffix(".tmp")
@@ -329,12 +341,16 @@ class Yurutucu:
         except BorsaHatasi as hata:
             self.sayac.baglanti_hatasi += 1
             self.son_hata = f"bar kaynağı: {hata}"
+            self._hata_kaydet("bar_kaynagi", str(hata))
             self.hat.durum_yaz(ek=self._ek())
             return []
         en_son_kapali = bar_acilisi(simdi, self.ayar.timeframe) - self._adim
         ozetler = []
         for b in yeni:
             canli = b.open_time == en_son_kapali
+            if not canli:
+                self.sayac.kacirilan_karar += 1
+                self._hata_kaydet("kacirilan_karar", f"bar {utc_str(b.open_time)} geç geldi")
             ozetler.append(self._bar_isle(canli_bar(b) if canli else _backfill(b), canli=canli))
             # Her bardan sonra: çökme penceresi tek bara iner (aynı bar yeniden işlenirse
             # `Engel.AYNI_BAR` ve paper'ın `transactTime` kuralı ikinci emri/erken fill'i keser).
@@ -370,6 +386,7 @@ class Yurutucu:
         except BorsaHatasi as hata:
             self.sayac.baglanti_hatasi += 1
             self.son_hata = f"hesap: {hata}"
+            self._hata_kaydet("hesap", str(hata))
             return {"bar_ms": bar.open_time, "karar": None, "hata": self.son_hata}
         self.risk.bar_isle(bar.open_time, h.ozkaynak)
         self.hat.ozkaynak_isle(h.ozkaynak, bar.open_time + self._adim)

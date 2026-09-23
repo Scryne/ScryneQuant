@@ -6006,3 +6006,36 @@ t 2,64) OOS'ta risk-ayarlı getiriye dönüşmedi.
 ölçülebilir (31 tek sembollü + 18 evren); %5 sınırı 1,0039 (önce de 1,004), %90 GA 0,982–1,063; mevcut eşik 1,04'ün
 yanlış pozitifi 0,042. `COKLU_TEST_CEKILIS_SAYISI` 48 → 49; eşik değişmedi. `oos_suresi` kaydı yeniden üretildi
 (asgari 569,67 gün aynı).
+
+---
+
+## K-122 — Gerçek para iki hükme bağlandı (sistem hazır + strateji hazır); 14 günlük gösterim dönemi
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("her şey hazır olduğundan emin olmadan hesaba gerçek
+para ile açmam. önce projenin tamamen bitmesini istiyorum … gerçekten projenin çalıştığını görmeden … para atmam";
+koşu yeri: "bu bilgisayar") · **Tabi:** K-008, K-010, K-028, K-035, K-038, K-046, K-065, K-111, K-114, K-115, K-119
+
+### Karar
+
+1. **Gerçek para iki ayrı, makine kontrollü hükme bağlı** (`sq execution hazirlik`, `execution/hazirlik.py`):
+   - **Sistem hazır:** HEAD'de yeşil test kaydı; `gosterim-testnet` (sanal para, gerçek borsa emri) ve
+     `gosterim-shadow` (gerçek hesap, salt okunur) koşularının her biri ≥ 14 gün, süreç yaşıyor, veri ≤ 2 bar
+     geride, halt/SAFE_MODE/UNKNOWN yok, pozisyon mutabakatı temiz, testnet ≥ 4 dolan emir / shadow ≥ 4 GOLGE ve
+     0 gönderilmiş emir, kaçırılan karar ≤ %2, saat sıçraması 0, ≥ 1 yeniden başlatma; canlı host kill
+     tatbikatı; R8 PASS (K-112).
+   - **Strateji hazır:** en az bir strateji promotion zincirinde `live_adayi` ya da ötesinde (12 kapı + risk
+     incelemesi + paper).
+   Pilot (K-115) de dahil gerçek para, Scryne'ın kararıyla **ikisi birden** sağlanmadan konmaz. Eşikler gösterim
+   başlamadan yazıldı; dönem içinde değiştirilmez.
+2. **Gösterim koşuları oturumdan bağımsız:** `tools/gosterim_gozetmen.ps1` (yalnız başlatır; öldürmez, SAFE_MODE
+   kaldırmaz, mod yükseltmez; `runs/gosterim/DURDUR` ile durur), Windows zamanlanmış görevi `ScryneQuant-Gosterim`
+   (oturum açılışı + 10 dakikada bir). Eski `testnet-surekli-1` planlı durduruldu (aynı testnet hesabı/sembolünde
+   iki koşu pozisyon mutabakatını bozardı; hiç emir vermemişti).
+3. **Gösterim öncesi bulunan ve düzeltilen:**
+   - `testnet-surekli-1` 10 saatte 107 döngüde veri ucuna 5 denemede ulaşamadı. Public adaptör artık ağ hatasında
+     yedek uca geçer (`YEDEK_HOSTLAR`: data-api → api → api-gcp; aynı veri). Hız sınırı hatası uç değiştirmez
+     (ccxt'de `NetworkError` alt sınıfı; testle bulundu).
+   - Kesinti yüzünden karar üretilmeyen bar sessizdi: `Sayac.kacirilan_karar` + zamanlı `hatalar.jsonl`.
+   - `live.kill.pid_oku` bozuk pid dosyasında `TypeError` ile çöküyor. `live/` R8 için dondurulmuş olduğundan
+     (K-111, bekçi testi) orada düzeltilmedi; hazırlık raporu hatayı yakalar ve "süreç çalışmıyor" der. R8
+     kapanışından sonra `live/`de düzeltilecek.
