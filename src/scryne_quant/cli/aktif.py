@@ -143,6 +143,12 @@ def calistir_komut(hesap: HesapOpt) -> None:
 
     ayar, ham = _ayar(hesap)
     (KOK / hesap / "kapali").unlink(missing_ok=True)  # elle başlatma kalıcı kapatmayı kaldırır
+    if ayar.araci == "carry_paper":  # K-139: iki bacaklı funding carry, kendi döngüsü
+        from scryne_quant.aktif import carry
+
+        typer.echo(f"AKTİF DEMO '{hesap}' · funding carry · spot long + perp short")
+        carry.calistir_carry(KOK / hesap, float(ham["sermaye"]), yaz=typer.echo)
+        return
     araci = _araci(ayar, ham)
     typer.echo(f"AKTİF DEMO '{hesap}' · {ayar.araci} · {ayar.strateji} · {ayar.timeframe} · "
                f"{len(ayar.semboller)} sembol")

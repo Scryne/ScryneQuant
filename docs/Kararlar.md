@@ -6990,3 +6990,45 @@ K-136/K-137'nin "FAIL → demoya eklenmez" hükmü (yalnız demo kademesi için)
   (`10cd5c0`). Üç MT5 hesabı 20:18 UTC'de turda doğrulandı (`/api/aktif`).
 - Operasyon notu: SSH üzerinden satır içi PowerShell komutlarında `$değişken` yol parçaları güvenilir biçimde
   geçmiyor (bir `kapali` silme adımı sessizce boşa gitti). Host komutları betik dosyası (`-File`) olarak gönderilir.
+
+---
+
+## K-139 — Funding carry: backtest 2020-26 yıllık +%6,6, azami düşüş −%0,7; demoya (`kripto-carry`)
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("ne yapıcaksan yap tüm yetkiyi sana veriyorum";
+demo kararları Claude'da, gerçek para Scryne'da — K-050) · **Değiştirir:** K-079/2'nin "vadeli hesap açılmıyor"
+kilidi **demo için** kalkar (simüle, hesap gerekmez); gerçek para için hesap kararı hâlâ Scryne'da ·
+**Kaynak:** ön kayıt `docs/research/records/2026-09-23-carry-onkayit.md` (`ad61b5d`, koşudan önce),
+`tools/carry_arastirma.py`, sonuç `2026-09-23-carry-sonuc.json`, `src/scryne_quant/aktif/carry.py`,
+`tests/unit/test_carry.py`
+
+### Neden
+
+Tüm sık işlem stratejileri brüt pozitifken maliyete kaybetti (K-134…K-137). Funding carry maliyeti ödeyen değil,
+toplayan taraftır: fiyat yönü sıfırlanır, gelir funding'dir.
+
+### Sonuç (maliyet 19 bps/taraf, tasfiye vekili dahil, 380 perp ∩ PIT spot)
+
+| | Yıllık | Azami düşüş | En kötü hafta | Ort. pozisyon |
+|---|---|---|---|---|
+| 2020-26 | **+%6,6** | **−%0,7** | −%0,5 | 2,6 |
+| 2020-23 | +%9,3 | −%0,5 | −%0,3 | 3,2 |
+| 2024-26 | +%2,7 | −%0,7 | −%0,5 | 1,6 |
+| Yıl yıl | 2020 +%12,0 · 2021 +%24,8 · 2022 +%0,1 · 2023 +%2,1 · 2024 +%7,6 · 2025 −%0,4 · 2026 +%0,1 | | | |
+
+Kaynak (başlangıç özkaynağı oranı): funding +%64,6, premium +%1,2, maliyet −%5,9, tasfiye −%6,6 (10 olay).
+Demo ölçütü (2024-26 yıllık > 0 ∧ DD < %10) geçti.
+
+### Okuma
+
+Getiri piyasa rejimine bağlı: kaldıraçlı boğa dönemlerinde (2021, 2024) yüksek, funding düşükken (2022, 2025-26)
+sermaye boşta. Risk çok düşük (en kötü hafta −%0,5). Boşta duran sermayenin USDT faizi hesaba katılmadı (tutucu).
+Tasfiye vekili tutucu (gün içi %45 sıçrama → notional'ın %6'sı kayıp); gerçek paraya geçerken perp teminatı ve
+otomatik cüzdan dengelemesi ayrıca tasarlanır.
+
+### Karar
+
+`kripto-carry` demo hesabı (10.000 USDT simüle): `aktif/carry.py`, backtest'le aynı kural; canlı sapma: 3 günlük
+funding geçmişi yalnız anlık yıllık oranı ≥ %10 olan perp'ler için çekilir. Binance public uçları (fapi +
+data-api), emir yok. Testler: yön nötrlüğü (iki bacakta %30 fiyat değişimi → değer sabit), funding tahakkuku,
+giriş/çıkış eşikleri, likidite filtresi, tasfiye vekili.

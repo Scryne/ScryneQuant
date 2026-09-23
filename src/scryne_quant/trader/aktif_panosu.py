@@ -51,7 +51,7 @@ def hesap_ozeti(ad: str, tanim: dict[str, Any], dizin: Path, simdi_ms: int) -> d
         "timeframe": tf,
         "semboller": list(tanim.get("semboller", [])),
         "sermaye": float(sermaye) if sermaye is not None else None,
-        "para_birimi": "USDT" if str(tanim.get("araci", "")).startswith("kripto") else "USD",
+        "para_birimi": "USDT" if tanim.get("araci") in ("kripto_paper", "carry_paper") else "USD",
         "yalniz_long": bool(tanim.get("yalniz_long", False)),
         "kapali": (dizin / "kapali").is_file(),
         "var": False,

@@ -5,6 +5,10 @@ import type { Hafta, HesapOzeti, Islem, Olay, Pozisyon } from "./tipler";
 
 const NEDEN: Record<string, string> = {
   giris: "Giriş",
+  giris_perp: "Giriş · vadeli short",
+  cikis_perp: "Çıkış · vadeli short",
+  tasfiye: "Tasfiye",
+  tasfiye_perp: "Tasfiye · vadeli",
   cikis: "Çıkış",
   donus: "Yön değişimi",
   fren: "Kayıp freni",
@@ -155,6 +159,7 @@ const STRATEJI: Record<string, string> = {
   rsi_donus: "Ortalamaya dönüş (RSI 3)",
   gece: "Gece getirisi (16:00 → 09:00 ET)",
   ay_donumu: "Ay dönümü (son gün → 3. gün)",
+  carry: "Funding carry (yön nötr, funding toplar)",
 };
 
 export function Ayar({ h, risk }: { h: HesapOzeti; risk: Record<string, number> }) {
