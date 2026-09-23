@@ -50,8 +50,8 @@
   "f845b3fba9cba79654bcc0e89edde06501d3dfbddce5494337ecd440dafbb2dc",
   "fdce091fbfa2d5a639f3a709bf2288856b01d47848c1314cde9a14995bf3b7be"
  ],
- "defter_sayisi": 63,
- "defter_sha256": "659eda2e4e943dedcf5964fc1dc63118930d215552cc7bbdee19601da2d55a83",
+ "defter_sayisi": 64,
+ "defter_sha256": "fa2852ceb9bfeba6048858a18085483c2974909d2597de4b2cbd6c33b9104f6b",
  "deneme": 500,
  "evren": 18,
  "ga05": [
@@ -59,8 +59,8 @@
   1.0634610745437818
  ],
  "git": {
-  "commit": "c1a9d00dc749e99ca54189eef316bf17e0dc81e7",
-  "dirty": true,
+  "commit": "afe1e1b5d3b26c21f3650afb9097fba2d4badd85",
+  "dirty": false,
   "git_yok": false
  },
  "kaynak": "runs/faz12/coklu-test-birlesik-500-0.json",
@@ -81,10 +81,11 @@
   "2346fdff4ca9eb7f4cae85fb657bb166d5d91dca992cbc66bbbe131fada25b34",
   "e6b085a1e5f3ae1a7e19d3e3888b9b1291121561172bd392b2eea9fd0ee2dd0f",
   "c5e045e1ef1bb4b72bf33c9af4d29033fba34c74121a84060cc4a442ce0fcda3",
-  "6657422e58fd1ed70e9d1f93dfb617a9c572d6306e3af67cfc044ed5ed5ee9a0"
+  "6657422e58fd1ed70e9d1f93dfb617a9c572d6306e3af67cfc044ed5ed5ee9a0",
+  "12fef84afb54fab3bc98d6fa3f749ce1dfb0d37c24abcaefac61c4bf8f73d1cc"
  ],
  "p05": 1.0039280761569713,
  "seed": 0,
  "tek_sembollu": 31,
- "uretildi": "2026-09-23 04:17:24 UTC"
+ "uretildi": "2026-09-23 14:30:24 UTC"
 }
