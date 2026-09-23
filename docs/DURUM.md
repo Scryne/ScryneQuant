@@ -38,6 +38,10 @@ ve en fazla 1:10 kaldıraç.
 - **Ön kayıtlı dönüş araştırması (K-136):** 36 aday × 2 piyasa; IS'te seçilen aday OOS'ta **kaldı**
   (kripto −%8,6, MT5 −%3,9). OOS'ta pozitif aday kripto 7/36, MT5 8/36; medyan −%9. Yeni demo
   hesap eklenmedi.
+- **Program 2 (K-137, literatür etkileri, Holm k=4):** gece getirisi, gün içi momentum, ay dönümü,
+  zaman serisi momentumu → 0/4 PASS. Gece ve ay dönümü etkileri 30 yıllık bağımsız veride gerçek
+  (SPY gece +4 bps/gün, t 6); Integral CFD'sinde gece etkisini maliyet (≈ 2,8 bps/gün) sıfırlıyor, ay
+  dönümü tutarlı ama 12 yılda istatistiksel eşiği geçmiyor.
 - Eski alfa araştırması (64 çekiliş) aynı sonucu vermişti: maliyet sonrası üstünlük yok.
 - Yani çalışan demolar **kazanç beklentisiyle değil ölçmek için** çalışıyor; demo karnesi geriye
   bakıştan farklı çıkarsa o ayrı bir bulgu olur.
@@ -46,7 +50,8 @@ ve en fazla 1:10 kaldıraç.
 
 1. Dört hesabın ilk haftalık karnesi (2026-09-28 sonrası): demo ↔ geriye bakış tutarlı mı?
 2. Integral'den algoritmik işlem izni (Scryne) → gerçek demo emirleri; CFD komisyonu ölçülür.
-3. Maliyeti düşüren yeni fikirler (limit emir, daha seçici giriş) ancak **yeni ön kayıtla**.
+3. Integral CFD'nin gerçek maliyeti (komisyon + kayma) ölçülürse A1/A3 aynı tanımla yeni ön kayıtla
+   yeniden değerlendirilir (K-137). Yeni fikirler de ancak **yeni ön kayıtla**.
 
 ## Dondurulmuş
 

@@ -6891,3 +6891,55 @@ yalnız son zaman diliminin (4h) dönemini tutuyor (betik hatası, sonrası içi
   Kod ve testler duruyor (koruma testleri gerçek para yolu açılırsa yine geçerli), çalışan süreç yok.
 - `.claude/CLAUDE.md` dosya haritası yürürlükteki hat + dondurulmuş bölüm olarak yeniden yazıldı; kural 8 ve 11
   gerçek paraya geçişin kuralı olarak kapsamlandı (demo araştırması yine ön kayıtla).
+
+---
+
+## K-137 — Program 2 (literatür etkileri): 0/4 PASS; gece ve ay dönümü etkileri gerçek ama bu araçta maliyet/örneklem yetmiyor
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("şu strateji araştırmasında detaylıca ve
+profesyonelce çalışıp bulamaz mısın") · **Tabi:** K-004, K-007, K-039, K-134…K-136 · **Kaynak:** ön kayıt
+`docs/research/records/2026-09-23-aktif-program2-onkayit.md` (`e3c31e9`, koşudan önce), `tools/aktif_program2.py`,
+sonuç `docs/research/records/2026-09-23-aktif-program2-sonuc.json`
+
+### Yöntem
+
+Parametre taraması yerine literatürde belgelenmiş dört etki, literatürdeki tanımıyla (arama yok): A1 gece
+getirisi (16:00→09:00 ET long), A2 gün içi momentum (16:00→10:00 işareti, 15:00-16:00 ET barı), A3 ay dönümü
+(son işlem günü → 3. işlem günü), B1 zaman serisi momentumu (252 gün işareti, %10 hedef oynaklık, haftalık).
+MT5 Integral verisi (A1/A2 H1 2021-04→, A3 D1 2014→, B1 D1 1990→); maliyet taraf başı yarım spread + 0,5
+komisyon + 0,5 kayma (1,2-2,2 bps); Newey-West t, Holm k = 4. Sunucu saati sabit UTC+3 (bakım arası ölçümü).
+Mekanik koşudan önce sentetik bilinen-cevap verisiyle sınandı (gündüz hareketi gece stratejisine sızmıyor).
+
+### Sonuç (net, portföy)
+
+| | Dönem | Yıllık | Sharpe | Ort. bps/gün | NW t | Semboller + | İşlem/hafta | Karar |
+|---|---|---|---|---|---|---|---|---|
+| A1 gece | 2021-26 | −%1,1 | −0,05 | −0,18 | −0,13 | 1/3 | 30 | FAIL |
+| A2 gün içi mom. | 2021-26 | −%8,9 | −1,90 | −3,69 | −4,21 | 0/3 | 29 | FAIL |
+| A3 ay dönümü | 2014-26 | +%2,2 | 0,36 | +0,87 | 1,35 | 3/3 | 1,4 | FAIL (Holm) |
+| B1 TSMOM | 1990-26 | −%0,8 | −0,09 | −0,23 | −0,57 | 6/11 | 8 | FAIL |
+
+**Bağımsız referans (Yahoo, maliyetsiz):** gece getirisi SPY +4,0 bps/gün (t 6,0, 1993-2026), QQQ +5,6 (t 5,7),
+DIA +3,1 (t 4,2); gün içi ≈ 0. 2020'lerde SPY +3,9 (t 2,0). Ay dönümü günleri SPY +11,9 vs diğer günler +3,6
+bps (t 3,7).
+
+### Okuma
+
+- **A1:** etki gerçek (30 yıl, t 6) ve MT5'te brüt ≈ +2,6 bps/gün görünüyor; ama günde iki taraf maliyeti
+  ≈ 2,8 bps onu sıfırlıyor. Vadeli tabanlı CFD'de taşıma maliyeti (≈ risksiz faiz) de çoğunlukla gece
+  birikir — araç yapısal olarak ETF'ten dezavantajlı. Maliyetin 1 bps'i doğrulanmamış varsayım (komisyon +
+  ek kayma).
+- **A2:** 2021-26 vadelide saatlik çözünürlükte işaret ters (brüt ≈ −1,7 bps); maliyet üstüne ekleniyor.
+  Ters çevirmek sonuca bakıp kural değiştirmek olur; yapılmadı.
+- **A3:** en tutarlı aday: 3/3 endeks pozitif, iki yarı pozitif, maliyet ihmal edilebilir, 30 yıllık
+  referans güçlü. Ama 12 yılda t 1,35: Holm eşiğini (p ≤ 0,0125) geçmiyor. Ayda ~4 gün pozisyon; "sık işlem"
+  değil.
+- **B1:** bu 11 sembollük (FX ağırlıklı) evrende 35 yılda sıfır; literatürdeki TSMOM tahvil/emtia dahil
+  50+ piyasada ölçülmüş.
+
+### Karar
+
+0/4 PASS → demoya yeni hesap eklenmez (ön kayıt kuralı). Mevcut demolar değişmez. Gerçek maliyet (Integral CFD
+komisyonu, gerçekleşen kayma) ölçülürse A1 ve A3 **aynı tanımla** yeni ön kayıtla yeniden değerlendirilebilir;
+bu, sonuçtan sonra kural değiştirmek değil, varsayım olan bir girdiyi ölçümle değiştirmektir ve ön kayıtta
+açıkça öyle yazılır.
