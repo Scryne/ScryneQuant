@@ -78,8 +78,8 @@ export function Emirler({ emirler, strateji }: { emirler: Emir[]; strateji?: str
           </table>
         </div>
       ) : (
-        <div className="grid flex-1 place-items-center rounded-2xl border border-dashed border-bot-line-strong p-6 text-center">
-          <div className="w-full max-w-xs">
+        <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-bot-line-strong p-6 text-center">
+          <div className="w-full max-w-[20rem]">
             <p className="font-semibold text-bot-text-2">Henüz emir yok</p>
             <p className="mt-1 text-[13px] text-pretty text-bot-text-3">
               {strateji === "sabit_oran"

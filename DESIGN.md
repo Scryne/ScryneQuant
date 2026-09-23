@@ -347,6 +347,8 @@ ve ayrı bir renkte** (`bot-risk` kehribar) ve başka hiçbir şeye verilmez. Za
   "bot ne zaman bir şey yapacak" sorusunu tek bakışta cevaplar.
 - **Sayılar:** büyük bakiye Manrope `tnum`; tablo ve fiyatlar Fira Code. Sayılar anlık değişir,
   sayma animasyonu yok.
+- **Adlı genişlik sınıfı yok.** `spacing` token'ları (`xs`…`2xl`) Tailwind v4'te `max-w-sm` gibi adlı sınıfları
+  ele geçirir (`max-w-sm` = 8px olur). Genişlik sınırı açık değerle yazılır: `max-w-[24rem]`.
 - **Yeşil gradient** yalnız iki yerde: grafik alan dolgusu ve pilot kartı (`bot-mint` → `bot-mint-deep`; referansın "öne çıkan
   kart"ı). Başka yüzeyde gradient yok; kartlar opak (`bot-surface`), cam yok.
 - **Salt okuma:** ekranda emir/onay/kill düğmesi yoktur (K-036, K-043). Acil durdurma kartı

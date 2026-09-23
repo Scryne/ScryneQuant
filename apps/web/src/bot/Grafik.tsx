@@ -152,8 +152,8 @@ export function Grafik({ egri, sermaye }: { egri: EgriNoktasi[]; sermaye: number
           </figcaption>
         </figure>
       ) : (
-        <div className="grid flex-1 place-items-center rounded-2xl border border-dashed border-bot-line-strong p-8 text-center">
-          <div className="w-full max-w-sm">
+        <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-bot-line-strong p-8 text-center">
+          <div className="w-full max-w-[24rem]">
             <p className="font-semibold text-bot-text-2">Grafik ilk saatlerde dolacak</p>
             <p className="mt-1 text-[13px] text-pretty text-bot-text-3">
               Bot her saat başı kapanışta bir nokta ekler. İki noktadan sonra eğri burada görünür.

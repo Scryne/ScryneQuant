@@ -235,8 +235,8 @@ function RiskSeridi({
 
 function BosEkran() {
   return (
-    <div className="kart grid place-items-center p-10 text-center">
-      <div className="w-full max-w-md">
+    <div className="kart flex items-center justify-center p-10 text-center">
+      <div className="w-full max-w-[28rem]">
         <p className="font-bot-title text-bot-title font-semibold">Henüz koşu yok</p>
         <p className="mt-1 text-[13px] text-pretty text-bot-text-3">
           Gözetmen görevini başlat ya da bir koşu aç:{" "}
