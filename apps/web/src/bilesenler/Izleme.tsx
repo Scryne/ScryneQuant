@@ -79,7 +79,7 @@ export function IzlemeBolumu() {
                   · {a.kosu ?? "host"}: {a.mesaj}
                 </span>
                 <span className="block text-label text-tertiary">
-                  Ne yapılacağı: docs/Runbook.md
+                  Ne yapılacağı: docs/arsiv/Runbook.md
                 </span>
               </li>
             ))}

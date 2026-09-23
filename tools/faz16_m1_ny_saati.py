@@ -1,6 +1,6 @@
 """M-1 "NY saati çapası" — program adayı 01'in gerekçe ölçüsü. **Çekiliş değil.**
 
-Tanım `docs/program-adaylari/01-transkript-desenleri/README.md` §4'te 2026-09-15'te,
+Tanım `docs/arsiv/program-adaylari/01-transkript-desenleri/README.md` §4'te 2026-09-15'te,
 sonuç görülmeden yazıldı; bu betik o tanımı olduğu gibi hesaplar. Parametre yok, seçim yok:
 çapa 13:00 ET, pencereler 60/30/60 dk, 96 plasebo çapası sabit. Karar kuralı önceden yazılı:
 

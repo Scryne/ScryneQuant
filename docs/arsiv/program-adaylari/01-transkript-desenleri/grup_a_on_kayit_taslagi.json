@@ -1,0 +1,1150 @@
+{
+  "meta": {
+    "amac": "Grup A (mevcut veri hattıyla kapsanan) adaylar için K-051 formatında ön kayıt TASLAĞI. Test edilmedi, deftere yazılmadı, hiçbir aday öne çıkarılmadı; parametreler öneridir.",
+    "girdi": "C:\\Users\\scryn\\Downloads\\trade-strateji\\hipotez_adaylari.json",
+    "olusturma_tarihi": "2026-09-15",
+    "onay_durumu": "İNSAN ONAYI BEKLİYOR",
+    "grup_a_kurali": "Aday Grup A'ya alındı ancak ve ancak: gerekli_veri alanı BTC/kripto'yu açıkça listeliyor VEYA enstrümanı belirtmiyor/'herhangi likit' diyor; VE kural BTCUSDT dışında ikinci bir sembol (ETH, AVAX, NQ/ES çifti vb.) veya depoda/indiricide olmayan bir veri türü (COT, tatil takvimi) gerektirmiyor. Kaynağın yalnızca endeks/FX/metal üzerinde anlattığı ama 'genel' dediği adaylar Grup A'ya ALINMADI; BTC'ye aktarılmaları kaynakta olmayan yeni bir hipotez olur, bu karar insana bırakıldı (Grup B'de 'kaynak_genel_iddia' bayrağı).",
+    "veri_kapsami_dogrulamasi": {
+      "dogrulama_tarihi": "2026-09-15",
+      "dogrulama_yontemi": "Depo dosyaları pyarrow ile okundu (satır sayısı ve ilk/son open_time); indirici ve adaptör kaynak kodu incelendi.",
+      "depodaki_seriler": [
+        {
+          "dosya": "data/market/BTCUSDT/1m.parquet",
+          "bar": 1630476,
+          "ilk_utc": "2023-08-04 04:17",
+          "son_utc": "2026-09-09 10:52"
+        },
+        {
+          "dosya": "data/market/BTCUSDT/1h.parquet",
+          "bar": 45576,
+          "ilk_utc": "2021-06-28 03:00",
+          "son_utc": "2026-09-09 09:00"
+        },
+        {
+          "dosya": "data/market/BTCUSDT/4h.parquet",
+          "bar": 11615,
+          "ilk_utc": "2021-05-24 08:00",
+          "son_utc": "2026-09-11 00:00"
+        },
+        {
+          "dosya": "data/market/BTCUSDT/1d.parquet",
+          "bar": 1936,
+          "ilk_utc": "2021-05-24",
+          "son_utc": "2026-09-10"
+        },
+        {
+          "dosya": "data/funding/BTCUSDT.parquet",
+          "kayit": 7675,
+          "ilk_utc": "2019-09-10 08:00",
+          "son_utc": "2026-09-11 08:00",
+          "kaynak": "Binance USD-M perp funding (fapi)"
+        }
+      ],
+      "kaynak": "Binance SPOT kline (data-api.binance.vision). Sütunlar: open_time, open, high, low, close, volume, quote_volume, trades, quality_status.",
+      "indirici_desteklenen_timeframe": [
+        "1m",
+        "3m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "4h",
+        "6h",
+        "12h",
+        "1d"
+      ],
+      "depoda_olmayan": "BTCUSDT dışında hiçbir sembol yok (ETH dahil). CME vadelileri, FX, XAU/XAG, COT için ne veri ne adaptör var. Spike 6'nın 659 sembollük evreni ölçüldü ama depoya indirilmemiş.",
+      "motor_kisitlari": [
+        "Spot, açığa satış ve kaldıraç yok: Sinyal.target_exposure ∈ [0, 1], Yon ∈ {BUY, SELL, FLAT} (strategy/sinyal.py, portfolio/durum.py). Short bacaklar bu motorda test edilemez.",
+        "Limit, stop ve take-profit emri yok: sinyal kapanmış barda üretilir, t+1 açılışında aleyhte slippage ile dolar (backtest/fill.py, K-004, K-007). Kaynaklardaki limit girişleri 'bar kapanışı bölgedeyse sonraki açılışta' kuralına, SL/TP'ler 'bar kapanışı seviyeyi geçtiyse sonraki açılışta FLAT' kuralına çevrildi.",
+        "Bağlam tek timeframe taşır (strategy/baglam.py). Birden fazla zaman dilimi isteyen kurallar, alt zaman diliminde koşup üst zaman dilimini strateji içinde kendi barlarından toplayacak biçimde yazıldı (I/O yok, K-003 ile uyumlu).",
+        "Zaman UTC epoch ms, bar zamanı açılış zamanı (K-005). ET pencereleri America/New_York saat dilimi kuralıyla (yaz saati dahil) UTC'ye çevrilmeli; bu çeviri deterministik ve look-ahead içermez."
+      ]
+    }
+  },
+  "on_kayit_oncesi_acik_engeller": [
+    {
+      "karar": "K-045",
+      "engel": "Tek sembollü yönlü strateji araması kapandı ('BTC/USDT üzerinde klasik teknik göstergelerle yönlü tahmin, bu veri ve bu kapılarla tükendi'). Grup A'nın tamamı BTCUSDT tek sembol yönlü stratejidir."
+    },
+    {
+      "karar": "K-051/2",
+      "engel": "Yeni arama programı ancak bilgi kaynağının 'neden belirgin biçimde farklı olduğu' iddiayla değil ölçüyle gerekçelendirilerek, arama bütçesi ve durma kuralıyla deftere yazılarak açılabilir. Bu taslaklar aynı BTC fiyat geçmişinden türetilen saat/bar desenleridir; farklı bir bilgi kaynağı olduklarına dair bir ölçüm bu çalışmada yok. Programın açılıp açılmayacağı insan kararıdır."
+    },
+    {
+      "karar": "K-054",
+      "engel": "evren_dayanikliligi tek sembolde ölçülemez; rejim_kararliligi, parametre_perturbasyonu ve pbo eşikleri açık. Bugünkü hâliyle hiçbir Grup A taslağı promotion kapılarının tamamında 'ölçüldü' alamaz."
+    },
+    {
+      "karar": "K-049 / K-054 leak_riski",
+      "engel": "Kural ve parametre önerileri eğitim kesimi Mayıs 2026 olan bir LLM tarafından üretildi; kaynak videolardaki grafik örnekleri (ör. KAANERMI-DMC-10: Temmuz 2026) değerlendirme verisinin içine düşüyor. Değerlendirme penceresinin leak_riski açısından nasıl kısıtlanacağı insan kararıdır."
+    },
+    {
+      "karar": "Motor kapsamı (Final-Doküman v1)",
+      "engel": "Spot, long-only, limit/stop emri yok. Kaynak kuralların short bacakları çıkarıldı; bir taslak (DREYKO-PRS-02-h2) yalnızca short olduğu için koşturulamaz."
+    }
+  ],
+  "taslaklar": [
+    {
+      "hipotez_id": "DREYKO-PRS-02-h1",
+      "onerilen_ad": "btc_aylik_inside_bar_hedef_olcumu",
+      "taslak_turu": "istatistiksel_olcum",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/02_optimal_trend_entry_ile_isleme_girmek_pattern_recognition_series_ep2.md",
+      "mekanizma": "Güçlü bir düşüş ayından sonra önceki ayın aralığı içinde kalan (inside bar) bir ay oluşursa, bu ayın high ve low seviyeleri sonraki ayda fiyatın ulaştığı seviyeler olarak işlev görür.",
+      "sabit_kural": "Veri: data/market/BTCUSDT/1d.parquet, UTC takvim ayına toplanmış aylık mumlar. Ay M: close < open VE (open − close) ≥ 0.6·(high − low). Ay M+1: high(M+1) ≤ high(M) VE low(M+1) ≥ low(M). EĞER bu iki koşul sağlanırsa, ay M+2 için şu ikili değişkenler kaydedilir: U = [M+2 içinde high ≥ high(M+1)], D = [M+2 içinde low ≤ low(M+1)], ilk ulaşılan uç. Baz: veri setindeki TÜM ardışık (K, K+1) ay çiftleri için [K+1 içinde high ≥ high(K)] ve [K+1 içinde low ≤ low(K)]. İstatistik: tek taraflı binom testi, H1: P(U ∨ D | olay) > P(baz, U ∨ D).",
+      "parametre_onerileri": [
+        {
+          "parametre": "ay_siniri",
+          "onerilen_deger": "UTC takvim ayı",
+          "gerekce": "Depo UTC (K-005); video BTC aylık grafiği kullandı ve borsa aylık mumları UTC'dir. ET sınırı CME'ye özgü, burada anlamsız."
+        },
+        {
+          "parametre": "govde_range_orani",
+          "onerilen_deger": 0.6,
+          "gerekce": "Kaynakta 'net bir satış' denmiş, sayı yok. Gövdenin mum aralığının yarısından belirgin büyük olması en yakın nesnel karşılık; 0.5 sınırda kalan mumları da alırdı, 0.6 tek değer olarak seçildi."
+        }
+      ],
+      "beklenen_yon": "Yönsüz. Kaynağın iddiası: inside bar ayının uçlarına sonraki ay ulaşılma oranı baz orandan yüksek.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [],
+        "tabi_oldugu_kapilar_K054": [],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "not": "Bu aday bir işlem stratejisi değil, bir istatistiksel özellik ölçümüdür (ulaşma oranı / range oranı). K-019 ve K-054 kapıları Sharpe, işlem ve walk-forward üzerine kurulu olduğundan uygulanamaz; sonuç promotion adayı üretmez. Ölçüm için önerilen istatistik ve baz oran sabit_kural içinde. K-039 açısından aynı veriye yeni bir soru olduğu için çekiliş sayılması önerilir (insan kararı).",
+        "leak_riski": "Strateji taslaklarındaki not burada da geçerli."
+      },
+      "durma_kurali_onerisi": "Tek tur. Depodaki serinin ön kayıt anındaki sha256'sı dondurulur; ölçüm bir kez yapılır. Olay sayısı 10'un altında çıkarsa sonuç 'ölçülemedi (yetersiz örnek)' olarak kapanır; veri uzatılarak (ör. daha eski BTC geçmişi indirilerek) tekrar ölçülmez — bu ayrı bir çekiliş olur. Not: depodaki 1d serisi 2021-05'ten başlıyor (~64 ay); koşulu sağlayan olay sayısının 10'a ulaşmama olasılığı yüksek ve bu ön kayıttan önce bilinmeli.",
+      "ayni_aile": "F04_INSIDE_BAR_RANGE_HEDEF",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-22-h1"
+      ],
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_aylik_inside_bar_hedef_olcumu",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-02-h2",
+      "onerilen_ad": "btc_gunluk_bearish_fvg_ilk_temas_red",
+      "taslak_turu": "islem_stratejisi_motorda_calismaz",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/02_optimal_trend_entry_ile_isleme_girmek_pattern_recognition_series_ep2.md",
+      "mekanizma": "Düşüş dalgasında oluşmuş, daha önce dokunulmamış günlük bearish FVG'ye ilk temastan sonra kapanışlar FVG'nin orta seviyesinin altında kalıyorsa FVG direnç olarak çalışır ve fiyat aşağı döner; kapanışlar 0.5 üstüne çıkarsa FVG geçilir.",
+      "sabit_kural": "Veri: BTCUSDT 1d. Bearish FVG: low(c1) > high(c3); Z = [high(c3), low(c1)]; oluşumdan sonra hiçbir bar high'ı Z_alt'a ulaşmamış. t = ilk gün high ≥ Z_alt. EĞER t, t+1, t+2, t+3 günlerinin hiçbirinin close'u Z_alt + 0.5·(Z_üst − Z_alt) üzerinde değilse → t+3 kapanışında SHORT sinyali (t+4 açılışında dolum). ÇIKIŞ: bir günlük close ≤ FVG'yi oluşturan düşüş bacağının dibi (c1'den önceki son 3-bar fraktal swing high ile c3 arasındaki en düşük low) → FLAT; VEYA close > Z_üst → FLAT.",
+      "parametre_onerileri": [
+        {
+          "parametre": "bekleme_gun_N",
+          "onerilen_deger": 3,
+          "gerekce": "Kaynak 'çok zaman geçiriyorsa' diyor, süre yok. Günlük grafikte en küçük anlamlı 'zaman geçirme' birkaç gündür; ilk temas günü + 3 gün (yaklaşık yarım hafta) tek değer olarak seçildi."
+        },
+        {
+          "parametre": "olcu",
+          "onerilen_deger": "kapanış",
+          "gerekce": "Kaynak '0.5 arasının altında kalıyorsa' diyor; fitil ölçüsü tek bir iğneyle kuralı bozar, kapanış kaynağın 'burada zaman geçirme' vurgusuna daha yakın."
+        },
+        {
+          "parametre": "fvg_secimi",
+          "onerilen_deger": "dokunulmamış tüm günlük bearish FVG'ler (her biri bağımsız olay)",
+          "gerekce": "Kaynağın 'premium'daki FVG' seçimi öznel; seçim yapmamak tek nesnel seçenek."
+        }
+      ],
+      "beklenen_yon": "Short.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [
+          "oos_sharpe (K-044 ile düzeltilmiş sınır)",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "max_drawdown",
+          "stres_dayanikliligi"
+        ],
+        "tabi_oldugu_kapilar_K054": [
+          "rejim_kararliligi",
+          "evren_dayanikliligi",
+          "parametre_perturbasyonu",
+          "pbo"
+        ],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "bugunku_olculebilirlik_notu": {
+          "parametre_kararliligi": "Tek noktalı ızgarada her katman aynı değeri seçer; kapı mekanik olarak geçer ve bilgi taşımaz. Bu bir geçiş kanıtı sayılmamalı.",
+          "rejim_kararliligi": "Ölçülemez: rejim tanımı henüz yok (K-052, Faz 12). Ölçülemeyen kapı geçilmiş sayılmaz (K-019).",
+          "evren_dayanikliligi": "Ölçülemez: tek sembol (BTCUSDT) ve depoda evren verisi yok (K-054 açıkça 'tek sembolde ölçülemez' diyor).",
+          "parametre_perturbasyonu": "Eşiği açık (K-054, Faz 11); eşiksiz kapı ölçülemez.",
+          "pbo": "Eşiği açık (K-054, Faz 11); ayrıca tek noktalı ızgarada CSCV'nin seçeceği bir alternatif yok.",
+          "sonuc": "Bugünkü durumda bu taslak dört K-054 kapısında 'ölçülemedi' alır; yani sonuç ne olursa olsun promotion'a geçemez. Koşturma yalnızca ölçüm/eleme değeri taşır.",
+          "leak_riski": "İnsan kararı gerekiyor: kurallar ve parametreler, eğitim kesimi Mayıs 2026 olan bir LLM (bu çalışmayı yapan model) tarafından, kaynak videolardaki 2025-2026 grafik örneklerinden türetildi. K-049 'eğitim kesimi öncesi dönem için üretilen türetim leak_riski taşır' diyor. Muhafazakâr okuma: OOS/değerlendirme penceresinin tamamı 2026-06 sonrasına düşmedikçe (bugün ~3 ay veri) bu taslaklar leak_riski taşır."
+        },
+        "motor_uyumu": "Kural yalnızca short tarafında işlem üretiyor; motor spot/long-only olduğu için bu taslak koşturulamaz. Long bacağa çevirmek kaynakta olmayan yeni bir hipotez olur ve bu dosyada önerilmedi."
+      },
+      "durma_kurali_onerisi": "Koşturulamaz (motor long-only). Açığa satış kapsamı açılmadıkça bu taslak bekler; bekleme süresince çekiliş sayılmaz.",
+      "ayni_aile": "F10_FVG_TEPKI_SR",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-05-h2",
+        "DREYKO-PRS-12-h2",
+        "DREYKO-PRS-14-h1",
+        "DREYKO-PRS-16-h3",
+        "DREYKO-PRS-20-h1",
+        "KAANERMI-10AM-03-h2",
+        "KAANERMI-SIFIR-07-h1",
+        "KAANERMI-SIFIR-19-h1"
+      ],
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_gunluk_bearish_fvg_ilk_temas_red",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-02-h3",
+      "onerilen_ad": "btc_1h_ote_govde_long",
+      "taslak_turu": "islem_stratejisi_yalniz_long_bacak",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/02_optimal_trend_entry_ile_isleme_girmek_pattern_recognition_series_ep2.md",
+      "mekanizma": "Bir impuls bacağı oluştuktan sonra fiyat bacağın 0.62-0.705 Fibonacci geri çekilme bölgesine dönüp bacak yönünde devam eder; hedefler bacak uzunluğunun 1 ve 2 katı uzantılarıdır.",
+      "sabit_kural": "Veri: BTCUSDT 1h. Swing: gövde bazlı 3-bar fraktal — swing low barı i: min(open,close)(i) < min(open,close)(i−1) ve < min(open,close)(i+1); swing high simetrik max(open,close); swing i+1 kapanınca onaylanır. Bacak: A = en son onaylı swing low gövde değeri, B = A'dan sonra onaylı ilk swing high gövde değeri, (B − A) ≥ 3·ATR(14). EĞER pozisyon yoksa VE bir bar close ∈ [B − 0.705·(B − A), B − 0.62·(B − A)] VE bu bar B onaylandıktan sonra ve fiyat A'nın altında hiç kapanmadan geliyorsa → BUY (t+1 açılışı, maruziyet 0.2). ÇIKIŞ: close ≤ A → FLAT; VEYA close ≥ B + 1.0·(B − A) → FLAT. Her bacak için en fazla bir giriş.",
+      "parametre_onerileri": [
+        {
+          "parametre": "timeframe",
+          "onerilen_deger": "1h",
+          "gerekce": "Kaynak 1H ve 15m gösterdi. 1h depoda 2021'den hazır (daha uzun örneklem); 15m ayrı bir çekiliş olurdu."
+        },
+        {
+          "parametre": "swing_tanimi",
+          "onerilen_deger": "gövde bazlı 3-bar fraktal",
+          "gerekce": "Kaynak açıkça 'OTE'yi body'lerden çekiyorum, asıl hacim body'lerde' diyor; fraktal genişliği 1 (3 bar) kanalların kullandığı tanım (KAANERMI-SIFIR-02)."
+        },
+        {
+          "parametre": "asgari_bacak_ATR_kati",
+          "onerilen_deger": 3,
+          "gerekce": "Kaynak 'impuls bacağı' diyor; filtre olmadan her 3 barlık dalgacık bacak sayılır. 3·ATR(14) 1h'te belirgin bir hareketin en küçük standart karşılığı olarak tek değer seçildi."
+        },
+        {
+          "parametre": "giris_bolgesi",
+          "onerilen_deger": "0.62–0.705",
+          "gerekce": "Kaynağın kendi 'ICT OTE' ayarı; 0.79 başka videolarda geçiyor, bu videonun ayarı 0.705."
+        },
+        {
+          "parametre": "hedef",
+          "onerilen_deger": "-1 uzantı (B + 1.0·(B−A))",
+          "gerekce": "Kaynak -1'de kâr, -2'de sonlandırma diyor. Motor kısmi çıkışı ek parametre gerektirdiği için tek çıkış seçildi; -1 kaynağın ilk hedefi."
+        },
+        {
+          "parametre": "maruziyet",
+          "onerilen_deger": 0.2,
+          "gerekce": "0.2: defterdeki önceki ön kayıtlı hipotezlerin (funding_ters/filtre/egilim, K-042) tamamı maruziyet [0.2] kullandı; farklı bir değer seçmek kıyası bozar. Risk limiti azami_maruziyet 0.3'ün altında."
+        }
+      ],
+      "beklenen_yon": "Long (yukarı bacaklarda devam). Kaynağın simetrik short bacağı motorda test edilemez ve bu taslağa dahil değil.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [
+          "oos_sharpe (K-044 ile düzeltilmiş sınır)",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "max_drawdown",
+          "stres_dayanikliligi"
+        ],
+        "tabi_oldugu_kapilar_K054": [
+          "rejim_kararliligi",
+          "evren_dayanikliligi",
+          "parametre_perturbasyonu",
+          "pbo"
+        ],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "bugunku_olculebilirlik_notu": {
+          "parametre_kararliligi": "Tek noktalı ızgarada her katman aynı değeri seçer; kapı mekanik olarak geçer ve bilgi taşımaz. Bu bir geçiş kanıtı sayılmamalı.",
+          "rejim_kararliligi": "Ölçülemez: rejim tanımı henüz yok (K-052, Faz 12). Ölçülemeyen kapı geçilmiş sayılmaz (K-019).",
+          "evren_dayanikliligi": "Ölçülemez: tek sembol (BTCUSDT) ve depoda evren verisi yok (K-054 açıkça 'tek sembolde ölçülemez' diyor).",
+          "parametre_perturbasyonu": "Eşiği açık (K-054, Faz 11); eşiksiz kapı ölçülemez.",
+          "pbo": "Eşiği açık (K-054, Faz 11); ayrıca tek noktalı ızgarada CSCV'nin seçeceği bir alternatif yok.",
+          "sonuc": "Bugünkü durumda bu taslak dört K-054 kapısında 'ölçülemedi' alır; yani sonuç ne olursa olsun promotion'a geçemez. Koşturma yalnızca ölçüm/eleme değeri taşır.",
+          "leak_riski": "İnsan kararı gerekiyor: kurallar ve parametreler, eğitim kesimi Mayıs 2026 olan bir LLM (bu çalışmayı yapan model) tarafından, kaynak videolardaki 2025-2026 grafik örneklerinden türetildi. K-049 'eğitim kesimi öncesi dönem için üretilen türetim leak_riski taşır' diyor. Muhafazakâr okuma: OOS/değerlendirme penceresinin tamamı 2026-06 sonrasına düşmedikçe (bugün ~3 ay veri) bu taslaklar leak_riski taşır."
+        }
+      },
+      "durma_kurali_onerisi": "Tek tur (K-042 kalıbı). Veri: depodaki BTCUSDT serisinin ön kayıt anındaki sha256'sı dondurulur; sonradan inen bar eklenmez. Değerlendirme: projenin mevcut walk-forward/stres/kapı hattı değiştirilmeden bir kez koşturulur; sonuç o koşuda kesindir. Kapılardan kalırsa hipotez kapanır: ızgara genişletme, timeframe/sembol değişikliği, filtre ekleme veya ikinci seçim yöntemi yapılmaz; yapılırsa ayrı çekiliş sayılır. asgari_islem < 30 çıkarsa sonuç 'kaldı' olarak kaydedilir; veri birikmesi beklenerek yeniden koşturulmaz.",
+      "ayni_aile": "F08_FIB_RETRACEMENT_DEVAM",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-06-h1",
+        "KAANERMI-10AM-04-h2",
+        "KAANERMI-DMC-06-h3",
+        "KAANERMI-LUNCH-14-h1",
+        "KAANERMI-SIFIR-11-h1",
+        "KAANERMI-SIFIR-12-h1"
+      ],
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_1h_ote_govde_long",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-07-h1",
+      "onerilen_ad": "btc_1h_volatilite_daralma_genisleme_olcumu",
+      "taslak_turu": "istatistiksel_olcum",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/07_amd_100_yildir_calisan_tek_piyasa_dongusu_pattern_recognition_series_ep7.md",
+      "mekanizma": "Piyasada küçük range'lerin oluşması daha büyük range ve genişlemelerin habercisidir.",
+      "sabit_kural": "Veri: BTCUSDT 1h. Her bar t için d(t) = ATR(10)(t) / ATR(50)(t). Olay: d(t) < 0.6 VE d(t−1) ≥ 0.6 (daralmaya giriş anı; ardışık barların tekrar sayılmasını önler). Sonuç: G(t) = [max(high, t+1..t+10) − min(low, t+1..t+10)] / ATR(50)(t). Baz: tüm barlar için aynı G. İstatistik: medyan(G | olay) > medyan(G | baz), tek taraflı Mann-Whitney U; olaylar arası en az 10 bar ayrım.",
+      "parametre_onerileri": [
+        {
+          "parametre": "timeframe",
+          "onerilen_deger": "1h",
+          "gerekce": "Dosya 'intraday ve günlük' diyor; depodaki en uzun intraday seri 1h."
+        },
+        {
+          "parametre": "kisa_ATR",
+          "onerilen_deger": 10,
+          "gerekce": "Standart kısa pencere; kaynakta sayı yok."
+        },
+        {
+          "parametre": "uzun_ATR",
+          "onerilen_deger": 50,
+          "gerekce": "Projede ATR(50) diğer taslaklarda ortak normalizasyon; tek değer."
+        },
+        {
+          "parametre": "daralma_esigi",
+          "onerilen_deger": 0.6,
+          "gerekce": "Kısa volatilitenin uzun ortalamanın belirgin altında olması; kaynakta sayı yok, 0.5 çok nadir, 0.7 sıradan dalgalanmayı kapsar."
+        },
+        {
+          "parametre": "sonuc_penceresi_bar",
+          "onerilen_deger": 10,
+          "gerekce": "Kısa ATR penceresiyle aynı uzunluk; ek serbestlik yaratmamak için."
+        }
+      ],
+      "beklenen_yon": "Yönsüz; daralma sonrası range'in baz orandan büyük olması.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [],
+        "tabi_oldugu_kapilar_K054": [],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "not": "Bu aday bir işlem stratejisi değil, bir istatistiksel özellik ölçümüdür (ulaşma oranı / range oranı). K-019 ve K-054 kapıları Sharpe, işlem ve walk-forward üzerine kurulu olduğundan uygulanamaz; sonuç promotion adayı üretmez. Ölçüm için önerilen istatistik ve baz oran sabit_kural içinde. K-039 açısından aynı veriye yeni bir soru olduğu için çekiliş sayılması önerilir (insan kararı).",
+        "leak_riski": "Strateji taslaklarındaki not burada da geçerli."
+      },
+      "durma_kurali_onerisi": "Tek tur. Depodaki serinin ön kayıt anındaki sha256'sı dondurulur; ölçüm bir kez yapılır. Olay sayısı 100'un altında çıkarsa sonuç 'ölçülemedi (yetersiz örnek)' olarak kapanır; veri uzatılarak (ör. daha eski BTC geçmişi indirilerek) tekrar ölçülmez — bu ayrı bir çekiliş olur. Not: kaynak dosya transkript değil özet metin.",
+      "ayni_aile": "F20_VOLATILITE_REJIM_SEANS_HACIM",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-23-h3",
+        "KAANERMI-LUNCH-02-h2",
+        "KAANERMI-LUNCH-08-h1",
+        "KAANERMI-SIFIR-05-h1"
+      ],
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_1h_volatilite_daralma_genisleme_olcumu",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-07-h2",
+      "onerilen_ad": "btc_gunluk_alt_sweep_ertesi_gun_long",
+      "taslak_turu": "islem_stratejisi_yalniz_long_bacak",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/07_amd_100_yildir_calisan_tek_piyasa_dongusu_pattern_recognition_series_ep7.md",
+      "mekanizma": "Üç günlük döngüde D1 yönü ve range'i belirler, D2 bu range'in bir ucundaki likiditeyi alıp döner, D3 dönüş yönünde genişler.",
+      "sabit_kural": "Veri: BTCUSDT 1d (UTC gün). EĞER low(D2) < low(D1) VE close(D2) > low(D1) → D2 kapanışında BUY (D3 açılışında dolum, maruziyet 0.2). ÇIKIŞ: D3 barının kapanışında FLAT (D4 açılışında dolum). Pozisyondayken yeni sinyal pozisyonu uzatmaz; tutma süresi sabit 1 gün.",
+      "parametre_onerileri": [
+        {
+          "parametre": "gun_siniri",
+          "onerilen_deger": "UTC 00:00",
+          "gerekce": "Depodaki 1d mumu UTC; BTC 24/7 işlem görür, ET 17:00/18:00 sınırı CME seansına özgü."
+        },
+        {
+          "parametre": "tutma_suresi",
+          "onerilen_deger": "1 gün (yalnızca D3)",
+          "gerekce": "Kaynak 'D3: expansion'ın yaşandığı hedef gün' diyor; tek gün."
+        },
+        {
+          "parametre": "maruziyet",
+          "onerilen_deger": 0.2,
+          "gerekce": "0.2: defterdeki önceki ön kayıtlı hipotezlerin (funding_ters/filtre/egilim, K-042) tamamı maruziyet [0.2] kullandı; farklı bir değer seçmek kıyası bozar. Risk limiti azami_maruziyet 0.3'ün altında."
+        }
+      ],
+      "beklenen_yon": "Long (alt sweep sonrası D3 yukarı). Üst sweep → short bacağı motorda test edilemez, taslağa dahil değil.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [
+          "oos_sharpe (K-044 ile düzeltilmiş sınır)",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "max_drawdown",
+          "stres_dayanikliligi"
+        ],
+        "tabi_oldugu_kapilar_K054": [
+          "rejim_kararliligi",
+          "evren_dayanikliligi",
+          "parametre_perturbasyonu",
+          "pbo"
+        ],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "bugunku_olculebilirlik_notu": {
+          "parametre_kararliligi": "Tek noktalı ızgarada her katman aynı değeri seçer; kapı mekanik olarak geçer ve bilgi taşımaz. Bu bir geçiş kanıtı sayılmamalı.",
+          "rejim_kararliligi": "Ölçülemez: rejim tanımı henüz yok (K-052, Faz 12). Ölçülemeyen kapı geçilmiş sayılmaz (K-019).",
+          "evren_dayanikliligi": "Ölçülemez: tek sembol (BTCUSDT) ve depoda evren verisi yok (K-054 açıkça 'tek sembolde ölçülemez' diyor).",
+          "parametre_perturbasyonu": "Eşiği açık (K-054, Faz 11); eşiksiz kapı ölçülemez.",
+          "pbo": "Eşiği açık (K-054, Faz 11); ayrıca tek noktalı ızgarada CSCV'nin seçeceği bir alternatif yok.",
+          "sonuc": "Bugünkü durumda bu taslak dört K-054 kapısında 'ölçülemedi' alır; yani sonuç ne olursa olsun promotion'a geçemez. Koşturma yalnızca ölçüm/eleme değeri taşır.",
+          "leak_riski": "İnsan kararı gerekiyor: kurallar ve parametreler, eğitim kesimi Mayıs 2026 olan bir LLM (bu çalışmayı yapan model) tarafından, kaynak videolardaki 2025-2026 grafik örneklerinden türetildi. K-049 'eğitim kesimi öncesi dönem için üretilen türetim leak_riski taşır' diyor. Muhafazakâr okuma: OOS/değerlendirme penceresinin tamamı 2026-06 sonrasına düşmedikçe (bugün ~3 ay veri) bu taslaklar leak_riski taşır."
+        }
+      },
+      "durma_kurali_onerisi": "Tek tur (K-042 kalıbı). Veri: depodaki BTCUSDT serisinin ön kayıt anındaki sha256'sı dondurulur; sonradan inen bar eklenmez. Değerlendirme: projenin mevcut walk-forward/stres/kapı hattı değiştirilmeden bir kez koşturulur; sonuç o koşuda kesindir. Kapılardan kalırsa hipotez kapanır: ızgara genişletme, timeframe/sembol değişikliği, filtre ekleme veya ikinci seçim yöntemi yapılmaz; yapılırsa ayrı çekiliş sayılır. asgari_islem < 30 çıkarsa sonuç 'kaldı' olarak kaydedilir; veri birikmesi beklenerek yeniden koşturulmaz. Not: kaynak dosya transkript değil özet metin.",
+      "ayni_aile": "F03_ONCEKI_MUM_RANGE_SWEEP_CRT",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-08-h1",
+        "DREYKO-PRS-09-h3",
+        "DREYKO-PRS-12-h1",
+        "DREYKO-PRS-16-h1",
+        "KAANERMI-SIFIR-18-h1"
+      ],
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_gunluk_alt_sweep_ertesi_gun_long",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "DREYKO-PRS-09-h3",
+      "onerilen_ad": "btc_4h_onceki_gun_low_sweep_geri_kapanis_long",
+      "taslak_turu": "islem_stratejisi",
+      "kaynak_dosya": "DREYKO/Pattern Recognition Series/09_market_maker_model_pattern_recognition_series_ep9.md",
+      "mekanizma": "Günlük bir mumun sell-side likiditesi alınıp 4H'de bu seviyenin altında birikim olduktan sonra 4H gövde tekrar seviyenin üstünde kapanırsa yukarı dönüş başlar.",
+      "sabit_kural": "Veri: BTCUSDT 4h; önceki UTC günün high/low'u strateji içinde 4h barlarından toplanır. L = önceki UTC günün low'u, H = önceki UTC günün high'ı. EĞER pozisyon yoksa VE bu UTC gün içinde bir 4h bar low < L olduysa (sweep dibi S = o güne kadarki en düşük low) VE mevcut 4h bar close > L → BUY (t+1 açılışı, maruziyet 0.2). ÇIKIŞ: close < S → FLAT; VEYA close ≥ H → FLAT. Gün başına en fazla bir giriş; L ve H giriş anında dondurulur.",
+      "parametre_onerileri": [
+        {
+          "parametre": "referans_mum",
+          "onerilen_deger": "önceki günlük (UTC) mum",
+          "gerekce": "Kaynak hem günlük hem 3-günlük diyor; ilk ve açık ifadesi 'günlük'. 3-günlük ayrı çekiliş olurdu."
+        },
+        {
+          "parametre": "timeframe",
+          "onerilen_deger": "4h",
+          "gerekce": "Kaynağın kendi zaman dilimi ('4 saatlikte body kapattıktan sonra')."
+        },
+        {
+          "parametre": "maruziyet",
+          "onerilen_deger": 0.2,
+          "gerekce": "0.2: defterdeki önceki ön kayıtlı hipotezlerin (funding_ters/filtre/egilim, K-042) tamamı maruziyet [0.2] kullandı; farklı bir değer seçmek kıyası bozar. Risk limiti azami_maruziyet 0.3'ün altında."
+        }
+      ],
+      "beklenen_yon": "Long.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [
+          "oos_sharpe (K-044 ile düzeltilmiş sınır)",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "max_drawdown",
+          "stres_dayanikliligi"
+        ],
+        "tabi_oldugu_kapilar_K054": [
+          "rejim_kararliligi",
+          "evren_dayanikliligi",
+          "parametre_perturbasyonu",
+          "pbo"
+        ],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "bugunku_olculebilirlik_notu": {
+          "parametre_kararliligi": "Tek noktalı ızgarada her katman aynı değeri seçer; kapı mekanik olarak geçer ve bilgi taşımaz. Bu bir geçiş kanıtı sayılmamalı.",
+          "rejim_kararliligi": "Ölçülemez: rejim tanımı henüz yok (K-052, Faz 12). Ölçülemeyen kapı geçilmiş sayılmaz (K-019).",
+          "evren_dayanikliligi": "Ölçülemez: tek sembol (BTCUSDT) ve depoda evren verisi yok (K-054 açıkça 'tek sembolde ölçülemez' diyor).",
+          "parametre_perturbasyonu": "Eşiği açık (K-054, Faz 11); eşiksiz kapı ölçülemez.",
+          "pbo": "Eşiği açık (K-054, Faz 11); ayrıca tek noktalı ızgarada CSCV'nin seçeceği bir alternatif yok.",
+          "sonuc": "Bugünkü durumda bu taslak dört K-054 kapısında 'ölçülemedi' alır; yani sonuç ne olursa olsun promotion'a geçemez. Koşturma yalnızca ölçüm/eleme değeri taşır.",
+          "leak_riski": "İnsan kararı gerekiyor: kurallar ve parametreler, eğitim kesimi Mayıs 2026 olan bir LLM (bu çalışmayı yapan model) tarafından, kaynak videolardaki 2025-2026 grafik örneklerinden türetildi. K-049 'eğitim kesimi öncesi dönem için üretilen türetim leak_riski taşır' diyor. Muhafazakâr okuma: OOS/değerlendirme penceresinin tamamı 2026-06 sonrasına düşmedikçe (bugün ~3 ay veri) bu taslaklar leak_riski taşır."
+        }
+      },
+      "durma_kurali_onerisi": "Tek tur (K-042 kalıbı). Veri: depodaki BTCUSDT serisinin ön kayıt anındaki sha256'sı dondurulur; sonradan inen bar eklenmez. Değerlendirme: projenin mevcut walk-forward/stres/kapı hattı değiştirilmeden bir kez koşturulur; sonuç o koşuda kesindir. Kapılardan kalırsa hipotez kapanır: ızgara genişletme, timeframe/sembol değişikliği, filtre ekleme veya ikinci seçim yöntemi yapılmaz; yapılırsa ayrı çekiliş sayılır. asgari_islem < 30 çıkarsa sonuç 'kaldı' olarak kaydedilir; veri birikmesi beklenerek yeniden koşturulmaz.",
+      "ayni_aile": "F03_ONCEKI_MUM_RANGE_SWEEP_CRT",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-07-h2",
+        "DREYKO-PRS-08-h1",
+        "DREYKO-PRS-12-h1",
+        "DREYKO-PRS-16-h1",
+        "KAANERMI-SIFIR-18-h1"
+      ],
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_4h_onceki_gun_low_sweep_geri_kapanis_long",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-01-h1",
+      "onerilen_ad": "btc_5m_ny_lunch_low_fitil_sweep_long",
+      "taslak_turu": "islem_stratejisi_yalniz_long_bacak",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/01_kendi_stratejimi_acikladim_bolum_1.md",
+      "mekanizma": "New York öğle seansı (Lunch) bittikten sonra 5 dakikalık grafikte bir mum Lunch high'ını veya low'unu fitille aşıp içeri kapanırsa, fiyat ters yöne döner.",
+      "sabit_kural": "Veri: BTCUSDT 5m (depodaki 1m'den strateji içinde deterministik toplanır: open=ilk, high=max, low=min, close=son; 5 barın hepsi quality_status=ok değilse bar 'ok' değildir). Saat: America/New_York. LH/LL = açılış zamanı 12:00 ≤ t < 13:00 ET olan 5m barların high maksimumu / low minimumu. EĞER pozisyon yoksa VE açılışı 13:00–13:25 ET arasında olan bir 5m bar b için low(b) < LL VE close(b) ≥ LL VE o gün henüz sinyal üretilmediyse → BUY (b+1 açılışı, maruziyet 0.2). ÇIKIŞ (5m kapanışlarında): close < low(b) → FLAT; VEYA close ≥ LH → FLAT; VEYA açılışı 15:55 ET olan barın kapanışında hâlâ pozisyondaysa → FLAT.",
+      "parametre_onerileri": [
+        {
+          "parametre": "lunch_penceresi",
+          "onerilen_deger": "12:00–13:00 ET",
+          "gerekce": "Kaynağın açık tanımı (TSİ 19:00-20:00 = ET 12:00-13:00)."
+        },
+        {
+          "parametre": "sinyal_penceresi",
+          "onerilen_deger": "13:00–13:30 ET (açılışı 13:25'e kadar olan 6 bar)",
+          "gerekce": "Kaynak 'grafiğe 20:00'de oturuyorum, maksimum 30 dakika beklerim' diyor."
+        },
+        {
+          "parametre": "timeframe",
+          "onerilen_deger": "5m",
+          "gerekce": "Kaynağın açık kuralı ('5 dakikalık grafikte iğnelerse')."
+        },
+        {
+          "parametre": "stop",
+          "onerilen_deger": "sinyal barının low'u (kapanış bazlı)",
+          "gerekce": "Kaynak 'stop'unu hemen iğnelediği yere atıyorsun' diyor; motor stop emri desteklemediği için kapanış kontrolüne çevrildi."
+        },
+        {
+          "parametre": "hedef",
+          "onerilen_deger": "Lunch high (LH)",
+          "gerekce": "Kaynak 'Low'u iğnelenirse High'ına target koyuyoruz' diyor; LRL/iç FVG alternatifleri ayrı çekiliş olurdu."
+        },
+        {
+          "parametre": "zaman_stopu",
+          "onerilen_deger": "15:55 ET barının kapanışı",
+          "gerekce": "Kaynak çıkış süresi vermiyor; NY PM killzone'unun bitişi (16:00 ET) kaynağın kendi seans çerçevesindeki doğal sınır."
+        },
+        {
+          "parametre": "bias_filtresi",
+          "onerilen_deger": "yok",
+          "gerekce": "Kaynağın bias tanımı öznel; filtreli versiyon ayrı çekiliştir."
+        },
+        {
+          "parametre": "maruziyet",
+          "onerilen_deger": 0.2,
+          "gerekce": "0.2: defterdeki önceki ön kayıtlı hipotezlerin (funding_ters/filtre/egilim, K-042) tamamı maruziyet [0.2] kullandı; farklı bir değer seçmek kıyası bozar. Risk limiti azami_maruziyet 0.3'ün altında."
+        }
+      ],
+      "beklenen_yon": "Long (Lunch low süpürülüp içeri kapanınca). Lunch high süpürme → short bacağı motorda test edilemez, taslağa dahil değil. Kaynak bu stratejinin çalıştığı enstrümanlar arasında BTC'yi saydı; ancak Lunch kavramı ABD hisse seansına aittir ve 24/7 BTC'de aynı saatin anlamı ölçülmedi.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [
+          "oos_sharpe (K-044 ile düzeltilmiş sınır)",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "max_drawdown",
+          "stres_dayanikliligi"
+        ],
+        "tabi_oldugu_kapilar_K054": [
+          "rejim_kararliligi",
+          "evren_dayanikliligi",
+          "parametre_perturbasyonu",
+          "pbo"
+        ],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "bugunku_olculebilirlik_notu": {
+          "parametre_kararliligi": "Tek noktalı ızgarada her katman aynı değeri seçer; kapı mekanik olarak geçer ve bilgi taşımaz. Bu bir geçiş kanıtı sayılmamalı.",
+          "rejim_kararliligi": "Ölçülemez: rejim tanımı henüz yok (K-052, Faz 12). Ölçülemeyen kapı geçilmiş sayılmaz (K-019).",
+          "evren_dayanikliligi": "Ölçülemez: tek sembol (BTCUSDT) ve depoda evren verisi yok (K-054 açıkça 'tek sembolde ölçülemez' diyor).",
+          "parametre_perturbasyonu": "Eşiği açık (K-054, Faz 11); eşiksiz kapı ölçülemez.",
+          "pbo": "Eşiği açık (K-054, Faz 11); ayrıca tek noktalı ızgarada CSCV'nin seçeceği bir alternatif yok.",
+          "sonuc": "Bugünkü durumda bu taslak dört K-054 kapısında 'ölçülemedi' alır; yani sonuç ne olursa olsun promotion'a geçemez. Koşturma yalnızca ölçüm/eleme değeri taşır.",
+          "leak_riski": "İnsan kararı gerekiyor: kurallar ve parametreler, eğitim kesimi Mayıs 2026 olan bir LLM (bu çalışmayı yapan model) tarafından, kaynak videolardaki 2025-2026 grafik örneklerinden türetildi. K-049 'eğitim kesimi öncesi dönem için üretilen türetim leak_riski taşır' diyor. Muhafazakâr okuma: OOS/değerlendirme penceresinin tamamı 2026-06 sonrasına düşmedikçe (bugün ~3 ay veri) bu taslaklar leak_riski taşır."
+        }
+      },
+      "durma_kurali_onerisi": "Tek tur (K-042 kalıbı). Veri: depodaki BTCUSDT serisinin ön kayıt anındaki sha256'sı dondurulur; sonradan inen bar eklenmez. Değerlendirme: projenin mevcut walk-forward/stres/kapı hattı değiştirilmeden bir kez koşturulur; sonuç o koşuda kesindir. Kapılardan kalırsa hipotez kapanır: ızgara genişletme, timeframe/sembol değişikliği, filtre ekleme veya ikinci seçim yöntemi yapılmaz; yapılırsa ayrı çekiliş sayılır. asgari_islem < 30 çıkarsa sonuç 'kaldı' olarak kaydedilir; veri birikmesi beklenerek yeniden koşturulmaz. Not: 1m depo 2023-08-04'te başlıyor (~3,1 yıl); 5m bu aralıkla sınırlı.",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-10-h1",
+        "DREYKO-PRS-12-h3",
+        "KAANERMI-LUNCH-02-h1",
+        "KAANERMI-LUNCH-03-h1",
+        "KAANERMI-LUNCH-05-h1",
+        "KAANERMI-LUNCH-07-h1",
+        "KAANERMI-LUNCH-09-h1",
+        "KAANERMI-LUNCH-10-h1",
+        "KAANERMI-LUNCH-11-h1",
+        "KAANERMI-LUNCH-12-h1",
+        "KAANERMI-LUNCH-13-h1",
+        "KAANERMI-SIFIR-15-h1",
+        "KAANERMI-SIFIR-23-h1"
+      ],
+      "celisen_hipotez_id": [
+        "KAANERMI-LUNCH-02-h1",
+        "KAANERMI-LUNCH-13-h1",
+        "KAANERMI-LUNCH-14-h1",
+        "KAANERMI-LUNCH-14-h2"
+      ],
+      "celiski_tipi": [
+        "LUNCH_GIRIS_TANIMI"
+      ],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_5m_ny_lunch_low_fitil_sweep_long",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-02-h1",
+      "onerilen_ad": "btc_5m_ny_oglen_gevsek_sweep_fvg_filtreli_long",
+      "taslak_turu": "islem_stratejisi_yalniz_long_bacak",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/02_lunch_stratejisi_bolum_2.md",
+      "mekanizma": "Lunch sonrası dönüş için tam bir fitil şart değildir; New York AM seansının high veya low'unun likiditesinin alınması yeterlidir, ancak fitilin hemen ötesinde yüksek zaman dilimi FVG'si varsa dönüş beklenmemelidir.",
+      "sabit_kural": "Veri: BTCUSDT 5m ve 15m (ikisi de 1m'den strateji içinde toplanır). R_low = açılış zamanı 09:30 ≤ t < 13:00 ET olan 5m barların low minimumu; R_high = aynı barların high maksimumu. EĞER pozisyon yoksa VE açılışı 13:00–13:25 ET olan 5m bar b için low(b) < R_low VE close(b) ≥ R_low VE o gün sinyal yoksa VE [b kapanışı anında, low(b) ile low(b) − 0.5·ATR(15m,50) arasında üst kenarı bulunan, o ana kadar hiç dokunulmamış bir 15m bearish FVG YOKSA] → BUY (b+1 açılışı, maruziyet 0.2). ÇIKIŞ: close < low(b) → FLAT; VEYA close ≥ R_high → FLAT; VEYA 15:55 ET barının kapanışında FLAT.",
+      "parametre_onerileri": [
+        {
+          "parametre": "referans_aralik",
+          "onerilen_deger": "09:30–13:00 ET (NY AM + Lunch)",
+          "gerekce": "Kaynak 'New York'un High'ı veya Low'u alınması yeterli' diyor; Lunch ile NY AM uçlarının birleşimi 09:30–13:00 aralığının ucudur."
+        },
+        {
+          "parametre": "htf_filtre_mesafesi",
+          "onerilen_deger": "0.5·ATR(15m,50)",
+          "gerekce": "Kaynak 'üstte önemli bir 15 dakikalık PD array varsa dalamazsın' diyor, mesafe yok; yarım 15m ATR 'hemen ötesinde' ifadesinin tek değerli karşılığı."
+        },
+        {
+          "parametre": "filtre_pd_array_turu",
+          "onerilen_deger": "dokunulmamış 15m FVG",
+          "gerekce": "Kaynak FVG, OB, Breaker sayıyor; yalnızca FVG nesnel olarak tanımlı."
+        },
+        {
+          "parametre": "sinyal_penceresi_stop_zaman_stopu",
+          "onerilen_deger": "LUNCH-01-h1 ile aynı",
+          "gerekce": "Çekirdek kuraldan tek farkın referans aralık + filtre olması için; başka her şey sabit."
+        },
+        {
+          "parametre": "maruziyet",
+          "onerilen_deger": 0.2,
+          "gerekce": "0.2: defterdeki önceki ön kayıtlı hipotezlerin (funding_ters/filtre/egilim, K-042) tamamı maruziyet [0.2] kullandı; farklı bir değer seçmek kıyası bozar. Risk limiti azami_maruziyet 0.3'ün altında."
+        }
+      ],
+      "beklenen_yon": "Long. Short bacak motorda test edilemez.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [
+          "oos_sharpe (K-044 ile düzeltilmiş sınır)",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "max_drawdown",
+          "stres_dayanikliligi"
+        ],
+        "tabi_oldugu_kapilar_K054": [
+          "rejim_kararliligi",
+          "evren_dayanikliligi",
+          "parametre_perturbasyonu",
+          "pbo"
+        ],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "bugunku_olculebilirlik_notu": {
+          "parametre_kararliligi": "Tek noktalı ızgarada her katman aynı değeri seçer; kapı mekanik olarak geçer ve bilgi taşımaz. Bu bir geçiş kanıtı sayılmamalı.",
+          "rejim_kararliligi": "Ölçülemez: rejim tanımı henüz yok (K-052, Faz 12). Ölçülemeyen kapı geçilmiş sayılmaz (K-019).",
+          "evren_dayanikliligi": "Ölçülemez: tek sembol (BTCUSDT) ve depoda evren verisi yok (K-054 açıkça 'tek sembolde ölçülemez' diyor).",
+          "parametre_perturbasyonu": "Eşiği açık (K-054, Faz 11); eşiksiz kapı ölçülemez.",
+          "pbo": "Eşiği açık (K-054, Faz 11); ayrıca tek noktalı ızgarada CSCV'nin seçeceği bir alternatif yok.",
+          "sonuc": "Bugünkü durumda bu taslak dört K-054 kapısında 'ölçülemedi' alır; yani sonuç ne olursa olsun promotion'a geçemez. Koşturma yalnızca ölçüm/eleme değeri taşır.",
+          "leak_riski": "İnsan kararı gerekiyor: kurallar ve parametreler, eğitim kesimi Mayıs 2026 olan bir LLM (bu çalışmayı yapan model) tarafından, kaynak videolardaki 2025-2026 grafik örneklerinden türetildi. K-049 'eğitim kesimi öncesi dönem için üretilen türetim leak_riski taşır' diyor. Muhafazakâr okuma: OOS/değerlendirme penceresinin tamamı 2026-06 sonrasına düşmedikçe (bugün ~3 ay veri) bu taslaklar leak_riski taşır."
+        }
+      },
+      "durma_kurali_onerisi": "Tek tur (K-042 kalıbı). Veri: depodaki BTCUSDT serisinin ön kayıt anındaki sha256'sı dondurulur; sonradan inen bar eklenmez. Değerlendirme: projenin mevcut walk-forward/stres/kapı hattı değiştirilmeden bir kez koşturulur; sonuç o koşuda kesindir. Kapılardan kalırsa hipotez kapanır: ızgara genişletme, timeframe/sembol değişikliği, filtre ekleme veya ikinci seçim yöntemi yapılmaz; yapılırsa ayrı çekiliş sayılır. asgari_islem < 30 çıkarsa sonuç 'kaldı' olarak kaydedilir; veri birikmesi beklenerek yeniden koşturulmaz. Not: KAANERMI-LUNCH-01-h1 ile rakip hipotez; ikisi de ayrı çekiliş sayılır ve birinin sonucu diğerinin koşturulup koşturulmayacağına karar vermek için kullanılmaz.",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-10-h1",
+        "DREYKO-PRS-12-h3",
+        "KAANERMI-LUNCH-01-h1",
+        "KAANERMI-LUNCH-03-h1",
+        "KAANERMI-LUNCH-05-h1",
+        "KAANERMI-LUNCH-07-h1",
+        "KAANERMI-LUNCH-09-h1",
+        "KAANERMI-LUNCH-10-h1",
+        "KAANERMI-LUNCH-11-h1",
+        "KAANERMI-LUNCH-12-h1",
+        "KAANERMI-LUNCH-13-h1",
+        "KAANERMI-SIFIR-15-h1",
+        "KAANERMI-SIFIR-23-h1"
+      ],
+      "celisen_hipotez_id": [
+        "KAANERMI-LUNCH-01-h1"
+      ],
+      "celiski_tipi": [
+        "LUNCH_GIRIS_TANIMI"
+      ],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_5m_ny_oglen_gevsek_sweep_fvg_filtreli_long",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "KAANERMI-LUNCH-11-h1",
+      "onerilen_ad": "btc_1m_ny_lunch_sweep_trend_kosullu_mss_teyidi_long",
+      "taslak_turu": "islem_stratejisi_yalniz_long_bacak",
+      "kaynak_dosya": "Kaanermi/Lunch Stratejisi Model Kampı 💰/11_yanlislikla_para_basan_strateji_bulduk_7_parite_backtesti.md",
+      "mekanizma": "Piyasa güçlü bir yönde giderken Lunch ucunun trend tersine süpürülmesi tek başına dönüş sinyali değildir; bu durumda yapı kırılımı teyidi beklenmelidir.",
+      "sabit_kural": "Veri: BTCUSDT 1m (bağlam timeframe'i); 5m ve 1h barlar strateji içinde toplanır. LH/LL ve 5m sweep barı b: KAANERMI-LUNCH-01-h1 ile aynı. Trend(b) = [b kapanışı anındaki son kapanmış 1h bar close − 20 bar önceki 1h close] / ATR(1h,14). EĞER Trend(b) ≥ −2 → BUY, b'nin son 1m barının kapanışında (dolum sonraki 1m açılışı). EĞER Trend(b) < −2 (long sinyali düşüş trendine karşı) → b sonrası 30 adet 1m bar içinde, b içindeki en son onaylı 1m 3-bar fraktal swing high'ın üzerinde bir 1m close oluşursa o barda BUY; oluşmazsa sinyal yok. ÇIKIŞ (1m kapanışlarında): close < low(b) → FLAT; close ≥ LH → FLAT; 15:59 ET barının kapanışında FLAT. Maruziyet 0.2; gün başına en fazla bir giriş.",
+      "parametre_onerileri": [
+        {
+          "parametre": "trend_olcusu",
+          "onerilen_deger": "20 bar 1h getiri / ATR(1h,14)",
+          "gerekce": "Kaynak 'patır kütür gidiyor' diyor, ölçü yok; 20 saat yaklaşık bir günlük yön, ATR normalizasyonu enstrümandan bağımsız."
+        },
+        {
+          "parametre": "trend_esigi",
+          "onerilen_deger": 2.0,
+          "gerekce": "±2 ATR 'güçlü trend' için tek değer; ±1 sıradan günleri de trend sayardı."
+        },
+        {
+          "parametre": "mss_bekleme",
+          "onerilen_deger": "30 adet 1m bar (6 adet 5m bar)",
+          "gerekce": "Kaynak 'burada Market Structure Shift beklememiz lazımdı' diyor, süre yok; LUNCH-01'in 30 dakikalık sinyal penceresiyle aynı uzunluk."
+        },
+        {
+          "parametre": "mss_tanimi",
+          "onerilen_deger": "sweep barı içindeki son 1m fraktal swing high üzerinde 1m kapanış",
+          "gerekce": "Kaynağın MSS tarifi ('McDonald's') öznel; ortak operasyonel tanım."
+        },
+        {
+          "parametre": "maruziyet",
+          "onerilen_deger": 0.2,
+          "gerekce": "0.2: defterdeki önceki ön kayıtlı hipotezlerin (funding_ters/filtre/egilim, K-042) tamamı maruziyet [0.2] kullandı; farklı bir değer seçmek kıyası bozar. Risk limiti azami_maruziyet 0.3'ün altında."
+        }
+      ],
+      "beklenen_yon": "Long. Trend karşıtı sinyallerde teyitli girişin daha iyi sonuç vermesi kaynağın iddiası; bu taslak yalnızca birleşik kuralı ölçer, iki alt kümenin karşılaştırması ayrı çekiliş olur.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [
+          "oos_sharpe (K-044 ile düzeltilmiş sınır)",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "max_drawdown",
+          "stres_dayanikliligi"
+        ],
+        "tabi_oldugu_kapilar_K054": [
+          "rejim_kararliligi",
+          "evren_dayanikliligi",
+          "parametre_perturbasyonu",
+          "pbo"
+        ],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "bugunku_olculebilirlik_notu": {
+          "parametre_kararliligi": "Tek noktalı ızgarada her katman aynı değeri seçer; kapı mekanik olarak geçer ve bilgi taşımaz. Bu bir geçiş kanıtı sayılmamalı.",
+          "rejim_kararliligi": "Ölçülemez: rejim tanımı henüz yok (K-052, Faz 12). Ölçülemeyen kapı geçilmiş sayılmaz (K-019).",
+          "evren_dayanikliligi": "Ölçülemez: tek sembol (BTCUSDT) ve depoda evren verisi yok (K-054 açıkça 'tek sembolde ölçülemez' diyor).",
+          "parametre_perturbasyonu": "Eşiği açık (K-054, Faz 11); eşiksiz kapı ölçülemez.",
+          "pbo": "Eşiği açık (K-054, Faz 11); ayrıca tek noktalı ızgarada CSCV'nin seçeceği bir alternatif yok.",
+          "sonuc": "Bugünkü durumda bu taslak dört K-054 kapısında 'ölçülemedi' alır; yani sonuç ne olursa olsun promotion'a geçemez. Koşturma yalnızca ölçüm/eleme değeri taşır.",
+          "leak_riski": "İnsan kararı gerekiyor: kurallar ve parametreler, eğitim kesimi Mayıs 2026 olan bir LLM (bu çalışmayı yapan model) tarafından, kaynak videolardaki 2025-2026 grafik örneklerinden türetildi. K-049 'eğitim kesimi öncesi dönem için üretilen türetim leak_riski taşır' diyor. Muhafazakâr okuma: OOS/değerlendirme penceresinin tamamı 2026-06 sonrasına düşmedikçe (bugün ~3 ay veri) bu taslaklar leak_riski taşır."
+        }
+      },
+      "durma_kurali_onerisi": "Tek tur (K-042 kalıbı). Veri: depodaki BTCUSDT serisinin ön kayıt anındaki sha256'sı dondurulur; sonradan inen bar eklenmez. Değerlendirme: projenin mevcut walk-forward/stres/kapı hattı değiştirilmeden bir kez koşturulur; sonuç o koşuda kesindir. Kapılardan kalırsa hipotez kapanır: ızgara genişletme, timeframe/sembol değişikliği, filtre ekleme veya ikinci seçim yöntemi yapılmaz; yapılırsa ayrı çekiliş sayılır. asgari_islem < 30 çıkarsa sonuç 'kaldı' olarak kaydedilir; veri birikmesi beklenerek yeniden koşturulmaz.",
+      "ayni_aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+      "ayni_ailedeki_diger_adaylar": [
+        "DREYKO-PRS-10-h1",
+        "DREYKO-PRS-12-h3",
+        "KAANERMI-LUNCH-01-h1",
+        "KAANERMI-LUNCH-02-h1",
+        "KAANERMI-LUNCH-03-h1",
+        "KAANERMI-LUNCH-05-h1",
+        "KAANERMI-LUNCH-07-h1",
+        "KAANERMI-LUNCH-09-h1",
+        "KAANERMI-LUNCH-10-h1",
+        "KAANERMI-LUNCH-12-h1",
+        "KAANERMI-LUNCH-13-h1",
+        "KAANERMI-SIFIR-15-h1",
+        "KAANERMI-SIFIR-23-h1"
+      ],
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_1m_ny_lunch_sweep_trend_kosullu_mss_teyidi_long",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    },
+    {
+      "hipotez_id": "KAANERMI-SIFIR-09-h1",
+      "onerilen_ad": "btc_1h_displacement_ici_karsi_mum_ob_long",
+      "taslak_turu": "islem_stratejisi",
+      "kaynak_dosya": "Kaanermi/Sıfırdan Trading Kampı 💰/09_order_block_yapilari.md",
+      "mekanizma": "Güçlü bir yönlü hareketin içinde oluşan küçük karşı renkli mum(lar) kademeli alım/satım izidir; fiyat daha sonra bu mumun aralığına döndüğünde orta noktasından tepki verir.",
+      "sabit_kural": "Veri: BTCUSDT 1h. Pencere W = son 5 kapanmış bar [t−4..t]. Displacement: close(t) − open(t−4) ≥ 3·ATR(50)(t−5) VE W içinde en az bir bearish bar (close < open) var VE o barın range'i W'nin ortalama range'inden küçük. OB = W içindeki SON böyle bearish barın [low, high], OBm = orta nokta, TEPE = max(high, W). OB, W'nin tamamlandığı barda dondurulur. EĞER pozisyon yoksa VE sonraki barlarda ilk kez low ≤ OBm VE close ≥ low(OB) → BUY (t+1 açılışı, maruziyet 0.2). ÇIKIŞ: close < low(OB) → FLAT; VEYA close ≥ TEPE → FLAT. OB, ilk dokunuştan sonra (giriş olsun olmasın) veya 50 bar içinde dokunulmazsa geçersiz.",
+      "parametre_onerileri": [
+        {
+          "parametre": "timeframe",
+          "onerilen_deger": "1h",
+          "gerekce": "Kaynak 1H/2H/4H örnekleri gösteriyor; 1h depoda hazır. Kaynak 'zaman dilimini değiştirerek daha güzel bulabilirsiniz' diyor — bu geriye dönük seçim olduğu için tek TF sabitlendi."
+        },
+        {
+          "parametre": "pencere_bar",
+          "onerilen_deger": 5,
+          "gerekce": "Kaynağın tarifi '1, 2, 3 bullish mum, sonra bearish mum, sonra devam' — en küçük karşılığı 5 bar."
+        },
+        {
+          "parametre": "displacement_ATR_kati",
+          "onerilen_deger": 3,
+          "gerekce": "Kaynak 'yüksek displacement' diyor; 5 barlık net hareketin 3·ATR olması belirgin bir hareketin tek değerli karşılığı (DREYKO-PRS-02-h3'teki bacak eşiğiyle tutarlı)."
+        },
+        {
+          "parametre": "OB_bolgesi",
+          "onerilen_deger": "tek bearish mumun [low, high]",
+          "gerekce": "Kaynak 'iki mumu da alabiliriz' diyor; tek mum en dar, en az yorum gerektiren tanım."
+        },
+        {
+          "parametre": "gecerlilik_suresi_bar",
+          "onerilen_deger": 50,
+          "gerekce": "Kaynakta süre yok; ATR(50) penceresiyle aynı uzunluk, ek serbestlik yaratmamak için."
+        },
+        {
+          "parametre": "maruziyet",
+          "onerilen_deger": 0.2,
+          "gerekce": "0.2: defterdeki önceki ön kayıtlı hipotezlerin (funding_ters/filtre/egilim, K-042) tamamı maruziyet [0.2] kullandı; farklı bir değer seçmek kıyası bozar. Risk limiti azami_maruziyet 0.3'ün altında."
+        }
+      ],
+      "beklenen_yon": "Long. Kaynak OB'nin 'entry için riskli, hedef olarak daha iyi' olduğunu söylüyor; bu taslak giriş versiyonunu ölçer.",
+      "basari_kriteri_onerisi": {
+        "tabi_oldugu_kapilar_K019": [
+          "oos_sharpe (K-044 ile düzeltilmiş sınır)",
+          "oos_is_orani",
+          "wf_katman_basari",
+          "parametre_kararliligi",
+          "asgari_islem",
+          "max_drawdown",
+          "stres_dayanikliligi"
+        ],
+        "tabi_oldugu_kapilar_K054": [
+          "rejim_kararliligi",
+          "evren_dayanikliligi",
+          "parametre_perturbasyonu",
+          "pbo"
+        ],
+        "mutlak_engeller": [
+          "dirty (K-009)",
+          "data_quality_warning (K-006)",
+          "gecici_maliyet_modeli (K-021)",
+          "leak_riski (K-049/K-054)"
+        ],
+        "bugunku_olculebilirlik_notu": {
+          "parametre_kararliligi": "Tek noktalı ızgarada her katman aynı değeri seçer; kapı mekanik olarak geçer ve bilgi taşımaz. Bu bir geçiş kanıtı sayılmamalı.",
+          "rejim_kararliligi": "Ölçülemez: rejim tanımı henüz yok (K-052, Faz 12). Ölçülemeyen kapı geçilmiş sayılmaz (K-019).",
+          "evren_dayanikliligi": "Ölçülemez: tek sembol (BTCUSDT) ve depoda evren verisi yok (K-054 açıkça 'tek sembolde ölçülemez' diyor).",
+          "parametre_perturbasyonu": "Eşiği açık (K-054, Faz 11); eşiksiz kapı ölçülemez.",
+          "pbo": "Eşiği açık (K-054, Faz 11); ayrıca tek noktalı ızgarada CSCV'nin seçeceği bir alternatif yok.",
+          "sonuc": "Bugünkü durumda bu taslak dört K-054 kapısında 'ölçülemedi' alır; yani sonuç ne olursa olsun promotion'a geçemez. Koşturma yalnızca ölçüm/eleme değeri taşır.",
+          "leak_riski": "İnsan kararı gerekiyor: kurallar ve parametreler, eğitim kesimi Mayıs 2026 olan bir LLM (bu çalışmayı yapan model) tarafından, kaynak videolardaki 2025-2026 grafik örneklerinden türetildi. K-049 'eğitim kesimi öncesi dönem için üretilen türetim leak_riski taşır' diyor. Muhafazakâr okuma: OOS/değerlendirme penceresinin tamamı 2026-06 sonrasına düşmedikçe (bugün ~3 ay veri) bu taslaklar leak_riski taşır."
+        }
+      },
+      "durma_kurali_onerisi": "Tek tur (K-042 kalıbı). Veri: depodaki BTCUSDT serisinin ön kayıt anındaki sha256'sı dondurulur; sonradan inen bar eklenmez. Değerlendirme: projenin mevcut walk-forward/stres/kapı hattı değiştirilmeden bir kez koşturulur; sonuç o koşuda kesindir. Kapılardan kalırsa hipotez kapanır: ızgara genişletme, timeframe/sembol değişikliği, filtre ekleme veya ikinci seçim yöntemi yapılmaz; yapılırsa ayrı çekiliş sayılır. asgari_islem < 30 çıkarsa sonuç 'kaldı' olarak kaydedilir; veri birikmesi beklenerek yeniden koşturulmaz.",
+      "ayni_aile": "F17_ORDER_BLOCK_KARSI_RENK_MUM",
+      "ayni_ailedeki_diger_adaylar": [],
+      "celisen_hipotez_id": [],
+      "celiski_tipi": [],
+      "K051_kimlik_alanlari_onerisi": {
+        "strateji": "btc_1h_displacement_ici_karsi_mum_ob_long",
+        "sembol": "BTCUSDT",
+        "veri_sha256": "ön kayıt anında depodan hesaplanacak (bu dosyada bilerek boş)",
+        "evren": "BTCUSDT tek sembol (Binance spot)",
+        "portfoy_kurma_yontemi": "tek enstrüman; giriş sinyalinde target_exposure = 0.2, çıkışta FLAT",
+        "rejim_tanimi": "yok",
+        "parametre_secim_yontemi": "sabit tek nokta (seçim yok)"
+      },
+      "onay_durumu": "İNSAN ONAYI BEKLİYOR"
+    }
+  ],
+  "coklu_test_butcesi_taslagi": {
+    "yontem_notu": "K-044'ün asıl yöntemi (paylaşılan dairesel kaydırma permütasyon null'ı, `sq lab coklu-test`) her çekilişin gerçek OOS sinyal takvimini ve backtest'ini gerektirir; hiçbir test koşturulmadığı için bu yöntemle eşik HESAPLANAMAZ. K-051/3 program açılışında yalnızca mertebe tahmini (DSR/Bonferroni) ister ve bu tahmin kapı değildir; aşağıdaki sayılar budur. Her iki formül proje kodundaki tanımla birebir yeniden üretildi: DSR = σ·[(1−γ)·z(1−1/N) + γ·z(1−1/(N·e))] (research/coklu_test.py::beklenen_azami_sharpe), Bonferroni = σ·z(1−α/N); σ=0,4416, α=0,05 ile N=31'de 0,922 ve 1,301 veriyor (K-044 tablosu: 0,922 ve 1,300).",
+    "girdiler": {
+      "defterdeki_cekilis": 38,
+      "olculebilir_cekilis_K044": 31,
+      "sigma_oos_sharpe": 0.4416,
+      "sigma_kaynagi": "docs/arsiv/Faz-4-Donus-4-Coklu-Test.md: 31 çekilişin OOS Sharpe sapması 0,4416",
+      "alfa": 0.05,
+      "alfa_kaynagi": "K-044: %5 (Scryne'ın iştah kararı, K-033)",
+      "mevcut_kapi": "COKLU_TEST_ESIGI = 1,02 (N=31, permütasyon, %90 GA 0,975-1,055)",
+      "grup_a_aday_sayisi": 10,
+      "grup_a_tur_dagilimi": {
+        "istatistiksel_olcum": [
+          "DREYKO-PRS-02-h1",
+          "DREYKO-PRS-07-h1"
+        ],
+        "islem_stratejisi_motorda_calismaz": [
+          "DREYKO-PRS-02-h2"
+        ],
+        "islem_stratejisi_yalniz_long_bacak": [
+          "DREYKO-PRS-02-h3",
+          "DREYKO-PRS-07-h2",
+          "KAANERMI-LUNCH-01-h1",
+          "KAANERMI-LUNCH-02-h1",
+          "KAANERMI-LUNCH-11-h1"
+        ],
+        "islem_stratejisi": [
+          "DREYKO-PRS-09-h3",
+          "KAANERMI-SIFIR-09-h1"
+        ]
+      }
+    },
+    "aileler_yalnizca_korelasyon_bilgisi": {
+      "kural": "Her Grup A adayı ayrı çekiliş sayıldı. Aileler çekiliş sayısını AZALTMAK için kullanılmadı; yalnızca gerçek permütasyon ölçümünde korelasyonun nereden geleceğini göstermek için listelendi. Paylaşılan kaydırma korelasyonu veriden alır; aynı ailedeki çekilişler birbirine yakın Sharpe üretirse ölçülen eşik mertebe tahmininin ALTINDA kalabilir, ama bu ancak ölçülünce bilinir.",
+      "grup_a_aile_dagilimi": [
+        {
+          "aile": "F02_SEANS_RANGE_SWEEP_DONUS",
+          "grup_a_cekilis_sayisi": 3,
+          "grup_a_uyeleri": [
+            "KAANERMI-LUNCH-01-h1",
+            "KAANERMI-LUNCH-02-h1",
+            "KAANERMI-LUNCH-11-h1"
+          ],
+          "ailenin_tum_adaylari": 14
+        },
+        {
+          "aile": "F03_ONCEKI_MUM_RANGE_SWEEP_CRT",
+          "grup_a_cekilis_sayisi": 2,
+          "grup_a_uyeleri": [
+            "DREYKO-PRS-07-h2",
+            "DREYKO-PRS-09-h3"
+          ],
+          "ailenin_tum_adaylari": 6
+        },
+        {
+          "aile": "F04_INSIDE_BAR_RANGE_HEDEF",
+          "grup_a_cekilis_sayisi": 1,
+          "grup_a_uyeleri": [
+            "DREYKO-PRS-02-h1"
+          ],
+          "ailenin_tum_adaylari": 2
+        },
+        {
+          "aile": "F08_FIB_RETRACEMENT_DEVAM",
+          "grup_a_cekilis_sayisi": 1,
+          "grup_a_uyeleri": [
+            "DREYKO-PRS-02-h3"
+          ],
+          "ailenin_tum_adaylari": 7
+        },
+        {
+          "aile": "F10_FVG_TEPKI_SR",
+          "grup_a_cekilis_sayisi": 1,
+          "grup_a_uyeleri": [
+            "DREYKO-PRS-02-h2"
+          ],
+          "ailenin_tum_adaylari": 9
+        },
+        {
+          "aile": "F17_ORDER_BLOCK_KARSI_RENK_MUM",
+          "grup_a_cekilis_sayisi": 1,
+          "grup_a_uyeleri": [
+            "KAANERMI-SIFIR-09-h1"
+          ],
+          "ailenin_tum_adaylari": 1
+        },
+        {
+          "aile": "F20_VOLATILITE_REJIM_SEANS_HACIM",
+          "grup_a_cekilis_sayisi": 1,
+          "grup_a_uyeleri": [
+            "DREYKO-PRS-07-h1"
+          ],
+          "ailenin_tum_adaylari": 5
+        }
+      ]
+    },
+    "senaryolar": [
+      {
+        "senaryo": "S1_talimat_tum_grup_a",
+        "aciklama": "Talimattaki tanım: Grup A'daki 10 adayın hepsi ayrı çekiliş (motorda koşturulamayan ve ölçüm türündekiler dahil).",
+        "eklenen_cekilis": 10,
+        "defter_toplami": 48,
+        "olculebilir_toplam_varsayimi": 41,
+        "deflated_sharpe_beklenen_azami_olculebilir_bazli": 0.971,
+        "bonferroni_alfa_0_05_olculebilir_bazli": 1.338,
+        "deflated_sharpe_defter_bazli": 0.998,
+        "bonferroni_defter_bazli": 1.359,
+        "kaba_permutasyon_mertebesi_olculebilir_bazli": 1.072
+      },
+      {
+        "senaryo": "S2_yalniz_kosturulabilir_strateji",
+        "aciklama": "Bilgi amaçlı alt sınır: yalnızca motorda koşturulabilen işlem stratejileri (DREYKO-PRS-02-h3, DREYKO-PRS-07-h2, DREYKO-PRS-09-h3, KAANERMI-LUNCH-01-h1, KAANERMI-LUNCH-02-h1, KAANERMI-LUNCH-11-h1, KAANERMI-SIFIR-09-h1). Ölçüm türü adaylar Sharpe üretmez, short-only aday koşturulamaz.",
+        "eklenen_cekilis": 7,
+        "defter_toplami": 45,
+        "olculebilir_toplam_varsayimi": 38,
+        "deflated_sharpe_beklenen_azami_olculebilir_bazli": 0.958,
+        "bonferroni_alfa_0_05_olculebilir_bazli": 1.328,
+        "deflated_sharpe_defter_bazli": 0.987,
+        "bonferroni_defter_bazli": 1.351,
+        "kaba_permutasyon_mertebesi_olculebilir_bazli": 1.057
+      },
+      {
+        "senaryo": "BILGI_tum_114_aday",
+        "aciklama": "Bütçe DEĞİL, yalnızca ölçek göstergesi: envanterdeki tüm adaylar bir gün çekilseydi.",
+        "eklenen_cekilis": 114,
+        "defter_toplami": 152,
+        "olculebilir_toplam_varsayimi": 145,
+        "deflated_sharpe_beklenen_azami_olculebilir_bazli": 1.174,
+        "bonferroni_alfa_0_05_olculebilir_bazli": 1.499,
+        "deflated_sharpe_defter_bazli": 1.181,
+        "bonferroni_defter_bazli": 1.504,
+        "kaba_permutasyon_mertebesi_olculebilir_bazli": 1.296
+      }
+    ],
+    "referans_N31": {
+      "deflated_sharpe": 0.922,
+      "bonferroni": 1.301,
+      "olculen_permutasyon": 1.017,
+      "oran_permutasyon_bolu_dsr": 1.1036
+    },
+    "okuma_notlari": [
+      "'kaba_permutasyon_mertebesi' sütunu bir yöntem değil, bir ölçekleme varsayımıdır: N=31'deki permütasyon/DSR oranının (1,103) N büyüyünce sabit kaldığını varsayar. Kapı olarak kullanılamaz.",
+      "Ölçülebilir bazlı satırlar, eklenen her çekilişin ölçülebilir (sayı üreten) olacağını varsayar. K-044'te 38 çekilişin 7'si sayı üretmedi; yeni çekilişlerde de olabilir.",
+      "σ=0,4416 BTC 1h/4h klasik gösterge stratejilerinden ölçüldü. Intraday saat penceresi stratejilerinin OOS Sharpe dağılımı farklı olabilir; σ büyürse eşik doğrusal olarak büyür.",
+      "Bonferroni bağımsızlık varsaydığı için K-044'te fazla düzeltti (üst sınır okuması); DSR normal dağılım varsayar. Gerçek eşik yalnızca çekilişler koşturulduktan sonra `sq lab coklu-test` ile ölçülür ve COKLU_TEST_CEKILIS_SAYISI sabiti yeni sayıya güncellenmeden kapı geçerli değildir (K-044/5).",
+      "Nihai eşik bu dosyada belirlenmedi."
+    ]
+  },
+  "celiskiler": {
+    "isaretlenen": [
+      {
+        "kod": "SMT_ISLEM_ENSTRUMANI",
+        "aciklama": "SMT sinyalinde işlemin likiditeyi ALMAYAN mı ALAN mı enstrümanda açılacağı",
+        "taraf_1": [
+          "DREYKO-PRS-02-h4",
+          "DREYKO-PRS-21-h1"
+        ],
+        "taraf_2": [
+          "DREYKO-PRS-09-h1",
+          "KAANERMI-DMC-06-h2",
+          "KAANERMI-SIFIR-10-h1"
+        ]
+      },
+      {
+        "kod": "HAFTALIK_UC_GUNU",
+        "aciklama": "Haftalık high/low'un Pazartesi/Salı mı Salı/Çarşamba mı oluştuğu",
+        "taraf_1": [
+          "DREYKO-PRS-03-h1"
+        ],
+        "taraf_2": [
+          "KAANERMI-10AM-05-h1"
+        ]
+      },
+      {
+        "kod": "TEMAS_SONRASI_BIRIKIM",
+        "aciklama": "Bölgeye temas sonrası birikimde 'işlem yok' mu 'önce stop avı sonra dönüş' mü",
+        "taraf_1": [
+          "KAANERMI-10AM-03-h2"
+        ],
+        "taraf_2": [
+          "KAANERMI-DMC-08-h2"
+        ]
+      },
+      {
+        "kod": "LUNCH_GIRIS_TANIMI",
+        "aciklama": "Lunch dönüşünde çekirdek kural (Lunch SONRASI 5m fitil) ile gevşetilmiş sweep / Lunch İÇİNDE giriş",
+        "taraf_1": [
+          "KAANERMI-LUNCH-01-h1"
+        ],
+        "taraf_2": [
+          "KAANERMI-LUNCH-02-h1",
+          "KAANERMI-LUNCH-13-h1",
+          "KAANERMI-LUNCH-14-h1",
+          "KAANERMI-LUNCH-14-h2"
+        ]
+      }
+    ],
+    "isaretlenmeyen": "'Midnight Open' isimlendirme karışıklığı (18:00 vs 00:00 ET) rakip bir fiyat iddiası değil, adlandırma farkı; etkilenen adaylar (KAANERMI-DMC-01-h3, KAANERMI-DMC-08-h1) saati açıkça sabitlediği için celisen_hipotez_id verilmedi.",
+    "kural": "Çelişen adaylar birleştirilmedi; her biri ayrı ve rakip hipotezdir. Bir tarafın sonucu diğer tarafın koşturulup koşturulmayacağına karar vermek için kullanılmamalı (sonuca bakıp çekiliş seçmek olur)."
+  }
+}

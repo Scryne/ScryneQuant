@@ -122,7 +122,7 @@
       "karar": "K-058",
       "gerekce": "OOS'ta en kötü rejimin Sharpe'ı (30 günlük rejim penceresi); null donchian 0,481 / rsi_donus 0,685, sıkı olanı. Rejim tanımı kripto kıyasında kalibre (FX'te değil, K-106).",
       "olcum_tarihi": "2026-09-16",
-      "kayit": "docs/Faz-11-Dogrulama-Raporu.md",
+      "kayit": "docs/arsiv/Faz-11-Dogrulama-Raporu.md",
       "yeniden_olcum": "Yeni ızgara biçimi ya da yeni varlık sınıfı → `tools/kalibrasyon_v2_kos.py`."
     },
     {

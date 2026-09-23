@@ -6,7 +6,7 @@ status: aktif
 ---
 # ScryneQuant — Karar Günlüğü
 
-Bu dosya **neden** sorusunun cevabını tutar. `docs/Final-Dokuman.md` ne yapılacağını
+Bu dosya **neden** sorusunun cevabını tutar. `docs/arsiv/Final-Dokuman.md` ne yapılacağını
 söyler; burası o kararın hangi alternatifler arasından, hangi gerekçeyle seçildiğini
 kaydeder.
 
@@ -165,7 +165,7 @@ backtest sonucuna hangi değerlerle çalıştığı yazılır:
   aşağı).
 - **Spread:** modelin içinde ayrıca sayılmaz; slippage varsayımı spread'i kapsayacak kadar
   yüksek tutulur.
-- **Ölçülen değerler (Spike 4, 2026-09-08 — `docs/spikes/04-maliyet-tarifesi.md`):**
+- **Ölçülen değerler (Spike 4, 2026-09-08 — `docs/arsiv/spikes/04-maliyet-tarifesi.md`):**
   `fee_taker_bps = 10.0` (Binance VIP 0 spot, BNB indirimi varsayılmıyor),
   `slippage_bps = 5.0` **geçici** — Faz 1'de kalibre edilecek (K-021; ilk yöntem K-020 idi,
   ölçüm onu çürüttü). Geçici değerle üretilen hiçbir sonuç promotion'a giremez.
@@ -275,7 +275,7 @@ sürümlenebiliyor — canlı bir veritabanının durumu için aynısı geçerli
 PostgreSQL asıl olarak eşzamanlı yazma, transaction ve dayanıklı state gerektiğinde
 (paper/live) anlamlı. O noktada zaten gerekli olacak; şimdi kurmak erken.
 
-**Spike 3'ün doğruladığı ve eklediği (2026-09-08, `docs/spikes/03-parquet-duckdb.md`):**
+**Spike 3'ün doğruladığı ve eklediği (2026-09-08, `docs/arsiv/spikes/03-parquet-duckdb.md`):**
 
 Seçim ölçümle onaylandı, hiçbir eşik zorlanmadı: 5 yıllık 1m verisi 71 MB, tamamı 0,12 s'de
 RAM'e giriyor, en ağır sorgu (1m→1h yeniden örneklem) 87 ms. Karara üç somut değer eklendi:
@@ -389,7 +389,7 @@ sayısal eşik esnetilemez — değiştirmek için karar günlüğüne yazmak ge
 ## K-015 — Binance erişimi: coğrafi engel yok, testnet ayakta
 
 **Durum:** kabul · **Kaynak:** Spike 1 · **Tarih:** 2026-09-08 ·
-**Rapor:** `docs/spikes/01-binance-erisim.md`
+**Rapor:** `docs/arsiv/spikes/01-binance-erisim.md`
 
 **Karar:** Binance'e Türkiye'den erişim doğrulandı. Faz 1'in indiricisi ve Faz 7'nin testnet
 planı bu temele kurulabilir.
@@ -443,7 +443,7 @@ anahtarla **tekrarlanmalıdır**; bugünkü kanıt "yol açık" der, "hesap çal
 ## K-016 — Fee/slippage'ın kesin sayıları
 
 **Durum:** kabul · **Tarih:** 2026-09-08 · **Kapatır:** Spike 4 · **Kaynak:**
-`docs/spikes/04-maliyet-tarifesi.md`
+`docs/arsiv/spikes/04-maliyet-tarifesi.md`
 
 Bu karar ayrı bir başlık taşımıyordu; numarası "Açık kararlar" tablosunda ve sekiz kararın
 "İlgili" satırında geçtiği için başlık 2026-09-20'de eklendi (içerik yeni değil). Sayıların
@@ -454,7 +454,7 @@ BNB indirimi varsayılmıyor). Slippage bu kararda kapanmadı → K-020 (çürü
 ## K-017 — Birincil timeframe: 1h
 
 **Durum:** kabul · **Kaynak:** Spike 2 · **Tarih:** 2026-09-08 ·
-**Rapor:** `docs/spikes/02-veri-hacmi.md`
+**Rapor:** `docs/arsiv/spikes/02-veri-hacmi.md`
 
 **Karar:** **Birincil timeframe 1h.** Strateji, backtest ve promotion 1h barı üzerinde
 çalışır. 1m verisi indirilir ve saklanır ama strateji timeframe'i değildir.
@@ -540,7 +540,7 @@ yani maliyeti fiilen sıfırlardı.
 
 Sebep: kripto 7/24 kesintisiz işlem görüyor. `open[t+1]`, `close[t]`'in birkaç milisaniye
 sonrasıdır; arada piyasa kapanışı yok, boşluk yok. Bu dağılım bir yürütme belirsizliğini
-değil, iki komşu işlemin tick farkını ölçüyor. Ayrıntı: `docs/spikes/02-veri-hacmi.md` §4.
+değil, iki komşu işlemin tick farkını ölçüyor. Ayrıntı: `docs/arsiv/spikes/02-veri-hacmi.md` §4.
 
 Yerine **K-021** geçti.
 
@@ -642,7 +642,7 @@ dosyası tüm ağacı çözer.
 değil: ikisinin ayrışabildiği durumları (elle kurulmuş paket, bozuk ortam) görmenin tek yolu
 bu.
 
-**Yan karar:** lint/format `ruff`, ama `docs/` ve `research/` hariç. `docs/Proje-Fikri.md`
+**Yan karar:** lint/format `ruff`, ama `docs/` ve `research/` hariç. `docs/arsiv/Proje-Fikri.md`
 tarihsel kayıttır ve içindeki kod blokları olduğu gibi kalmalıdır; `research/` zaten commit
 edilmiyor.
 
@@ -938,7 +938,7 @@ kabul, gizlenmiş bir varsayım değil — hem üreticinin hem testin docstring'
 ## K-019 — Promotion kapılarının sayısal eşikleri
 
 **Durum:** kabul · **Tarih:** 2026-09-09 · **Faz:** 4 · **Kapatır:** K-010'un ve K-018/3'ün
-açık bıraktığı sayılar · **Rapor:** `docs/Faz-4-Laboratuvar-Raporu.md`
+açık bıraktığı sayılar · **Rapor:** `docs/arsiv/Faz-4-Laboratuvar-Raporu.md`
 
 K-018 şunu şart koşmuştu: *"K-010'un kapıları sayısal eşiklerle tanımlanır ve makine
 kontrol eder. 'Sonuçlara bak ve karar ver' bir kapı değildir."* Eşikler Faz 4 sonunda
@@ -1099,7 +1099,7 @@ zinciri risksiz koşulmuş bir sonucu `risk_incelemesi` aşamasında **ölçüle
 ## K-033 — Risk limitlerinin her biri kaynağını ve gözden geçirme koşulunu taşır
 
 **Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 5 · **Rapor:**
-`docs/Faz-5-Risk-Raporu.md`
+`docs/arsiv/Faz-5-Risk-Raporu.md`
 
 **Karar:** Sekiz limitin her biri `config/risk.json`da bir `Gerekce` ile birlikte yaşar ve
 gerekçe iki kaynaktan birini beyan eder:
@@ -1490,7 +1490,7 @@ küçük gösterir ve bu kararın tam olarak engellemek istediği şeyi yapar.
 **Zorlama laboratuvarda, yalnızca kapıda değil — ve bu bir düzeltme.** Kararın ilk hâlinde
 defteri yalnızca promotion kapısı kontrol ediyordu. Yanlıştı: **çekiliş laboratuvarda
 yapılıyor.** `sq lab karsilastir` yedi aileyi koşturup sonuçlarını gösterebiliyor, defter
-bundan habersiz kalıyordu — ve bu gerçekten oldu (`docs/Faz-4-Donus-1-Timeframe.md`, "Süreç
+bundan habersiz kalıyordu — ve bu gerçekten oldu (`docs/arsiv/Faz-4-Donus-1-Timeframe.md`, "Süreç
 hatası"). Artık `sq lab` komutlarının hepsi defteri zorluyor; kaydedilmemiş bir strateji
 **koşturulamıyor**.
 
@@ -1683,7 +1683,7 @@ test bir şey kanıtlamaz.** `SahteBorsa` artık yön ve lot adımı kontrolü y
 ## K-042 — Funding rate bir bilgi kaynağı olarak eklenir; üç hipotez, tek tur, geri dönüşsüz
 
 **Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 4'e dönüş 3 · **Tamamlar:** K-039 ·
-**İlgili:** K-002, K-016, K-025, K-030 · **Kanıt:** `docs/spikes/05-funding-verisi.md`
+**İlgili:** K-002, K-016, K-025, K-030 · **Kanıt:** `docs/arsiv/spikes/05-funding-verisi.md`
 
 **Bağlam.** Faz 4 yedi hipotezi çürüttü, dönüş 1 (timeframe) ve dönüş 2 (parametre seçim
 yöntemi) de çürüdü. Üçü de **aynı kavanozdan** çekilişti: aynı veri, aynı fiyat geçmişi,
@@ -1762,7 +1762,7 @@ istenen cevabı üretmek değil.
 ### 7. SONUÇ (2026-09-11, aynı gün): **çürütüldü, kural uygulandı**
 
 Üç hipotez ön kayıtla yazıldı (defter 36-38), ölçüldü, üçü de kapılarda kaldı. **Funding
-fikri kapandı.** Ayrıntı: `docs/Faz-4-Donus-3-Funding.md`.
+fikri kapandı.** Ayrıntı: `docs/arsiv/Faz-4-Donus-3-Funding.md`.
 
 Sonuç beklenen yöndeydi ama tablo Faz 4'ten beri görülmemiş bir şey içeriyor:
 `funding_egilim` projenin **ilk pozitif OOS Sharpe**'ını üretti (+0,288) ve yedi kapının
@@ -1835,7 +1835,7 @@ yoğunluğunu** düşürür. 30 günün kapanışında bu ayrım rapora yazılac
 
 **Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 4'e dönüş 4 · **Kapatır:** K-039'un
 açık düzeltmesi · **Değiştirir:** K-019 (`oos_sharpe` sınırı) · **İlgili:** K-018, K-033,
-K-007 · **Kanıt:** `docs/Faz-4-Donus-4-Coklu-Test.md`, `tests/unit/test_coklu_test.py`,
+K-007 · **Kanıt:** `docs/arsiv/Faz-4-Donus-4-Coklu-Test.md`, `tests/unit/test_coklu_test.py`,
 `runs/deneyler/coklu_test/`
 
 **Bağlam.** K-039 çekilişleri saymayı getirdi ama düzeltmeyi **açık bıraktı** ve sebebini
@@ -1950,7 +1950,7 @@ defterden de silinmez: denendi, sayılır. Defter 38, ölçülebilir 31.
 
 **Durum:** kabul · **Tarih:** 2026-09-11 · **Faz:** 4'e dönüş 5 · **Kapatır:** tek sembollü
 yönlü strateji araması · **İlgili:** K-016, K-021, K-039, K-042, K-044 · **Kanıt:**
-`docs/Faz-4-Donus-5-Tavan.md`
+`docs/arsiv/Faz-4-Donus-5-Tavan.md`
 
 **Bağlam.** K-044 çoklu test düzeltmesini ölçtükten sonra ortada şu tablo vardı: 38 hipotez
 denendi, hiçbiri geçmedi, ve en iyi sonuç şans beklentisinin altındaydı. Doğal bir itiraz
@@ -2362,8 +2362,8 @@ alınan varlıktan kesiliyor.
 
 ## K-048 — Vizyon v2: kapsam genişliyor, v1 çekirdeği duruyor
 
-**Durum:** kabul · **Tarih:** 2026-09-12 · **Kaynak:** `docs/Proje-Fikri-v2.md` ·
-**Denetim:** `docs/Denetim-v2.md` · **Tadil eder:** Final-Doküman "Kapsam (v1)" ·
+**Durum:** kabul · **Tarih:** 2026-09-12 · **Kaynak:** `docs/arsiv/Proje-Fikri-v2.md` ·
+**Denetim:** `docs/arsiv/Denetim-v2.md` · **Tadil eder:** Final-Doküman "Kapsam (v1)" ·
 **İlgili:** K-008, K-013, K-014, K-045
 
 **Karar.** Projenin hedefi *"kripto spot, tek sembol araştırma ve execution platformu"*ndan
@@ -2550,7 +2550,7 @@ Denetim-v2 A4-A7, B1-B3; Spike 6
 ## K-053 — İlk genişleme kripto içinde; ikinci varlık sınıfı ölçülmeden açılmaz
 
 **Durum:** kabul · **Tarih:** 2026-09-12 · **Kaynak:** Spike 6
-(`docs/spikes/06-coklu-sembol-evren.md`) · **İlgili:** K-015, K-042, K-048
+(`docs/arsiv/spikes/06-coklu-sembol-evren.md`) · **İlgili:** K-015, K-042, K-048
 
 **Karar.** v2'nin ilk araştırma programları **Binance kripto** üzerinde kurulur: çoklu sembol
 (cross-sectional), türev (evren geneli funding/basis), makro (ücretsiz PIT kaynakları).
@@ -2654,7 +2654,7 @@ doğruluyor.
 
 **Durum:** kabul · **Tarih:** 2026-09-16 · **Faz:** 9 · **Uygular:** K-052/3, K-052/4,
 K-052/5, K-051/4 · **İlgili:** K-005, K-006, K-009, K-011, K-024, K-039 ·
-**Kanıt:** `docs/Faz-9-Veri-Platformu-Raporu.md`
+**Kanıt:** `docs/arsiv/Faz-9-Veri-Platformu-Raporu.md`
 
 **Bağlam.** Çoklu sembol evreni REST'ten kurulamaz: delist edilmiş sembollerin geçmişi orada
 yok, arşivde var (Spike 6). Arşiv kullanılınca dört şey ölçüldü ve dördü de karar gerektirdi.
@@ -2708,7 +2708,7 @@ varlık sınıfı (K-053, Faz 15) için bloke edici hâle gelir.
 
 **Durum:** kabul · **Tarih:** 2026-09-16 · **Uygular:** K-001, K-052/2, K-052/3, K-037,
 K-030 · **Tamamlar:** K-009, K-019, K-054 · **Kaynak:** Faz 10,
-`docs/Faz-10-Coklu-Enstruman-Raporu.md`
+`docs/arsiv/Faz-10-Coklu-Enstruman-Raporu.md`
 
 ### Karar — yedi madde
 
@@ -2820,7 +2820,7 @@ Bu karar şu üç durumda yeniden açılır:
 
 **Durum:** kabul · **Tarih:** 2026-09-16 · **Kapatır:** K-054'ün açık eşikleri ·
 **Uygular:** K-051/2-4, K-049/4 · **Tamamlar:** K-019, K-044 · **Kaynak:** Faz 11,
-`docs/Faz-11-Dogrulama-Raporu.md`, ham ölçümler `runs/kalibrasyon-v2/`
+`docs/arsiv/Faz-11-Dogrulama-Raporu.md`, ham ölçümler `runs/kalibrasyon-v2/`
 
 ### Karar — altı madde
 
@@ -2898,7 +2898,7 @@ aday `cok_faktor` 1h/plato (PBO ✓, pertürbasyon ✓, rejim ✗) — Faz 4'ün
 ## K-059 — Barı biten sembolde kalan pozisyon: 48 bar sonra sıfır değer; token göçü kimlik sorunudur
 
 **Durum:** kabul · **Tarih:** 2026-09-16 · **Tamamlar:** K-057 (motorun "son bilinen fiyat"
-kuralı), K-007, K-052/4 · **Kaynak:** Faz 12, `docs/Faz-12-Kesitsel-Fiyat-Raporu.md` §4,
+kuralı), K-007, K-052/4 · **Kaynak:** Faz 12, `docs/arsiv/Faz-12-Kesitsel-Fiyat-Raporu.md` §4,
 `tools/faz12_bayat_olcumu.py` → `runs/faz12/bayat-olcumu.json`
 
 ### Bağlam
@@ -3138,7 +3138,7 @@ işaretin gerekçesiz kaldırılamadığını koruyor.
 
 **Durum:** kabul · **Tarih:** 2026-09-17 · **Onay:** Scryne ("tüm dediğin her şeyi
 onaylıyorum") · **Tamamlar:** K-062/5 (hostta borsa işlem anahtarı yok), K-050 · **Kaynak:**
-`src/scryne_quant/data/alfred.py`, `src/scryne_quant/cli/izle.py`, `docs/Runbook.md`
+`src/scryne_quant/data/alfred.py`, `src/scryne_quant/cli/izle.py`, `docs/arsiv/Runbook.md`
 
 ### Karar
 
@@ -3163,13 +3163,13 @@ yüzden içerik sınırlandı.
 ### Ek (2026-09-20, Scryne: "K-066: AÇ") — vadeli **salt okunur** anahtar, iki uç
 
 Hat 1 ikinci tavanının iki girdisi (VIP 0 USDT-M taker fee; C-isolated MMR kademeleri)
-anahtarsız hiçbir resmî kaynaktan doğrulanamadı (`docs/Faz-16-Hat1-Fee-MMR-Erisilebilirlik.md`).
+anahtarsız hiçbir resmî kaynaktan doğrulanamadı (`docs/arsiv/Faz-16-Hat1-Fee-MMR-Erisilebilirlik.md`).
 Ek kapsam: vadeli hesap için **salt okunur** API anahtarı; yetki yalnız `GET /fapi/v1/
 commissionRate` ve `GET /fapi/v1/leverageBracket`; işlem/emir **kapalı**, çekim **kapalı**,
 başka uç yok. Anahtar hosta konmaz (K-062/5 aynen); yalnız araştırma makinesinde, hiçbir
 çıktıya yazılmaz. Erişim ölçüm kapısı **değildir**: gelen kayıt tarihlidir, PIT sınırı kayıt
 anıdır (2020–2025 IS'e uygulanırsa `NON_PIT/leak_risk`, kapı dışı). Araç:
-`tools/faz16_vadeli_okuma.py`; kayıt `docs/spikes/08-vadeli-tarife-kademe.md`. Mevcut spot
+`tools/faz16_vadeli_okuma.py`; kayıt `docs/arsiv/spikes/08-vadeli-tarife-kademe.md`. Mevcut spot
 salt okunur anahtar bu uçlarda `-2015` verdi (yetki yok); yetkili anahtar Scryne'ın eylemi.
 
 ## K-067 — Jev'in genişleyen rolü: eleme ve **ileriye dönük** sınıflandırma; sinyal üretimi yok
@@ -3217,8 +3217,8 @@ Jev'i oraya koymak yeni bir bilgi kaynağı açar; sinyal üretimine koymak K-04
 
 **Durum:** kabul · **Tarih:** 2026-09-18 · **Faz:** 16 · **Kapatır:** evren kıyasının üstüne
 tek dışlama katmanı ekleyen çekiliş ailesi · **İlgili:** K-042, K-045, K-051, K-054, K-067 ·
-**Kanıt:** `docs/Faz-12-Turev-Evren-Raporu.md`, `docs/Faz-12-Makro-Rejim-Raporu.md`,
-`docs/Faz-16-Konumlanma-Raporu.md`
+**Kanıt:** `docs/arsiv/Faz-12-Turev-Evren-Raporu.md`, `docs/arsiv/Faz-12-Makro-Rejim-Raporu.md`,
+`docs/arsiv/Faz-16-Konumlanma-Raporu.md`
 
 **Bağlam.** Faz 12 ve Faz 16'da üç program, sekiz çekiliş, tek bir iskelet: `evren_esit_agirlik`
 kıyası (n=10, haftalık, hedef brüt 0,2) + kesitte bir dilimi dışlayan tek katman. Dışlama
@@ -3411,7 +3411,7 @@ Sabit 1,04, aralığın **üstünde** olduğu için bu kalem bugünkü kararı d
 
 **Durum:** kabul · **Tarih:** 2026-09-18 · **Onay:** Scryne · **Faz:** 16 ·
 **Denetler:** K-030 · **İlgili:** K-007, K-010, K-018, K-039, K-051 · **Kanıt:**
-`docs/Faz-16-Kiyas-Olcumu.md`, `runs/faz16/kiyas-olcumu.json`
+`docs/arsiv/Faz-16-Kiyas-Olcumu.md`, `runs/faz16/kiyas-olcumu.json`
 
 ### Bağlam
 
@@ -3462,7 +3462,7 @@ birer karardır ve **sonuca bakılarak verilemez**; ikisi de risk iştahının p
 h51'in OOS Sharpe'ı 0,363; kendi kıyasını (n=10, 0,167) iki katından fazla geçiyor ve bu
 doğru. Ama 3. maddenin çizgisi 0,333, yani üstünlük **%9**. Rapordaki "kıyası iki kat
 geçti" okunuşu, seçilen kıyas yüzünden olduğundan büyük görünüyordu; düzeltme
-`docs/Faz-16-Kiyas-Olcumu.md` §5'te.
+`docs/arsiv/Faz-16-Kiyas-Olcumu.md` §5'te.
 
 ## K-073 — Araştırma/canlı risk motoru ve evren kalibrasyonu: karşılaştırılabilirlik uyuşmazlığı
 
@@ -3657,8 +3657,8 @@ K-043'ün planlı durdurma yordamıyla yapılır.
 **Durum:** kabul · **Tarih:** 2026-09-19 · **Onay:** Scryne (beş bağlayıcı karar, Jev denetimi
 sonrası) · **Tabi:** K-067 (Jev sinyal üretmez — **aynen yürürlükte**), K-049 (AI yetkisi,
 kesim, dondurma), K-039/K-051 (çekiliş sayımı, program bütçesi), K-045 (tek sembollü yönlü
-arama kapalı), K-037 (izin veren katman risk dışında olamaz) · **Kaynak:** `docs/Jev-Denetim.md`
-(repository ↔ `docs/Jev-Integration-Spec.md` denetimi), `docs/spikes/07-jev-durum.md`,
+arama kapalı), K-037 (izin veren katman risk dışında olamaz) · **Kaynak:** `docs/arsiv/Jev-Denetim.md`
+(repository ↔ `docs/arsiv/Jev-Integration-Spec.md` denetimi), `docs/arsiv/spikes/07-jev-durum.md`,
 `config/jev.json`
 
 **Bağlam.** Spec bir "Jev-style LLM decision layer" istiyor: yön, güven, rejim, kurulum
@@ -3748,7 +3748,7 @@ kesimi yayınlanmıyor (spec'in tarihsel isabet kanıtı). Bu karar üçünü de
 
 **Durum:** kabul · **Tarih:** 2026-09-19 · **Onay:** Scryne ("beklemek istemiyorum, başka bir
 çözüm bul") · **Tabi:** K-074/3 (kesim UNKNOWN, uydurulmaz — **aynen yürürlükte**), K-049/4,
-K-067 (Jev sinyal üretmez — aynen) · **Kaynak:** `docs/spikes/07-jev-durum.md` (c),
+K-067 (Jev sinyal üretmez — aynen) · **Kaynak:** `docs/arsiv/spikes/07-jev-durum.md` (c),
 `config/jev.json::yayin_utc`, `runs/jev/tekrar-yayin-sonrasi-1.sqlite`
 
 **Bağlam.** K-074/3 doğru olarak "yayın tarihi kesim yerine geçmez; yayından önceki hiçbir
@@ -3788,7 +3788,7 @@ kesitsel korelasyon nedeniyle etkin n sembol sayısıyla doğrusal büyümez —
 ## K-076 — Jev yön ekseni kapandı: 50 sembol, yayın sonrası pencere, isabet %49,0
 
 **Durum:** kabul · **Tarih:** 2026-09-19 · **Onay:** Scryne ("evet aç ve koştur") · **Tabi:**
-K-067, K-074 (aynen), K-075 · **Kaynak:** `docs/Faz-16-Jev-Evren-Replay-Raporu.md`,
+K-067, K-074 (aynen), K-075 · **Kaynak:** `docs/arsiv/Faz-16-Jev-Evren-Replay-Raporu.md`,
 `runs/jev/evren/`
 
 **Bağlam.** K-074 çoklu sembolü gölge kapsamı dışında bırakmıştı; K-075 yayın sonrası
@@ -3813,7 +3813,7 @@ açtı; strateji, program ya da çekiliş değil (Jev sinyal üretmiyor, paramet
 
 **Durum:** kabul · **Tarih:** 2026-09-20 · **Onay:** Scryne (Faz 0 sonucu kabul) · **Tabi:**
 K-045 (tavan), K-054 (kapılar), K-067/K-074/K-076 (Jev, aynen), K-068 (seçim/kurma) ·
-**Kaynak:** `docs/Faz-16-Rejim-Tavan-Olcumu.md`, `tools/faz16_rejim_tavan.py`,
+**Kaynak:** `docs/arsiv/Faz-16-Rejim-Tavan-Olcumu.md`, `tools/faz16_rejim_tavan.py`,
 `runs/faz16/rejim_tavan.json`, Jev Strategy Discovery denetimi (audit + design, 2026-09-19)
 
 **Bağlam.** Jev Strategy Discovery Engine denetimi "NOT READY" dedi ve tek ön koşul koydu:
@@ -3844,15 +3844,15 @@ gösterilsin. Ölçüldü.
 ### Sonraki soru
 
 Seçici değil, kaynak: "gate seviyesine ulaşabilecek yeni alpha edge nereden üretilebilir?"
-Önce araştırma uzayı haritalanır (`docs/Alpha-Discovery-Gap-Audit.md`), sonra program
+Önce araştırma uzayı haritalanır (`docs/arsiv/Alpha-Discovery-Gap-Audit.md`), sonra program
 açılır (K-051). Bu karar hiçbir programı açmıyor.
 
 ## K-078 — Alpha Discovery Gap Audit ve iki Adım 0 ölçümü: Hat 2 kapandı, Hat 1 ikinci tavana uygun (bilgilendirici)
 
 **Durum:** kabul (bilgilendirici; hiçbir kapsam, kapı ya da karar değişmedi) · **Tarih:**
 2026-09-20 · **Onay:** Scryne · **Tabi:** K-045, K-053, K-068, K-077 (aynen); K-008, K-033,
-K-046, K-057 (açılmadı) · **Kaynak:** `docs/Alpha-Discovery-Gap-Audit.md`,
-`docs/Faz-16-Hat1-Carry-Tavan-Olcumu.md`, `docs/Faz-16-Hat2-Funding-Uzlasma-Olcumu.md`,
+K-046, K-057 (açılmadı) · **Kaynak:** `docs/arsiv/Alpha-Discovery-Gap-Audit.md`,
+`docs/arsiv/Faz-16-Hat1-Carry-Tavan-Olcumu.md`, `docs/arsiv/Faz-16-Hat2-Funding-Uzlasma-Olcumu.md`,
 `tools/faz16_carry_tavan.py`, `tools/faz16_funding_uzlasma.py`, `runs/faz16/carry_tavan.json`,
 `runs/faz16/funding_uzlasma.json`
 
@@ -3883,9 +3883,9 @@ K-046, K-057 (açılmadı) · **Kaynak:** `docs/Alpha-Discovery-Gap-Audit.md`,
 **Durum:** kabul (bilgilendirici — Hat 1'in mevcut metodolojik kapanış durumunun kalıcı kaydı;
 yeni veri erişimi, yeni kapsam, yeni kapı ya da yeni yetki **açmaz**; yeni kural ve yeni K
 bağımlılığı üretmez) · **Tarih:** 2026-09-20 · **Onay:** Scryne · **Tabi:** K-007, K-021,
-K-045, K-049/4, K-054, K-058, K-066 (+Ek), K-077, K-078 · **Kaynak:** `docs/Faz-16-Hat1-Kapanis.md`,
-`docs/Faz-16-Hat1-Ikinci-Tavan-Kismi-Raporu.md`, `docs/Faz-16-Hat1-Metodoloji-Denetimi.md`,
-`docs/Faz-16-Hat1-Fee-MMR-Erisilebilirlik.md`, `docs/spikes/08-vadeli-tarife-kademe.md`
+K-045, K-049/4, K-054, K-058, K-066 (+Ek), K-077, K-078 · **Kaynak:** `docs/arsiv/Faz-16-Hat1-Kapanis.md`,
+`docs/arsiv/Faz-16-Hat1-Ikinci-Tavan-Kismi-Raporu.md`, `docs/arsiv/Faz-16-Hat1-Metodoloji-Denetimi.md`,
+`docs/arsiv/Faz-16-Hat1-Fee-MMR-Erisilebilirlik.md`, `docs/arsiv/spikes/08-vadeli-tarife-kademe.md`
 
 1. **Ölçülen:** ideal carry tavanı (K-078); perp slippage K-021 yöntemiyle BTC 7,11 / ETH
    9,11 bps (config'e yazılmadı); DTB3 benchmark (BEY, K-060 PIT); fee=0 maliyet **üst
@@ -3917,8 +3917,8 @@ K-045, K-049/4, K-054, K-058, K-066 (+Ek), K-077, K-078 · **Kaynak:** `docs/Faz
 ## K-080 — Veri seti kimliği tarihe sabitlenir: `bitis_gun` ile geri sarım, kayıtta `veri_son_ms`
 
 **Durum:** kabul · **Tarih:** 2026-09-20 · **Onay:** Scryne ("A / K-080 ONAY", denetim döngüsü
-kapanışı) · **Tabi:** K-009, K-011, K-039, K-057/6 · **Kaynak:** `docs/audit/W3-Research-Backtest.md`
-§6, `docs/audit/W6-Testing-CI.md` T3, `tests/unit/test_geri_sarim.py`, `docs/ROADMAP-RESET.md` R1(a)
+kapanışı) · **Tabi:** K-009, K-011, K-039, K-057/6 · **Kaynak:** `docs/arsiv/audit/W3-Research-Backtest.md`
+§6, `docs/arsiv/audit/W6-Testing-CI.md` T3, `tests/unit/test_geri_sarim.py`, `docs/ROADMAP-RESET.md` R1(a)
 
 ### Bulgu (W3, 2026-09-20)
 
@@ -4049,8 +4049,8 @@ yanlış-pozitifi **%4,2** (hedef %5). Engel ve A kararı (ölçülemeyen oynakl
 ## K-082 — Promotion kaydı zincir hash'li ve audit'e bağlı; canlı/paper açılışı bütünlük ister
 
 **Durum:** kabul · **Tarih:** 2026-09-20 · **Onay:** Scryne (İz A P1/P2 talimatı) · **Tabi:**
-K-008/5, K-010, K-032, K-035, K-038, K-050 · **Kaynak:** `docs/audit/W2-Risk-Execution.md` B4,
-`docs/audit/IzA-CI-Kill-Promotion-Denetim.md` §3, `tests/unit/test_promotion_zinciri.py`
+K-008/5, K-010, K-032, K-035, K-038, K-050 · **Kaynak:** `docs/arsiv/audit/W2-Risk-Execution.md` B4,
+`docs/arsiv/audit/IzA-CI-Kill-Promotion-Denetim.md` §3, `tests/unit/test_promotion_zinciri.py`
 
 ### Bulgu
 
@@ -4114,7 +4114,7 @@ olay, paper bozuk/audit'siz/karşılıksız açılmaz, doğrulanmış açılır,
 **Durum:** kabul · **Tarih:** 2026-09-20 (Paket 1, taslak) → **2026-09-21 kabul** (Decision Memo) ·
 **Onay:** Scryne (R2 Paket 1 talimatı; U13/U15/U16/U17 Decision Gate onayı, 2026-09-21) ·
 **Tabi:** K-007, K-009, K-039, K-052, K-057/6, K-079, K-080, K-081 · **Kaynak:** `docs/ROADMAP-RESET.md` R2,
-`docs/audit/W1-Architecture.md` §6, `docs/research/Threshold-Policy.md` §1 (U13-U17) ve §3,
+`docs/arsiv/audit/W1-Architecture.md` §6, `docs/research/Threshold-Policy.md` §1 (U13-U17) ve §3,
 `tests/unit/test_enstruman_v2.py`, `tests/unit/test_takvim.py`
 
 ### Bulgu
@@ -4253,7 +4253,7 @@ Mevcut `test_kimlik.py`, `test_evren.py`, `test_izgara.py`, `test_coklu_motor.py
 ## K-084 — Enstrüman-başı maliyet modeli: katalog + çözümleyici; tek-model Binance spot yolu bit-aynı (U14)
 
 **Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (U14 spike → tasarım A kabulü, R2 Paket 3
-talimatı) · **Tabi:** K-007, K-009, K-021, K-057/6, K-083 · **Kaynak:** `docs/audit/W3` R5 (tek global
+talimatı) · **Tabi:** K-007, K-009, K-021, K-057/6, K-083 · **Kaynak:** `docs/arsiv/audit/W3` R5 (tek global
 maliyet 761 sembole uygulanıyor), Threshold-Policy U14, U14 Spike (2026-09-21),
 `tests/unit/test_maliyet_katalogu.py`
 
@@ -4392,7 +4392,7 @@ kripto-dışı takvim içeriği. Bunlar R2'yi açık tutmaz; R4 satırı zaten b
 **Durum:** değiştirildi → K-088 (sağlayıcı: HistData yerine FXCM MarketData; sınıf/kapsam/takvim/eşik maddeleri yürürlükte) · **Tarih:** 2026-09-21 · **Onay:** Scryne ("R3'ün ilk işi: kaynak/lisans ve
 kripto-dışı veri kapsamı kararı") · **Tabi:** K-005, K-007, K-014, K-021, K-052, K-079, K-080,
 K-083/U13-U17, K-084 · **Kaynak:** sağlayıcı sayfaları 2026-09-21'de okundu (aşağıda), Threshold-
-Policy §3, `docs/audit/W7` §5, `src/scryne_quant/data/sozlesme.py:histdata-fx-m1`
+Policy §3, `docs/arsiv/audit/W7` §5, `src/scryne_quant/data/sozlesme.py:histdata-fx-m1`
 
 ### Bulgu — kaynak taraması (2026-09-21, sayfalar doğrudan okundu)
 
@@ -4436,7 +4436,7 @@ Policy §3, `docs/audit/W7` §5, `src/scryne_quant/data/sozlesme.py:histdata-fx-
 SHA'lı manifesto), idempotent, `--bitis-gun`; (b) `sq data fx-al` CLI (gelen dizinden);
 (c) `sq data quality` FX'te (gap 5/7 farkında değil — R4'e kadar hafta sonu boşlukları
 raporlanır, `suspect` değil); (d) takvim ölçümü + `fx-5x24` satırı; (e) PIT evren tablosu (çift
-listesi) + hayatta kalma ölçümü; (f) `docs/Faz-R3-FX-Veri-Raporu.md`. Kanıt: `test_fx.py`
+listesi) + hayatta kalma ölçümü; (f) `docs/arsiv/Faz-R3-FX-Veri-Raporu.md`. Kanıt: `test_fx.py`
 (format, EST→UTC, bid, idempotency, checksum, K-080).
 
 ---
@@ -4501,7 +4501,7 @@ zaten yasaktı. Ayrıca veri yalnız bid ve kaynak akışı adsızdı. FTP için
 
 **Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (R3 Paket 1(d) talimatı) · **Tabi:**
 K-005, K-009, K-083/U15-U16, K-088 · **Kaynak:** `src/scryne_quant/data/takvim.py`,
-`docs/Faz-R3-FX-Veri-Raporu.md` §3-4, `tests/unit/test_takvim.py::TestFx5x24`, `test_fx.py::TestFxKalite`
+`docs/arsiv/Faz-R3-FX-Veri-Raporu.md` §3-4, `tests/unit/test_takvim.py::TestFx5x24`, `test_fx.py::TestFxKalite`
 
 ### Ölçüm (FXCM EURUSD m1, 55 hafta: 2023-11-19 22:00 → 2024-12-13 21:00 UTC)
 
@@ -4545,7 +4545,7 @@ K-005, K-009, K-083/U15-U16, K-088 · **Kaynak:** `src/scryne_quant/data/takvim.
 
 **Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (Paket 1(e) tasarım talimatı; büyük
 indirme ve ödeme yok) · **Tabi:** K-051/4, K-052, K-088, K-089 · **Kaynak:**
-`src/scryne_quant/data/fx_evren.py`, `tests/unit/test_fx_evren.py`, `docs/Faz-R3-FX-Veri-Raporu.md` §5
+`src/scryne_quant/data/fx_evren.py`, `tests/unit/test_fx_evren.py`, `docs/arsiv/Faz-R3-FX-Veri-Raporu.md` §5
 
 ### Karar
 
@@ -4591,7 +4591,7 @@ tekdüze → 0, eksik çift → 1/6 medyan 1/3 azami, sağlayıcı boşluğu, k�
 **Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne (HEAD keşfi onayı) · **Düzeltir:** K-088
 ölçüm notundaki hafta numarası kuralı · **Tabi:** K-052, K-088, K-090 · **Kaynak:**
 `data/fx.py:hafta_no/hafta_anahtarlari`, `data/fx/_evren/6124cf568498.json` (yerel),
-`docs/Faz-R3-FX-Veri-Raporu.md` §5b, `tests/unit/test_fx.py`, `test_fx_evren.py`
+`docs/arsiv/Faz-R3-FX-Veri-Raporu.md` §5b, `tests/unit/test_fx.py`, `test_fx_evren.py`
 
 ### Bulgu
 
@@ -4630,7 +4630,7 @@ adıyla dışlanır; canlı yok.
 ## K-092 — R3 kapandı: kripto-dışı ilk sınıf (FX, FXCM) veri katmanı
 
 **Durum:** kabul · **Tarih:** 2026-09-21 · **Onay:** Scryne ("Paket 1(f) ile R3 raporunu kapat")
-· **Tabi:** K-087…K-091 · **Kaynak:** `docs/ROADMAP-RESET.md` R3, `docs/Faz-R3-FX-Veri-Raporu.md`
+· **Tabi:** K-087…K-091 · **Kaynak:** `docs/ROADMAP-RESET.md` R3, `docs/arsiv/Faz-R3-FX-Veri-Raporu.md`
 
 **R3 bitti kriteri, madde madde:** kaynak seçilmiş + lisans kaydı (`fxcm-candledata-m1`,
 `VeriSozlesmesi.lisans` alıntılı, K-088) ✅; tarihsel indirici idempotent + checksum + `veri_sonu`
@@ -6836,3 +6836,58 @@ biri aday olursa K-039 sayımına eklenir.
 
 - Swap/finansman ve komisyon simüle edilmiyor (iyimser yönde). Vadeli tabanlı endeks CFD'lerinde vade geçişi fiyat
   sıçraması üretebilir. Döngü ilk turda stratejinin o anki pozisyonuna girer.
+
+---
+
+## K-136 — MT5 11 sembol (kur çevrimi + swap); ön kayıtlı dönüş araştırması FAIL; temizlik: arşiv ve dondurma
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("dediğin tüm her şeyi eksiksiz bir şekilde yap";
+MT5'e EURUSD, GBPUSD, USDCHF, USDJPY, AUDUSD, NZDUSD, USDCAD, XAUUSD, S&P, NASDAQ, DJI; "eğer öncekiler çok
+önemli değil se onları kaldır. yeniler olsun sadece") · **Tabi:** K-004, K-007, K-039, K-050, K-134, K-135 ·
+**Kaynak:** `aktif/araci.py` (`PaperHesap.doviz/ek`, `MT5Araci.kur`, `MT5Paper.tahakkuk`), `aktif/geriye.py`
+(`swap`), `tools/aktif_arastirma.py`, `docs/research/records/2026-09-23-aktif-donus-onkayit.md` +
+`-sonuc.json`, `docs/arsiv/`, `docs/ROADMAP-RESET.md`, `tests/unit/test_aktif.py`
+
+### 1. MT5: 11 sembol, kur çevrimi, swap, komisyon
+
+- Kâr para birimi hesaptan farklı semboller (USDCHF → CHF, USDJPY → JPY, USDCAD → CAD) artık desteklenir:
+  `birim_notional = sözleşme × fiyat × kur(kâr para birimi → USD)`. Kur, güncel orta fiyattan (`XXXUSD` ya da
+  `1/USDXXX`); parite yoksa hata. `MT5Paper` kote nakdi o para biriminde tutar (`doviz`), özkaynakta güncel kurla
+  çevirir — MT5'in kârı güncel kurla çevirmesiyle aynı. Test: USDJPY 1 lot = 100.000 USD; yarım spread kaybı
+  0,01 × 100.000 / 150,01.
+- **Gecelik swap** sembolün kendi değerinden (`swap_mode` 1 = puan; `puan × point × sözleşme` lot başına):
+  sunucu gece yarısı (UTC+3 → 21:00 UTC), Pazartesi-Cuma geceleri, `swap_rollover3days` (Çarşamba) üç kat, hafta
+  sonu yok. Endeks CFD'leri `swap_mode` 0 (vadeli tabanlı, swap yok). Backtest aynı kuralı notional kesriyle
+  uygular (bugünkü swap oranları; geçmiş swap bilinmiyor).
+- **Komisyon:** Integral forex'te komisyon almıyor (spread içinde); CFD'de hesap türüne bağlı, demo için
+  doğrulanmadı → `ucret_bps` 0,5 kötü yönde tahmin (K-007).
+- Ölçülen swap (puan, long/short): EURUSD −11/+1, GBPUSD −5/−4, USDCHF +4/−14, USDJPY +7/−21, AUDUSD −5/−3,
+  NZDUSD −4/0, USDCAD 0/−12, XAUUSD −80/+25. Spread 0,5-2,5 bps.
+
+### 2. Ön kayıtlı dönüş araştırması — FAIL
+
+Ön kayıt koşudan önce commit'lendi (`59bbe65`). Izgara 36 aday/piyasa (`rsi_donus`, n × alt × trend × 1h/4h),
+730 gün, IS %70 / OOS %30; seçim IS haftalık Sharpe (≥ 5 işlem/hafta şartıyla); geçme OOS toplam > 0 ∧
+Sharpe ≥ 0,5 ∧ kârlı hafta ≥ %50.
+
+| | Seçilen | IS | OOS | OOS'ta pozitif aday |
+|---|---|---|---|---|
+| Kripto (10 coin, long) | 1h n5 alt15 trend200 | −%4,4 · Sharpe −0,24 | −%8,6 · Sharpe −1,66 | 7/36 (medyan −%8,8) |
+| MT5 (11 sembol, long/short) | 1h n3 alt5 trend100 | +%11,1 · Sharpe 0,57 | −%3,9 · Sharpe −0,40 | 8/36 (medyan −%9,8) |
+
+İki piyasada da **kaldı**; yeni demo hesap eklenmedi. Dağılımın en iyi OOS'u (MT5 4h +%16,7) IS'te seçilemezdi;
+ona bakıp ızgara daraltmak bu kaydın dışındadır ve yeni ön kayıt ister. Not: sonuç dosyasındaki `veri` alanı
+yalnız son zaman diliminin (4h) dönemini tutuyor (betik hatası, sonrası için düzeltildi); iki zaman dilimi de son
+730 gün. MT5 geçmişi terminal verisi, dondurulmadı (yeniden koşu son barlarda farklılaşabilir).
+
+### 3. Temizlik
+
+- `docs/` kökünde yalnız DURUM, Kararlar, ROADMAP-RESET, iki `.jsonl` defter ve `research/` kaldı; geri kalan
+  56 doküman + `audit/`, `program-adaylari/`, `spikes/` → `docs/arsiv/` (`git mv`, geçmiş korunur). Atıflar
+  `docs/arsiv/...` olarak güncellendi; append-only defterler, `docs/research/**/*.json` ve SHA'sı dondurulmuş
+  `config/r8_kriterler.json`'a dokunulmadı.
+- Eski DURUM `docs/arsiv/DURUM-2026-09-23-oncesi.md`; yeni DURUM tek sayfa, yalnız yürürlükteki hat.
+- **Dondurulan fazlar:** R5, R8, R9, R10, R11, R14, R15, R16 → `⛔ donduruldu (K-136)`; sıradaki satır R17.
+  Kod ve testler duruyor (koruma testleri gerçek para yolu açılırsa yine geçerli), çalışan süreç yok.
+- `.claude/CLAUDE.md` dosya haritası yürürlükteki hat + dondurulmuş bölüm olarak yeniden yazıldı; kural 8 ve 11
+  gerçek paraya geçişin kuralı olarak kapsamlandı (demo araştırması yine ön kayıtla).

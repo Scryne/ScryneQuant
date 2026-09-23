@@ -7,13 +7,13 @@ kapılardan geçtikten sonra kontrollü biçimde otomatik uygulayan tek kişilik
 ve execution platformu.
 
 **Durum (2026-09-20):** kanonik yol haritası **`docs/ROADMAP-RESET.md`** (R0-R12; Faz 0-16
-tablosu `docs/Roadmap.md`'de tarihsel). R0 denetim döngüsü kapandı (`docs/audit/`); R1
+tablosu `docs/arsiv/Roadmap.md`'de tarihsel). R0 denetim döngüsü kapandı (`docs/arsiv/audit/`); R1
 stabilizasyon (a)-(f) kapandı — K-080 veri sonu sabitleme, K-081 eşik yeniden ölçümü (45
 çekiliş, `oos_sharpe` 1,04 korundu), K-082 promotion zinciri + audit — (g) doküman senkronu
 bu güncellemeyle. **52 çekilişin hiçbiri kapıyı geçmedi**; bu kapının çalıştığının kanıtı.
 Mevcut eylem uzayında (long-only spot) araştırma kapalı (K-078); Hat 1 veri engelli (K-079).
 Host-1 K-069 penceresi (2026-09-17 → 09-25) sürüyor; canlı (R12) tetik bekliyor, hazırlık
-`docs/Faz-8-Hazirlik.md`.
+`docs/arsiv/Faz-8-Hazirlik.md`.
 
 **2026-09-12 — vizyon v2 (K-048):** kapsam *multi-asset autonomous trading research &
 execution platform*'a genişledi. Çekirdek değişmedi; genişleyen şey bilgi kaynakları ve
@@ -62,24 +62,24 @@ kaç kötü stratejiyi elediğiyle ölçülür.
 
 | Soru | Dosya |
 | --- | --- |
-| Proje ne yapacak? | [`docs/Final-Dokuman.md`](docs/Final-Dokuman.md) — **bağlayıcı (v2)** |
+| Proje ne yapacak? | [`docs/arsiv/Final-Dokuman.md`](docs/arsiv/Final-Dokuman.md) — **bağlayıcı (v2)** |
 | Neden böyle karar verildi? | [`docs/Kararlar.md`](docs/Kararlar.md) — K-001…K-079 |
-| Yeni vizyon ne? | [`docs/Proje-Fikri-v2.md`](docs/Proje-Fikri-v2.md) · denetimi [`docs/Denetim-v2.md`](docs/Denetim-v2.md) |
-| Çoklu sembol evreni kurulabilir mi? | [`docs/spikes/06-coklu-sembol-evren.md`](docs/spikes/06-coklu-sembol-evren.md) — evet, ölçüldü |
-| Timeframe denendi mi? | [`docs/Faz-4-Donus-1-Timeframe.md`](docs/Faz-4-Donus-1-Timeframe.md) — çürütüldü |
-| Seçim yöntemi denendi mi? | [`docs/Faz-4-Donus-2-Secim.md`](docs/Faz-4-Donus-2-Secim.md) — çürütüldü |
+| Yeni vizyon ne? | [`docs/arsiv/Proje-Fikri-v2.md`](docs/arsiv/Proje-Fikri-v2.md) · denetimi [`docs/arsiv/Denetim-v2.md`](docs/arsiv/Denetim-v2.md) |
+| Çoklu sembol evreni kurulabilir mi? | [`docs/arsiv/spikes/06-coklu-sembol-evren.md`](docs/arsiv/spikes/06-coklu-sembol-evren.md) — evet, ölçüldü |
+| Timeframe denendi mi? | [`docs/arsiv/Faz-4-Donus-1-Timeframe.md`](docs/arsiv/Faz-4-Donus-1-Timeframe.md) — çürütüldü |
+| Seçim yöntemi denendi mi? | [`docs/arsiv/Faz-4-Donus-2-Secim.md`](docs/arsiv/Faz-4-Donus-2-Secim.md) — çürütüldü |
 | Kaç hipotez denendi? | [`docs/Hipotez-Defteri.jsonl`](docs/Hipotez-Defteri.jsonl) — `sq lab hipotezler` |
-| Sırada ne var? | [`docs/Roadmap.md`](docs/Roadmap.md) |
-| Özgün fikir neydi? | [`docs/Proje-Fikri.md`](docs/Proje-Fikri.md) |
-| Fikirde ne düzeltildi? | [`docs/Denetim.md`](docs/Denetim.md) |
+| Sırada ne var? | [`docs/arsiv/Roadmap.md`](docs/arsiv/Roadmap.md) |
+| Özgün fikir neydi? | [`docs/arsiv/Proje-Fikri.md`](docs/arsiv/Proje-Fikri.md) |
+| Fikirde ne düzeltildi? | [`docs/arsiv/Denetim.md`](docs/arsiv/Denetim.md) |
 | Arayüz nasıl görünecek? | [`DESIGN.md`](DESIGN.md) |
-| Veri katmanı ne buldu? | [`docs/Faz-1-Veri-Raporu.md`](docs/Faz-1-Veri-Raporu.md) |
-| Laboratuvar ne ölçtü? | [`docs/Faz-4-Laboratuvar-Raporu.md`](docs/Faz-4-Laboratuvar-Raporu.md) |
-| Risk motoru ne yaptı? | [`docs/Faz-5-Risk-Raporu.md`](docs/Faz-5-Risk-Raporu.md) |
-| Canlı taraf nerede? | [`docs/Faz-6-Paper-Raporu.md`](docs/Faz-6-Paper-Raporu.md) · [`docs/Faz-7-Execution-Raporu.md`](docs/Faz-7-Execution-Raporu.md) · host operasyonu [`docs/Runbook.md`](docs/Runbook.md) |
-| Canlıya nasıl geçilir? | [`docs/Faz-8-Hazirlik.md`](docs/Faz-8-Hazirlik.md) — shadow, kademe, venue; tetik yok |
-| Araştırma nerede kapandı? | [`docs/Alpha-Discovery-Gap-Audit.md`](docs/Alpha-Discovery-Gap-Audit.md) (K-078) · [`docs/Faz-16-Hat1-Kapanis.md`](docs/Faz-16-Hat1-Kapanis.md) (K-079) |
-| Jev ne yapıyor? | [`docs/Jev-Denetim.md`](docs/Jev-Denetim.md) · [`docs/Jev-Golge-Raporu.md`](docs/Jev-Golge-Raporu.md) — yalnız gölge (K-074) |
+| Veri katmanı ne buldu? | [`docs/arsiv/Faz-1-Veri-Raporu.md`](docs/arsiv/Faz-1-Veri-Raporu.md) |
+| Laboratuvar ne ölçtü? | [`docs/arsiv/Faz-4-Laboratuvar-Raporu.md`](docs/arsiv/Faz-4-Laboratuvar-Raporu.md) |
+| Risk motoru ne yaptı? | [`docs/arsiv/Faz-5-Risk-Raporu.md`](docs/arsiv/Faz-5-Risk-Raporu.md) |
+| Canlı taraf nerede? | [`docs/arsiv/Faz-6-Paper-Raporu.md`](docs/arsiv/Faz-6-Paper-Raporu.md) · [`docs/arsiv/Faz-7-Execution-Raporu.md`](docs/arsiv/Faz-7-Execution-Raporu.md) · host operasyonu [`docs/arsiv/Runbook.md`](docs/arsiv/Runbook.md) |
+| Canlıya nasıl geçilir? | [`docs/arsiv/Faz-8-Hazirlik.md`](docs/arsiv/Faz-8-Hazirlik.md) — shadow, kademe, venue; tetik yok |
+| Araştırma nerede kapandı? | [`docs/arsiv/Alpha-Discovery-Gap-Audit.md`](docs/arsiv/Alpha-Discovery-Gap-Audit.md) (K-078) · [`docs/arsiv/Faz-16-Hat1-Kapanis.md`](docs/arsiv/Faz-16-Hat1-Kapanis.md) (K-079) |
+| Jev ne yapıyor? | [`docs/arsiv/Jev-Denetim.md`](docs/arsiv/Jev-Denetim.md) · [`docs/arsiv/Jev-Golge-Raporu.md`](docs/arsiv/Jev-Golge-Raporu.md) — yalnız gölge (K-074) |
 
 ## Değişmez kurallar
 

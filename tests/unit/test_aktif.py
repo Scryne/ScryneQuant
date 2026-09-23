@@ -84,7 +84,7 @@ def test_agirlik_yon_degismedikce_dokunmaz_ve_toplam_tavan() -> None:
 def test_fren_hepsini_kapatir_ve_takvimle_kalkar() -> None:
     a = RiskAyari(gunluk_kayip=0.03, haftalik_kayip=0.08)
     f = FrenDurumu()
-    pazartesi = 1_790_035_200_000  # 2026-09-21 00:00 UTC, Pazartesi
+    pazartesi = 1_790_035_200_000  # 2026-09-22 00:00 UTC (Salı; aynı ISO haftası)
     assert f.guncelle(100.0, pazartesi, a) is None
     assert f.guncelle(96.9, pazartesi + 3_600_000, a) == "gunluk_kayip"
     assert agirlik_adimi({"A": 0.3}, {"A": 1.0}, {"A": 0.01}, a, fren=True) == {"A": 0.0}
@@ -218,3 +218,75 @@ def test_mt5_paper_spreadden_dolar_ve_demo_ister(tmp_path: Path) -> None:
                                              equity=1.0)
     with pytest.raises(AraciHatasi, match="DEMO"):
         p.emir("EURUSD", 1.0, "cikis")
+
+
+def _mt5_usdjpy() -> Any:
+    """USDJPY (kâr JPY) sahte terminali: bid 150,00 / ask 150,02, swap long +7 / short −21 puan."""
+    import time as _t
+
+    m = sahte_mt5(0)
+    bilgi = SimpleNamespace(visible=True, currency_profit="JPY", trade_contract_size=100_000.0,
+                            volume_step=0.01, volume_min=0.05, volume_max=100.0, point=0.001,
+                            swap_mode=1, swap_long=7.0, swap_short=-21.0, swap_rollover3days=3)
+    m.symbol_info = lambda s: bilgi if s == "USDJPY" else None
+    m.symbol_select = lambda s, a: True
+    m.symbol_info_tick = lambda s: SimpleNamespace(
+        bid=150.00, ask=150.02, time=_t.time() + 3 * 3600)
+    return m
+
+
+def test_mt5_paper_kur_cevrimi_usdjpy(tmp_path: Path) -> None:
+    """K-136: kote JPY nakdi JPY kasasında, özkaynak güncel kurla USD."""
+    from scryne_quant.aktif.araci import MT5Paper
+
+    p = MT5Paper(tmp_path, sermaye=100_000.0, ucret_bps=0.0, kayma_bps=0.0,
+                 sunucu_utc_farki_saat=3, mt5=_mt5_usdjpy())
+    assert p.birim_notional("USDJPY", 150.01) == pytest.approx(100_000.0)  # 1 lot = 100k USD
+    p.emir("USDJPY", 1.0, "giris")
+    # Yalnız yarım spread kaybı: 0,01 JPY × 100.000 / 150,01 ≈ 6,67 USD.
+    assert p.ozkaynak() == pytest.approx(100_000.0 - 0.01 * 100_000 / 150.01)
+    assert p._hesap.doviz["JPY"] == pytest.approx(-150.02 * 100_000)
+
+
+def test_mt5_paper_swap_gece_yarisi_ve_uc_kat(tmp_path: Path) -> None:
+    """Swap sunucu gece yarısında (UTC+3 → 21:00 UTC); Çarşamba gecesi üç kat; hafta sonu yok."""
+    from scryne_quant.aktif.araci import MT5Paper
+
+    p = MT5Paper(tmp_path, sermaye=100_000.0, ucret_bps=0.0, kayma_bps=0.0,
+                 sunucu_utc_farki_saat=3, mt5=_mt5_usdjpy())
+    p.emir("USDJPY", 2.0, "giris")
+    sali_20 = 1_790_107_200_000  # 2026-09-22 20:00 UTC (Salı, sunucu 23:00)
+    assert p.tahakkuk(sali_20) == 0.0  # ilk çağrı yalnız işaretler
+    kur = 1 / 150.01
+    # Salı gecesi (21:00 UTC geçildi): 2 lot × 7 puan × 0,001 × 100.000 = 1.400 JPY.
+    assert p.tahakkuk(sali_20 + 2 * 3_600_000) == pytest.approx(1_400 * kur)
+    # Çarşamba gecesi üç kat.
+    assert p.tahakkuk(sali_20 + 26 * 3_600_000) == pytest.approx(3 * 1_400 * kur)
+    # Cuma → Pazartesi: Perşembe ve Cuma geceleri (2 × 1.400); Cumartesi/Pazar yok.
+    cuma_20 = sali_20 + 3 * 86_400_000
+    p.tahakkuk(cuma_20 - 3_600_000)
+    assert p.tahakkuk(cuma_20 + 3 * 86_400_000) == pytest.approx(1_400 * kur)
+    assert p.swap_toplam() == pytest.approx((1 + 3 + 1 + 1) * 1_400 * kur)
+
+
+def test_geriye_swap_gece_yarisi() -> None:
+    """Sabit fiyatta long pozisyon yalnız swap öder; Çarşamba gecesi üç kat, hafta sonu yok."""
+    gun = 86_400_000
+    t0 = 1_790_035_200_000  # 2026-09-22 00:00 UTC (Salı)
+    n = 24 * 7
+    idx = pd.Index(t0 + 3_600_000 * np.arange(n), name="open_time")
+    o = np.full(n, 100.0)
+    df = pd.DataFrame({"open": o, "high": o * 1.001, "low": o * 0.999, "close": o}, index=idx)
+    ayar = HesapAyari("t", "p", ("X",), "1h", "ema_trend", {}, RiskAyari(
+        islem_riski=1.0, atr_carpan=1.0, sembol_kaldirac=1.0, toplam_kaldirac=1.0))
+    orijinal = st.STRATEJILER["ema_trend"]
+    st.STRATEJILER["ema_trend"] = lambda d, **k: pd.Series(1.0, index=d.index)
+    try:
+        s = geriye({"X": df}, ayar, yalniz_long=True, ucret_bps=0, kayma_bps=0,
+                   swap={"X": (-0.0001, 0.0)}, sunucu_farki_ms=3 * 3_600_000, uc_kat_gun=3)
+    finally:
+        st.STRATEJILER["ema_trend"] = orijinal
+    # Salı 00:00 → Pazartesi 23:00 UTC: Salı, Çarşamba (×3), Perşembe, Cuma ve Pazartesi
+    # geceleri (sunucu gece yarısı 21:00 UTC); Cumartesi/Pazar yok → 1+3+1+1+1 = 7 gece.
+    assert s["ozkaynak"].iloc[-1] == pytest.approx((1 - 0.0001) ** 4 * (1 - 0.0003))
+    assert int(s.index[-1].timestamp() * 1000) - t0 == 7 * gun

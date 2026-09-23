@@ -1,6 +1,6 @@
 """Kesitsel sıralama aileleri: evren içinde hangi dilim taşınır? (Faz 12, `kesitsel_fiyat`)
 
-Program kaydı `docs/Arastirma-Programlari.jsonl`, taslak `docs/Faz-12-Program-Taslaklari.md`.
+Program kaydı `docs/Arastirma-Programlari.jsonl`, taslak `docs/arsiv/Faz-12-Program-Taslaklari.md`.
 Üç aile, **aynı iskelet**; yalnızca skor farklı:
 
 | Aile | Skor (büyük = tercih) | Soru |

@@ -2,7 +2,7 @@
 
 Tek sembollü `exchange/akis.py:BinanceBarAkisi` Faz 6'da bilinçli olarak genel yazılmamıştı:
 *"çoklu sembol Faz 7+'nın işi; birden çok örnek mi birleşik akış mı, ölçülerek karara
-bağlanacak."* Evren paper motoru (tasarım `docs/Faz-14-Coklu-Paper-Tasarim.md` §2) ≈50 sembol
+bağlanacak."* Evren paper motoru (tasarım `docs/arsiv/Faz-14-Coklu-Paper-Tasarim.md` §2) ≈50 sembol
 izliyor. Karar: **tek birleşik akış** (`/stream?streams=a@kline_1h/b@kline_1h/...`).
 Sebepler: 50 ayrı bağlantı Binance'in IP başına bağlantı sınırını gereksiz yere zorlar ve her
 biri ayrı bir kopma/yeniden bağlanma yaşar; birleşik akışta kopma **tek** olaydır ve resync

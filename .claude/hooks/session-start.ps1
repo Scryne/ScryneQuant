@@ -57,12 +57,12 @@ catch {
 $asama = "$($state.asama)"
 $projeAdi = "$($state.proje_adi)"
 # Kanonik roadmap yolu state.json'da değiştirilebilir (ScryneQuant: docs/ROADMAP-RESET.md).
-$roadmapRel = if ($state.PSObject.Properties['roadmap'] -and "$($state.roadmap)") { "$($state.roadmap)" } else { 'docs/Roadmap.md' }
+$roadmapRel = if ($state.PSObject.Properties['roadmap'] -and "$($state.roadmap)") { "$($state.roadmap)" } else { 'docs/arsiv/Roadmap.md' }
 
 $asamaAciklamalari = @{
-    'fikir'        = 'Fikir dokümanı geliştiriliyor (docs/Proje-Fikri.md). Sıradaki adım: dokümanı netleştir, sonra denetime geç.'
+    'fikir'        = 'Fikir dokümanı geliştiriliyor (docs/arsiv/Proje-Fikri.md). Sıradaki adım: dokümanı netleştir, sonra denetime geç.'
     'denetim'      = 'Fikir dokümanı denetleniyor. Sıradaki adım: riskli/bilinmeyen teknoloji kararları varsa küçük bir spike ile doğrula, sonra finalizasyona geç.'
-    'finalizasyon' = 'Final doküman hazırlanıyor (docs/Final-Dokuman.md) -- teknoloji stack ve mimari kararları netleşiyor. Sıradaki adım: roadmap.'
+    'finalizasyon' = 'Final doküman hazırlanıyor (docs/arsiv/Final-Dokuman.md) -- teknoloji stack ve mimari kararları netleşiyor. Sıradaki adım: roadmap.'
     'roadmap'      = 'Roadmap hazırlanıyor -- faz faz, her faz için bitti kriteri tanımlanıyor. Sıradaki adım: uygulamaya başla.'
     'uygulama'     = 'Roadmap takip edilerek uygulanıyor.'
     'tamamlandi'   = 'Proje tamamlandı.'

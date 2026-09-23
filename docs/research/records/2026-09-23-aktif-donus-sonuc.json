@@ -1,0 +1,2817 @@
+{
+ "onkayit": "docs/research/records/2026-09-23-aktif-donus-onkayit.md",
+ "zaman_ms": 1790189009460,
+ "piyasalar": [
+  {
+   "hesap": "kripto-donus",
+   "veri": {
+    "BTCUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "ETHUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "SOLUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "XRPUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "BNBUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "DOGEUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "ADAUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "LINKUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "AVAXUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ],
+    "LTCUSDT": [
+     "2024-09-23 00:00:00+00:00",
+     "2026-09-22 20:00:00+00:00",
+     4380
+    ]
+   },
+   "aday_sayisi": 36,
+   "uygun_sayisi": 21,
+   "secilen": {
+    "tf": "1h",
+    "parametreler": {
+     "n": 5,
+     "alt": 15.0,
+     "ust": 85.0,
+     "cikis": 50.0,
+     "trend": 200
+    },
+    "is": {
+     "hafta": 74,
+     "toplam_getiri": -0.04423396431125082,
+     "haftalik_ortalama": -0.0004992619572798516,
+     "haftalik_medyan": 0.0,
+     "pozitif_hafta": 0.40540540540540543,
+     "en_iyi_hafta": 0.0497879732958193,
+     "en_kotu_hafta": -0.04788356278456685,
+     "sharpe_haftalik_yillik": -0.23925155894278008,
+     "max_dusus": -0.12571159416102073,
+     "islem_hafta": 7.756756756756757,
+     "ort_brut": 0.048985215194972474
+    },
+    "oos": {
+     "hafta": 32,
+     "toplam_getiri": -0.08571174827270811,
+     "haftalik_ortalama": -0.002727798635728581,
+     "haftalik_medyan": 0.0,
+     "pozitif_hafta": 0.40625,
+     "en_iyi_hafta": 0.015578869930017003,
+     "en_kotu_hafta": -0.039029971685637266,
+     "sharpe_haftalik_yillik": -1.6631658497994404,
+     "max_dusus": -0.1442056259555431,
+     "islem_hafta": 7.875,
+     "ort_brut": 0.0575506612355017
+    }
+   },
+   "hukum": {
+    "toplam_getiri": false,
+    "sharpe": false,
+    "pozitif_hafta": false,
+    "gecti": false
+   },
+   "oos_dagilim": {
+    "pozitif_aday": 7,
+    "medyan_toplam": -0.08807748529176762,
+    "en_iyi": 0.031038211583803044,
+    "en_kotu": -0.5826945956866294
+   },
+   "adaylar": [
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.5317668240329214,
+      "haftalik_ortalama": -0.009863437619552374,
+      "haftalik_medyan": -0.008788165482278565,
+      "pozitif_hafta": 0.22972972972972974,
+      "en_iyi_hafta": 0.1629118447649156,
+      "en_kotu_hafta": -0.05838920074508902,
+      "sharpe_haftalik_yillik": -2.6551974161592478,
+      "max_dusus": -0.5360061226171382,
+      "islem_hafta": 28.18918918918919,
+      "ort_brut": 0.07153269117859651
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.24463535423897786,
+      "haftalik_ortalama": -0.008652888297610944,
+      "haftalik_medyan": -0.0067528979861803395,
+      "pozitif_hafta": 0.21875,
+      "en_iyi_hafta": 0.015573298711147876,
+      "en_kotu_hafta": -0.03967623940195952,
+      "sharpe_haftalik_yillik": -5.005178089208283,
+      "max_dusus": -0.2590270260384926,
+      "islem_hafta": 30.25,
+      "ort_brut": 0.07503829946003293
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.49437879053934974,
+      "haftalik_ortalama": -0.008996313981601384,
+      "haftalik_medyan": -0.004595773005168113,
+      "pozitif_hafta": 0.17567567567567569,
+      "en_iyi_hafta": 0.040882099699821595,
+      "en_kotu_hafta": -0.0704427923450539,
+      "sharpe_haftalik_yillik": -3.4521550323611097,
+      "max_dusus": -0.5102618479081464,
+      "islem_hafta": 29.81081081081081,
+      "ort_brut": 0.07193624089272695
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.2928776455673091,
+      "haftalik_ortalama": -0.010675390746477258,
+      "haftalik_medyan": -0.00879990124915675,
+      "pozitif_hafta": 0.21875,
+      "en_iyi_hafta": 0.015573298711147654,
+      "en_kotu_hafta": -0.038237855317468705,
+      "sharpe_haftalik_yillik": -5.509062484651673,
+      "max_dusus": -0.31270115207713933,
+      "islem_hafta": 33.125,
+      "ort_brut": 0.08693607751559972
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.7583404317318206,
+      "haftalik_ortalama": -0.01858060563316953,
+      "haftalik_medyan": -0.016239970143515914,
+      "pozitif_hafta": 0.16216216216216217,
+      "en_iyi_hafta": 0.12577588640411452,
+      "en_kotu_hafta": -0.08734346278086558,
+      "sharpe_haftalik_yillik": -4.53928663592131,
+      "max_dusus": -0.7593068796532678,
+      "islem_hafta": 57.648648648648646,
+      "ort_brut": 0.13085214988482066
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.4101894793868309,
+      "haftalik_ortalama": -0.01614932043064165,
+      "haftalik_medyan": -0.013526904930970363,
+      "pozitif_hafta": 0.21875,
+      "en_iyi_hafta": 0.024413654796777262,
+      "en_kotu_hafta": -0.06581679190602496,
+      "sharpe_haftalik_yillik": -5.597928004127255,
+      "max_dusus": -0.42017739139131205,
+      "islem_hafta": 60.125,
+      "ort_brut": 0.13875856362246244
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.7288992684527427,
+      "haftalik_ortalama": -0.01721531328183602,
+      "haftalik_medyan": -0.015323352961483128,
+      "pozitif_hafta": 0.16216216216216217,
+      "en_iyi_hafta": 0.03286264802202954,
+      "en_kotu_hafta": -0.08991498987983271,
+      "sharpe_haftalik_yillik": -5.399172224629782,
+      "max_dusus": -0.7288992684527427,
+      "islem_hafta": 59.45945945945946,
+      "ort_brut": 0.13294638421932842
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.4489675649167434,
+      "haftalik_ortalama": -0.018221478694716735,
+      "haftalik_medyan": -0.01747678877847686,
+      "pozitif_hafta": 0.1875,
+      "en_iyi_hafta": 0.02106012184470396,
+      "en_kotu_hafta": -0.07329259062264382,
+      "sharpe_haftalik_yillik": -6.099196151854808,
+      "max_dusus": -0.4593527675905862,
+      "islem_hafta": 65.75,
+      "ort_brut": 0.15350442738273423
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.8669820825562659,
+      "haftalik_ortalama": -0.02634953892533759,
+      "haftalik_medyan": -0.030677796636872368,
+      "pozitif_hafta": 0.16216216216216217,
+      "en_iyi_hafta": 0.132905758157003,
+      "en_kotu_hafta": -0.10371069438476666,
+      "sharpe_haftalik_yillik": -5.7320592201527125,
+      "max_dusus": -0.8675669829575374,
+      "islem_hafta": 86.27027027027027,
+      "ort_brut": 0.17913095025226486
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.5412249914245626,
+      "haftalik_ortalama": -0.023773090393330497,
+      "haftalik_medyan": -0.02380916982806408,
+      "pozitif_hafta": 0.1875,
+      "en_iyi_hafta": 0.024165493512046998,
+      "en_kotu_hafta": -0.08774092828324576,
+      "sharpe_haftalik_yillik": -7.18985339605079,
+      "max_dusus": -0.548407403391441,
+      "islem_hafta": 90.5625,
+      "ort_brut": 0.18863577069705487
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.8370280185407015,
+      "haftalik_ortalama": -0.023801003590569976,
+      "haftalik_medyan": -0.019538878040930574,
+      "pozitif_hafta": 0.14864864864864866,
+      "en_iyi_hafta": 0.04186104413616909,
+      "en_kotu_hafta": -0.09239242956875249,
+      "sharpe_haftalik_yillik": -5.994773520175457,
+      "max_dusus": -0.839416499532776,
+      "islem_hafta": 86.62162162162163,
+      "ort_brut": 0.1753442308181733
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.5826945956866294,
+      "haftalik_ortalama": -0.026633144278946936,
+      "haftalik_medyan": -0.02880188816132695,
+      "pozitif_hafta": 0.125,
+      "en_iyi_hafta": 0.02549367430656213,
+      "en_kotu_hafta": -0.08820235810245136,
+      "sharpe_haftalik_yillik": -7.718676544317654,
+      "max_dusus": -0.5898677027128933,
+      "islem_hafta": 92.75,
+      "ort_brut": 0.19818814136513657
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.1408932952264942,
+      "haftalik_ortalama": -0.002015428973455125,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.33783783783783783,
+      "en_iyi_hafta": 0.0153086709840764,
+      "en_kotu_hafta": -0.03568650042200072,
+      "sharpe_haftalik_yillik": -1.743691090457036,
+      "max_dusus": -0.17539230586602217,
+      "islem_hafta": 3.77027027027027,
+      "ort_brut": 0.01802461889585215
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.03929776663613738,
+      "haftalik_ortalama": -0.0012284300148266564,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.46875,
+      "en_iyi_hafta": 0.007246071150893707,
+      "en_kotu_hafta": -0.024937889279760372,
+      "sharpe_haftalik_yillik": -1.2752567920347384,
+      "max_dusus": -0.07031077838998501,
+      "islem_hafta": 4.15625,
+      "ort_brut": 0.022076743110859085
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.14166894894210635,
+      "haftalik_ortalama": -0.002002473645914514,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.3918918918918919,
+      "en_iyi_hafta": 0.027300338159860882,
+      "en_kotu_hafta": -0.038470239196403244,
+      "sharpe_haftalik_yillik": -1.3171743466811152,
+      "max_dusus": -0.19796390920965867,
+      "islem_hafta": 5.5,
+      "ort_brut": 0.024347281625051446
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.0851851862786237,
+      "haftalik_ortalama": -0.002742976270101831,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.375,
+      "en_iyi_hafta": 0.009289312568777186,
+      "en_kotu_hafta": -0.031491318942523105,
+      "sharpe_haftalik_yillik": -2.3268393418399227,
+      "max_dusus": -0.10736634795828293,
+      "islem_hafta": 5.84375,
+      "ort_brut": 0.02986165488951795
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.32563443997825436,
+      "haftalik_ortalama": -0.005057755445700083,
+      "haftalik_medyan": -0.003993769134136571,
+      "pozitif_hafta": 0.33783783783783783,
+      "en_iyi_hafta": 0.12965650106074422,
+      "en_kotu_hafta": -0.047542625909537395,
+      "sharpe_haftalik_yillik": -1.588756933259859,
+      "max_dusus": -0.34336655010804185,
+      "islem_hafta": 16.283783783783782,
+      "ort_brut": 0.06079890650581317
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.19119033836543475,
+      "haftalik_ortalama": -0.006554247348338021,
+      "haftalik_medyan": -0.0033740708271067232,
+      "pozitif_hafta": 0.34375,
+      "en_iyi_hafta": 0.005861674488525148,
+      "en_kotu_hafta": -0.030678437290101,
+      "sharpe_haftalik_yillik": -4.4711690737926,
+      "max_dusus": -0.20641080662340783,
+      "islem_hafta": 17.59375,
+      "ort_brut": 0.06442937950404229
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.3042931841998676,
+      "haftalik_ortalama": -0.004709025266156439,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.40540540540540543,
+      "en_iyi_hafta": 0.053526200283666725,
+      "en_kotu_hafta": -0.0496048382699239,
+      "sharpe_haftalik_yillik": -1.774285937545424,
+      "max_dusus": -0.33120120877214354,
+      "islem_hafta": 18.60810810810811,
+      "ort_brut": 0.06873137419393259
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.21539748098410227,
+      "haftalik_ortalama": -0.007475696088348624,
+      "haftalik_medyan": -0.003415825198218536,
+      "pozitif_hafta": 0.3125,
+      "en_iyi_hafta": 0.009969671415233083,
+      "en_kotu_hafta": -0.037839227613170046,
+      "sharpe_haftalik_yillik": -4.333122273533753,
+      "max_dusus": -0.23810209104411184,
+      "islem_hafta": 20.65625,
+      "ort_brut": 0.08139561040199454
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.5468515150847016,
+      "haftalik_ortalama": -0.010146122370462847,
+      "haftalik_medyan": -0.008245982926706585,
+      "pozitif_hafta": 0.3108108108108108,
+      "en_iyi_hafta": 0.15787983935646643,
+      "en_kotu_hafta": -0.08844548452434409,
+      "sharpe_haftalik_yillik": -2.2902816259636887,
+      "max_dusus": -0.5780100709644023,
+      "islem_hafta": 32.391891891891895,
+      "ort_brut": 0.10726214023406012
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.25020074827007643,
+      "haftalik_ortalama": -0.00885023144181668,
+      "haftalik_medyan": -0.007240834520089112,
+      "pozitif_hafta": 0.28125,
+      "en_iyi_hafta": 0.020696513828119878,
+      "en_kotu_hafta": -0.03498685640280208,
+      "sharpe_haftalik_yillik": -4.296190484683305,
+      "max_dusus": -0.2739922371012449,
+      "islem_hafta": 34.15625,
+      "ort_brut": 0.11503024610918394
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.49073602913194025,
+      "haftalik_ortalama": -0.008812187337177554,
+      "haftalik_medyan": -0.0034511848502509768,
+      "pozitif_hafta": 0.2972972972972973,
+      "en_iyi_hafta": 0.04591539000015721,
+      "en_kotu_hafta": -0.06479283922593515,
+      "sharpe_haftalik_yillik": -2.7602262668346156,
+      "max_dusus": -0.523726157029186,
+      "islem_hafta": 34.527027027027025,
+      "ort_brut": 0.11452642615302164
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.34364845998474636,
+      "haftalik_ortalama": -0.012947543410105927,
+      "haftalik_medyan": -0.010467044859209629,
+      "pozitif_hafta": 0.1875,
+      "en_iyi_hafta": 0.020696513828119434,
+      "en_kotu_hafta": -0.052146208574845976,
+      "sharpe_haftalik_yillik": -5.8789086713144405,
+      "max_dusus": -0.3524890672651615,
+      "islem_hafta": 38.09375,
+      "ort_brut": 0.13701475409139646
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": 0.0008218408306392977,
+      "haftalik_ortalama": 1.110595717080132e-05,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.013513513513513514,
+      "en_iyi_hafta": 0.0008218408306392977,
+      "en_kotu_hafta": 0.0,
+      "sharpe_haftalik_yillik": 0.8382736442849091,
+      "max_dusus": -0.0036305712505262377,
+      "islem_hafta": 0.02702702702702703,
+      "ort_brut": 0.00017123287671232874
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": 0.0,
+      "haftalik_ortalama": 0.0,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0,
+      "en_iyi_hafta": 0.0,
+      "en_kotu_hafta": 0.0,
+      "sharpe_haftalik_yillik": 0.0,
+      "max_dusus": 0.0,
+      "islem_hafta": 0.0,
+      "ort_brut": 0.0
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.0200616290745097,
+      "haftalik_ortalama": -0.0002706324482487718,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.013513513513513514,
+      "en_iyi_hafta": 0.0024370086947902436,
+      "en_kotu_hafta": -0.02154941880131156,
+      "sharpe_haftalik_yillik": -0.7729129258671616,
+      "max_dusus": -0.03026836348355555,
+      "islem_hafta": 0.10810810810810811,
+      "ort_brut": 0.0015166340508806263
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.0005425284506228589,
+      "haftalik_ortalama": -1.695401408196434e-05,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0,
+      "en_iyi_hafta": 0.0,
+      "en_kotu_hafta": -0.0005425284506228589,
+      "sharpe_haftalik_yillik": -1.2747548783981961,
+      "max_dusus": -0.004985629585618101,
+      "islem_hafta": 0.0625,
+      "ort_brut": 0.0003424657534246575
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.06141738701290733,
+      "haftalik_ortalama": -0.000844102284752133,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.17567567567567569,
+      "en_iyi_hafta": 0.00867725182065704,
+      "en_kotu_hafta": -0.020682383331755094,
+      "sharpe_haftalik_yillik": -1.2348163389835516,
+      "max_dusus": -0.07184749490380682,
+      "islem_hafta": 0.8513513513513513,
+      "ort_brut": 0.008387097501587745
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.04478386208985641,
+      "haftalik_ortalama": -0.0014108171584241228,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.1875,
+      "en_iyi_hafta": 0.006607755650931857,
+      "en_kotu_hafta": -0.031376250123809624,
+      "sharpe_haftalik_yillik": -1.5981122791389792,
+      "max_dusus": -0.06274226370492886,
+      "islem_hafta": 1.34375,
+      "ort_brut": 0.014349171453346842
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.04723463402718053,
+      "haftalik_ortalama": -0.0006265637255192247,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.2702702702702703,
+      "en_iyi_hafta": 0.01730317511470636,
+      "en_kotu_hafta": -0.040414894373921095,
+      "sharpe_haftalik_yillik": -0.6143426362252191,
+      "max_dusus": -0.0896783025797,
+      "islem_hafta": 1.8783783783783783,
+      "ort_brut": 0.012478717914366012
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.009739201860011204,
+      "haftalik_ortalama": -0.00029313657313351574,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.28125,
+      "en_iyi_hafta": 0.011671344850563425,
+      "en_kotu_hafta": -0.013329086169929671,
+      "sharpe_haftalik_yillik": -0.41420651609446885,
+      "max_dusus": -0.05430464142311431,
+      "islem_hafta": 2.28125,
+      "ort_brut": 0.020607098901342782
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.09099745242552237,
+      "haftalik_ortalama": -0.0012433333946944539,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.4594594594594595,
+      "en_iyi_hafta": 0.019622897718004184,
+      "en_kotu_hafta": -0.03338746465038278,
+      "sharpe_haftalik_yillik": -0.9413788554093107,
+      "max_dusus": -0.1023042365662088,
+      "islem_hafta": 4.648648648648648,
+      "ort_brut": 0.032995669864120884
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.08807748529176762,
+      "haftalik_ortalama": -0.0028106291678124014,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.34375,
+      "en_iyi_hafta": 0.011954284317388542,
+      "en_kotu_hafta": -0.03413229766182657,
+      "sharpe_haftalik_yillik": -1.7423220584080088,
+      "max_dusus": -0.1275731614167076,
+      "islem_hafta": 5.6875,
+      "ort_brut": 0.039309724206054344
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.04423396431125082,
+      "haftalik_ortalama": -0.0004992619572798516,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.40540540540540543,
+      "en_iyi_hafta": 0.0497879732958193,
+      "en_kotu_hafta": -0.04788356278456685,
+      "sharpe_haftalik_yillik": -0.23925155894278008,
+      "max_dusus": -0.12571159416102073,
+      "islem_hafta": 7.756756756756757,
+      "ort_brut": 0.048985215194972474
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.08571174827270811,
+      "haftalik_ortalama": -0.002727798635728581,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.40625,
+      "en_iyi_hafta": 0.015578869930017003,
+      "en_kotu_hafta": -0.039029971685637266,
+      "sharpe_haftalik_yillik": -1.6631658497994404,
+      "max_dusus": -0.1442056259555431,
+      "islem_hafta": 7.875,
+      "ort_brut": 0.0575506612355017
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.21603992084989354,
+      "haftalik_ortalama": -0.0031633083056620734,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.33783783783783783,
+      "en_iyi_hafta": 0.030482343877139106,
+      "en_kotu_hafta": -0.0600076338796931,
+      "sharpe_haftalik_yillik": -1.4738651068190252,
+      "max_dusus": -0.23023962016696997,
+      "islem_hafta": 6.675675675675675,
+      "ort_brut": 0.05578929297869014
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.09662668273441999,
+      "haftalik_ortalama": -0.0031349294687321692,
+      "haftalik_medyan": -0.0002993700690173684,
+      "pozitif_hafta": 0.21875,
+      "en_iyi_hafta": 0.007814414123287206,
+      "en_kotu_hafta": -0.034235394572062594,
+      "sharpe_haftalik_yillik": -2.6530232522338135,
+      "max_dusus": -0.1092167686382921,
+      "islem_hafta": 6.5625,
+      "ort_brut": 0.07307457843101493
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.2069375977832394,
+      "haftalik_ortalama": -0.0029542129731685005,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.2972972972972973,
+      "en_iyi_hafta": 0.03989829123971167,
+      "en_kotu_hafta": -0.08308608402895212,
+      "sharpe_haftalik_yillik": -1.1489317346729098,
+      "max_dusus": -0.25433651754708053,
+      "islem_hafta": 7.45945945945946,
+      "ort_brut": 0.05886513008407263
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.129708190076135,
+      "haftalik_ortalama": -0.0042687077866755165,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.28125,
+      "en_iyi_hafta": 0.009511628008711304,
+      "en_kotu_hafta": -0.05504748117954583,
+      "sharpe_haftalik_yillik": -2.7286090497597804,
+      "max_dusus": -0.14767596363988433,
+      "islem_hafta": 8.6875,
+      "ort_brut": 0.08836438203927635
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.360881240295994,
+      "haftalik_ortalama": -0.00575165531274623,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.35135135135135137,
+      "en_iyi_hafta": 0.03693596602625271,
+      "en_kotu_hafta": -0.08068155685480849,
+      "sharpe_haftalik_yillik": -1.7646185803994592,
+      "max_dusus": -0.3956466555213428,
+      "islem_hafta": 14.04054054054054,
+      "ort_brut": 0.10653393949266686
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.18339984163393097,
+      "haftalik_ortalama": -0.006145644199290482,
+      "haftalik_medyan": -0.00010065079223758877,
+      "pozitif_hafta": 0.34375,
+      "en_iyi_hafta": 0.022559308923671084,
+      "en_kotu_hafta": -0.062060653381476705,
+      "sharpe_haftalik_yillik": -2.422346749191453,
+      "max_dusus": -0.19401219841066664,
+      "islem_hafta": 15.28125,
+      "ort_brut": 0.13350517156984956
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.2998582864555752,
+      "haftalik_ortalama": -0.004521163774037512,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.35135135135135137,
+      "en_iyi_hafta": 0.03927642110875684,
+      "en_kotu_hafta": -0.1041380100142808,
+      "sharpe_haftalik_yillik": -1.3797592506069563,
+      "max_dusus": -0.3499759355336727,
+      "islem_hafta": 15.216216216216216,
+      "ort_brut": 0.10781925339547871
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.1492475549137774,
+      "haftalik_ortalama": -0.004904810916231777,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.34375,
+      "en_iyi_hafta": 0.022002744088688297,
+      "en_kotu_hafta": -0.06478095006344708,
+      "sharpe_haftalik_yillik": -2.154501635720537,
+      "max_dusus": -0.16126965208998034,
+      "islem_hafta": 17.9375,
+      "ort_brut": 0.14919953099292163
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.4266396238901853,
+      "haftalik_ortalama": -0.007170187371318834,
+      "haftalik_medyan": -0.00022500000000003073,
+      "pozitif_hafta": 0.35135135135135137,
+      "en_iyi_hafta": 0.04792270980851043,
+      "en_kotu_hafta": -0.0719750149081213,
+      "sharpe_haftalik_yillik": -2.0570116463738954,
+      "max_dusus": -0.4513564566556222,
+      "islem_hafta": 21.594594594594593,
+      "ort_brut": 0.1487545706696692
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.30994192185330216,
+      "haftalik_ortalama": -0.011297807714588534,
+      "haftalik_medyan": -0.004404450143700944,
+      "pozitif_hafta": 0.34375,
+      "en_iyi_hafta": 0.01794030905062871,
+      "en_kotu_hafta": -0.06670256992346513,
+      "sharpe_haftalik_yillik": -3.796729132169832,
+      "max_dusus": -0.32277914864357804,
+      "islem_hafta": 22.5,
+      "ort_brut": 0.18895718578838802
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.384271400219407,
+      "haftalik_ortalama": -0.006157822280157467,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.36486486486486486,
+      "en_iyi_hafta": 0.047727456469435214,
+      "en_kotu_hafta": -0.10303475998876266,
+      "sharpe_haftalik_yillik": -1.637846772665126,
+      "max_dusus": -0.428294472394639,
+      "islem_hafta": 22.054054054054053,
+      "ort_brut": 0.14521093563061466
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.23902048276083465,
+      "haftalik_ortalama": -0.008305618556702116,
+      "haftalik_medyan": -0.0013801771406006247,
+      "pozitif_hafta": 0.3125,
+      "en_iyi_hafta": 0.014472081706650819,
+      "en_kotu_hafta": -0.06717374933593412,
+      "sharpe_haftalik_yillik": -3.0333827275968575,
+      "max_dusus": -0.25437490188400924,
+      "islem_hafta": 24.25,
+      "ort_brut": 0.1938360510831609
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.06937395469182839,
+      "haftalik_ortalama": -0.0009313907709221839,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.20270270270270271,
+      "en_iyi_hafta": 0.010770398824172744,
+      "en_kotu_hafta": -0.0662609758979652,
+      "sharpe_haftalik_yillik": -0.7621472942751885,
+      "max_dusus": -0.10369092739966901,
+      "islem_hafta": 1.1891891891891893,
+      "ort_brut": 0.016993728216948445
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": 0.00821613679807398,
+      "haftalik_ortalama": 0.00025678928644545795,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.15625,
+      "en_iyi_hafta": 0.004751280255864465,
+      "en_kotu_hafta": -0.0033292650630587506,
+      "sharpe_haftalik_yillik": 1.2562115385176906,
+      "max_dusus": -0.01219590324983899,
+      "islem_hafta": 0.75,
+      "ort_brut": 0.011265084465624634
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.11890912788300612,
+      "haftalik_ortalama": -0.001674232410482047,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.16216216216216217,
+      "en_iyi_hafta": 0.013749721164751927,
+      "en_kotu_hafta": -0.04646200818844992,
+      "sharpe_haftalik_yillik": -1.447633103397179,
+      "max_dusus": -0.14298856324931053,
+      "islem_hafta": 1.5675675675675675,
+      "ort_brut": 0.021109209089470265
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": 0.031038211583803044,
+      "haftalik_ortalama": 0.0009586709336410204,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.25,
+      "en_iyi_hafta": 0.008915794937805366,
+      "en_kotu_hafta": -0.0033292650630588616,
+      "sharpe_haftalik_yillik": 2.7633709076671162,
+      "max_dusus": -0.010687714467325082,
+      "islem_hafta": 1.375,
+      "ort_brut": 0.01753382865524906
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.26793537368192144,
+      "haftalik_ortalama": -0.004043280626722218,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.2972972972972973,
+      "en_iyi_hafta": 0.030482343877139106,
+      "en_kotu_hafta": -0.08431736279828728,
+      "sharpe_haftalik_yillik": -1.6382485276074827,
+      "max_dusus": -0.2725231191249249,
+      "islem_hafta": 4.297297297297297,
+      "ort_brut": 0.05267100576441361
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.04940817372286055,
+      "haftalik_ortalama": -0.0015707663652836622,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.25,
+      "en_iyi_hafta": 0.005128827679665493,
+      "en_kotu_hafta": -0.014819468378948653,
+      "sharpe_haftalik_yillik": -2.336953913328647,
+      "max_dusus": -0.06485574320682053,
+      "islem_hafta": 3.8125,
+      "ort_brut": 0.06775779758138535
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.324739899807299,
+      "haftalik_ortalama": -0.005040869499641255,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.35135135135135137,
+      "en_iyi_hafta": 0.03827703180819486,
+      "en_kotu_hafta": -0.10198900318947501,
+      "sharpe_haftalik_yillik": -1.648282705433795,
+      "max_dusus": -0.3424561526086758,
+      "islem_hafta": 5.0,
+      "ort_brut": 0.058477997096802486
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.03973607482883301,
+      "haftalik_ortalama": -0.0012539428860388682,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.25,
+      "en_iyi_hafta": 0.007537416081315751,
+      "en_kotu_hafta": -0.019828104102383226,
+      "sharpe_haftalik_yillik": -1.7971529846660537,
+      "max_dusus": -0.066537842034334,
+      "islem_hafta": 5.25,
+      "ort_brut": 0.08022287285286793
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.38162994938957695,
+      "haftalik_ortalama": -0.006184131506875098,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.3108108108108108,
+      "en_iyi_hafta": 0.04871731778921551,
+      "en_kotu_hafta": -0.08377885525733486,
+      "sharpe_haftalik_yillik": -1.8647871775305416,
+      "max_dusus": -0.41588772825917475,
+      "islem_hafta": 8.594594594594595,
+      "ort_brut": 0.09601484218695572
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.13622189097967707,
+      "haftalik_ortalama": -0.004481339384970074,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.375,
+      "en_iyi_hafta": 0.018609452741317645,
+      "en_kotu_hafta": -0.036023447778633866,
+      "sharpe_haftalik_yillik": -2.464204896681217,
+      "max_dusus": -0.1586529565680992,
+      "islem_hafta": 8.5,
+      "ort_brut": 0.11282150715625551
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.31502740945538166,
+      "haftalik_ortalama": -0.0047208622494532325,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.3108108108108108,
+      "en_iyi_hafta": 0.05447309218666585,
+      "en_kotu_hafta": -0.1189826938143611,
+      "sharpe_haftalik_yillik": -1.2527304448159644,
+      "max_dusus": -0.3697398153759658,
+      "islem_hafta": 9.324324324324325,
+      "ort_brut": 0.09312647969470628
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.11504820817689454,
+      "haftalik_ortalama": -0.0037205567025705467,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.34375,
+      "en_iyi_hafta": 0.02157359111844004,
+      "en_kotu_hafta": -0.047833825438901134,
+      "sharpe_haftalik_yillik": -1.9702195454944516,
+      "max_dusus": -0.14342721702176564,
+      "islem_hafta": 10.6875,
+      "ort_brut": 0.14332039038362757
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": 0.0014995480809305572,
+      "haftalik_ortalama": 2.026416325581834e-05,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.013513513513513514,
+      "en_iyi_hafta": 0.0014995480809305572,
+      "en_kotu_hafta": 0.0,
+      "sharpe_haftalik_yillik": 0.8382736442849087,
+      "max_dusus": -0.00949524538065849,
+      "islem_hafta": 0.02702702702702703,
+      "ort_brut": 0.0005095477957675438
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": 0.003677658820964602,
+      "haftalik_ortalama": 0.00011492683815514382,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.03125,
+      "en_iyi_hafta": 0.003677658820964602,
+      "en_kotu_hafta": 0.0,
+      "sharpe_haftalik_yillik": 1.2747548783981961,
+      "max_dusus": -0.0006287470731012323,
+      "islem_hafta": 0.0625,
+      "ort_brut": 0.0006663092079859207
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.020500324680751025,
+      "haftalik_ortalama": -0.00027626979137036577,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.02702702702702703,
+      "en_iyi_hafta": 0.007822724687784222,
+      "en_kotu_hafta": -0.018584390477348056,
+      "sharpe_haftalik_yillik": -0.7406169558478226,
+      "max_dusus": -0.043124828505984314,
+      "islem_hafta": 0.08108108108108109,
+      "ort_brut": 0.002964275636467011
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": 0.00367765882096438,
+      "haftalik_ortalama": 0.00011492683815513688,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.03125,
+      "en_iyi_hafta": 0.00367765882096438,
+      "en_kotu_hafta": 0.0,
+      "sharpe_haftalik_yillik": 1.2747548783981961,
+      "max_dusus": -0.0006287470731014544,
+      "islem_hafta": 0.0625,
+      "ort_brut": 0.0006663092079859207
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.05764515909887358,
+      "haftalik_ortalama": -0.000793897566970931,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0,
+      "en_iyi_hafta": 0.0,
+      "en_kotu_hafta": -0.031244605618544585,
+      "sharpe_haftalik_yillik": -1.423607221548391,
+      "max_dusus": -0.06514060486857876,
+      "islem_hafta": 0.2702702702702703,
+      "ort_brut": 0.008918594642405079
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": -0.0023980345767471434,
+      "haftalik_ortalama": -7.496377829111292e-05,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.03125,
+      "en_iyi_hafta": 0.0004111897558232158,
+      "en_kotu_hafta": -0.0015194269705186558,
+      "sharpe_haftalik_yillik": -1.5117879591200434,
+      "max_dusus": -0.011112989182732846,
+      "islem_hafta": 0.1875,
+      "ort_brut": 0.004103395926000736
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.07399305348968999,
+      "haftalik_ortalama": -0.0010210314855742455,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0945945945945946,
+      "en_iyi_hafta": 0.011420098832721548,
+      "en_kotu_hafta": -0.03132101677322818,
+      "sharpe_haftalik_yillik": -1.2535557481712591,
+      "max_dusus": -0.10028842914281144,
+      "islem_hafta": 0.7837837837837838,
+      "ort_brut": 0.01639101196300877
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": 0.01986309258968877,
+      "haftalik_ortalama": 0.000618299179452126,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.125,
+      "en_iyi_hafta": 0.014430114795436877,
+      "en_kotu_hafta": -0.0015194269705184338,
+      "sharpe_haftalik_yillik": 1.6579979452908968,
+      "max_dusus": -0.010812225590712599,
+      "islem_hafta": 0.5625,
+      "ort_brut": 0.008116972254716236
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.10460125987079905,
+      "haftalik_ortalama": -0.0014147573428231234,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.20270270270270271,
+      "en_iyi_hafta": 0.0170540944829638,
+      "en_kotu_hafta": -0.08271688337901328,
+      "sharpe_haftalik_yillik": -0.8330105916501375,
+      "max_dusus": -0.16725474513646088,
+      "islem_hafta": 1.3783783783783783,
+      "ort_brut": 0.026087445073858875
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": 0.017393327009335602,
+      "haftalik_ortalama": 0.0005423880940679075,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.1875,
+      "en_iyi_hafta": 0.007342022330098397,
+      "en_kotu_hafta": -0.004791487116655335,
+      "sharpe_haftalik_yillik": 1.4802406782393227,
+      "max_dusus": -0.020046520388090405,
+      "islem_hafta": 1.1875,
+      "ort_brut": 0.028213320183779693
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 74,
+      "toplam_getiri": -0.25051141817477574,
+      "haftalik_ortalama": -0.0037680088969771473,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.16216216216216217,
+      "en_iyi_hafta": 0.019155175395754842,
+      "en_kotu_hafta": -0.08314572851429192,
+      "sharpe_haftalik_yillik": -1.768249977715646,
+      "max_dusus": -0.27267790033909756,
+      "islem_hafta": 1.945945945945946,
+      "ort_brut": 0.035668190862714264
+     },
+     "oos": {
+      "hafta": 32,
+      "toplam_getiri": 0.027365086736529376,
+      "haftalik_ortalama": 0.0008505789833836569,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.28125,
+      "en_iyi_hafta": 0.011277628190770717,
+      "en_kotu_hafta": -0.008584833682066417,
+      "sharpe_haftalik_yillik": 1.665166384381068,
+      "max_dusus": -0.023068720329636472,
+      "islem_hafta": 1.9375,
+      "ort_brut": 0.042153235020168614
+     }
+    }
+   ]
+  },
+  {
+   "hesap": "mt5-demo",
+   "veri": {
+    "EURUSD": [
+     "2023-12-10 21:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "GBPUSD": [
+     "2023-12-10 21:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "USDCHF": [
+     "2023-12-10 21:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "USDJPY": [
+     "2023-12-10 21:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "AUDUSD": [
+     "2023-12-08 09:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "NZDUSD": [
+     "2023-12-10 21:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "USDCAD": [
+     "2023-12-10 21:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "XAUUSD": [
+     "2023-12-05 05:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "S&P": [
+     "2023-12-04 01:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "NASDAQ": [
+     "2023-12-04 05:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ],
+    "DJI": [
+     "2023-12-04 05:00:00+00:00",
+     "2026-09-23 13:00:00+00:00",
+     4380
+    ]
+   },
+   "aday_sayisi": 36,
+   "uygun_sayisi": 25,
+   "secilen": {
+    "tf": "1h",
+    "parametreler": {
+     "n": 3,
+     "alt": 5.0,
+     "ust": 95.0,
+     "cikis": 50.0,
+     "trend": 100
+    },
+    "is": {
+     "hafta": 110,
+     "toplam_getiri": 0.11147300343646327,
+     "haftalik_ortalama": 0.0010486222815019046,
+     "haftalik_medyan": 0.0017717075204070065,
+     "pozitif_hafta": 0.5909090909090909,
+     "en_iyi_hafta": 0.0334485320163016,
+     "en_kotu_hafta": -0.05632480635523607,
+     "sharpe_haftalik_yillik": 0.5720663402781487,
+     "max_dusus": -0.13762704264801784,
+     "islem_hafta": 8.327272727272728,
+     "ort_brut": 0.3367543775723772
+    },
+    "oos": {
+     "hafta": 47,
+     "toplam_getiri": -0.039317566086124134,
+     "haftalik_ortalama": -0.0007599513729826788,
+     "haftalik_medyan": 0.0,
+     "pozitif_hafta": 0.44680851063829785,
+     "en_iyi_hafta": 0.027814196527633728,
+     "en_kotu_hafta": -0.04326786715899511,
+     "sharpe_haftalik_yillik": -0.3984813022708573,
+     "max_dusus": -0.09093280365781198,
+     "islem_hafta": 6.382978723404255,
+     "ort_brut": 0.29206960764134665
+    }
+   },
+   "hukum": {
+    "toplam_getiri": false,
+    "sharpe": false,
+    "pozitif_hafta": false,
+    "gecti": false
+   },
+   "oos_dagilim": {
+    "pozitif_aday": 8,
+    "medyan_toplam": -0.09806158874722337,
+    "en_iyi": 0.16736253125534017,
+    "en_kotu": -0.7427234081744785
+   },
+   "adaylar": [
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.6746788412680634,
+      "haftalik_ortalama": -0.009824517296138882,
+      "haftalik_medyan": -0.0049330531128766175,
+      "pozitif_hafta": 0.39090909090909093,
+      "en_iyi_hafta": 0.038611349356634905,
+      "en_kotu_hafta": -0.09656718612791104,
+      "sharpe_haftalik_yillik": -2.766764312945433,
+      "max_dusus": -0.6942756060630837,
+      "islem_hafta": 46.6,
+      "ort_brut": 1.213711285954055
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.16415930375434606,
+      "haftalik_ortalama": -0.0034938979153857153,
+      "haftalik_medyan": -0.003315599726746221,
+      "pozitif_hafta": 0.3829787234042553,
+      "en_iyi_hafta": 0.04280898165585634,
+      "en_kotu_hafta": -0.059508373911900114,
+      "sharpe_haftalik_yillik": -0.9988574501874156,
+      "max_dusus": -0.2509462571918414,
+      "islem_hafta": 47.48936170212766,
+      "ort_brut": 1.1191266036836447
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.761407008963538,
+      "haftalik_ortalama": -0.012532568122037012,
+      "haftalik_medyan": -0.010481665553326747,
+      "pozitif_hafta": 0.3181818181818182,
+      "en_iyi_hafta": 0.07610947324833783,
+      "en_kotu_hafta": -0.07602315512533309,
+      "sharpe_haftalik_yillik": -3.164807272926137,
+      "max_dusus": -0.7825071704711921,
+      "islem_hafta": 53.872727272727275,
+      "ort_brut": 1.4013207276797235
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.2511053539428836,
+      "haftalik_ortalama": -0.00565437480557274,
+      "haftalik_medyan": -0.00393485988727349,
+      "pozitif_hafta": 0.3829787234042553,
+      "en_iyi_hafta": 0.04847524878714404,
+      "en_kotu_hafta": -0.08249604380074815,
+      "sharpe_haftalik_yillik": -1.3147680364001046,
+      "max_dusus": -0.26940167109791213,
+      "islem_hafta": 56.12765957446808,
+      "ort_brut": 1.3206008279542714
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.8730981926738456,
+      "haftalik_ortalama": -0.01807691387767397,
+      "haftalik_medyan": -0.01642291536773338,
+      "pozitif_hafta": 0.34545454545454546,
+      "en_iyi_hafta": 0.049756646607212796,
+      "en_kotu_hafta": -0.09476530300779173,
+      "sharpe_haftalik_yillik": -4.0960908903457165,
+      "max_dusus": -0.8771564089038408,
+      "islem_hafta": 91.69090909090909,
+      "ort_brut": 2.1327347148994242
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.41789097750165627,
+      "haftalik_ortalama": -0.010857021623802341,
+      "haftalik_medyan": -0.01237030938047945,
+      "pozitif_hafta": 0.3404255319148936,
+      "en_iyi_hafta": 0.07380113914242692,
+      "en_kotu_hafta": -0.09169526859135868,
+      "sharpe_haftalik_yillik": -2.2671514364006073,
+      "max_dusus": -0.457243102369985,
+      "islem_hafta": 94.93617021276596,
+      "ort_brut": 2.0622473097991807
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.9041872390410716,
+      "haftalik_ortalama": -0.020520930449835294,
+      "haftalik_medyan": -0.016002430939596746,
+      "pozitif_hafta": 0.2909090909090909,
+      "en_iyi_hafta": 0.056084987641664474,
+      "en_kotu_hafta": -0.11636311042581537,
+      "sharpe_haftalik_yillik": -4.404908657484912,
+      "max_dusus": -0.9150761677811191,
+      "islem_hafta": 98.78181818181818,
+      "ort_brut": 2.258626410697844
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.6559157051251152,
+      "haftalik_ortalama": -0.021734343969741266,
+      "haftalik_medyan": -0.021898075169571096,
+      "pozitif_hafta": 0.2553191489361702,
+      "en_iyi_hafta": 0.05311475096445095,
+      "en_kotu_hafta": -0.09016002511505672,
+      "sharpe_haftalik_yillik": -4.160238651674565,
+      "max_dusus": -0.6732696271797441,
+      "islem_hafta": 103.44680851063829,
+      "ort_brut": 2.2072050856512564
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.94384968624777,
+      "haftalik_ortalama": -0.025322666575410373,
+      "haftalik_medyan": -0.026027704153042786,
+      "pozitif_hafta": 0.21818181818181817,
+      "en_iyi_hafta": 0.057719951037612294,
+      "en_kotu_hafta": -0.08969258909266375,
+      "sharpe_haftalik_yillik": -5.721782435607824,
+      "max_dusus": -0.945082433426315,
+      "islem_hafta": 129.92727272727274,
+      "ort_brut": 2.770348557500148
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.5112204170615451,
+      "haftalik_ortalama": -0.014239364945204992,
+      "haftalik_medyan": -0.015366488620884189,
+      "pozitif_hafta": 0.3404255319148936,
+      "en_iyi_hafta": 0.07600018531425579,
+      "en_kotu_hafta": -0.09014123309310806,
+      "sharpe_haftalik_yillik": -2.440273481570712,
+      "max_dusus": -0.5603224680383563,
+      "islem_hafta": 138.85106382978722,
+      "ort_brut": 2.7172966173805913
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 2,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.9417547512274349,
+      "haftalik_ortalama": -0.024840864527489986,
+      "haftalik_medyan": -0.020831909204407306,
+      "pozitif_hafta": 0.2818181818181818,
+      "en_iyi_hafta": 0.06507344998559428,
+      "en_kotu_hafta": -0.09449283804426323,
+      "sharpe_haftalik_yillik": -4.923104263753032,
+      "max_dusus": -0.9465765645448374,
+      "islem_hafta": 137.1818181818182,
+      "ort_brut": 2.8406508338325858
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.7427234081744785,
+      "haftalik_ortalama": -0.027712480907024946,
+      "haftalik_medyan": -0.03655332349594076,
+      "pozitif_hafta": 0.2127659574468085,
+      "en_iyi_hafta": 0.053946358062176625,
+      "en_kotu_hafta": -0.08914160754911937,
+      "sharpe_haftalik_yillik": -5.117026602705022,
+      "max_dusus": -0.7531410047892962,
+      "islem_hafta": 142.17021276595744,
+      "ort_brut": 2.7259216557138735
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": 0.11147300343646327,
+      "haftalik_ortalama": 0.0010486222815019046,
+      "haftalik_medyan": 0.0017717075204070065,
+      "pozitif_hafta": 0.5909090909090909,
+      "en_iyi_hafta": 0.0334485320163016,
+      "en_kotu_hafta": -0.05632480635523607,
+      "sharpe_haftalik_yillik": 0.5720663402781487,
+      "max_dusus": -0.13762704264801784,
+      "islem_hafta": 8.327272727272728,
+      "ort_brut": 0.3367543775723772
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.039317566086124134,
+      "haftalik_ortalama": -0.0007599513729826788,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.44680851063829785,
+      "en_iyi_hafta": 0.027814196527633728,
+      "en_kotu_hafta": -0.04326786715899511,
+      "sharpe_haftalik_yillik": -0.3984813022708573,
+      "max_dusus": -0.09093280365781198,
+      "islem_hafta": 6.382978723404255,
+      "ort_brut": 0.29206960764134665
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.18800871618415238,
+      "haftalik_ortalama": -0.0017036571450640575,
+      "haftalik_medyan": 0.0001368244982611344,
+      "pozitif_hafta": 0.5181818181818182,
+      "en_iyi_hafta": 0.031710099719091334,
+      "en_kotu_hafta": -0.07241749697381916,
+      "sharpe_haftalik_yillik": -0.637782110526908,
+      "max_dusus": -0.32512193554383106,
+      "islem_hafta": 12.472727272727273,
+      "ort_brut": 0.526531267188417
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.12044108682816734,
+      "haftalik_ortalama": -0.0025562406364483116,
+      "haftalik_medyan": -0.0005593912350427832,
+      "pozitif_hafta": 0.44680851063829785,
+      "en_iyi_hafta": 0.03312323186052302,
+      "en_kotu_hafta": -0.06147167719751967,
+      "sharpe_haftalik_yillik": -0.9931197424166911,
+      "max_dusus": -0.15239426150393498,
+      "islem_hafta": 10.72340425531915,
+      "ort_brut": 0.4575852438601846
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.39376621622199093,
+      "haftalik_ortalama": -0.0041408949124347215,
+      "haftalik_medyan": 0.0017552404732092963,
+      "pozitif_hafta": 0.5272727272727272,
+      "en_iyi_hafta": 0.05236475407532115,
+      "en_kotu_hafta": -0.137735535295066,
+      "sharpe_haftalik_yillik": -1.0707649312671421,
+      "max_dusus": -0.4546693611178316,
+      "islem_hafta": 28.972727272727273,
+      "ort_brut": 1.0742287339240368
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.1264492618207329,
+      "haftalik_ortalama": -0.002573452179710576,
+      "haftalik_medyan": 0.0016709872883702293,
+      "pozitif_hafta": 0.5106382978723404,
+      "en_iyi_hafta": 0.05644080915739247,
+      "en_kotu_hafta": -0.061879091274302134,
+      "sharpe_haftalik_yillik": -0.7533928938778472,
+      "max_dusus": -0.17052548456973926,
+      "islem_hafta": 28.893617021276597,
+      "ort_brut": 1.012122748938994
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.5978506466724696,
+      "haftalik_ortalama": -0.007851488332966079,
+      "haftalik_medyan": -0.0030481496350499016,
+      "pozitif_hafta": 0.44545454545454544,
+      "en_iyi_hafta": 0.059326779963849274,
+      "en_kotu_hafta": -0.08621518710675713,
+      "sharpe_haftalik_yillik": -2.0239172103741154,
+      "max_dusus": -0.6505580379200158,
+      "islem_hafta": 35.945454545454545,
+      "ort_brut": 1.3283245286717986
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.2354890868852394,
+      "haftalik_ortalama": -0.005162642090333687,
+      "haftalik_medyan": 0.00039657846415774856,
+      "pozitif_hafta": 0.5106382978723404,
+      "en_iyi_hafta": 0.05180703756896543,
+      "en_kotu_hafta": -0.09873539083171734,
+      "sharpe_haftalik_yillik": -1.1360076402229706,
+      "max_dusus": -0.26246572056461825,
+      "islem_hafta": 37.53191489361702,
+      "ort_brut": 1.3084741698160136
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.7352883581870739,
+      "haftalik_ortalama": -0.011395818496992784,
+      "haftalik_medyan": -0.00811324185038359,
+      "pozitif_hafta": 0.4090909090909091,
+      "en_iyi_hafta": 0.04939572484120314,
+      "en_kotu_hafta": -0.1371284349990194,
+      "sharpe_haftalik_yillik": -2.372664969581725,
+      "max_dusus": -0.7581098484810747,
+      "islem_hafta": 53.68181818181818,
+      "ort_brut": 1.8090539714384457
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.391293295683392,
+      "haftalik_ortalama": -0.009851899243080688,
+      "haftalik_medyan": -0.01401854868757757,
+      "pozitif_hafta": 0.40425531914893614,
+      "en_iyi_hafta": 0.07834310699033553,
+      "en_kotu_hafta": -0.09724267709165046,
+      "sharpe_haftalik_yillik": -1.9564646356901862,
+      "max_dusus": -0.4377313636009227,
+      "islem_hafta": 54.04255319148936,
+      "ort_brut": 1.7184338620752035
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 3,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.7636371499892884,
+      "haftalik_ortalama": -0.012353531491592531,
+      "haftalik_medyan": -0.007799060683312153,
+      "pozitif_hafta": 0.39090909090909093,
+      "en_iyi_hafta": 0.059119414595627084,
+      "en_kotu_hafta": -0.10509998651456032,
+      "sharpe_haftalik_yillik": -2.4468008808621864,
+      "max_dusus": -0.8136384156407733,
+      "islem_hafta": 61.763636363636365,
+      "ort_brut": 2.049161217259299
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.5184802203010574,
+      "haftalik_ortalama": -0.014752412682674498,
+      "haftalik_medyan": -0.01698645304347024,
+      "pozitif_hafta": 0.3617021276595745,
+      "en_iyi_hafta": 0.0657383380061165,
+      "en_kotu_hafta": -0.08407804594984991,
+      "sharpe_haftalik_yillik": -2.8812329897250097,
+      "max_dusus": -0.5306970207778086,
+      "islem_hafta": 64.0,
+      "ort_brut": 1.9807103336572214
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": 0.02063293009470213,
+      "haftalik_ortalama": 0.00018606385964619257,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.06363636363636363,
+      "en_iyi_hafta": 0.005423280977288725,
+      "en_kotu_hafta": 0.0,
+      "sharpe_haftalik_yillik": 1.5229171649794286,
+      "max_dusus": -0.004500998570519665,
+      "islem_hafta": 0.12727272727272726,
+      "ort_brut": 0.00729473847586528
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.06368209233928135,
+      "haftalik_ortalama": -0.0013829161804446131,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0,
+      "en_iyi_hafta": 0.0,
+      "en_kotu_hafta": -0.028135882077715557,
+      "sharpe_haftalik_yillik": -1.753648867058539,
+      "max_dusus": -0.06368209233928135,
+      "islem_hafta": 0.14893617021276595,
+      "ort_brut": 0.03078037298569618
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.009882141503159692,
+      "haftalik_ortalama": -8.061287196650315e-05,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.2,
+      "en_iyi_hafta": 0.009978202471150999,
+      "en_kotu_hafta": -0.024369943268435,
+      "sharpe_haftalik_yillik": -0.13209847306983302,
+      "max_dusus": -0.07543586493894805,
+      "islem_hafta": 0.6909090909090909,
+      "ort_brut": 0.059018915269387566
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.05773141344080912,
+      "haftalik_ortalama": -0.0012478664913043583,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0425531914893617,
+      "en_iyi_hafta": 0.0045890162090256315,
+      "en_kotu_hafta": -0.028135882077715668,
+      "sharpe_haftalik_yillik": -1.5611054286149881,
+      "max_dusus": -0.05773141344080912,
+      "islem_hafta": 0.23404255319148937,
+      "ort_brut": 0.03476371537208039
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.0336697172107947,
+      "haftalik_ortalama": -0.00025428438963672953,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.43636363636363634,
+      "en_iyi_hafta": 0.01823665631130056,
+      "en_kotu_hafta": -0.06964374372010695,
+      "sharpe_haftalik_yillik": -0.17283472741476819,
+      "max_dusus": -0.13882515394403416,
+      "islem_hafta": 2.5636363636363635,
+      "ort_brut": 0.19085666037627802
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.10432255471849561,
+      "haftalik_ortalama": -0.002299265656776399,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.2553191489361702,
+      "en_iyi_hafta": 0.014288997613967291,
+      "en_kotu_hafta": -0.03234326794437048,
+      "sharpe_haftalik_yillik": -1.7980976490007636,
+      "max_dusus": -0.10546224690012518,
+      "islem_hafta": 1.7872340425531914,
+      "ort_brut": 0.15182686700924297
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.1406740680514862,
+      "haftalik_ortalama": -0.0012077369712631372,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.45454545454545453,
+      "en_iyi_hafta": 0.046490868018736586,
+      "en_kotu_hafta": -0.08060370776261683,
+      "sharpe_haftalik_yillik": -0.47573819787188903,
+      "max_dusus": -0.2975407069578849,
+      "islem_hafta": 5.527272727272727,
+      "ort_brut": 0.3911876598176227
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.05113434453203325,
+      "haftalik_ortalama": -0.0010212818117292292,
+      "haftalik_medyan": 0.0004120980843100863,
+      "pozitif_hafta": 0.5106382978723404,
+      "en_iyi_hafta": 0.030192515187281943,
+      "en_kotu_hafta": -0.034732614822554186,
+      "sharpe_haftalik_yillik": -0.5306489817730862,
+      "max_dusus": -0.0925266942385582,
+      "islem_hafta": 4.25531914893617,
+      "ort_brut": 0.32209150613658105
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": 0.08648766505922079,
+      "haftalik_ortalama": 0.0008855097659612585,
+      "haftalik_medyan": 0.0029299558862866393,
+      "pozitif_hafta": 0.5909090909090909,
+      "en_iyi_hafta": 0.04438057735056389,
+      "en_kotu_hafta": -0.06046692607335269,
+      "sharpe_haftalik_yillik": 0.3937980792681979,
+      "max_dusus": -0.14795413461730866,
+      "islem_hafta": 10.236363636363636,
+      "ort_brut": 0.6279688083717173
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.10541311532096465,
+      "haftalik_ortalama": -0.0021755399229268146,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.44680851063829785,
+      "en_iyi_hafta": 0.05040262002674556,
+      "en_kotu_hafta": -0.047238726953217514,
+      "sharpe_haftalik_yillik": -0.7930515170916081,
+      "max_dusus": -0.15298454778546344,
+      "islem_hafta": 8.74468085106383,
+      "ort_brut": 0.6028368048837309
+     }
+    },
+    {
+     "tf": "1h",
+     "parametreler": {
+      "n": 5,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 110,
+      "toplam_getiri": -0.3595788536223148,
+      "haftalik_ortalama": -0.0037424532746027648,
+      "haftalik_medyan": -0.0015726191642535525,
+      "pozitif_hafta": 0.44545454545454544,
+      "en_iyi_hafta": 0.04617320867033148,
+      "en_kotu_hafta": -0.09402456345433552,
+      "sharpe_haftalik_yillik": -1.1079930070014443,
+      "max_dusus": -0.4514360037995985,
+      "islem_hafta": 16.618181818181817,
+      "ort_brut": 1.0142610205674372
+     },
+     "oos": {
+      "hafta": 47,
+      "toplam_getiri": -0.2702933970118626,
+      "haftalik_ortalama": -0.006408642002819651,
+      "haftalik_medyan": -0.009503591648095444,
+      "pozitif_hafta": 0.40425531914893614,
+      "en_iyi_hafta": 0.041008865221711543,
+      "en_kotu_hafta": -0.06235386752403527,
+      "sharpe_haftalik_yillik": -1.9648154585457234,
+      "max_dusus": -0.28344323581234643,
+      "islem_hafta": 14.936170212765957,
+      "ort_brut": 0.9616820252600845
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.39607937725625453,
+      "haftalik_ortalama": -0.004693869455998162,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.49514563106796117,
+      "en_iyi_hafta": 0.0367133981149077,
+      "en_kotu_hafta": -0.06708542032591547,
+      "sharpe_haftalik_yillik": -1.7423303905759666,
+      "max_dusus": -0.41960742326204825,
+      "islem_hafta": 12.902912621359222,
+      "ort_brut": 1.1152990057032461
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.027397291699030935,
+      "haftalik_ortalama": -0.000518432560428756,
+      "haftalik_medyan": 0.001334411275012215,
+      "pozitif_hafta": 0.6444444444444445,
+      "en_iyi_hafta": 0.026028618384216218,
+      "en_kotu_hafta": -0.03475061275123503,
+      "sharpe_haftalik_yillik": -0.2638407340359249,
+      "max_dusus": -0.12021960430558198,
+      "islem_hafta": 11.933333333333334,
+      "ort_brut": 0.9522344303160354
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.3625764863787879,
+      "haftalik_ortalama": -0.0041069823492439995,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.46601941747572817,
+      "en_iyi_hafta": 0.03338374655985343,
+      "en_kotu_hafta": -0.08205689885757039,
+      "sharpe_haftalik_yillik": -1.3202173016687284,
+      "max_dusus": -0.41560262870025566,
+      "islem_hafta": 14.932038834951456,
+      "ort_brut": 1.2593701179155286
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.09806158874722337,
+      "haftalik_ortalama": -0.0021556808997117574,
+      "haftalik_medyan": -0.001492210292166174,
+      "pozitif_hafta": 0.4444444444444444,
+      "en_iyi_hafta": 0.033406835336858176,
+      "en_kotu_hafta": -0.043921667464719594,
+      "sharpe_haftalik_yillik": -0.9379233812186948,
+      "max_dusus": -0.1495612611842806,
+      "islem_hafta": 15.733333333333333,
+      "ort_brut": 1.2497405234157506
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.48487535047402064,
+      "haftalik_ortalama": -0.006083225351178223,
+      "haftalik_medyan": -0.0004788459752730345,
+      "pozitif_hafta": 0.44660194174757284,
+      "en_iyi_hafta": 0.04526371865881429,
+      "en_kotu_hafta": -0.0959017383462345,
+      "sharpe_haftalik_yillik": -1.6991049994577387,
+      "max_dusus": -0.5073790073925559,
+      "islem_hafta": 26.281553398058254,
+      "ort_brut": 1.948511971146472
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.11547929146333913,
+      "haftalik_ortalama": -0.002503438985808273,
+      "haftalik_medyan": -0.0027774733943484176,
+      "pozitif_hafta": 0.4444444444444444,
+      "en_iyi_hafta": 0.052596015806680274,
+      "en_kotu_hafta": -0.04336100915362551,
+      "sharpe_haftalik_yillik": -0.8529149283321724,
+      "max_dusus": -0.20031142853932649,
+      "islem_hafta": 24.977777777777778,
+      "ort_brut": 1.875113666542887
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.3082425218405159,
+      "haftalik_ortalama": -0.003172964976618007,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.4854368932038835,
+      "en_iyi_hafta": 0.07508784100953791,
+      "en_kotu_hafta": -0.09851796527155221,
+      "sharpe_haftalik_yillik": -0.8139825364332991,
+      "max_dusus": -0.3900835582924639,
+      "islem_hafta": 28.310679611650485,
+      "ort_brut": 2.0670090697741266
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.20239862733566316,
+      "haftalik_ortalama": -0.004704778019805613,
+      "haftalik_medyan": -0.0017986506955933734,
+      "pozitif_hafta": 0.4444444444444444,
+      "en_iyi_hafta": 0.05892583851739053,
+      "en_kotu_hafta": -0.07995956100118673,
+      "sharpe_haftalik_yillik": -1.3587401946639266,
+      "max_dusus": -0.2796933209384762,
+      "islem_hafta": 28.555555555555557,
+      "ort_brut": 2.146015272716315
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.6423278673611217,
+      "haftalik_ortalama": -0.009456500578985276,
+      "haftalik_medyan": -0.008703698129441495,
+      "pozitif_hafta": 0.3786407766990291,
+      "en_iyi_hafta": 0.0645514017918487,
+      "en_kotu_hafta": -0.08301659091095881,
+      "sharpe_haftalik_yillik": -2.2165274080202537,
+      "max_dusus": -0.6645790320381015,
+      "islem_hafta": 37.49514563106796,
+      "ort_brut": 2.6366739319498564
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.3445125460824193,
+      "haftalik_ortalama": -0.00883514316848944,
+      "haftalik_medyan": -0.0005354730204086833,
+      "pozitif_hafta": 0.4666666666666667,
+      "en_iyi_hafta": 0.04452211393881389,
+      "en_kotu_hafta": -0.08038620530148399,
+      "sharpe_haftalik_yillik": -2.0012892048352846,
+      "max_dusus": -0.42913436526959714,
+      "islem_hafta": 37.044444444444444,
+      "ort_brut": 2.4976704387112934
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 2,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.5016589464165271,
+      "haftalik_ortalama": -0.006190038229407928,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.4368932038834951,
+      "en_iyi_hafta": 0.0812491342780397,
+      "en_kotu_hafta": -0.08631326795000405,
+      "sharpe_haftalik_yillik": -1.3509336346715257,
+      "max_dusus": -0.5685213263044857,
+      "islem_hafta": 39.16504854368932,
+      "ort_brut": 2.6305080192145813
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.4409630461097215,
+      "haftalik_ortalama": -0.012253489632507036,
+      "haftalik_medyan": -0.0038372286256689314,
+      "pozitif_hafta": 0.4444444444444444,
+      "en_iyi_hafta": 0.04870542075368989,
+      "en_kotu_hafta": -0.08489504276381876,
+      "sharpe_haftalik_yillik": -2.583609589469009,
+      "max_dusus": -0.5035538316423394,
+      "islem_hafta": 39.53333333333333,
+      "ort_brut": 2.6991817964277427
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.06306843149312791,
+      "haftalik_ortalama": -0.0005785210025214971,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.3592233009708738,
+      "en_iyi_hafta": 0.01885952355525755,
+      "en_kotu_hafta": -0.06161584163124989,
+      "sharpe_haftalik_yillik": -0.4045033728007647,
+      "max_dusus": -0.15380991185403936,
+      "islem_hafta": 2.0776699029126213,
+      "ort_brut": 0.28133289441357806
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.09541199319572247,
+      "haftalik_ortalama": 0.002050628717538008,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.4666666666666667,
+      "en_iyi_hafta": 0.020363128433958266,
+      "en_kotu_hafta": -0.01970239422877651,
+      "sharpe_haftalik_yillik": 2.134873319581894,
+      "max_dusus": -0.053141661773258075,
+      "islem_hafta": 1.8666666666666667,
+      "ort_brut": 0.2724507172552899
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": 0.05588514924546306,
+      "haftalik_ortalama": 0.0005652638179456048,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.44660194174757284,
+      "en_iyi_hafta": 0.018859523555257773,
+      "en_kotu_hafta": -0.04022881914928511,
+      "sharpe_haftalik_yillik": 0.47288789407450466,
+      "max_dusus": -0.12974159958211084,
+      "islem_hafta": 2.9514563106796117,
+      "ort_brut": 0.39823841953294986
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.16736253125534017,
+      "haftalik_ortalama": 0.0034840735055372204,
+      "haftalik_medyan": 0.003263378390911287,
+      "pozitif_hafta": 0.6666666666666666,
+      "en_iyi_hafta": 0.02556604684039021,
+      "en_kotu_hafta": -0.021847126874720013,
+      "sharpe_haftalik_yillik": 2.8009593686066907,
+      "max_dusus": -0.04122103043795211,
+      "islem_hafta": 3.066666666666667,
+      "ort_brut": 0.45520797967164695
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.2473934019008489,
+      "haftalik_ortalama": -0.002581268311096809,
+      "haftalik_medyan": 0.0019043282115895899,
+      "pozitif_hafta": 0.5631067961165048,
+      "en_iyi_hafta": 0.04023287987995783,
+      "en_kotu_hafta": -0.08238870893511974,
+      "sharpe_haftalik_yillik": -1.0036403656394268,
+      "max_dusus": -0.2832991736746603,
+      "islem_hafta": 8.436893203883495,
+      "ort_brut": 1.020509098231442
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.07754236294653549,
+      "haftalik_ortalama": 0.0017623954724941247,
+      "haftalik_medyan": 0.004258395991326047,
+      "pozitif_hafta": 0.5777777777777777,
+      "en_iyi_hafta": 0.029723852971764275,
+      "en_kotu_hafta": -0.03195439222499896,
+      "sharpe_haftalik_yillik": 0.8842081716541048,
+      "max_dusus": -0.08421352943866833,
+      "islem_hafta": 7.288888888888889,
+      "ort_brut": 0.9291830407046308
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.24001539755039458,
+      "haftalik_ortalama": -0.0024370221421158213,
+      "haftalik_medyan": 0.0027945462517457997,
+      "pozitif_hafta": 0.5631067961165048,
+      "en_iyi_hafta": 0.041802826266231996,
+      "en_kotu_hafta": -0.09250024861295358,
+      "sharpe_haftalik_yillik": -0.8359023797542708,
+      "max_dusus": -0.3066443336728957,
+      "islem_hafta": 10.640776699029127,
+      "ort_brut": 1.2989797210231981
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.04759741169373677,
+      "haftalik_ortalama": 0.0011675958573696915,
+      "haftalik_medyan": 0.0019044583719998176,
+      "pozitif_hafta": 0.5777777777777777,
+      "en_iyi_hafta": 0.029723852971764053,
+      "en_kotu_hafta": -0.044026878443109374,
+      "sharpe_haftalik_yillik": 0.5108841789586016,
+      "max_dusus": -0.08636419458654199,
+      "islem_hafta": 10.022222222222222,
+      "ort_brut": 1.2859254860225389
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.4166508934156967,
+      "haftalik_ortalama": -0.004931765328962379,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.47572815533980584,
+      "en_iyi_hafta": 0.032973014102170684,
+      "en_kotu_hafta": -0.08192183899569905,
+      "sharpe_haftalik_yillik": -1.4908142326970906,
+      "max_dusus": -0.4298729467127228,
+      "islem_hafta": 15.097087378640778,
+      "ort_brut": 1.7346311824390406
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.0024041553482223588,
+      "haftalik_ortalama": 0.00029136636216526597,
+      "haftalik_medyan": 0.003034080927207583,
+      "pozitif_hafta": 0.6,
+      "en_iyi_hafta": 0.04635513611912079,
+      "en_kotu_hafta": -0.054324909845169356,
+      "sharpe_haftalik_yillik": 0.09557171201212468,
+      "max_dusus": -0.15033196377077473,
+      "islem_hafta": 14.955555555555556,
+      "ort_brut": 1.6184755542877949
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 3,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.29872405472649877,
+      "haftalik_ortalama": -0.0031235804600723326,
+      "haftalik_medyan": 0.0013008386285118245,
+      "pozitif_hafta": 0.5048543689320388,
+      "en_iyi_hafta": 0.03910678147708202,
+      "en_kotu_hafta": -0.08167161113627719,
+      "sharpe_haftalik_yillik": -0.9024351490250926,
+      "max_dusus": -0.36533261869529043,
+      "islem_hafta": 17.145631067961165,
+      "ort_brut": 1.877261480138442
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.008692156700291775,
+      "haftalik_ortalama": 0.0001532573387967294,
+      "haftalik_medyan": 0.0040346937574962105,
+      "pozitif_hafta": 0.5555555555555556,
+      "en_iyi_hafta": 0.050933453297093756,
+      "en_kotu_hafta": -0.10350667689982274,
+      "sharpe_haftalik_yillik": 0.042004397671190415,
+      "max_dusus": -0.159005473668836,
+      "islem_hafta": 17.955555555555556,
+      "ort_brut": 2.00370154764597
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": 0.0,
+      "haftalik_ortalama": 0.0,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0,
+      "en_iyi_hafta": 0.0,
+      "en_kotu_hafta": 0.0,
+      "sharpe_haftalik_yillik": 0.0,
+      "max_dusus": 0.0,
+      "islem_hafta": 0.0,
+      "ort_brut": 0.0
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.0,
+      "haftalik_ortalama": 0.0,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0,
+      "en_iyi_hafta": 0.0,
+      "en_kotu_hafta": 0.0,
+      "sharpe_haftalik_yillik": 0.0,
+      "max_dusus": 0.0,
+      "islem_hafta": 0.0,
+      "ort_brut": 0.0
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 5.0,
+      "ust": 95.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": -0.009586179273413542,
+      "haftalik_ortalama": -9.152761245361435e-05,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.009708737864077669,
+      "en_iyi_hafta": 0.011174135275399344,
+      "en_kotu_hafta": -0.01626105680847656,
+      "sharpe_haftalik_yillik": -0.3303073115296616,
+      "max_dusus": -0.027477881275492777,
+      "islem_hafta": 0.038834951456310676,
+      "ort_brut": 0.01194835559198189
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.007299821133609052,
+      "haftalik_ortalama": -0.00016251508396959805,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.0,
+      "en_iyi_hafta": 0.0,
+      "en_kotu_hafta": -0.0037706110506272594,
+      "sharpe_haftalik_yillik": -1.5370276208556812,
+      "max_dusus": -0.010921623781219858,
+      "islem_hafta": 0.044444444444444446,
+      "ort_brut": 0.025699168556311415
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": 0.12139580311262499,
+      "haftalik_ortalama": 0.0011297406924212583,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.23300970873786409,
+      "en_iyi_hafta": 0.020084762113963706,
+      "en_kotu_hafta": -0.03675376590760726,
+      "sharpe_haftalik_yillik": 1.404683402570192,
+      "max_dusus": -0.05425183160089775,
+      "islem_hafta": 0.7184466019417476,
+      "ort_brut": 0.11469675390563477
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": -0.002244951354401392,
+      "haftalik_ortalama": -4.686820361383434e-05,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.08888888888888889,
+      "en_iyi_hafta": 0.0057025888570425565,
+      "en_kotu_hafta": -0.013764043280298899,
+      "sharpe_haftalik_yillik": -0.1351439330381992,
+      "max_dusus": -0.025096958441988115,
+      "islem_hafta": 0.2222222222222222,
+      "ort_brut": 0.09137161032725573
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 10.0,
+      "ust": 90.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": 0.10593950262213458,
+      "haftalik_ortalama": 0.001010251591238149,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.24271844660194175,
+      "en_iyi_hafta": 0.026393557457472516,
+      "en_kotu_hafta": -0.03675376590760737,
+      "sharpe_haftalik_yillik": 0.9054080346032172,
+      "max_dusus": -0.10750343387904138,
+      "islem_hafta": 1.1262135922330097,
+      "ort_brut": 0.21914100772879816
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.05147302142053278,
+      "haftalik_ortalama": 0.001145678963346586,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.4,
+      "en_iyi_hafta": 0.019671720653878566,
+      "en_kotu_hafta": -0.02979082742339012,
+      "sharpe_haftalik_yillik": 1.0634914094640349,
+      "max_dusus": -0.04232287723461181,
+      "islem_hafta": 1.2444444444444445,
+      "ort_brut": 0.2743495942841491
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 100
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": 0.020810349135818473,
+      "haftalik_ortalama": 0.00028794748497948576,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.4368932038834951,
+      "en_iyi_hafta": 0.03632163603102567,
+      "en_kotu_hafta": -0.0558950514791795,
+      "sharpe_haftalik_yillik": 0.15683837805297482,
+      "max_dusus": -0.20940222897322902,
+      "islem_hafta": 2.796116504854369,
+      "ort_brut": 0.5301556923592269
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.05342094955434207,
+      "haftalik_ortalama": 0.0012112564551038805,
+      "haftalik_medyan": 0.0,
+      "pozitif_hafta": 0.4,
+      "en_iyi_hafta": 0.029749602058491975,
+      "en_kotu_hafta": -0.03286562975852381,
+      "sharpe_haftalik_yillik": 0.8322602460718659,
+      "max_dusus": -0.05039886208034672,
+      "islem_hafta": 2.3555555555555556,
+      "ort_brut": 0.45579792609089465
+     }
+    },
+    {
+     "tf": "4h",
+     "parametreler": {
+      "n": 5,
+      "alt": 15.0,
+      "ust": 85.0,
+      "cikis": 50.0,
+      "trend": 200
+     },
+     "is": {
+      "hafta": 103,
+      "toplam_getiri": 0.03467160535342795,
+      "haftalik_ortalama": 0.00044817097647193365,
+      "haftalik_medyan": 0.0004538330092493936,
+      "pozitif_hafta": 0.5145631067961165,
+      "en_iyi_hafta": 0.03218228236794496,
+      "en_kotu_hafta": -0.04596804218053563,
+      "sharpe_haftalik_yillik": 0.21097228999396417,
+      "max_dusus": -0.24291372041496218,
+      "islem_hafta": 4.689320388349515,
+      "ort_brut": 0.8464929150641886
+     },
+     "oos": {
+      "hafta": 45,
+      "toplam_getiri": 0.12714356327605647,
+      "haftalik_ortalama": 0.002790618413663161,
+      "haftalik_medyan": 0.003807367159180508,
+      "pozitif_hafta": 0.5777777777777777,
+      "en_iyi_hafta": 0.04597392314790549,
+      "en_kotu_hafta": -0.048964732516454945,
+      "sharpe_haftalik_yillik": 1.2485295418258637,
+      "max_dusus": -0.07184181704590997,
+      "islem_hafta": 4.333333333333333,
+      "ort_brut": 0.8542561418206834
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -79,7 +79,7 @@ PORTFOY_KISIT_ADLARI: Final[tuple[str, ...]] = ("azami_brut_maruziyet", "azami_e
 
 #: Risk motorunun volatilite ölçüsünün penceresi. Stratejinin bildirdiği özelliklerden
 #: **bağımsız**: risk kendi ölçüsünü kendi alır (`PiyasaOlcumu`). 14, limitlerin
-#: kalibre edildiği pencere (`docs/Faz-5-Risk-Raporu.md`) — değiştirmek
+#: kalibre edildiği pencere (`docs/arsiv/Faz-5-Risk-Raporu.md`) — değiştirmek
 #: `volatilite_esigi` ve `ters_hareket_atr_carpani`yi yeniden ölçmeyi gerektirir.
 #:
 #: Faz 3'te `backtest/motor.py`de doğdu, Faz 6'da buraya taşındı: paper döngüsü de aynı

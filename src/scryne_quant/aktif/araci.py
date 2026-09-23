@@ -17,6 +17,7 @@ durumu aracıdan yeniden okur (tahmin yürütülmez).
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import time
@@ -74,18 +75,23 @@ def _bar_df(open_time_ms: Any, o: Any, h: Any, lo: Any, c: Any) -> pd.DataFrame:
 class PaperHesap:
     """Simüle hesap: nakit + işaretli adet, koşu dizininde `paper.json` (atomik yazım).
 
-    Muhasebe nakit tabanlı: alış nakdi düşürür, satış (açığa satış dahil) artırır;
-    özkaynak = nakit + Σ adet × birim_notional(fiyat). Finansman/swap yok (iyimser yönde,
-    bilinen sınır, K-134).
+    Muhasebe nakit tabanlı: alış nakdi düşürür, satış (açığa satış dahil) artırır.
+    `nakit` hesap para biriminde; kote para birimi farklı semboller (USDJPY → JPY) o para
+    biriminde `doviz` kasasına yazılır ve özkaynakta **güncel kurla** çevrilir — MT5'in kârı
+    güncel kurla çevirmesiyle aynı (K-136). `ek`: aracıya özgü kalıcı durum (swap izi).
     """
 
     def __init__(self, dizin: Path, sermaye: float) -> None:
         self._yol = Path(dizin) / "paper.json"
         self.adet: dict[str, float] = {}
+        self.doviz: dict[str, float] = {}
+        self.ek: dict[str, Any] = {}
         if self._yol.is_file():
             d = json.loads(self._yol.read_text(encoding="utf-8"))
             self.nakit = float(d["nakit"])
             self.adet = {k: float(v) for k, v in d["adet"].items()}
+            self.doviz = {k: float(v) for k, v in d.get("doviz", {}).items()}
+            self.ek = dict(d.get("ek", {}))
         else:
             self.nakit = float(sermaye)
             self._yaz()
@@ -94,13 +100,26 @@ class PaperHesap:
         self._yol.parent.mkdir(parents=True, exist_ok=True)
         gecici = self._yol.with_suffix(".tmp")
         gecici.write_text(
-            json.dumps({"nakit": self.nakit, "adet": self.adet}, indent=1), encoding="utf-8"
+            json.dumps({"nakit": self.nakit, "adet": self.adet, "doviz": self.doviz,
+                        "ek": self.ek}, indent=1),
+            encoding="utf-8",
         )
         os.replace(gecici, self._yol)
 
-    def uygula(self, sembol: str, delta: float, birim: float, ucret: float) -> None:
-        """`birim`: bir adetin dolum fiyatındaki hesap para birimi değeri."""
-        self.nakit -= delta * birim + ucret
+    def kasa(self, doviz: str | None, tutar: float) -> None:
+        """Nakde ekle (negatifse düş); `doviz` None ise hesap para birimi."""
+        if doviz is None:
+            self.nakit += tutar
+        else:
+            self.doviz[doviz] = self.doviz.get(doviz, 0.0) + tutar
+
+    def uygula(
+        self, sembol: str, delta: float, birim: float, ucret: float, doviz: str | None = None
+    ) -> None:
+        """`birim`: bir adetin dolum fiyatındaki değeri — `doviz` verilmişse o para biriminde,
+        yoksa hesap para biriminde. `ucret` her zaman hesap para biriminde."""
+        self.kasa(doviz, -delta * birim)
+        self.nakit -= ucret
         yeni = round(self.adet.get(sembol, 0.0) + delta, 12)
         if abs(yeni) < 1e-12:
             self.adet.pop(sembol, None)
@@ -315,14 +334,22 @@ class MT5Araci:
             sonuc[p.symbol] = sonuc.get(p.symbol, 0.0) + isaret * float(p.volume)
         return {s: round(v, 8) for s, v in sonuc.items() if abs(v) > 1e-12}
 
+    def kur(self, doviz: str) -> float:
+        """1 birim `doviz` kaç hesap para birimi (güncel orta fiyat). Çevrim paritesi yoksa
+        hata: tahmin edilmez."""
+        if doviz == self.para_birimi:
+            return 1.0
+        for parite, ters in ((doviz + self.para_birimi, False), (self.para_birimi + doviz, True)):
+            if self._mt5.symbol_info(parite) is not None:
+                self._sembol(parite)
+                orta = self.fiyat(parite)
+                return 1.0 / orta if ters else orta
+        raise AraciHatasi(f"{doviz} → {self.para_birimi} çevrim paritesi yok")
+
     def birim_notional(self, sembol: str, fiyat: float) -> float:
+        """Bir lotun hesap para birimindeki değeri: sözleşme × fiyat × kur(kâr para birimi)."""
         bilgi = self._sembol(sembol)
-        if str(bilgi.currency_profit) != self.para_birimi:
-            raise AraciHatasi(
-                f"{sembol}: kâr para birimi {bilgi.currency_profit} ≠ hesap {self.para_birimi}; "
-                "çevrim yok, sembol listeden çıkarılmalı"
-            )
-        return float(bilgi.trade_contract_size) * fiyat
+        return float(bilgi.trade_contract_size) * fiyat * self.kur(str(bilgi.currency_profit))
 
     def adet_yuvarla(self, sembol: str, adet: float) -> float:
         bilgi = self._sembol(sembol)
@@ -398,12 +425,15 @@ class MT5Araci:
 
 
 class MT5Paper(MT5Araci):
-    """MT5'in gerçek fiyatı ve sembol kuralları, dolum simüle. (K-134)
+    """MT5'in gerçek fiyatı ve sembol kuralları, dolum simüle. (K-134, K-135, K-136)
 
     Aracı sunucusu algoritmik emri kapatmışsa (`trade_expert=False`, retcode 10026) demo yine
     koşar: veri ve bid/ask MT5'ten, hesap koşu dizininde. Alış ask'tan, satış bid'den (gerçek
-    spread) + `kayma_bps` aleyhte + `ucret_bps` komisyon. Swap/finansman yok (iyimser).
-    MT5 hesabında hiçbir emir açılmaz.
+    spread) + `kayma_bps` aleyhte + `ucret_bps` komisyon. Kote para birimi hesaptan farklıysa
+    (USDJPY, USDCHF, USDCAD) nakit o para biriminde tutulur, özkaynakta güncel kurla çevrilir.
+    **Gecelik swap** sembolün kendi değerinden (`swap_long/short`, puan) sunucu gece yarısında
+    tahakkuk eder; `swap_rollover3days` günü üç kat, hafta sonu geceleri yok. MT5 hesabında
+    hiçbir emir açılmaz.
     """
 
     ad = "mt5_paper"
@@ -423,13 +453,69 @@ class MT5Paper(MT5Araci):
         self._kayma = kayma_bps / 10_000
         self._hesap = PaperHesap(Path(dizin), sermaye)
 
+    def _kote(self, sembol: str) -> str | None:
+        doviz = str(self._sembol(sembol).currency_profit)
+        return None if doviz == self.para_birimi else doviz
+
     def ozkaynak(self) -> float:
-        return self._hesap.nakit + sum(
-            a * self.birim_notional(s, self.fiyat(s)) for s, a in self._hesap.adet.items()
-        )
+        toplam = self._hesap.nakit
+        for doviz, tutar in self._hesap.doviz.items():
+            if tutar:
+                toplam += tutar * self.kur(doviz)
+        for s, a in self._hesap.adet.items():
+            toplam += a * self.birim_notional(s, self.fiyat(s))
+        return toplam
 
     def pozisyonlar(self) -> dict[str, float]:
         return dict(self._hesap.adet)
+
+    def swap_toplam(self) -> float:
+        return float(self._hesap.ek.get("swap_toplam", 0.0))
+
+    def tahakkuk(self, simdi_ms: int) -> float:
+        """Son tahakkuktan bu yana geçen sunucu gece yarılarının swap'ını işler; hesap para
+        biriminde toplamı döndürür. İlk çağrı yalnız başlangıcı işaretler."""
+        ek = self._hesap.ek
+        son = ek.get("son_swap_ms")
+        if son is None:
+            ek["son_swap_ms"] = simdi_ms
+            self._hesap._yaz()
+            return 0.0
+        fark_ms = self._fark_ms()
+        gun = 86_400_000
+        # Sunucu saatinde (son, simdi] aralığına düşen her gece yarısı.
+        ilk = ((int(son) + fark_ms) // gun + 1) * gun
+        toplam = 0.0
+        for gece_yarisi in range(ilk, simdi_ms + fark_ms + 1, gun):
+            gece = dt.datetime.fromtimestamp((gece_yarisi - 1) / 1000, tz=dt.UTC)
+            mt5_gun = (gece.weekday() + 1) % 7  # MT5: Pazar=0 … Cumartesi=6
+            if mt5_gun in (0, 6):
+                continue  # hafta sonu gecesi: üç katlı gün karşılar
+            for s, a in self._hesap.adet.items():
+                toplam += self._swap(s, a, mt5_gun)
+        ek["son_swap_ms"] = simdi_ms
+        ek["swap_toplam"] = float(ek.get("swap_toplam", 0.0)) + toplam
+        self._hesap._yaz()
+        return toplam
+
+    def _fark_ms(self) -> int:
+        if self._fark_s is None:
+            raise AraciHatasi("sunucu saat farkı bilinmiyor; swap tahakkuku için ayarda verilmeli")
+        return self._fark_s * 1000
+
+    def _swap(self, sembol: str, adet: float, mt5_gun: int) -> float:
+        bilgi = self._sembol(sembol)
+        mod = int(bilgi.swap_mode)
+        if mod == 0:
+            return 0.0
+        if mod != 1:
+            raise AraciHatasi(f"{sembol}: swap_mode {mod} desteklenmiyor (yalnız puan, 1)")
+        puan = float(bilgi.swap_long if adet > 0 else bilgi.swap_short)
+        carpan = 3 if mt5_gun == int(bilgi.swap_rollover3days) else 1
+        tutar = abs(adet) * puan * float(bilgi.point) * float(bilgi.trade_contract_size) * carpan
+        doviz = self._kote(sembol)
+        self._hesap.kasa(doviz, tutar)
+        return tutar * (1.0 if doviz is None else self.kur(doviz))
 
     def emir(self, sembol: str, delta: float, neden: str) -> Dolum:
         self._demo_denetle()
@@ -442,7 +528,9 @@ class MT5Paper(MT5Araci):
             raise AraciHatasi(f"{sembol}: tick bayat (piyasa kapalı?), dolum yapılmadı")
         ref = float(tick.ask) if delta > 0 else float(tick.bid)
         fiyat = ref * (1 + self._kayma) if delta > 0 else ref * (1 - self._kayma)
-        birim = self.birim_notional(sembol, fiyat)
-        ucret = abs(delta) * birim * self._ucret
-        self._hesap.uygula(sembol, delta, birim, ucret)
+        doviz = self._kote(sembol)
+        kote_birim = float(self._sembol(sembol).trade_contract_size) * fiyat
+        kur = 1.0 if doviz is None else self.kur(doviz)
+        ucret = abs(delta) * kote_birim * kur * self._ucret
+        self._hesap.uygula(sembol, delta, kote_birim, ucret, doviz=doviz)
         return Dolum(sembol, delta, fiyat, ucret)

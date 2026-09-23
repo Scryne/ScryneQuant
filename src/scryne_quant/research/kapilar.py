@@ -153,7 +153,7 @@ def oos_suresi_gun(bar_sayisi: int, timeframe_ms: int) -> float:
     return bar_sayisi * timeframe_ms / _GUN_MS
 
 #: K-019'un eşikleri. Her biri Faz 4'ün ölçümüne dayanıyor; gerekçeler
-#: `docs/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı. `oos_sharpe` ayrıca K-044'ün
+#: `docs/arsiv/Faz-4-Laboratuvar-Raporu.md`'de ayrıntılı. `oos_sharpe` ayrıca K-044'ün
 #: çoklu test düzeltmesini taşıyor.
 ESIKLER: Final[tuple[Esik, ...]] = (
     Esik(

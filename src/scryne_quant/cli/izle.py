@@ -2,7 +2,7 @@
 
 `kontrol` her çalıştığında bütün kuralları koşturur, etkin alarmları `runs/izleme/durum.json`a
 yazar ve **değişimleri** (açılan / kapanan alarm) `runs/izleme/alarmlar.jsonl`e ekler. Hostta
-zamanlanmış görevle 15 dakikada bir koşar. Her alarm kodunun `docs/Runbook.md`de satırı var.
+zamanlanmış görevle 15 dakikada bir koşar. Her alarm kodunun `docs/arsiv/Runbook.md`de satırı var.
 """
 
 from __future__ import annotations
@@ -102,7 +102,8 @@ def izle_kontrol(
         bildir(
             konu,
             f"{'ALARM' if acildi else 'kapandı'}: {d['kod']} ({d['kosu'] or 'host'})",
-            f"{d['mesaj']}\n{d['boyut']} · {d['seviye']} · {zaman}\nMüdahale: docs/Runbook.md",
+            f"{d['mesaj']}\n{d['boyut']} · {d['seviye']} · {zaman}\n"
+            "Müdahale: docs/arsiv/Runbook.md",
             oncelik=("urgent" if d["seviye"] == "kritik" else "high") if acildi else "low",
             etiket="rotating_light" if acildi else "white_check_mark",
         )

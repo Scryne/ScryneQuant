@@ -13,14 +13,14 @@ bittiğinde `asama` alanını sırayla güncelle: `fikir` → `denetim` → `fin
 
 ## Dosyalar
 
-- `docs/Proje-Fikri.md` — ilk fikir (v1, tarihsel)
-- `docs/Proje-Fikri-v2.md` — **yürürlükteki vizyon** (2026-09-12, multi-asset platform)
-- `docs/Final-Dokuman.md` — nihai kararlar (teknoloji stack, mimari, riskler) — **v2**
-- `docs/DURUM.md` — **yürürlükteki durumun tek sayfası** (oturum başında önce bu)
-- `docs/ROADMAP-RESET.md` — kanonik yol haritası (R0-R12); `docs/Roadmap.md` tarihsel. Her faz "Durum" sütunuyla takip edilir, hook bunu
-  otomatik okur
-- `DESIGN.md` (proje kökünde) — bu projeye özel frontend kimliği (accent palet, tipografi,
-  mood). Google DESIGN.md spec'i (alpha): kesin değerler frontmatter'da, gerekçe Markdown'da.
+- `docs/DURUM.md` — **yürürlükteki durumun tek sayfası** (oturum başında önce bu).
+- `docs/ROADMAP-RESET.md` — yol haritası; hook "Durum" sütununu okur. Yürürlükteki hat R17
+  (aktif demo bot); ⛔ satırlar donduruldu (K-136).
+- `docs/Kararlar.md` — karar günlüğü (K-001…); "neden böyle"nin tek adresi.
+- `docs/arsiv/` — tarihsel her şey (fikir v1/v2, final doküman, faz raporları, denetimler,
+  eski DURUM). Yalnız geçmişe bakarken açılır.
+- `DESIGN.md` (proje kökünde) — frontend kimliği (Google DESIGN.md spec'i: kesin değerler
+  frontmatter'da, gerekçe Markdown'da).
 
 ## Frontend
 
@@ -43,6 +43,10 @@ metni) → denetim pasları (`fixing-accessibility`, animasyon varsa
 
 Bu proje gerçek parayla temas edecek. Aşağıdakiler tercih değil, **kısıt**. Bir görev
 bunlardan birini ihlal ediyorsa görev yanlıştır; kural değil.
+
+**Kapsam (K-136):** 1-7, 9, 10, 12, 16 ve 17 aktif demo hat dahil **her kodda** geçerli. 8 ve 11
+(promotion kapıları, hipotez sayımı) **gerçek paraya** geçişin kuralıdır; demo hatta araştırma
+yine ön kayıtla yapılır (`docs/research/records/*-onkayit.md`, koşudan önce commit).
 
 1. **Strateji I/O yapamaz.** `strategy/` paketi exchange, ağ, dosya sistemi veya
    veritabanına erişemez. (K-003)
@@ -88,67 +92,32 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 
 ## Dosya haritası
 
-**Önce `docs/DURUM.md` oku** — yürürlükteki durumun tek sayfası (doğrulanmış bileşenler, strateji
-durumu, 12 kapı, canlı/pilot, Jev, açık işler). Çelişkide DURUM.md ve en yeni K kazanır; faz
-raporları ve eski kayıtlar tarihseldir. Aşağıdaki liste yalnız **nereye bakılacağı**dır.
+**Yürürlükteki hat — aktif demo bot (K-134…K-136)**
+- Kod `src/scryne_quant/aktif/`: `strateji` (saf yön serileri), `risk` (boyut, kaldıraç tavanı,
+  günlük/haftalık kayıp freni), `araci` (`KriptoPaper`; `MT5Paper` gerçek fiyat/spread + kur
+  çevrimi + swap; `MT5Araci` yalnız demo hesap, Integral'de algoritmik emir kapalı), `dongu`,
+  `geriye` (aynı kurallarla backtest), `defter` (işlem, özkaynak, karne).
+- CLI `sq aktif geriye|calistir|karne|durdur|baglanti`; ayar `config/aktif.json`; koşular
+  `runs/aktif/<hesap>/`; testler `tests/unit/test_aktif.py`.
+- Takip ekranı `sq execution pano` → http://127.0.0.1:8790 (`trader/aktif_panosu.py` →
+  `/api/aktif`, `apps/web/aktif.html` + `src/aktif/`; derleme `cd apps/web && npm run build`).
+- Süreçleri `tools/gosterim_gozetmen.ps1` (zamanlanmış görev `ScryneQuant-Gosterim`, 10 dk) ayakta
+  tutar: dört demo hesap + pano. `sq aktif durdur` kalıcı kapatır (`kapali`).
+- Araştırma: `tools/aktif_arastirma.py` + ön kayıt/sonuç `docs/research/records/2026-09-23-aktif-donus-*`.
 
-**Karar ve sayım**
-- `docs/Kararlar.md` — karar günlüğü (K-001…); "neden böyle"nin tek adresi.
-- `docs/Hipotez-Defteri.jsonl` — çekiliş sayısı (K-039), append-only; her hipotez **önce**
-  kaydedilir. `docs/Arastirma-Programlari.jsonl` — program + arama bütçesi (K-051); açma/kapama
-  `sq lab program-kaydet|program-kapat`. Kayıttan önce `sq lab tekrar-kontrol` (Jev, K-061).
-- Evren çekilişi: `tools/faz12_evren_kos.py kaydet|kos|durum` (programlar `PROGRAM_AYARI`,
-  ızgaralar `research/izgaralar.py`). **Koşudan önce commit** (yoksa kayıt `dirty` taşır).
-- Defter büyüyünce çoklu test fotoğrafı (`docs/research/coklu-test-olcum.json`) yeniden ölçülür:
-  `tools/faz12_coklu_test.py --deneme 500 --seed 0` (bekçi `test_coklu_test.py` kırmızı kalır).
-
-**Kapılar ve ölçüm aletleri**
-- `research/kapilar.py` (K-019 + K-113), `research/kapilar_v2.py` (K-054; `butun_kapilar` 12);
-  eşik kaydı `config/esikler.json` (kod okumaz; `test_esikler.py` kod ↔ JSON ↔ K bağlar).
-- `tools/pozitif_kontrol.py` (kahin, gerçek veri), `tools/pozitif_kontrol_tam.py` (tek sembol
-  sentetik), `tools/pozitif_kontrol_evren.py` (evren sentetik) — kapı **gücü** (K-117…K-119).
-- `research/degerlendirme.py` (tek sembol), `research/evren_degerlendirme.py` (evren);
-  motorlar `backtest/motor.py` → `backtest/coklu_motor.py` (tek döngü, K-057).
-- `risk/promotion.py` — zincir hash'li promotion; `Kanit.protokol` alfa → `ZORUNLU_KAPILAR` (12, K-118),
-  rypp → `RYPP_KOSULLARI` (13) + B-3 bağımsız doğrulama (K-126); diğer aşamalar iki yolda ortak.
-  P3 k'sı = RYPP programının açılış bütçesi; kanıta donar, CLI program defterinden okur (K-128).
-  `sq promotion degerlendir --hipotez <kimlik>` K-039 sırasını doldurur.
-- B-3 bağımsız veri: `data/french.py` + `config/bagimsiz_veri.json` (dondurulmuş kimlik, rol, vintage eşi);
-  `sq data bagimsiz-dogrula [dataset]`. French 202607 + 201705 vintage eşi (K-128).
-- Mikro pilot hükmü: `sq execution hazirlik` → MİKRO PİLOT (K-129: testler + 7 gün gösterim + kill).
-- **Ürün K-132:** `strategy/kutuphane/sabit_oran.py` (%50 BTC, ±5 bant; `YATIRIM` kaydı, alfa değil). Risk profili
-  config eşlemesinden: `config/risk_profilleri.json` → `config/risk_yatirim.json` (`risk/limitler.profil_yolu`).
-- **Hedef K-125:** riski yönetilen sistematik yatırım. Promotion protokolü `docs/research/Risk-Yonetimli-Protokol.md`
-  + `research/risk_protokolu.py` (PASS/FAIL/INCONCLUSIVE, plasebo = kendi takviminin kaydırılmışı). Alfa yolu aynen durur.
-
-**Veri**
-- `data/evren/` arşiv deposu (2017-08→, PIT tablo `_evren/27b7a16ed0ed.parquet`); `data/market/`
-  REST deposu (2021-06→), karıştırılmaz (K-056/1). Yeni tek sembollü hipotezler `data/evren`
-  kullanır (K-119/6). Veri sonu sabitleme/geri sarım: `--bitis-gun`, `sq lab dogrula --geri-sar` (K-080).
-- Türev/makro/FX depoları `data/turev/`, `data/makro/`, `data/fx/` (FX finansmanı proxy → promotion
-  engeli, K-101/K-107). Carry takibi `tools/funding_guncel.py`.
-
-**Canlı yol**
-- `docs/Execution-Runbook.md` — nasıl çalıştırılır (§4.3 pilot). Mod makinesi `execution/mod.py`,
-  live gate `execution/canli_kapi.py` (`CanliYetki`'yi üreten tek yer), hat `execution/hat.py`,
-  yürütücü `trader/yurutucu.py`, canlı host `exchange/canli.py` (import sınırı testli).
-- `config/kademe.json` (pilot Kademe 1: strateji + sembol bağlı), `config/risk.json`,
-  `config/venue_statu.json`. R8 protokolü `docs/research/records/2026-09-22-R8-paper-protokol.md`.
-
-**Aktif demo bot (K-134, yürürlükteki hat)**
-- `src/scryne_quant/aktif/` (strateji, risk/fren, araci: `KriptoPaper` + `MT5Araci` yalnız demo, dongu, geriye,
-  defter), CLI `sq aktif geriye|calistir|karne|durdur|baglanti`, ayar `config/aktif.json`, koşular `runs/aktif/<hesap>/`.
-  Gözetmen `tools/gosterim_gozetmen.ps1` kripto hesaplarını ayakta tutar. Gerçek paraya geçiş yeni K ister.
-
-**Jev**
-- `src/scryne_quant/jev/` — yalnız gölge/ölçüm (K-074); işlem katmanı `jev`/`typesafe` import
-  edemez (`test_jev_izolasyon.py`); Jev'den `Sinyal` üreten fonksiyon yok. `config/jev.json`.
+**Dondurulmuş (kod ve testler duruyor, çalışan süreç yok, K-136)**
+- Alfa araştırması ve promotion: `research/`, `risk/promotion.py`, `config/esikler.json`,
+  `docs/Hipotez-Defteri.jsonl` (append-only), `docs/Arastirma-Programlari.jsonl`, `tools/faz12_*`,
+  `tools/pozitif_kontrol*.py`, `docs/research/` (Threshold-Policy, RYPP, kayıtlar).
+- Gerçek para yolu: `execution/` (mod makinesi, `canli_kapi.py` tek yetki kaynağı), `trader/yurutucu.py`,
+  `exchange/canli.py`, `config/kademe.json|risk*.json|venue_statu.json`, `docs/arsiv/Execution-Runbook.md`.
+  BTC gösterim/pilot/R8 koşuları durduruldu.
+- Jev (`src/scryne_quant/jev/`, K-074) yalnız gölge; işlem katmanı import edemez (`test_jev_izolasyon.py`).
+- Veri depoları `data/evren/` (PIT arşiv), `data/market/`, `data/turev/`, `data/makro/`, `data/fx/`.
 
 **Diğer**
-- `.github/workflows/test.yml` CI (ruff + `pytest -m "not network"`). `apps/web/` pano (bot ekranı `bot.html` + `src/bot/`, uç `/api/bot`, K-133);
-  `DESIGN.md` normatif token'lar (`npx --package @google/design.md -c "designmd lint DESIGN.md"`).
-- Tarihsel: `docs/Proje-Fikri*.md`, `docs/Denetim*.md`, `docs/Roadmap.md`, `docs/Faz-*.md`,
-  `docs/audit/`, `docs/spikes/`.
+- CI `.github/workflows/test.yml` (ruff + `pytest -m "not network"`). `uv run` kilitlenirse
+  `.venv/Scripts/` altından çalıştır (süreçler `sq.exe`'yi tutar).
 
 ## Uyarı
 

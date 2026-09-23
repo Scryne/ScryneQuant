@@ -6,7 +6,7 @@
 # 1. ScryneQuant-Evren       : acilista, oturumsuz (S4U), cokerse 1 dk arayla yeniden baslar.
 # 2. ScryneQuant-EvrenTablo  : her gun 03:15 UTC (06:15 TR) tablo yenileme denemesi.
 # 3. ScryneQuant-EvrenSapma  : her gun 03:45 UTC (06:45 TR) canli-backtest sapma olcumu.
-# 4. ScryneQuant-Izleme      : 15 dakikada bir alarm kontrolu (docs\Runbook.md).
+# 4. ScryneQuant-Izleme      : 15 dakikada bir alarm kontrolu (docs\arsiv\Runbook.md).
 #
 # Kosu tablosu yoksa arastirma tablosundan kopyalanir (bir kez). Sonrasi yalnizca yenileme.
 

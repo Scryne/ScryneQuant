@@ -65,6 +65,11 @@ def bayat_mi(son_acilis_ms: int, adim_ms: int, simdi: int) -> bool:
 def tur(araci: Araci, ayar: HesapAyari, defter: Defter, simdi: int | None = None) -> dict[str, Any]:
     simdi = simdi_ms() if simdi is None else simdi
     adim = timeframe_ms(ayar.timeframe)
+    tahakkuk = getattr(araci, "tahakkuk", None)  # MT5 paper: gecelik swap (K-136)
+    if tahakkuk is not None:
+        swap = tahakkuk(simdi)
+        if swap:
+            defter.olay(simdi, "swap", {"tutar": swap})
     ozk = araci.ozkaynak()
     fren_durum = defter.fren_oku()
     fren = fren_durum.guncelle(ozk, simdi, ayar.risk)

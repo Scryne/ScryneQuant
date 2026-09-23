@@ -1,7 +1,7 @@
 """Evren kıyasının üstüne **konumlanma** dışlaması. (Faz 16, `konumlanma_evren` programı)
 
 Program kaydı `docs/Arastirma-Programlari.jsonl` (kimlik `ccf75606a8ab0d52`), taslak
-`docs/Faz-16-Konumlanma-Program-Taslagi.md`, kaynak ölçüsü
+`docs/arsiv/Faz-16-Konumlanma-Program-Taslagi.md`, kaynak ölçüsü
 `runs/faz16/kaynak-olcumu-konumlanma.json`.
 
 **Soru:** Faz 12 kalabalığın *fiyatını* ölçtü (funding) ve vadeli talebi (basis); dördü de

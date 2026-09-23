@@ -1,6 +1,6 @@
 """Hat 1 / ikinci tavan — A listesi: mevcut veriyle hesaplanabilen girdiler. Ölçüm; karar yok.
 
-`docs/Faz-16-Hat1-Ikinci-Tavan-Tasarimi.md` §A'nın sekiz kalemini, oradaki tanımlarla,
+`docs/arsiv/Faz-16-Hat1-Ikinci-Tavan-Tasarimi.md` §A'nın sekiz kalemini, oradaki tanımlarla,
 yalnız depodaki veriden ve deterministik olarak çıkarır. İkinci tavanı **hesaplamaz**;
 CLOSE/ELIGIBLE demez; H/δ/L ızgaralarından seçim yapmaz; perp maliyeti, benchmark, likidasyon
 modeli, marjin tipi, stres parametresi üretmez.

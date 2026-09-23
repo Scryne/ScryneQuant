@@ -3,7 +3,7 @@
   "model": {
     "istenen": "jev-1.13.0",
     "yayin_utc": "2026-09-10T18:38:01Z",
-    "yayin_kaynagi": "GET https://api.typesafe.ai/v1/models release_date (jev-latest), 2026-09-19, docs/spikes/07-jev-durum.md (c)",
+    "yayin_kaynagi": "GET https://api.typesafe.ai/v1/models release_date (jev-latest), 2026-09-19, docs/arsiv/spikes/07-jev-durum.md (c)",
     "egitim_kesim_utc": null,
     "egitim_kesim_kaynagi": "dogrulanmadi",
     "not": "Kesim bilinmiyor: geriye donuk her turetim leak_riski=true (K-049/4, K-074/3). Yayin tarihi kesim yerine gecmez. TypeSafe'e resmi beyan soruldu; gelene kadar null kalir, uydurulmaz."

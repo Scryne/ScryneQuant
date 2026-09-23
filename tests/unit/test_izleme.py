@@ -74,7 +74,7 @@ def test_sapma_sebepli_sebepsiz_ve_bayat():
 
 
 def test_her_kodun_runbook_satiri_var_ve_fazlasi_yok():
-    metin = (KOK / "docs/Runbook.md").read_text(encoding="utf-8")
+    metin = (KOK / "docs/arsiv/Runbook.md").read_text(encoding="utf-8")
     runbook = set(re.findall(r"^\| `([A-Z_]+)` \|", metin, flags=re.M))
     assert runbook == set(RUNBOOK_KODLARI)
     kaynak = (KOK / "src/scryne_quant/live/izleme.py").read_text(encoding="utf-8")

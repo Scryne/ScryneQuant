@@ -15,7 +15,7 @@
 
     KANONİK KOPYA: ~/.claude/skills/proje-baslat/templates/.claude/hooks/
     Projeye özgü her şey state.json'dan okunur: proje_adi (vault flush etiketi)
-    ve isteğe bağlı `roadmap` yolu (varsayılan docs/Roadmap.md). Faz kimliğindeki
+    ve isteğe bağlı `roadmap` yolu (varsayılan docs/arsiv/Roadmap.md). Faz kimliğindeki
     harf öneki ('R3') satırdan okunup korunur. Projede elle değiştirme.
 #>
 
@@ -52,7 +52,7 @@ if (-not (Test-Path -LiteralPath $statePath -PathType Leaf)) { exit 0 }
 try { $state0 = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json -ErrorAction Stop } catch { exit 0 }
 $projeAdi = "$($state0.proje_adi)"
 if ([string]::IsNullOrWhiteSpace($projeAdi)) { $projeAdi = Split-Path -Leaf $projectDir }
-$roadmapRel = if ($state0.PSObject.Properties['roadmap'] -and "$($state0.roadmap)") { "$($state0.roadmap)" } else { 'docs/Roadmap.md' }
+$roadmapRel = if ($state0.PSObject.Properties['roadmap'] -and "$($state0.roadmap)") { "$($state0.roadmap)" } else { 'docs/arsiv/Roadmap.md' }
 $roadmapPath = Join-Path $projectDir $roadmapRel
 $roadmapName = Split-Path -Leaf $roadmapRel
 

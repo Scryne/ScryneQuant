@@ -169,7 +169,7 @@ def olc(
 #: nokta) null dağılımı ölçüldü ve **daha sıkı olan** eşik alındı — `<=` kapısında düşük,
 #: `>=` kapısında yüksek olanı. Belirsizlikte aleyhte yuvarla (K-007): eşik ızgara şekline
 #: bağlı çıktı ve bir aday, kendi ızgarasını seçerek gevşek eşikli tarafa kaçamamalı.
-#: Ham örnekler `runs/kalibrasyon-v2/`, rapor `docs/Faz-11-Dogrulama-Raporu.md`.
+#: Ham örnekler `runs/kalibrasyon-v2/`, rapor `docs/arsiv/Faz-11-Dogrulama-Raporu.md`.
 YANLIS_POZITIF: Final = 0.05
 
 #: K-119: `pbo` ve `parametre_perturbasyonu` kapılarının ölçüsü değişti (sıralama PBO'su →

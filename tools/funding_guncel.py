@@ -1,6 +1,6 @@
 """Funding carry'nin güncel düzeyi: yıllık funding (notional'a oranla) ve negatif ödeme payı.
 
-Çekiliş değil, strateji değil: `docs/Faz-16-Hat1-Carry-Tavan-Olcumu.md`'nin IS tavanının
+Çekiliş değil, strateji değil: `docs/arsiv/Faz-16-Hat1-Carry-Tavan-Olcumu.md`'nin IS tavanının
 (2020→2025-02) bugünkü karşılığını, aynı yerel depodan (`data/funding/<sembol>.parquet`)
 ölçer. Maliyet, basis, marjin ve likidasyon yok — yani yine bir **tavandır**.
 

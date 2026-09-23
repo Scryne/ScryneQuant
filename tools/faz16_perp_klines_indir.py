@@ -3,7 +3,7 @@
     uv run python tools/faz16_perp_klines_indir.py [--semboller BTCUSDT ETHUSDT] [--timeframe 1m]
 
 Amaç: perp bacağı slippage kalibrasyonu (K-021 yöntemi, `sq data slippage-kalibre --depo`)
-için perp 1m barları. `docs/Faz-16-Hat1-Veri-Karari-Tasarimi.md` Karar B: **BTCUSDT + ETHUSDT,
+için perp 1m barları. `docs/arsiv/Faz-16-Hat1-Veri-Karari-Tasarimi.md` Karar B: **BTCUSDT + ETHUSDT,
 yalnız 1m, IS (2020-01 → 2025-02)**; altcoin yok; işlem için değil, maliyet kalibrasyonu için.
 
 - Kaynak: `data.binance.vision` `data/futures/um/monthly/klines/<S>/<tf>/<S>-<tf>-YYYY-MM.zip`

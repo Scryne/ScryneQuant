@@ -1,11 +1,11 @@
 {
   "surum": 1,
   "karar": "K-114, K-115, K-132",
-  "kaynak": "docs/Faz-8-Hazirlik.md §2.1 (biçim); sayılar Scryne kararı ya da shadow/Kademe 1 ölçümü",
+  "kaynak": "docs/arsiv/Faz-8-Hazirlik.md §2.1 (biçim); sayılar Scryne kararı ya da shadow/Kademe 1 ölçümü",
   "not": "Bu dosya live gate'in (execution/canli_kapi.py) okuduğu kademe tablosudur. null = karar verilmedi ya da ölçülmedi ve kapıyı KAPALI tutar. Sayı yazmak izni artırır: K-050/2 gereği her değişiklik sayısal kapı + elle onay + yeni K ister; gevşetme (sermaye artışı, eşik düşürme) bu dosyadan tek başına yapılamaz.",
   "risk_sermayesi_usdt": 100.0,
   "aktif_kademe": 1,
-  "drift_tanimi": "docs/Faz-8-Hazirlik.md §2.3",
+  "drift_tanimi": "docs/arsiv/Faz-8-Hazirlik.md §2.3",
   "golge_olcutu": {
     "asgari_gun": 14,
     "asgari_golge": 20,

@@ -51,6 +51,22 @@ def _araci(ayar: Any, ham: dict[str, Any]) -> Any:
     raise typer.BadParameter(f"bilinmeyen aracı: {ayar.araci}")
 
 
+def _mt5_swap(araci: Any, semboller: tuple[str, ...]) -> dict[str, Any]:
+    """Backtest için MT5 swap oranları (gecelik, notional kesri) — bugünkü değerler (K-136)."""
+    oranlar: dict[str, tuple[float, float]] = {}
+    uc_kat = 3
+    for s in semboller:
+        b = araci._sembol(s)
+        if int(b.swap_mode) != 1:
+            continue
+        f = araci.fiyat(s)
+        oranlar[s] = (float(b.swap_long) * float(b.point) / f,
+                      float(b.swap_short) * float(b.point) / f)
+        uc_kat = int(b.swap_rollover3days)
+    return {"swap": oranlar, "sunucu_farki_ms": araci.sunucu_farki_s(semboller[0]) * 1000,
+            "uc_kat_gun": uc_kat}
+
+
 @aktif_app.command("geriye")
 def geriye_komut(
     hesap: HesapOpt,
@@ -73,6 +89,7 @@ def geriye_komut(
         ayar = replace(ayar, timeframe=timeframe)
     adim = timeframe_ms(ayar.timeframe)
     barlar: dict[str, pd.DataFrame] = {}
+    swap_ek: dict[str, Any] = {}
     if ayar.araci == "kripto_paper":
         veri = KOK / "veri"
         veri.mkdir(parents=True, exist_ok=True)
@@ -93,9 +110,10 @@ def geriye_komut(
         for s in ayar.semboller:
             barlar[s] = araci.barlar(s, ayar.timeframe, int(adet))
         yalniz_long = araci.yalniz_long
+        swap_ek = _mt5_swap(araci, ayar.semboller)
     sonuc = geriye_mod.geriye(barlar, ayar, yalniz_long=yalniz_long,
                               ucret_bps=float(ham.get("ucret_bps", 10)),
-                              kayma_bps=float(ham.get("kayma_bps", 5)))
+                              kayma_bps=float(ham.get("kayma_bps", 5)), **swap_ek)
     kesim = int(len(sonuc) * 0.7)
     son = sonuc.iloc[kesim:].copy()
     son["ozkaynak"] = son["ozkaynak"] / sonuc["ozkaynak"].iloc[kesim - 1]

@@ -4,7 +4,7 @@
 
 Amaç: likidasyon mark price'a göre tetiklenir; repodaki premium index mark değildir. Bu seri
 ikinci tavanın likidasyon **fiyat yolu**dur (C-1 iki senaryo, C-2 PIT/NON_PIT ayrımı —
-`docs/Faz-16-Hat1-Veri-Karari-Tasarimi.md`). Tek başına likidasyon sayısı üretmez (`mmr` yok).
+`docs/arsiv/Faz-16-Hat1-Veri-Karari-Tasarimi.md`). Tek başına likidasyon sayısı üretmez (`mmr` yok).
 
 - Kaynak: `data.binance.vision` `data/futures/um/monthly/markPriceKlines/<S>/1h/` + `.CHECKSUM`
   (`tools/faz12_premium_indir.py` kalıbı; aynı arşiv ailesi). Kapsam filtresi 2020-01 → 2025-02

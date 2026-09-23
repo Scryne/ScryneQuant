@@ -2,7 +2,7 @@
 
 Tarih: 2026-09-22 (UTC). Tür: karar dokümanı — yeni ölçüm yalnız mevcut kayıtlardan türetildi
 (defter 62, null önbelleği 48, program kapanış raporları); çekiliş yok, strateji kodu yok. Kaynaklar:
-K-045, K-068, K-072, K-077, K-078, K-079, `docs/Alpha-Discovery-Gap-Audit.md` (2026-09-20), K-102…K-109,
+K-045, K-068, K-072, K-077, K-078, K-079, `docs/arsiv/Alpha-Discovery-Gap-Audit.md` (2026-09-20), K-102…K-109,
 `runs/faz12/coklu-test/*.json`, `runs/faz12/r7-sinyal-gucu.json`.
 
 ## 1. Karar özeti

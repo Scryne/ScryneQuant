@@ -6,6 +6,10 @@ k+1 açılışından k+2 açılışına kadar getiri kazanır. Maliyet her ağı
 
 Yaklaşım (yazılı kalsın): ağırlıklar bar boyunca sabit kabul edilir (fiyatla kayma yok);
 15 dakikalık barlarda fark küçüktür, işlem sayısını değiştirmez.
+
+Swap (K-136, isteğe bağlı): `swap[sembol] = (long, short)` gecelik oran, notional'ın kesri
+(`swap_puan × point / fiyat`). Sunucu gece yarısını içeren barda tutulan ağırlığa işlenir;
+Pazartesi-Cuma geceleri, `uc_kat_gun` (MT5 numarası, Çarşamba=3) üç kat — `MT5Paper` ile aynı.
 """
 
 from __future__ import annotations
@@ -28,6 +32,9 @@ def geriye(
     yalniz_long: bool,
     ucret_bps: float,
     kayma_bps: float,
+    swap: dict[str, tuple[float, float]] | None = None,
+    sunucu_farki_ms: int = 0,
+    uc_kat_gun: int = 3,
 ) -> pd.DataFrame:
     """Kapanış zamanı indeksli çıktı: `ozkaynak`, `islem` (o bar kapanışında verilen emir sayısı),
     `brut` (toplam brüt ağırlık)."""
@@ -47,6 +54,17 @@ def geriye(
         atr_o[s] = a.reindex(zaman).to_numpy()
         getiri[s] = g.reindex(zaman).fillna(0.0).to_numpy()
 
+    gun = 86_400_000
+    gece_carpani = np.zeros(len(zaman))
+    if swap:
+        bas = (zaman + sunucu_farki_ms) // gun
+        son = (zaman + sunucu_farki_ms + adim) // gun
+        for k in np.nonzero(son > bas)[0]:
+            gece = pd.Timestamp(int(son[k]) * gun - 1, unit="ms", tz="UTC")
+            mt5_gun = (gece.weekday() + 1) % 7
+            if mt5_gun not in (0, 6):
+                gece_carpani[k] = 3.0 if mt5_gun == uc_kat_gun else 1.0
+
     w: dict[str, float] = {}
     fren = FrenDurumu()
     ozk = 1.0
@@ -57,6 +75,10 @@ def geriye(
         # 1) Bar k boyunca (açılış k → açılış k+1) mevcut ağırlıklar kazanır.
         #    Getiri dizisi sembolün kendi sonraki açılışına göre; bar yoksa 0.
         ozk *= 1.0 + sum(wi * getiri[s][k] for s, wi in w.items())
+        if swap and gece_carpani[k]:
+            ozk *= 1.0 + gece_carpani[k] * sum(
+                abs(wi) * swap.get(s, (0.0, 0.0))[0 if wi > 0 else 1] for s, wi in w.items()
+            )
         # 2) Bar k kapanışında karar.
         sebep = fren.guncelle(ozk, int(t) + adim, ayar.risk)
         yonler = {s: float(yon[s][k]) for s in semboller if not np.isnan(yon[s][k])}

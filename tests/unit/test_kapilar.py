@@ -128,7 +128,7 @@ class TestDegerlendirme:
         (K-010'un uyardığı sabırsızlık). Bu test o gevşetmeyi fark eder: birisi eşikleri
         indirirse burası kırmızıya döner ve gerekçe yazmaya zorlar.
         """
-        # BTC/USDT 1h, 5,2 yıl, 2026-09-09 ölçümü (docs/Faz-4-Laboratuvar-Raporu.md).
+        # BTC/USDT 1h, 5,2 yıl, 2026-09-09 ölçümü (docs/arsiv/Faz-4-Laboratuvar-Raporu.md).
         # OOS 13.672 bar = 569,67 gün (yıllıklandırma anlamlı; K-113 sınırının kendisi).
         faz4 = {
             "sma_kesisim": {"oos_sharpe": -1.03, "oos_is_orani": -1.67,

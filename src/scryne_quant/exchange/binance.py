@@ -1,7 +1,7 @@
 """Binance spot adaptörü. (K-015, Faz 0 gereksinim 1-6)
 
 Bu dosyadaki hemen her sabit bir **ölçümün** sonucudur, tercih değil. Spike 1 (bkz.
-`docs/spikes/01-binance-erisim.md`) neyin darboğaz olduğunu ve neyin olmadığını ölçtü;
+`docs/arsiv/spikes/01-binance-erisim.md`) neyin darboğaz olduğunu ve neyin olmadığını ölçtü;
 aşağıdaki her karar o ölçüme dayanıyor ve yorumu yanında yazılı.
 
 **Neden `fetch_ohlcv` değil, ham `publicGetKlines`:** ccxt'nin normalize ettiği OHLCV altı

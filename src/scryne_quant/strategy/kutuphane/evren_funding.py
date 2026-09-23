@@ -1,7 +1,7 @@
 """Evren kıyasının üstüne funding dışlaması. (Faz 12, `turev_evren` programı)
 
 Program kaydı `docs/Arastirma-Programlari.jsonl`, kaynak ölçüsü
-`docs/Faz-12-Program-Taslaklari.md` §1.2.
+`docs/arsiv/Faz-12-Program-Taslaklari.md` §1.2.
 
 **Soru:** K-042'nin `funding_filtre` mekanizması — aşırı pozitif funding, kaldıraçla
 finanse edilmiş bir kalabalığın işaretidir ve o kalabalık tasfiyeye açıktır — evren
