@@ -105,9 +105,10 @@ def test_bagimsiz_girdi_deterministik():
     assert rp.degerlendir(a).sozluk() == rp.degerlendir(b).sozluk()
 
 
-def _sonuc(oz, maruz, zaman):
+def _sonuc(oz, maruz, zaman, islem=10):
     return SimpleNamespace(ozkaynak=np.asarray(oz, float), maruziyet=np.asarray(maruz, float),
-                           zamanlar=np.asarray(zaman))
+                           zamanlar=np.asarray(zaman),
+                           metrikler=SimpleNamespace(islem_sayisi=islem))
 
 
 def test_kripto_girdi_zamanlama_takvimini_maruziyetten_cikarir():
@@ -117,7 +118,7 @@ def test_kripto_girdi_zamanlama_takvimini_maruziyetten_cikarir():
     oz_k = 10_000 * np.concatenate([[1.0], np.cumprod(1 + r)])
     g = (np.arange(n + 1) // 200) % 2 == 0
     oz_s = 10_000 * np.concatenate([[1.0], np.cumprod(1 + np.where(g[1:], r, 0.0))])
-    maruz = np.where(g, oz_s * 0.98, 0.0)
+    maruz = np.where(g, 0.98, 0.0)  # motor maruziyeti KESİR olarak verir (K-131)
     z = np.arange(n + 1)
     girdi, meta = rk.kripto_girdi(_sonuc(oz_s, maruz, z), _sonuc(oz_k, oz_k, z),
                                   _sonuc(oz_s * 0.999, maruz, z), maliyet_orani=0.0,
@@ -129,3 +130,18 @@ def test_kripto_girdi_zamanlama_takvimini_maruziyetten_cikarir():
         rk.kripto_girdi(_sonuc(oz_s, maruz, z), _sonuc(oz_k, oz_k, z + 1),
                         _sonuc(oz_s, maruz, z), maliyet_orani=0.0, aile_sayisi=1,
                         aile_program="p")
+
+
+def test_kripto_girdi_birim_ve_bos_takvim_bekcisi():
+    """K-131: maruziyet kesir değilse ya da işlem varken takvim boşsa hata (sessiz P3 yok)."""
+    n = 50
+    z = np.arange(n + 1)
+    oz = 10_000 * np.ones(n + 1)
+    with pytest.raises(rp.ProtokolHatasi, match="kesir"):
+        rk.kripto_girdi(_sonuc(oz, oz, z), _sonuc(oz, oz, z), _sonuc(oz, oz, z),
+                        maliyet_orani=0.0, aile_sayisi=1, aile_program="p")
+    with pytest.raises(rp.ProtokolHatasi, match="hep kapalı"):
+        rk.kripto_girdi(_sonuc(oz, np.zeros(n + 1), z), _sonuc(oz, oz / oz, z),
+                        _sonuc(oz, np.zeros(n + 1), z), maliyet_orani=0.0, aile_sayisi=1,
+                        aile_program="p")
+

@@ -158,10 +158,17 @@ def kripto_girdi(
     oz_k = np.asarray(kiyas.ozkaynak, dtype=np.float64)
     r_k = np.diff(oz_k) / oz_k[:-1]
     oz_s = np.asarray(strateji.ozkaynak, dtype=np.float64)
-    # Zamanlama takvimi: bar kapanışında brüt maruziyet / özkaynak > 0,5 → risk açık. Bar `t`nin
-    # getirisini (`t−1` → `t`) `t` barında tutulan pozisyon alır; `t` kapanışındaki maruziyet o.
-    oran = np.asarray(strateji.maruziyet, dtype=np.float64) / np.where(oz_s > 0, oz_s, np.nan)
-    g = (np.nan_to_num(oran, nan=0.0) > 0.5).astype(np.float64)[1:]
+    # Zamanlama takvimi: bar kapanışında brüt maruziyet (motor bunu **kesir** olarak verir,
+    # `PortfoyDurumu.brut_maruziyet`, [0, 1]) > 0,5 → risk açık. Bar `t`nin getirisini
+    # (`t−1` → `t`) `t` barında tutulan pozisyon alır; `t` kapanışındaki maruziyet o.
+    # K-131: ilk sürüm kesri bir de özkaynağa bölüyordu → takvim hep 0, P3 anlamsızdı.
+    maruz = np.asarray(strateji.maruziyet, dtype=np.float64)
+    if np.nanmax(maruz, initial=0.0) > 1.5:
+        raise rp.ProtokolHatasi("maruziyet kesir değil (> 1,5): birim sözleşmesi bozuk")
+    g = (np.nan_to_num(maruz, nan=0.0) > 0.5).astype(np.float64)[1:]
+    if strateji.metrikler.islem_sayisi > 0 and not g.any():
+        raise rp.ProtokolHatasi("strateji işlem yaptı ama zamanlama takvimi hep kapalı: "
+                                "takvim çıkarımı bozuk (K-131)")
     plasebo = rp.plasebo_mar(r_k, g, maliyet_orani=maliyet_orani, yil_bar=KRIPTO_YIL_BAR,
                              ornek=PLASEBO_ORNEK, tohum=tohum)
     girdi = rp.RyppGirdisi(
