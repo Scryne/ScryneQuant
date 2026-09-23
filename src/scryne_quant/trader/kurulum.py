@@ -185,7 +185,8 @@ def kosu_kur(
         raise KurulumHatasi(f"koşu {istek.kosu} gerekçeyle kapatılmış; yeniden başlatılamaz")
     dizin.mkdir(parents=True, exist_ok=True)
     audit = SqliteDefter(dizin / "audit.sqlite")
-    limitler = limitler_mod.yukle()
+    # K-132: strateji → risk profili eşlemesi config'den (kodu değil); yoksa genel profil.
+    limitler = limitler_mod.strateji_icin_yukle(istek.strateji)
     sermaye = float(istek.sermaye_usdt)
     azami_kayip: float | None = None
 

@@ -118,3 +118,22 @@ def test_kosu_kapat_gate_i_birakir_ama_kosu_bir_daha_baslamaz(calisma):
     assert (calisma / "runs/execution/k/kosu.safemode").is_file()  # işaret kalkmadı
     with pytest.raises(KurulumHatasi, match="kapatılmış"):
         kosu_kur(istek())
+
+
+def test_sabit_oran_paper_tekrari_risk_profiliyle_hedefe_ulasir(calisma):
+    """K-132: yatırım kuralı canlı yolla aynı kurulumdan geçer; risk profili config eşlemesinden
+    gelir ve %50 hedefi ~%11'e (genel profilin ATR boyutlandırması) kırpılmaz."""
+    for ad in ("risk_profilleri.json", "risk_yatirim.json"):
+        shutil.copy(REPO / "config" / ad, calisma / "config" / ad)
+    r = CliRunner()
+    assert r.invoke(app, ["execution", "yukselt", "PAPER", "--not", "test"]).exit_code == 0
+    y, kaynak = kosu_kur(KosuIstegi(mod=CalismaModu.PAPER, kosu="u", strateji="sabit_oran",
+                                    parametreler={}, kurallar=K, sermaye_usdt=100.0,
+                                    tekrar_barlari=df_barlara(bar_uret(n=300))))
+    rapor = y.tekrar_oynat(kaynak, isinma=100)
+    assert rapor["gecti"], rapor["kalan"]
+    durum = json.loads((calisma / "runs/execution/u/durum.json").read_text(encoding="utf-8"))
+    hesap = durum.get("hesap") or {}
+    maruziyet = hesap.get("maruziyet") or hesap.get("brut_maruziyet")
+    assert maruziyet is not None, list(hesap)
+    assert 0.40 < float(maruziyet) < 0.60, hesap

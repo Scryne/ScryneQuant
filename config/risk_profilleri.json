@@ -1,0 +1,8 @@
+{
+  "surum": 1,
+  "karar": "K-132",
+  "aciklama": "Strateji → risk limit dosyası eşlemesi. Listede olmayan strateji genel profili (config/risk.json) kullanır. Profil stratejinin kendi kodundan seçilemez (K-037: izin veren katman risk motoru dışında olamaz); eşleme config'dedir ve canlı kapının risk_config kontrolü aynı dosyayı doğrular (onay hash'i profili kapsar). Yeni eşleme ya da profil gevşetmesi yeni K ister.",
+  "strateji_profilleri": {
+    "sabit_oran": "config/risk_yatirim.json"
+  }
+}

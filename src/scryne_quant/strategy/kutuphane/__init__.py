@@ -58,6 +58,7 @@ from scryne_quant.strategy.kutuphane.oynaklik_filtre import (
     FxOynaklikFiltreCift,
 )
 from scryne_quant.strategy.kutuphane.rsi_donus import RsiOrtalamaDonus
+from scryne_quant.strategy.kutuphane.sabit_oran import SabitOran
 from scryne_quant.strategy.kutuphane.sma_kesisim import SmaKesisim
 from scryne_quant.strategy.kutuphane.zaman_serisi import ZamanSerisiTrend
 from scryne_quant.strategy.temel import PortfoyStratejisi, Strateji
@@ -82,6 +83,11 @@ KUTUPHANE: Final[dict[str, type[Strateji]]] = {
 #: çizgi. Karşılaştırma raporlarına ayrı bir satır olarak giriyor — bir stratejinin
 #: "%15 kazandı" cümlesi, aynı dönemde varlığın ne yaptığı bilinmeden okunamaz.
 KIYAS: Final[dict[str, type[Strateji]]] = {AlTut.ad: AlTut}
+
+#: Yatırım kuralları (K-132): alfa ailesi de kıyas da değil. Promotion ölçütü operasyoneldir
+#: (plasebo aranmaz); hipotez defterine çekiliş olarak girmez. `coz()` ile çözülür, canlıda
+#: `config/risk_profilleri.json` ile kendi risk profiline bağlanır.
+YATIRIM: Final[dict[str, type[Strateji]]] = {SabitOran.ad: SabitOran}
 
 #: Çok enstrümanlı kıyas. Ayrı bir sözlükte çünkü tipi farklı (`PortfoyStratejisi`) ve
 #: `coz()` ile çözülen tek sembollü stratejilerle aynı yere konsaydı, çağıranın hangi
@@ -154,7 +160,7 @@ class BilinmeyenStrateji(KeyError):
 
 def coz(ad: str) -> type[Strateji]:
     """Ada karşılık gelen strateji sınıfı. Kıyas ölçütü de çözülebilir."""
-    hepsi = {**KUTUPHANE, **KIYAS}
+    hepsi = {**KUTUPHANE, **KIYAS, **YATIRIM}
     try:
         return hepsi[ad]
     except KeyError:
@@ -179,6 +185,8 @@ __all__ = [
     "EVREN_KIYAS",
     "KIYAS",
     "KUTUPHANE",
+    "YATIRIM",
+    "SabitOran",
     "AlTut",
     "BilinmeyenStrateji",
     "CokFaktor",

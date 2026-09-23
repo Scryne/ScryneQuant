@@ -116,6 +116,8 @@ raporları ve eski kayıtlar tarihseldir. Aşağıdaki liste yalnız **nereye ba
 - B-3 bağımsız veri: `data/french.py` + `config/bagimsiz_veri.json` (dondurulmuş kimlik, rol, vintage eşi);
   `sq data bagimsiz-dogrula [dataset]`. French 202607 + 201705 vintage eşi (K-128).
 - Mikro pilot hükmü: `sq execution hazirlik` → MİKRO PİLOT (K-129: testler + 7 gün gösterim + kill).
+- **Ürün K-132:** `strategy/kutuphane/sabit_oran.py` (%50 BTC, ±5 bant; `YATIRIM` kaydı, alfa değil). Risk profili
+  config eşlemesinden: `config/risk_profilleri.json` → `config/risk_yatirim.json` (`risk/limitler.profil_yolu`).
 - **Hedef K-125:** riski yönetilen sistematik yatırım. Promotion protokolü `docs/research/Risk-Yonetimli-Protokol.md`
   + `research/risk_protokolu.py` (PASS/FAIL/INCONCLUSIVE, plasebo = kendi takviminin kaydırılmışı). Alfa yolu aynen durur.
 

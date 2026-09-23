@@ -18,7 +18,7 @@ import pytest
 from scryne_quant.features import motor
 from scryne_quant.features.barlar import bar_dizileri
 from scryne_quant.strategy.kosu import gorunum_kur, sinyalleri_uret
-from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE
+from scryne_quant.strategy.kutuphane import KIYAS, KUTUPHANE, YATIRIM
 from tests.conftest import bar_uret
 
 N = 1_500
@@ -100,12 +100,12 @@ def test_gosterge_testi_anlamsiz_degil() -> None:
 
 
 def _tek_sembollu() -> list[str]:
-    return sorted({**KUTUPHANE, **KIYAS})
+    return sorted({**KUTUPHANE, **KIYAS, **YATIRIM})
 
 
 def _kur(ad: str):
     """Varsayılan parametreler; sentetik serinin boyunu aşan pencereler küçültülür."""
-    sinif = {**KUTUPHANE, **KIYAS}[ad]
+    sinif = {**KUTUPHANE, **KIYAS, **YATIRIM}[ad]
     imza = inspect.signature(sinif.__init__)
     kucuk = {}
     for p, v in imza.parameters.items():

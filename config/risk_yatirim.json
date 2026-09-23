@@ -1,0 +1,118 @@
+{
+  "ardisik_kayip_limiti": 10,
+  "azami_brut_maruziyet": 1.0,
+  "azami_enstruman": 1000,
+  "azami_maruziyet": 0.5,
+  "cooldown_bar": 24,
+  "drawdown_limiti": 0.2,
+  "gerekceler": {
+    "ardisik_kayip_limiti": {
+      "dagilim": {},
+      "gozden_gecirme": "Paper trading'de (Faz 6) gerçek cooldown tetikleme sıklığı ölçüldüğünde.",
+      "kaynak": "istah",
+      "metin": "Faz 4'ün 6 stratejisinin 564 kayıp serisinde 10+ ardışık kayıp serilerin %5,9'unda görüldü (p95 = 10); 3+ ise %49,1'inde. Yani 10, 'olağan kötü gidiş' değil 'olağandışı' tarafta — daha düşük bir limit stratejinin normal davranışını cooldown'a sokardı.",
+      "olcum_tarihi": "2026-09-10",
+      "veri_sha256": ""
+    },
+    "azami_brut_maruziyet": {
+      "dagilim": {},
+      "gozden_gecirme": "Faz 12'de, ilk cross-sectional programın kapasite ve korelasyon ölçümüyle birlikte. O ölçüm gelene kadar bağlayıcı bir sayı yazmak, ölçülmemiş bir kapı olurdu (K-019).",
+      "kaynak": "istah",
+      "metin": "1,0 = kaldıraçsız spotun matematiksel üst sınırı; yani bugün bu limit bağlamıyor ve bağlamaması bilinçli. Faz 10 portföy kurma yöntemini kurar, brüt maruziyet iştahını ölçmez. Tek sembollü koşularda (Faz 1-7) bu tavanın bağlayıcı olmaması, o koşuların bit düzeyinde yeniden üretilebilirliğinin ön koşulu (K-057).",
+      "olcum_tarihi": "2026-09-16",
+      "veri_sha256": ""
+    },
+    "azami_enstruman": {
+      "dagilim": {},
+      "gozden_gecirme": "Faz 12'de, ilk cross-sectional programın turnover ve kapasite (ADV oranı) ölçümüyle birlikte. Evren genişledikçe eşzamanlı pozisyon sayısının maliyeti ölçülebilir hâle gelir.",
+      "kaynak": "istah",
+      "metin": "1000 = pratikte bağlamayan bir sayı (Faz 9'da inen evren 734 sembol). Konsantrasyon limiti bir iştah kararıdır ve iştahın sayısı ancak yöntemin maliyeti ölçüldükten sonra konuşulabilir; bugün yazılacak her sayı, sonucu görmeden konmuş gibi görünse de aslında hiçbir ölçüme dayanmazdı.",
+      "olcum_tarihi": "2026-09-16",
+      "veri_sha256": ""
+    },
+    "azami_maruziyet": {
+      "dagilim": {},
+      "gozden_gecirme": "Pilot (Kademe 1) sonunda gerçek dolum ve kayıp ölçümüyle; sermaye artırma kararıyla aynı toplantıda.",
+      "kaynak": "istah",
+      "metin": "K-132 (Scryne onayı: 'ikinci yolla devam edelim', hedef %50 BTC / %50 USDT): sabit oranlı yatırım ürününün hedef kesri. Genel profil (0,30) alım-satım stratejileri içindir; bu profil yalnız config/risk_profilleri.json'da eşlenen yatırım kuralına uygulanır. Kayıp yine kodda sabit pilot tavanıyla (10 USDT) ve drawdown/günlük zarar limitleriyle sınırlı.",
+      "olcum_tarihi": "2026-09-23",
+      "veri_sha256": ""
+    },
+    "cooldown_bar": {
+      "dagilim": {},
+      "gozden_gecirme": "Faz 6'da cooldown sonrası ilk işlemlerin sonucu ölçülünce.",
+      "kaynak": "istah",
+      "metin": "24 bar = 1h timeframe'de bir gün. Faz 4'te ölçülen medyan tutma süresi 27 saat; yani cooldown yaklaşık bir pozisyon ömrü kadar. Daha kısası 'ara vermek' sayılmaz, daha uzunu stratejiyi pencereden çıkarır.",
+      "olcum_tarihi": "2026-09-10",
+      "veri_sha256": ""
+    },
+    "drawdown_limiti": {
+      "dagilim": {},
+      "gozden_gecirme": "K-019'un `max_drawdown` eşiği değişirse bu sayı da değişmek zorunda (limitler.py'deki tutarlılık kontrolü zorluyor).",
+      "kaynak": "istah",
+      "metin": "K-019'un `max_drawdown` promotion kapısı 25%; fren kapıdan **önce** devreye girmek zorunda, yoksa canlıda bugün promote etmeyeceğimiz bir düşüşe izin verilmiş olur. 20% o sınırın altında.",
+      "olcum_tarihi": "2026-09-10",
+      "veri_sha256": ""
+    },
+    "gunluk_zarar_limiti": {
+      "dagilim": {
+        "p0.1": -0.1403094618816888,
+        "p0.5": -0.09311876448447838,
+        "p1": -0.07340404863974233,
+        "p10": -0.028854049509439598,
+        "p2.5": -0.05582889042705202,
+        "p5": -0.040434078496101915,
+        "p50": -7.696236540317961e-05
+      },
+      "gozden_gecirme": "",
+      "kaynak": "olculdu",
+      "metin": "1,899 günlük getiri dağılımı üzerinden seçildi: 30% maruziyet tavanında 24 günde (1.26%) tetikleniyor. Aday tablosu: 0.015→3.37%, 0.020→1.26%, 0.025→0.74%, 0.030→0.37%. Daha gevşek bir limit normal bir kötü günde stratejinin yerine karar verir; daha sıkı olanı neredeyse hiç çalışmaz.",
+      "olcum_tarihi": "2026-09-10",
+      "veri_sha256": "e3adb02c2a6a16396fe0c8d7fe5152fe9aef2506974546d1ae48681988382fea"
+    },
+    "islem_basina_risk": {
+      "dagilim": {},
+      "gozden_gecirme": "Pilot sonunda; yatırım ürünü büyütülürse ayrı bir K ile.",
+      "kaynak": "istah",
+      "metin": "K-132: ATR tabanlı işlem başı boyutlandırma bir stop mesafesi varsayar; sabit oranlı yatırımın stopu yoktur. 0,005 hedefi fiilen ~%11'e indirirdi (ölçüldü: 6,39×ATR aleyhte hareket). 0,05 tipik BTC 1h oynaklığında (ATR ≤ %1,5) 0,5 hedefini bağlamaz; volatilite eşiği (%2,05) üstünde alım zaten reddedilir.",
+      "olcum_tarihi": "2026-09-23",
+      "veri_sha256": ""
+    },
+    "ters_hareket_atr_carpani": {
+      "dagilim": {
+        "p50": 2.074267935206931,
+        "p75": 3.968858868083375,
+        "p90": 6.393418766106748,
+        "p95": 8.648355569287938,
+        "p99": 14.652750746281308,
+        "p99.5": 18.044134865294392,
+        "p99.9": 28.860743366977967
+      },
+      "gozden_gecirme": "",
+      "kaynak": "olculdu",
+      "metin": "24 barlık risk ufkunda aleyhte hareketin p90'ı (45,538 örnek). Geleneksel '2×ATR' varsayımı bu veride riski hafife alıyor: aynı ufukta medyan 2.07×ATR. Ufuk, Faz 4'te ölçülen medyan tutma süresi (27 saat ≈ 24 bar); v1'de borsada duran bir stop emri olmadığı için risk ufku tutma süresidir.",
+      "olcum_tarihi": "2026-09-10",
+      "veri_sha256": "e3adb02c2a6a16396fe0c8d7fe5152fe9aef2506974546d1ae48681988382fea"
+    },
+    "volatilite_esigi": {
+      "dagilim": {
+        "p50": 0.006837891373384851,
+        "p75": 0.009106069107023303,
+        "p90": 0.011900587961425497,
+        "p95": 0.013975800243911886,
+        "p99": 0.020466158208276002,
+        "p99.5": 0.024171046907899115,
+        "p99.9": 0.03137824897441537
+      },
+      "gozden_gecirme": "",
+      "kaynak": "olculdu",
+      "metin": "ATR(14)/fiyat dağılımının p99'ı (45,562 bar). Medyan 0.684%, yani eşik tipik volatilitenin 3.0 katı. Guard'ın amacı olağandışı çalkantıda işlem yapmamak; olağandışının tanımı veriden geliyor.",
+      "olcum_tarihi": "2026-09-10",
+      "veri_sha256": "e3adb02c2a6a16396fe0c8d7fe5152fe9aef2506974546d1ae48681988382fea"
+    }
+  },
+  "gunluk_zarar_limiti": 0.02,
+  "islem_basina_risk": 0.05,
+  "ters_hareket_atr_carpani": 6.3934,
+  "volatilite_esigi": 0.020466
+}

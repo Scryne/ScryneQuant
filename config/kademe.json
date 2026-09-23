@@ -1,6 +1,6 @@
 {
   "surum": 1,
-  "karar": "K-114, K-115",
+  "karar": "K-114, K-115, K-132",
   "kaynak": "docs/Faz-8-Hazirlik.md §2.1 (biçim); sayılar Scryne kararı ya da shadow/Kademe 1 ölçümü",
   "not": "Bu dosya live gate'in (execution/canli_kapi.py) okuduğu kademe tablosudur. null = karar verilmedi ya da ölçülmedi ve kapıyı KAPALI tutar. Sayı yazmak izni artırır: K-050/2 gereği her değişiklik sayısal kapı + elle onay + yeni K ister; gevşetme (sermaye artışı, eşik düşürme) bu dosyadan tek başına yapılamaz.",
   "risk_sermayesi_usdt": 100.0,
@@ -35,16 +35,16 @@
       "sermaye_usdt": 100.0,
       "azami_kayip_usdt": 10.0,
       "sembol": "BTCUSDT",
-      "strateji": "sma_kesisim",
+      "strateji": "sabit_oran",
       "asgari_gun": null,
       "asgari_emir": null,
       "drift_ust_siniri_bps": null,
       "pozisyon_farki": 0,
-      "not": "K-115 mikro canlı pilot: promotion'suz, alfa iddiası yok; amaç gerçek parayla execution/mutabakat/drift ölçümü. Tavanlar kodda sabit (canli_kapi.PILOT_*): sermaye ≤ 100, azami kayıp ≤ 10 USDT. Risk limitleri (config/risk.json) değişmedi; 100 USDT sermayede pozisyon ≈ 6-11 USDT.",
+      "not": "K-115 mikro canlı pilot, K-132 ile yatırım kuralına bağlandı: sabit_oran (hedef %50 BTC, bant ±5 puan, yeniden dengeleme). Promotion'suz; alfa/zamanlama iddiası yok. Tavanlar kodda sabit (canli_kapi.PILOT_*): sermaye ≤ 100, azami kayıp ≤ 10 USDT. Risk limitleri config/risk_profilleri.json → config/risk_yatirim.json (azami_maruziyet 0,5, islem_basina_risk 0,05; geri kalanı genel profille aynı).",
       "onay": {
         "gerekli": true,
-        "not": "Scryne 2026-09-22: '100 USDT, 10 USDT kayıpta dur'; 'ben direkt live olarak kullanmak istiyorum' (shadow adımı pilot için atlandı). Açılış yine `sq execution onayla` (TTY).",
-        "tarih": "2026-09-22"
+        "not": "Scryne 2026-09-22: '100 USDT, 10 USDT kayıpta dur'; 'ben direkt live olarak kullanmak istiyorum' (shadow adımı pilot için atlandı). Açılış yine `sq execution onayla` (TTY). | Scryne 2026-09-23 (K-132): 'ikinci yolla devam edelim' — hedef %50 BTC / %50 USDT sabit oranlı yatırım, pilotun stratejisi sabit_oran. Açılış yine `sq execution onayla`.",
+        "tarih": "2026-09-23"
       }
     },
     {

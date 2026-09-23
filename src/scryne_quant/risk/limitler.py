@@ -254,6 +254,28 @@ def yukle(yol: str | Path = VARSAYILAN_YOL) -> RiskLimitleri:
     return RiskLimitleri.model_validate_json(p.read_text(encoding="utf-8"))
 
 
+#: Strateji → risk profili eşlemesi (K-132). Yoksa her strateji genel profili kullanır.
+PROFIL_YOLU: Final = Path("config/risk_profilleri.json")
+
+
+def profil_yolu(strateji: str | None, kok: str | Path = ".") -> Path:
+    """Stratejinin risk limit dosyası. Eşleme config'dedir, stratejinin kodunda değil (K-037):
+    bir strateji kendine daha gevşek limit seçemez. Eşlemede yoksa genel profil."""
+    kok = Path(kok)
+    eslemeler = kok / PROFIL_YOLU
+    if strateji and eslemeler.is_file():
+        tablo = json.loads(eslemeler.read_text(encoding="utf-8"))
+        goreli = (tablo.get("strateji_profilleri") or {}).get(strateji)
+        if goreli:
+            return kok / goreli
+    return kok / VARSAYILAN_YOL
+
+
+def strateji_icin_yukle(strateji: str | None, kok: str | Path = ".") -> RiskLimitleri:
+    """`profil_yolu`ndaki limitler; dosya yoksa hata (varsayılana düşmez, K-032)."""
+    return yukle(profil_yolu(strateji, kok))
+
+
 def yaz(limitler: RiskLimitleri, yol: str | Path = VARSAYILAN_YOL) -> Path:
     """Limitleri dosyaya yazar. Anahtarlar sıralı — byte düzeyinde kararlı."""
     p = Path(yol)

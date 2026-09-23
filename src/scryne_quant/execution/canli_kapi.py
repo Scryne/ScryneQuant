@@ -174,12 +174,16 @@ def r8_sozlesmesi_kontrolu(b: KapiBaglami) -> Kontrol:
 
 
 def risk_config_kontrolu(b: KapiBaglami) -> Kontrol:
+    """Koşunun **kullanacağı** limit dosyası (K-132: strateji → profil eşlemesi) okunabiliyor
+    mu? Kanıt limit kimliği: onaylanan rapor profili de kapsar, profil değişirse onay düşer."""
+    yol = limitler_mod.profil_yolu(b.strateji, b.kok)
     try:
-        limitler = limitler_mod.yukle(b.yol(Path("config/risk.json")))
+        limitler = limitler_mod.yukle(yol)
     except (OSError, ValueError) as hata:
-        return Kontrol("risk_config", False, f"config/risk.json okunamadı: {hata}",
+        return Kontrol("risk_config", False, f"{yol} okunamadı: {hata}",
                        "risk limitleri yüklenmeden hiçbir mod açılmaz (K-032)")
-    return Kontrol("risk_config", True, f"limit kimliği {limitler.kimlik()[:16]}…",
+    return Kontrol("risk_config", True,
+                   f"{yol.as_posix()} · limit kimliği {limitler.kimlik()[:16]}…",
                    kanit=limitler.kimlik())
 
 

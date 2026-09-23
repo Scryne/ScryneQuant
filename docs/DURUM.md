@@ -5,6 +5,11 @@ type: durum
 ---
 # ScryneQuant — şu anki gerçek
 
+**Ürün (K-132, 2026-09-23):** sabit risk bütçeli sistematik yatırım — `sabit_oran`: hesabın %50'si BTC, %50 USDT,
+±5 puan bant dışında yeniden dengeleme; risk profili `config/risk_yatirim.json` (yalnız maruziyet tavanı 0,5 ve işlem
+başı risk 0,05 farklı). Mikro pilotun stratejisi bu kural; alfa/zamanlama iddiası yok. Geçmişte (2017-2026) azami
+düşüş %56 (tam BTC %84) — beklenti değil.
+
 **Hedef (K-125, 2026-09-23):** riski yönetilen sistematik yatırım — piyasayı yenmek değil, önceden
 tanımlı kurallarla maruziyet sağlayıp büyük düşüşlerde riski azaltmak. Promotion yolu: Risk Yönetimli
 Promotion Protokolü (`docs/research/Risk-Yonetimli-Protokol.md`); alfa yolu (12 kapı) aynen durur.
@@ -69,8 +74,8 @@ Yeni/değişen kapı **iki yönlü** doğrulanır (null + `tools/pozitif_kontrol
   zamanlanmış görev `ScryneQuant-Gosterim` (10 dk) ayakta tutar; durdurmak `runs/gosterim/DURDUR`.
   İkisi de 2026-09-23'te başladı (testnet 07:31, shadow 07:38 UTC; `BINANCE_API_KEY` salt okunura
   çekildi ve shadow yetki denetimi geçti).
-- **Mikro pilot (K-115/K-116):** 100 USDT, 10 USDT kayıpta SAFE_MODE, `sma_kesisim` BTCUSDT 1h,
-  alfa iddiası yok; K-122 hükümleri sağlanmadan açılmaz. Yordam `docs/Execution-Runbook.md` §4.3.
+- **Mikro pilot (K-115/K-116/K-132):** 100 USDT, 10 USDT kayıpta SAFE_MODE, `sabit_oran` BTCUSDT 1h (%50 BTC),
+  alfa iddiası yok; `urun-testnet` koşusu ürünü testnet'te gösteriyor; K-129 şartları (yeşil testler, 7 gün temiz gösterim, kill tatbikatı) ve elle onayla açılır. Yordam `docs/Execution-Runbook.md` §4.3.
 - **R8:** `r8-kiyas` gözlem koşusu, host-1, 2026-09-25 başlar, 14 gün, kriterler dondurulmuş
   (`config/r8_kriterler.json`). Operasyon kanıtı, alfa değil.
 - Kademe ≥ 2 (gerçek sermaye büyütme) promotion ister; tavan büyütmek kod + test + yeni K.

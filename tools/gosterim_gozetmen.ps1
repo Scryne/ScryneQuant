@@ -27,7 +27,9 @@ if (Test-Path (Join-Path $Gosterim "DURDUR")) { exit 0 }
 
 $Kosular = @(
     @{ Ad = "gosterim-testnet"; Arg = "execution calistir --mod testnet --kosu gosterim-testnet --strateji sma_kesisim --timeframe 1h --sermaye 100 --bekleme 20" },
-    @{ Ad = "gosterim-shadow";  Arg = "execution calistir --mod shadow --kosu gosterim-shadow --strateji sma_kesisim --timeframe 1h --sermaye 100 --bekleme 20" }
+    @{ Ad = "gosterim-shadow";  Arg = "execution calistir --mod shadow --kosu gosterim-shadow --strateji sma_kesisim --timeframe 1h --sermaye 100 --bekleme 20" },
+    # K-132: yatirim kurali (sabit_oran, %50 BTC) testnet'te; risk profili config/risk_profilleri.json.
+    @{ Ad = "urun-testnet";     Arg = "execution calistir --mod testnet --kosu urun-testnet --strateji sabit_oran --timeframe 1h --sermaye 100 --bekleme 20" }
 )
 
 $Calisan = Get-CimInstance Win32_Process -Filter "name='python.exe' or name='sq.exe'" |

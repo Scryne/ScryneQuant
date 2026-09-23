@@ -630,3 +630,24 @@ Her satır kararın özüdür. Ayrıntı, gerekçe ve ölçümler `docs/Kararlar
   - Promotion zinciri ilk kez gerçek RYPP kanıtıyla uçtan uca çalıştı ve FAIL'i kaydetti.
   - Kripto P3 hesabında bir birim hatası bulundu ve düzeltildi. Hükmü değiştirmiyor, ders kayıtta.
 - **Pilot:** Bu sonuç mikro pilotu etkilemiyor; pilot `sma_kesisim` ile ~2026-09-30'da açılabilir.
+
+---
+
+## 15. Ek (aynı gün): Ürün kararı — K-132
+
+- **Hedef:** Sabit risk bütçeli sistematik yatırım. Bot piyasayı tahmin etmiyor; kuralı disiplinle uyguluyor ve kaybı
+  kodda sınırlıyor.
+- **Ürün (`sabit_oran`):** Hesabın %50'si BTC, %50'si USDT. Oran %45-%55 dışına çıkınca yeniden dengeleniyor.
+- **Risk profili:**
+  - Ürüne özel ve config'den eşleniyor.
+  - Genel profilden yalnız iki alanda farklı: maruziyet tavanı 0,5, işlem başı risk 0,05.
+  - Diğer bütün limitler aynen; bir bekçi test bunu koruyor.
+- **Geçmiş (2017-2026, beklenti değil):**
+  - +%647, yıllık %24,8, azami düşüş %56.
+  - Karşılaştırma: tam BTC +%1.783, azami düşüş %84.
+- **Pilot:**
+  - 100 USDT, 10 USDT kayıp tavanı; tavan yaklaşık %20'lik bir BTC düşüşünde tetiklenir.
+  - Strateji `sabit_oran`.
+  - Ürün `urun-testnet` koşusunda testnet'te gösteriliyor.
+  - Açılış için işlem yetkili anahtar, hesapta ~100 USDT ve `sq execution onayla` gerekiyor.
+- **Sermaye büyütme:** Operasyonel promotion ölçütü ayrı bir K ile yazılana kadar kapalı.

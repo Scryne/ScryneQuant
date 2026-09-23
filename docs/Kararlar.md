@@ -6612,3 +6612,85 @@ bir program ve yeni bir IS araştırması ister.
 **Öğrenilen:**
 1. Kripto alt coin sepetinde tek piyasa trend kapısı, maruziyet düşürmenin ötesinde zamanlama değeri üretmedi.
 2. ABD sektörlerinde aynı kural düşüşü belirgin azaltıyor, ama sağlamlık (başlangıç tarihi, vintage) yetmiyor.
+
+---
+
+## K-132 — Hedef: sabit risk bütçeli sistematik yatırım; ilk ürün `sabit_oran` (%50 BTC, ±5 puan bant); pilot bu kurala bağlandı
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("tamam ikinci yolla devam edelim"; önerilen varsayılanlar: hedef
+%50 BTC / %50 USDT, bant ±5 puan) · **Tabi:** K-014, K-037, K-050, K-115, K-122, K-125, K-129, K-131 · **Kaynak:**
+`strategy/kutuphane/sabit_oran.py`, `config/risk_profilleri.json`, `config/risk_yatirim.json`, `risk/limitler.py`
+(`profil_yolu`), `trader/kurulum.py`, `execution/canli_kapi.py` (`risk_config_kontrolu`), `config/kademe.json`,
+`tools/gosterim_gozetmen.ps1`, `tests/unit/test_sabit_oran.py`, `tests/unit/test_execution_cli.py`
+
+### Gerekçe
+
+- **Arama tükendi.** 64 çekiliş (63 alfa + 1 RYPP) hiçbir zamanlama ya da seçim becerisini şanstan ayırt edemedi
+  (K-110, K-131).
+- **Riski azaltan tek ölçülmüş etken maruziyet.** K-131'de aday düşüşü maruziyeti azaltarak düşürdü, plaseboyu geçemedi.
+  Maruziyet bir beceri değil bir kuraldır ve bir bot kuralı kusursuz uygular.
+- **Hedefin netleşmesi.** K-125'in hedefi ("riski yönetilen sistematik yatırım") sabit risk bütçeli yatırım olarak
+  netleşiyor. Alfa ve RYPP yolları aynen durur ve yeni bir aday çıkarsa kullanılır.
+
+### Karar
+
+1. **Ürün (`sabit_oran`):**
+   - Portföyün `hedef` kesri (0,5) BTC'de, gerisi USDT'de.
+   - Maruziyet [0,45, 0,55] dışına çıkarsa hedefe dön; altındaysa `BUY`, üstündeyse `SELL`, mutlak hedef 0,5.
+   - Pozisyon yoksa `BUY`.
+   - Yön tahmini yok, indikatör yok, ısınma yok. Durum `ctx.pozisyon`dan okunur.
+   - Alfa ailesi değil: ayrı kayıt `YATIRIM`, hipotez defterine girmez.
+   - Look-ahead otomatik testine girdi (`test_look_ahead_genel.py`).
+2. **Risk profili (K-037/K-050 uyumlu):**
+   - Eşleme `config/risk_profilleri.json`'da, stratejinin kodunda değil; bir strateji kendine gevşek limit seçemez.
+   - `config/risk_yatirim.json` genel profilden **yalnız iki alanda** ayrılır:
+     - `azami_maruziyet` 0,30 → 0,50.
+     - `islem_basina_risk` 0,005 → 0,05. ATR stop boyutlandırması stopsuz bir yatırımda %50 hedefi ~%11'e indirirdi.
+   - Değişmeyenler: drawdown 0,20 (kill), günlük zarar %2, volatilite eşiği %2,05, cooldown.
+   - Bekçi test: başka bir alan değişirse kırılır.
+   - Canlı kapının `risk_config` kanıtı kullanılacak profilin limit kimliğidir; profil değişirse onay düşer.
+   - Genel `risk.json` ve araştırma yolu değişmedi.
+3. **Promotion ölçütü (yatırım ürünü):**
+   - Plasebo aranmaz, çünkü ürün zamanlama iddiası taşımaz.
+   - Aranan kanıt operasyoneldir:
+     - Risk sınırları hiç aşılmadı.
+     - Dengeleme yalnız bant dışında ve doğru yönde çalıştı.
+     - Mutabakat temiz.
+     - Maliyet modelle uyumlu.
+   - **Pilot (Kademe 1, K-115/K-129) promotion istemez.** Sermaye büyütme (Kademe ≥ 2) için bu operasyonel ölçütün
+     sayısal kapısı ve promotion zincirindeki karşılığı (üçüncü protokol) ayrı bir K ile yazılır. O yazılana kadar
+     Kademe ≥ 2 kapalıdır.
+4. **Pilot:**
+   - `config/kademe.json` Kademe 1 stratejisi `sma_kesisim` → `sabit_oran`, sembol BTCUSDT.
+   - Tavanlar kodda aynen: sermaye 100, kayıp 10 USDT.
+   - Açılış `sq execution onayla` ile elle.
+5. **Gösterim:**
+   - Mevcut `gosterim-testnet` ve `gosterim-shadow` (`sma_kesisim`) altyapı kanıtı olarak devam eder, 7 günlük saatleri
+     sıfırlanmaz. Sık emir ürettikleri için emir akışını daha iyi sınarlar.
+   - Gözetmene `urun-testnet` eklendi: `sabit_oran`, testnet, 100 USDT. Ürünü gerçek borsa akışında gösterir.
+
+### Risk karakteri (geçmiş, kapı değil; beklenti hiç değil)
+
+BTC 1h arşivi 2017-08-17 → 2026-09-19, 100 USDT, ölçülmüş maliyet modeli (taraf başı 10 + 5,3 bps):
+
+| | Toplam getiri | Yıllık | Azami düşüş | Dengeleme | Maliyet |
+| --- | --- | --- | --- | --- | --- |
+| **sabit_oran (%50, ±5)** | +%647 | %24,8 | **%56,2** | 100 | 2,66 USDT |
+| %50 al-tut (dengelemesiz, kayar) | +%892 | %28,8 | %72,6 | 1 | 0,08 |
+| %100 BTC tut | +%1.783 | %38,2 | %83,9 | 1 | 0,15 |
+
+**Okuma:**
+- Getiri tamamen BTC'nin geçmişteki yükselişinden geliyor ve geleceğe dair bir şey söylemez.
+- Ürünün yaptığı, düşüşü tam BTC'ye göre sınırlamak (%84 yerine %56). Bunun bedeli yükselişte daha az kazanmak.
+- **%56 da derin bir düşüş.**
+- **Pilotta:** 10 USDT kayıp tavanı, BTC yaklaşık %20 düşünce tetiklenir (%50 maruziyette hesabın %10'u) ve bot
+  SAFE_MODE'a geçer; çıkış elle yapılır. Bu pilot için doğru davranış.
+- **Sermaye büyütülürse:** Kullanıcı bu derinlikte düşüşü kabul etmeli ya da hedef kesri düşürülmeli. Bu, o gün
+  verilecek ayrı bir karar.
+
+### Bilinen sınırlar
+
+- Dengeleme emri 100 USDT'de ~5-6 USDT'dir, Binance'in asgari tutarının (5 USDT) hemen üstünde. Altına düşen emir
+  borsaya gitmeden reddedilir; bir sonraki barda yeniden denenir.
+- Çıkış (`SELL`) risk motorunda engellenmez, alım (`BUY`) günlük zarar ve volatilite kontrollerinden geçer. Sert bir
+  düşüş gününde "düşüşte alım" ertesi güne kayabilir.
