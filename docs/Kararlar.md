@@ -5975,3 +5975,29 @@ gerekçeli aile.
   paper/shadow ve embargo sonrası yeni veridir.
 - **Bütçe:** 2 çekiliş. Defter 62 → en çok 64. Çoklu test fotoğrafı program sonunda yeniden ölçülür (K-044); eşik
   bu karar içinde değiştirilmez.
+
+---
+
+## K-121 — `kripto_zs_trend` kapandı (1/2): h63 elendi; koşu commit'siz ağaçtan yapıldı (süreç hatası)
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Tabi:** K-009, K-044, K-072, K-110, K-119, K-120 · **Kaynak:**
+`runs/faz12/zs_trend_haftalik.json`, `docs/Arastirma-Programlari.jsonl` (kapanış satırı)
+
+### Ölçülen
+
+h63 `zs_trend_haftalik` (plato seçimi): IS Sharpe 0,967; **OOS Sharpe −0,535** vs kıyas (n = 10) 0,302; OOS getiri
+−%17,9, azami düşüş %29,2, 711 tur (994 gün); walk-forward 32 katman Sharpe 0,74, %62,5 pozitif; `pbo_zarar` 0,201,
+`perturbasyon_koruma` 0,611, en kötü rejim −0,63. K-119'un 12 kapısından 8'i kalıyor. Önceden yazılan karşı argüman
+(1) gerçekleşti: 2024 boğası ve 2025-26 düşüşü dönüş noktalarında testere. IS'teki zamanlama kanıtı (BTC 4 hafta
+t 2,64) OOS'ta risk-ayarlı getiriye dönüşmedi.
+
+### Karar
+
+1. **Elendi; program kapandı.** Durma kuralı gereği `zs_trend_aylik` harcanmaz. Zaman serisi trend (kripto evreni,
+   haftalık) tükenen aileler listesine eklendi (`docs/DURUM.md` §2).
+2. **Süreç hatası:** koşu K-120 değişiklikleri commit edilmeden başlatıldı; kayıt `dirty` mutlak engelini taşıyor
+   (K-009). Ekonomik sonuç etkilenmedi (kod değişikliği yalnız ızgara tanımıydı, sonradan commit `88c2a3d`), ama kayıt
+   promotion kanıtı olamaz. Kural hatırlatması `.claude/CLAUDE.md` haritasına yazıldı: **evren çekilişinden önce
+   commit.**
+3. Çoklu test fotoğrafı 63'e yeniden ölçülüyor (K-044). h63'ün OOS düşüşü %29 > %25 olduğu için null uygunluğunu
+   geçmez; eşiği yükseltmesi beklenmez.

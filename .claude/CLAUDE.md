@@ -16,6 +16,7 @@ bittiğinde `asama` alanını sırayla güncelle: `fikir` → `denetim` → `fin
 - `docs/Proje-Fikri.md` — ilk fikir (v1, tarihsel)
 - `docs/Proje-Fikri-v2.md` — **yürürlükteki vizyon** (2026-09-12, multi-asset platform)
 - `docs/Final-Dokuman.md` — nihai kararlar (teknoloji stack, mimari, riskler) — **v2**
+- `docs/DURUM.md` — **yürürlükteki durumun tek sayfası** (oturum başında önce bu)
 - `docs/ROADMAP-RESET.md` — kanonik yol haritası (R0-R12); `docs/Roadmap.md` tarihsel. Her faz "Durum" sütunuyla takip edilir, hook bunu
   otomatik okur
 - `DESIGN.md` (proje kökünde) — bu projeye özel frontend kimliği (accent palet, tipografi,
@@ -87,248 +88,52 @@ commit mesajında referans verilir. Karar silinmez, üzerine yenisi yazılır.
 
 ## Dosya haritası
 
-- `docs/Proje-Fikri.md` — Scryne'ın özgün konsept dokümanı (2627 satır, v1). Tarihsel kayıt;
-  çelişkide Final-Doküman kazanır.
-- `docs/Proje-Fikri-v2.md` — **2026-09-12'de gelen ikinci konsept dokümanı** (multi-asset
-  autonomous trading platform). Yürürlükteki vizyon; kapsamı genişletir, v1 çekirdeğini
-  geçersiz kılmaz (K-048).
-- `docs/Denetim-v2.md` — v2'nin denetimi: dokümanın istediğinin ne kadarı zaten var, ne
-  çelişiyor, ne eksik. K-048…K-054'ün kaynağı.
-- `docs/spikes/06-coklu-sembol-evren.md` — **çoklu sembol evreni ölçüldü** (K-053): 659 aday,
-  delist edilenlerin geçmişi indirilebiliyor, hayatta kalma yanlılığı ayda medyan %18,
-  ≈0,86 GB.
-- `docs/Denetim.md` — v1 fikir dokümanının denetimi: çelişkiler, eksikler, kapsam kesimleri.
-- `docs/Kararlar.md` — **karar günlüğü (K-001…).** "Neden böyle" sorusunun tek adresi.
-- `docs/Hipotez-Defteri.jsonl` — **kaç çekiliş yapıldığının kaydı (K-039).** Append-only,
-  sürüm kontrolünde. Faz 4'e her dönüşte denenecek hipotez **önce** buraya yazılır
-  (`sq lab hipotez-kaydet`); kaydedilmemiş bir hipotez `out_of_sample` aşamasını geçemez.
-  Sayı yalnızca kayıt değil, **eşiği belirleyen girdi**: K-044 düzeltmeyi ölçtü, yani
-  her yeni hipotez `oos_sharpe` kapısını yükseltiyor. **v2 ile (K-051):** defter tek ve
-  global kalır (program başına ikinci defter yok); her araştırma programı ön kayıtlı bir
-  **arama bütçesiyle** açılır; hipotez kimliğine evren tanımı, portföy yöntemi ve rejim
-  tanımı eklenir.
-- `sq lab tekrar-kontrol` (`src/scryne_quant/research/gizli_tekrar.py`) — **gizli tekrar çekiliş dedektörü
-  (K-061).** `hipotez-kaydet`ten önce koşturulur; Jev yeni gerekçeyi her önceki kayıtla
-  karşılaştırır, ≥0,80 uyarı / 0,50–0,80 incele. Engellemez, sayılmaz, işlem katmanına
-  girmez. Soru metni hash'le donmuş: değiştirmek yeni spike ister. `TYPESAFE_API_KEY` gerekir.
-- `docs/Faz-4-Donus-4-Coklu-Test.md` — **çoklu test düzeltmesi (K-044).** `oos_sharpe`
-  kapısı 0,50 → 1,02. Eşik defterdeki çekiliş sayısına bağlı; defter büyürse
-  `sq lab coklu-test` yeniden koşturulup `src/scryne_quant/research/kapilar.py`deki sabit güncellenmeli.
-- `docs/Faz-4-Donus-5-Tavan.md` — **tavan testi (K-045).** Maliyet sıfırken bile kapıları
-  geçen strateji yok; maliyet duvarı bağlayıcı kısıt değilmiş. Tek sembollü yönlü arama
-  **kapandı**. Yeni bir strateji/aile/parametre çekilişi yapılmayacak — istisna, ölçüyle
-  gerekçelendirilmiş belirgin biçimde farklı bir bilgi kaynağı. **v2 tam olarak bu
-  istisnayı kullanıyor** (K-048): cross-sectional, evren geneli türev ve makro programları
-  K-051'in program kaydı + arama bütçesiyle açılır, serbest çekilişle değil.
-- `docs/Final-Dokuman.md` — bağlayıcı kapsam, stack, mimari.
-- `docs/ROADMAP-RESET.md` — **kanonik yol haritası (2026-09-20, denetim döngüsü kabulü):**
-  R0-R12 + 10 paralel iz; hook bunu okur. R0-R4 kapalı (R4: K-093…K-097); sırada R5. `docs/Roadmap.md` — Faz 0-16, **tarihsel**.
-- `docs/audit/00-08` — denetim döngüsü (W0-W8 + Executive Summary); `docs/research/
-  Threshold-Policy.md` — eşik politikası (ölçülmüş / iştah / `DECISION REQUIRED`).
-- `docs/Roadmap.md` — Faz 0-16, her fazın somut bitti kriteri (tarihsel). Faz 0-8 v1 (8'i kapalı),
-  Faz 9-16 v2. **Faz 8 sıraya değil tetiklenmeye bağlıdır:** promotion'u geçen ilk strateji
-  çıktığında başlar.
-- `docs/Faz-8-Hazirlik.md` — **Faz 8 hazırlık (2026-09-20, kod yok, K yok).** Shadow adımı
-  (tanım, anahtar-yetkisiyle yapısal "gönderilmez" garantisi, `GolgeAdaptoru`/`GOLGE` durumu
-  tasarımı), `config/kademe.json` şeması, drift tanımı (`|paper − live|` işlem başına bps),
-  venue hukuki statü kayıt biçimi (**doldurulmadı**), tetik gelince iş sırası. Tetik yok.
-- `docs/Faz-11-Dogrulama-Raporu.md` — **Faz 11 ölçümleri (K-058):** K-054'ün dört kapısının
-  null kalibrasyonu (PBO'nun 0,5 referansı gerçek ızgarada geçersiz — null medyanı 0,237),
-  evren dayanıklılığının yapısal ölçümü, 38 çekilişin yeni kapılardaki durumu (0/38).
-- `docs/Arastirma-Programlari.jsonl` — **araştırma programı defteri (K-051/2, K-058).**
-  Append-only. Faz 12'de her program `sq lab program-kaydet` ile **önce** buraya açılır;
-  `sq lab hipotez-kaydet` artık `--program` istiyor ve bütçe dolunca reddediyor.
-- `src/scryne_quant/research/kapilar_v2.py` — K-054'ün dört kapısı ve eşikleri; `butun_kapilar` 12 kapının
-  tamamı (K-019 yedi + K-113 `oos_suresi` + K-054 dört). Eşikler ızgara şekline bağlı: yeni ızgara biçimi `tools/kalibrasyon_v2_kos.py` ile
-  yeniden ölçüm ister.
-- `docs/Faz-10-Coklu-Enstruman-Raporu.md` — **Faz 10 ölçümleri (K-057):** tek motor +
-  sarmalayıcı (bit düzeyinde eşitlik kanıtı), çok enstrümanlı Decimal referansı, evren
-  look-ahead, portföy düzeyi risk limitleri, VaR/CVaR + kapasite, evren kıyası, ölçek/bellek
-  (323 sembol × 32.857 bar = 945 MB), ve iki beklenmeyen bulgu (`sq lab dogrula` kırıktı;
-  `sonuc_hash` atlama sayacı listesi büyüdükçe kayıyordu).
-- `docs/Faz-9-Veri-Platformu-Raporu.md` — **Faz 9 ölçümleri (K-056):** arşivden 735 sembol,
-  µs geçişi, checksum, ızgaraya oturmayan barlar, kimlik kırılması eşikleri (12 bar / ln 10),
-  PIT evren tablosu ve yeniden ölçülen hayatta kalma yanlılığı (medyan %16,7).
-- **Veri sonu sabitleme / geri sarım (K-080).** Veri seti kimliği dosya hash'i + son bar;
-  depoyu uzatmak eski kayıtları yeniden üretilemez yapar. `sq data indir|arsiv-indir
-  --bitis-gun YYYY-MM-DD` depoyu o güne sabitler (sonrası atılır, uzatmak da geri sarmak da
-  aynı komut); `sq lab dogrula --geri-sar [--veri-sonu 'YYYY-MM-DD HH:MM']` reddedilen kaydı
-  depoyu kaydın `veri_son_ms`ine kırparak yeniden dener (ana depo değişir; `sq data indir`
-  geri getirir). Deney ve defter kayıtları `veri_son_ms` taşır (kimliğe girmez). Kanıt:
-  `tests/unit/test_geri_sarim.py`. Gerçek depo: 2026-09-09 10:00 UTC sınırı `e3adb02c…`yi
-  bayt düzeyinde geri veriyor; kalan uyuşmazlık K-057/6 hash algoritması (R1(b)).
-- **Kayıt yenileme (R1(b)).** `sq lab dogrula` uyuşmazlığı sınıflandırır: `yalniz_sonuc_hash`
-  (ekonomik alanlar birebir, K-057/6) ya da `semantik` (kod değişmiş, kayıt tarihsel).
-  `sq lab yenile <kayıt>` yalnız birinci sınıfı aynı girdiyle yeni kayda çevirir (etiket eski
-  kimlik + sebep; eski kayıt silinmez); semantik/aynı kaydı reddeder. Toplu durum:
-  `tools/r1b_kayit_durumu.py` → `runs/deneyler/tekrar-durumu.json` (ana depoya dokunmaz,
-  geçici kopyada geri sarar); rapor `docs/research/records/2026-09-20-R1b-kayit-durumu.md`.
-- `data/evren/` — arşivden inen çoklu sembol deposu (`.gitignore`'da). Sembol başına
-  `1h.parquet` + `1h.kaynak.json` (indirilen her arşiv dosyasının SHA-256'sı); `_evren/`
-  altında PIT evren tablosu ve kimlik kataloğu. `data/market/` REST verisiyle **karıştırılmaz**
-  (K-056/1).
-- `docs/Faz-1-Veri-Raporu.md`, `docs/Faz-4-Laboratuvar-Raporu.md`,
-  `docs/Faz-5-Risk-Raporu.md`, `docs/Faz-6-Paper-Raporu.md`,
-  `docs/Faz-7-Execution-Raporu.md` — faz sonu ölçüm raporları.
-  Sayılar buradan alınır, tahmin edilmez. Faz 6 **kapandı** (K-055): 30 günlük koşu kriteri
-  sürekli açık host gerektirdiği için Faz 8 ön koşuluna ve Faz 14'e taşındı.
-- **`config/esikler.json` — promotion eşiklerinin kaydı (K-113, Threshold-Policy §2 kabulü).** Ayar değil kayıt: kod
-  okumaz, `tests/unit/test_esikler.py` `kapilar.py`/`kapilar_v2.py` sabitlerini bu dosyaya ve her satırın K'sını
-  Kararlar.md'ye bağlar. Eşik değiştirmek = kod + JSON + yeni K. DECISION REQUIRED kalemleri girmez.
-  **`oos_sharpe`/`oos_is_orani` `oos_yillik_anlamli` ön koşullu; `oos_suresi` ≥ 569,67 gün** (fotoğraftaki en kısa
-  OOS; fotoğraf değişince `tools/r5_oos_suresi_olcum.py`). Kısa OOS'un yıllık Sharpe'ı kapı kararı üretmez.
-- `config/risk.json` — yürürlükteki risk limitleri; her limit `olculdu`/`istah` kaynağını
-  ve (iştahsa) gözden geçirme koşulunu taşır (K-033). `sq risk limitler` ile okunur.
-- `migrations/001_faz5.sql` — operasyonel PostgreSQL şeması. **Uygulanmadı ve bu artık bir
-  erteleme değil, bir ölçüm** (K-034, 2026-09-11): kararın kendi üç geri dönüş koşulu
-  ölçüldü, üçü de gerçekleşmemiş (tek yazıcı; audit 1.091 satır / eşik 10 M; `runs/`
-  3,7 MB / eşik 5 GB; tek sembol). Şema dondurulmuş, `risk/audit.py`'nin SQLite şemasıyla
-  hizalı tutuluyor ve testle korunuyor. Faz 8'e taşınan şey karar değil, bir sonraki ölçüm.
-- `src/scryne_quant/risk/promotion.py` — **promotion kaydı zincir hash'li ve audit'e bağlı
-  (K-082).** Her `gecmis` satırı `onceki_hash`/`satir_hash`/`audit_hash`; `yukle()` fail closed;
-  eski kayıt `sq promotion zincirle` ile açıkça göç eder (sessiz uyum yok); `degerlendir`/`onayla`
-  `--audit` (`runs/audit.sqlite`, `OlayTuru.PROMOTION`). `paper`/`live` açılışı bütünlük ister,
-  `gozlem`/`backtest` bakmaz (K-035). `runs/promotion/sma_kesisim.json` **göç edilmedi**.
-- `src/scryne_quant/oms/pozisyon.py` — **pozisyon mutabakatı** (K-046). Değişmez açılış
-  çıpası + defter akışı vs borsa bakiyesi; açıklanamayan farkta koşu durur. `sq testnet
-  pozisyon` ile okunur. Faz 8'in "açıklanamayan pozisyon farkı: sıfır" kriteri buraya
-  bakar.
-- `runs/testnet/poz-1.*`, `runs/testnet/lim-1.*` — K-046 ve K-047'nin ölçüm koşuları.
-  `.gitignore`'da; sayılar `docs/Faz-7-Execution-Raporu.md` §9'a kopyalandı.
-- `runs/testnet/<kosu>.sqlite` + `.json` — Faz 7 execution ölçümlerinin emir defteri ve
-  raporu. `sq testnet yuk` ve `sq testnet kesinti` üretir. `.gitignore`'da; sayılar
-  `docs/Faz-7-Execution-Raporu.md`'ye kopyalanır.
-- `runs/paper/<kosu>.sqlite` — bir paper/gözlem koşusunun **tamamı**: koşu kimliği,
-  kontrol noktası, fill defteri, koşu günlüğü ve risk audit'i tek dosyada. Koşuyu
-  yedeklemek tek bir dosyayı kopyalamak demek. `.gitignore`'da.
-- `src/scryne_quant/backtest/coklu_motor.py` — **çok enstrümanlı event loop (K-057).** Tek
-  sembollü `backtest/motor.py` bunun sarmalayıcısıdır; kendi döngüsü yok ve bu statik testle
-  korunuyor. Evren `ctx`i `strategy/evren.py`, hedef portföy sözleşmesi `strategy/hedef.py`,
-  portföy kurma `strategy/kurma.py`de.
-- `src/scryne_quant/backtest/fill.py` — **bid/ask fill + spread bileşeni (K-094, R4 Paket 2).**
-  Barlarda `bid_open`+`ask_open` varsa alış `ask×(1+s)`, satış `bid×(1−s)` (K-007 üstüne);
-  `Emir.kotasyon_fiyat`/`spread_maliyeti`; `Islem.spread`, `Metrikler.toplam_spread`,
-  `Sonuc.takvim` (seanslı takvimde `{id, icerik_hash}`) **yalnız varsa** kayda girer — kripto
-  yolu bit-aynı (HEAD kıyası K-094'te). FX Parquet → görünüm adaptörü ve FX kalite bayrağı
-  **yok** (R4 kalan).
-- `src/scryne_quant/common/finansman.py` — **finansman/rollover (K-095, R4 Paket 3).**
-  `Enstruman.finansman_modeli_id` → `config/finansman/<id>.json` (global yok, dosya yoksa hata;
-  bugün **dosya yok**, ölçülmüş swap oranı gelince yazılır). Rollover anları takvimden
-  (`Takvim.rollover_anlari`), bedel `CokluAdimci._finansman_isle`te bir kez nakitten; kayda
-  `finansmanlar`/`Islem.finansman`/`toplam_finansman` yalnız varsa. Finansman seanslı takvim
-  ister; nakit yetmezse koşu durur.
-- `src/scryne_quant/data/fx_gorunum.py` — **FXCM Parquet → motor adaptörü (K-096, R4 Paket 4).**
-  `fx_dogrula` FX kalite bayrağı (sözleşme ihlali hata, bozuk bar `suspect`, takvimli gap),
-  `fx_barlar` (orta OHLC, hacim NaN, bid/ask aynen), `fx_hizala`, haftalık üyelik, cfd kimlik
-  (`maliyet fxcm-fx`, `finansman fxcm-<pair>` — dosyaları **yok**, uydurulmaz).
-  `evren_kosu.fx_kur`; `sq evren backtest` FX tablosunu meta'dan tanır (`--fx-depo`).
-  Fixture `tests/fixtures/fx/` gerçek EURUSD 2024 h2-h8 (`tools/fx_fixture_uret.py`).
-- `src/scryne_quant/data/fx_kalibrasyon.py` + `sq data fx-kalibre` — **FX maliyet kalibrasyonu
-  (K-098, R5 Paket 1).** Kripto `kalibre_et` kalıbı, M1 orta fiyat; spread modele girmez (K-094),
-  rollover ±15 dk ayrı raporlu. `config/maliyet/fxcm-<pair>.json` **ölçülmüş** (21 çift, K-100/5; Active Trader koşulu); `config/finansman/fxcm-<pair>.json` **proxy** (`tur=proxy` → gecici, promotion
-  engeli; `tools/fx_finansman_proxy_yaz.py`). Rapor `docs/research/records/2026-09-21-R5-fx-kalibrasyon.json`.
-- `strategy/kutuphane/evren_esit_agirlik.py:FxEvrenEsitAgirlik` — **hacimsiz FX kıyası (K-099).**
-  PIT üyelerinin tamamı eşit ağırlık, 120 bar dengeleme, skor yok, hacim NaN kalır; kripto kıyası
-  iki kancayla aynı davranış. `sq evren backtest --strateji fx_evren_esit_agirlik --yeniden-dengele 120`.
-- **FX depo 21 çift × 55 hafta (K-100).** `data/fx/` pencere 2023-11-19..2024-12-13; `tools/
-  fx_depo_durumu.py` durum tablosu (tam/kısmi/sağlayıcı boşluğu/`bozuk`); `bozuk` = sağlayıcı 200
-  ama gövde kullanılamaz (kanıt `.bozuk.bin`, bar yok, evrende `var`). Maliyet **çift başına**
-  `config/maliyet/fxcm-<pair>.json` (21, ölçülmüş), finansman proxy 21 dosya (gecici).
-- **Finansman geçerlilik aralığı (K-101).** `FinansmanKaynagi.aralik` (`bas..bit`, bitiş hariç)
-  motorda denetlenir: ölçüm penceresi dışına taşan sembolde koşu başlamaz. FXCM tarihli rollover
-  arşivi yok (`docs/research/records/2026-09-21-R5-fx-rollover-kaynak.md`); 21 proxy geçici.
-- **FX araştırma hattı (K-102, R5 Paket 5).** `research/evren_degerlendirme.py` motor ayarlarını
-  veriden çözer (`motor_ayarlari`: çift başına maliyet/finansman + takvim; kripto `None` → bit-aynı);
-  sığmayan walk-forward/rejim "ölçülemedi" (küçültülmez). `tools/r5_fx_kos.py kaydet|kos|durum`
-  `fx_fiyat` çekilişleri (`izgaralar.FX_CEKILISLERI`, 12 nokta, K-101 penceresi `2023-11..2024-02`,
-  kontrol `fx_evren_esit_agirlik` 21 çift/0,2 brüt, rejim kıyası `EURUSD` kalibre değil).
-  `strategy/kutuphane/zaman_serisi.py:ZamanSerisiTrend` (`roc > 0` eşiği, yalnız uzun). Program
-  **kapalı** (3/3, h53-h55): 0/3 promotion; h54 tekrar gereksinimi taşıyor (yeni finansman aralığı
-  gelince aynı nokta, yeni çekiliş harcamadan). Rapor `docs/research/records/2026-09-21-R5-fx-alpha-1.md`.
-  Açık: `oos_sharpe` kapısı `yillik_anlamli`yı okumuyor (OOS 21,5 gün → Sharpe 6 anlamsız).
-  **h54 doğrulama (K-103, R6): elendi** — `tools/r6_h54_tekrar.py`, pencereler K-101 aralıklarından
-  (`fx_veri_kur(bitis_pazar=, semboller=)`), W2/W3 OOS negatif; rapor
-  `docs/research/records/2026-09-21-R6-h54-tekrar.md`.
-  **Ortalama dönüş ailesi (K-104, R6): kapalı, zayıf** — `strategy/kutuphane/ortalama_donus.py`
-  (`zaman_serisi_sapma`, `zaman_serisi_rsi`, eşikli), `izgaralar.FX_DONUS_CEKILISLERI`; h56 tekrar
-  gereksinimi taşıyor (W2/W3 sabit nokta, koşulmadı), h57 elendi. `tools/r5_fx_kos.py` artık çok
-  programlı (`FX_PROGRAMLAR`, ısınma tabanı 242). Rapor `docs/research/records/2026-09-22-R6-fx-ortalama-donus.md`.
-  **Oynaklık/risk ailesi (K-105, R6): kapalı, zayıf, tekrar gereksinimi yok** — `strategy/kutuphane/
-  oynaklik_filtre.py` (`fx_oynaklik_filtre_cift` / `_evren`: kıyasın üstüne `atr14/atr(p) > esik` → nakit,
-  elenen pay dağıtılmaz, eşik sonsuzken kıyasla bit-aynı), `izgaralar.FX_OYNAKLIK_CEKILISLERI` (eşikler
-  ölçülen dağılımdan), h58/h59 OOS'ta kontrolün −16/−21 USD altında; `1/σ` ağırlık ve düşük oynaklık seçimi
-  bu pencerede **yapısal olarak ölçülemez** (kapalı tur yok; `runs/fx/oynaklik-kaynak-olcumu.json`), çekiliş
-  harcanmadı. Rapor `docs/research/records/2026-09-22-R6-fx-oynaklik.md`.
-  **R6 kapandı (K-106, 2026-09-22):** `docs/research/records/2026-09-22-R6-kapanis.md` — h53-h59 kapılar 0/7,
-  tekrar eden OOS üstünlüğü 0/7; mevcut veri/dönem/hipotez kapsamında doğrulanmış FX alfası yok; dönüş
-  koşulları (tarihli finansman, ≥1 yıl veri, FX null, `oos_sharpe`↔`yillik_anlamli`) orada. Yeni çekiliş yok.
-  **R7(0) FX finansman penceresi — BLOCKED (K-107):** `docs/research/records/2026-09-22-R7-fx-finansman-penceresi.md`
-  — proxy ortak pencere 120 gün, en uzun çift 269, promotion'a açık 0 gün; gerçek tarihli rollover yok;
-  FX tetik `config/finansman/fxcm-<pair>.json` `tur=broker` ≥365 gün. R7 kripto evreninde yürür.
-  **R7(1) `portfoy_kurma` (K-108): kapalı, 0/2** — `strategy/kutuphane/evren_portfoy.py` (`evren_korelasyon_budama`:
-  `EvrenEsitAgirlik._korelasyon_icin` kancası + `kur(korelasyon=)`; `evren_oynaklik_hedefi`: yalnız düşüren
-  brüt ölçekleme), `izgaralar.PORTFOY_CEKILISLERI`; h60 elendi (ters çalıştı), h61 Sharpe-nötr elendi (7/11 kapı).
-  Rapor `docs/research/records/2026-09-22-R7-portfoy-kurma-1.md`.
-  **R7(2) `kesit_oynaklik` (K-109): kapalı, 0/1** — `tools/r7_sinyal_gucu.py` K-068 ön koşulu (yalnız IS IC; 11
-  sinyalden yalnız düşük oynaklık t ≈ 7), h62 OOS kıyas altı (0,287 vs 0,302; XRP'ye bağlı). Fiyat/hacim
-  kesit/ts sinyalleri: momentum/ters/sapma/hacim |t| < 2. Rapor `docs/research/records/2026-09-22-R7-kesit-oynaklik.md`.
-  **R7 kapandı (K-110):** `docs/research/records/2026-09-22-R7-kapanis-alfa-envanteri.md` — R6+R7 ortak bulgu,
-  tükenen aileler (tekrar denenmez), K-078/1 null-persentil ölçümüyle desteklendi, test edilmemiş kaynak
-  envanteri (A-H) + mimari uygunluk; yeni hat yok; tek adım Scryne'ın K-079/2 kararı (hayır → R8 kıyasla).
-- **Araştırma askıda (K-111): K-079/2 korunuyor, defter 62'de donmuş; yeni hipotez/çekiliş/hat/veri kaynağı yok.**
-  **R8 = operasyon koşusu** (`docs/research/records/2026-09-22-R8-paper-protokol.md`, kriterler
-  `config/r8_kriterler.json` dondurulmuş): `r8-kiyas` gözlem modu, host-1, 25 Eylül'de K-043 yordamıyla açılır,
-  14 gün, 10 alan PASS/FAIL; alfa/promotion kanıtı değil. Kapanış K-112.
-- **Execution / live yolu (K-114, R9 teknik kısmı):** `docs/Execution-Runbook.md` nasıl çalıştırılır.
-  `execution/mod.py` mod durum makinesi (DISABLED→PAPER→SHADOW→TESTNET→LIVE_PENDING_APPROVAL→LIVE,
-  `runs/execution/mod.json` zincirli; LIVE yalnız `sq execution onayla`, TTY, AST testli);
-  `execution/canli_kapi.py` live gate + `CanliYetki`'yi üreten tek yer (`exchange/yetki.py`, diske yazılmaz);
-  `execution/hat.py` onaylı niyet → engelleyici güvenlik → `EmirMotoru` → emir/pozisyon mutabakatı;
-  `exchange/paper_adaptoru.py` (K-004 fill), `exchange/golge.py` (shadow, `EmirDurumu.GOLGE`),
-  `exchange/canli.py` (canlı host — yalnız `cli/execution.py`, `trader/kurulum.py`, `execution/canli_kapi.py`
-  import edebilir, `test_canli_izolasyon.py`); `trader/` yürütücü + pano (`sq execution pano`, 8790).
-  `config/kademe.json` Faz-8-Hazirlik §6 kararları `DECISION REQUIRED` → live gate kapalı. R8 yolu bağlanmadı.
-  **R8 kriter hash'i CRLF biçiminin** (`canli_kapi.r8_kriter_sha256` satır sonunu normalize eder).
-- **Mikro canlı pilot (K-115):** `config/kademe.json` aktif Kademe 1 `"pilot": true` (100 USDT, `azami_kayip_usdt`
-  10, `sma_kesisim` BTCUSDT 1h); micro-live Kademe 2'ye kaydı (promotion ister). Pilot kapısı `strateji_onayi`/
-  `operasyon_r8`/`shadow_live_kaniti` yerine `pilot_siniri` + `pilot_hesap_degeri` (hesap toplamı 90-150 USDT,
-  salt okunur anahtarla). Risk modu `pilot` (`MOD_ESIGI` YOK, `Kanit` reddeder); hat `GuvenlikLimitleri.
-  azami_kayip_usdt` → SAFE_MODE (`Engel.KAYIP_TAVANI`). Venue kaydı `config/venue_statu.json` (arşiv
-  `data/hukuki/`). Testler `tests/unit/test_pilot.py`; açılış yordamı runbook §4.3. Alfa iddiası yok.
-  **K-116:** pilot onayı kademedeki `strateji` + `sembol`e bağlı (sembol kapı hash'inde; kurulum başka
-  sembolü reddeder). Funding carry güncel: son 12 ay BTC %3,4/yıl (IS %14,2), son 90 gün %6,5
-  (yeniden açılma işareti ≥ %8; sermayeye oranla ≈ DTB3) → Hat B bugün ekonomik değil (`tools/funding_guncel.py`,
-  `docs/research/records/2026-09-23-funding-carry-guncel.md`).
-- **Pozitif kontrol (K-117):** `tools/pozitif_kontrol.py` kapıların **gücünü** ölçer (bilinen üstünlüklü
-  kahin, gerçek motor/maliyet/kapılar). %65 günlük kahin (OOS Sharpe 2,06) K-019'dan 0/20; haftalık ufuk her
-  p'de 0/20 — stres (pp) ve `asgari_islem`/WF işlem şartı yapısal kusur. Motor bağımsız hesapla doğrulandı.
-  Yeni/değişen her kapı iki yönlü doğrulanır (null + güç). Kapı düzeltmeleri DECISION REQUIRED.
-  Kayıt `docs/research/records/2026-09-23-pozitif-kontrol.md`.
-- `sq evren backtest` — evren üzerinde çok enstrümanlı koşu. Varsayılan strateji bir
-  **kıyastır** (K-030), alfa adayı değil; buradan hipotez üretilmez (K-051).
-- `apps/web/` — dashboard SPA (K-036). Token'lar `DESIGN.md`'den üretiliyor
-  (`npm run tokens`), elle yazılmıyor.
-- `src/scryne_quant/jev/` — **Jev karar katmanı, yalnızca gölge/ölçüm (K-074).** `durum.py`
-  kanonik durum (betimleyici, `PENCERE_BAR`=1.200, 4h 1h'den kapanmış kovalarla; byte-identical
-  sızıntı testi), `sorular.py` donmuş soru seti (`SORU_SHA256` testli), `istemci.py` tek SDK
-  girişi + sır taraması, `karar.py` `JevKarari` (`extra=forbid`; olasılık + marj; fail-closed),
-  `defter.py` append-only zincir hash'li SQLite (`runs/jev/<kosu>.sqlite`), `golge.py` gölge
-  motoru/koşturucu (ayrı süreç, emir yok), `tekrar.py` replay → dondurma
-  (`data/semantik/jev/<turetim_id>/`, her kayıt `leak_riski`), `sonuc.py` ileri sonuç +
-  kalibrasyon. Bağımlılık yönü tek ve AST testli (`test_jev_izolasyon.py`): `jev` risk/
-  execution/oms'a ulaşamaz; işlem katmanı `jev`/`typesafe` import edemez. **Jev'den `Sinyal`
-  üreten fonksiyon yoktur** (K-067 aynen). CLI: `sq jev golge|durdur|durum|degerlendir|tekrar|dondur`.
-- `config/jev.json` — model pini, **kesim tarihi `null` (UNKNOWN, K-074/3)**, timeout/retry,
-  `yon_marji` 0,20, `bayat_ms`, **sonuç tanımları** (giriş `open[t+1]`, ufuk 1/4/24, MAE/MFE,
-  maliyet, isabet, kovalar) — koşudan önce sabit; değiştirmek yeni çekiliş (K-049/2).
-- `docs/Jev-Denetim.md` — spec ↔ repo denetimi (Existing/Partial/Missing/Conflicts) ve beş
-  bağlayıcı karar. `docs/Jev-Integration-Spec.md` — Scryne'ın spec'i (kaynak, değiştirilmez).
-  `docs/spikes/07-jev-durum.md` — 4h eşitliği, Jev tutarlılığı, kesim tarihi araştırması.
-- `.github/workflows/test.yml` — minimal CI (K-074/8): `uv run pytest -m "not network"` +
-  Jev sızıntı testleri adıyla.
-- `DESIGN.md` — arayüz kimliği. Token'lar Faz 6'da dolduruldu ve **normatif**: kesin
-  değerler yalnızca frontmatter'da, gerekçe Markdown gövdesinde. Doğrulama:
-  `npx --package @google/design.md -c "designmd lint DESIGN.md"`.
+**Önce `docs/DURUM.md` oku** — yürürlükteki durumun tek sayfası (doğrulanmış bileşenler, strateji
+durumu, 12 kapı, canlı/pilot, Jev, açık işler). Çelişkide DURUM.md ve en yeni K kazanır; faz
+raporları ve eski kayıtlar tarihseldir. Aşağıdaki liste yalnız **nereye bakılacağı**dır.
+
+**Karar ve sayım**
+- `docs/Kararlar.md` — karar günlüğü (K-001…); "neden böyle"nin tek adresi.
+- `docs/Hipotez-Defteri.jsonl` — çekiliş sayısı (K-039), append-only; her hipotez **önce**
+  kaydedilir. `docs/Arastirma-Programlari.jsonl` — program + arama bütçesi (K-051); açma/kapama
+  `sq lab program-kaydet|program-kapat`. Kayıttan önce `sq lab tekrar-kontrol` (Jev, K-061).
+- Evren çekilişi: `tools/faz12_evren_kos.py kaydet|kos|durum` (programlar `PROGRAM_AYARI`,
+  ızgaralar `research/izgaralar.py`). **Koşudan önce commit** (yoksa kayıt `dirty` taşır).
+- Defter büyüyünce çoklu test fotoğrafı (`docs/research/coklu-test-olcum.json`) yeniden ölçülür:
+  `tools/faz12_coklu_test.py --deneme 500 --seed 0` (bekçi `test_coklu_test.py` kırmızı kalır).
+
+**Kapılar ve ölçüm aletleri**
+- `research/kapilar.py` (K-019 + K-113), `research/kapilar_v2.py` (K-054; `butun_kapilar` 12);
+  eşik kaydı `config/esikler.json` (kod okumaz; `test_esikler.py` kod ↔ JSON ↔ K bağlar).
+- `tools/pozitif_kontrol.py` (kahin, gerçek veri), `tools/pozitif_kontrol_tam.py` (tek sembol
+  sentetik), `tools/pozitif_kontrol_evren.py` (evren sentetik) — kapı **gücü** (K-117…K-119).
+- `research/degerlendirme.py` (tek sembol), `research/evren_degerlendirme.py` (evren);
+  motorlar `backtest/motor.py` → `backtest/coklu_motor.py` (tek döngü, K-057).
+- `risk/promotion.py` — zincir hash'li promotion; `ZORUNLU_KAPILAR` (12) tam liste ister (K-118).
+
+**Veri**
+- `data/evren/` arşiv deposu (2017-08→, PIT tablo `_evren/27b7a16ed0ed.parquet`); `data/market/`
+  REST deposu (2021-06→), karıştırılmaz (K-056/1). Yeni tek sembollü hipotezler `data/evren`
+  kullanır (K-119/6). Veri sonu sabitleme/geri sarım: `--bitis-gun`, `sq lab dogrula --geri-sar` (K-080).
+- Türev/makro/FX depoları `data/turev/`, `data/makro/`, `data/fx/` (FX finansmanı proxy → promotion
+  engeli, K-101/K-107). Carry takibi `tools/funding_guncel.py`.
+
+**Canlı yol**
+- `docs/Execution-Runbook.md` — nasıl çalıştırılır (§4.3 pilot). Mod makinesi `execution/mod.py`,
+  live gate `execution/canli_kapi.py` (`CanliYetki`'yi üreten tek yer), hat `execution/hat.py`,
+  yürütücü `trader/yurutucu.py`, canlı host `exchange/canli.py` (import sınırı testli).
+- `config/kademe.json` (pilot Kademe 1: strateji + sembol bağlı), `config/risk.json`,
+  `config/venue_statu.json`. R8 protokolü `docs/research/records/2026-09-22-R8-paper-protokol.md`.
+
+**Jev**
+- `src/scryne_quant/jev/` — yalnız gölge/ölçüm (K-074); işlem katmanı `jev`/`typesafe` import
+  edemez (`test_jev_izolasyon.py`); Jev'den `Sinyal` üreten fonksiyon yok. `config/jev.json`.
+
+**Diğer**
+- `.github/workflows/test.yml` CI (ruff + `pytest -m "not network"`). `apps/web/` pano;
+  `DESIGN.md` normatif token'lar (`npx --package @google/design.md -c "designmd lint DESIGN.md"`).
+- Tarihsel: `docs/Proje-Fikri*.md`, `docs/Denetim*.md`, `docs/Roadmap.md`, `docs/Faz-*.md`,
+  `docs/audit/`, `docs/spikes/`.
 
 ## Uyarı
 
