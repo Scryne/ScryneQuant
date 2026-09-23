@@ -11,6 +11,9 @@
 #
 # Gözetmen yalnızca **başlatır**; hiçbir koşuyu öldürmez, SAFE_MODE kaldırmaz, mod yükseltmez.
 
+# K-138: host'ta pano ev ağına açılır (`-PanoHost 0.0.0.0`; güvenlik duvarı yalnız LocalSubnet).
+param([string]$PanoHost = "127.0.0.1")
+
 $ErrorActionPreference = "Stop"
 $Kok = Split-Path -Parent $PSScriptRoot
 $Sq = Join-Path $Kok ".venv\Scripts\sq.exe"
@@ -65,7 +68,7 @@ foreach ($ad in $Aktif) {
 # K-134: takip ekranı (http://127.0.0.1:8790, salt okunur). Çalışmıyorsa başlatılır.
 if (-not ($Calisan | Where-Object { $_ -match "execution pano" })) {
     $env:PYTHONIOENCODING = "utf-8"
-    Start-Process -FilePath $Sq -ArgumentList "execution pano" -WorkingDirectory $Kok -WindowStyle Hidden `
+    Start-Process -FilePath $Sq -ArgumentList "execution pano --host $PanoHost" -WorkingDirectory $Kok -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $Kok "runs\pano-8790.log") `
         -RedirectStandardError (Join-Path $Kok "runs\pano-8790.err") | Out-Null
     Yaz "başlatıldı: pano 8790"
