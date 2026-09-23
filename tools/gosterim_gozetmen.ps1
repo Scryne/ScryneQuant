@@ -61,3 +61,12 @@ foreach ($ad in $Aktif) {
         -RedirectStandardError (Join-Path $dizin "hata.log") | Out-Null
     Yaz "başlatıldı: aktif/$ad"
 }
+
+# K-134: takip ekranı (http://127.0.0.1:8790, salt okunur). Çalışmıyorsa başlatılır.
+if (-not ($Calisan | Where-Object { $_ -match "execution pano" })) {
+    $env:PYTHONIOENCODING = "utf-8"
+    Start-Process -FilePath $Sq -ArgumentList "execution pano" -WorkingDirectory $Kok -WindowStyle Hidden `
+        -RedirectStandardOutput (Join-Path $Kok "runs\pano-8790.log") `
+        -RedirectStandardError (Join-Path $Kok "runs\pano-8790.err") | Out-Null
+    Yaz "başlatıldı: pano 8790"
+}
