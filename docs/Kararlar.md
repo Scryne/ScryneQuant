@@ -5930,3 +5930,48 @@ veride (kahin + sentetik) doğrulandı, gerçek hipotezlere bakılmadan dondurul
 
 Çoklu test eşiği 1,04, 1,57 yıllık OOS'ta kalibre edildi. 9 yıllık seride yeniden ölçülmeli; uzun OOS'ta null daha
 dar olacağı için mevcut değer tutucu yönde kalır (K-050 yönü).
+
+---
+
+## K-120 — Araştırma askısı (K-111) kalkıyor; `kripto_zs_trend` programı açılıyor (bütçe 2)
+
+**Durum:** kabul · **Tarih:** 2026-09-23 · **Onay:** Scryne ("bu stratejiyi bulmanı istiyorum … projede vereceğin
+tüm kararları en iyi şekilde nasıl olacak ise o yönde kararlar ver") · **Değiştirir:** K-111/1 (askı) · **Tabi:**
+K-039, K-044, K-045, K-051, K-068, K-072, K-110, K-117, K-118, K-119
+
+### Gerekçe
+
+K-111 askıyı "62 çekiliş, 0 geçen, hat tükendi" kanıtına dayandırmıştı. K-117/K-118 o kanıtın kapı tarafını
+geçersiz kıldı: kapılar gerçek üstünlüğü de geçiremiyordu. Yavaş (haftalık+) stratejiler ise yapısal olarak hiç
+ölçülemiyordu. 62 çekilişin **OOS sonuçları** gerçek ölçümdür ve geçerliliğini korur (K-110: null persentili 0,50);
+tükenen aileler yeniden açılmaz. Açılan tek şey defterde **hiç çekilmemiş**, önceden ölçülemeyen bölgedeki en iyi
+gerekçeli aile.
+
+### Program `kripto_zs_trend`
+
+- **Mekanizma:** zaman serisi (mutlak) trend. Kripto PIT evreninde (`27b7a16ed0ed`) her haftalık dengelemede kendi
+  `pencere` barlık getirisi pozitif olan üyelerden en güçlü N tanesi eşit ağırlıkla taşınır; yükselen yoksa portföy
+  nakde döner (`ZamanSerisiTrend`, kod değişmedi).
+- **Kaynak farkı (K-045):** kesitsel momentum (h39-h42) üyeleri birbirine göre sıralar ve hep N isim taşır. Zaman
+  serisi trend, düşen piyasada nakde çekilerek **piyasa zamanlaması** yapar; bu bileşen kesitsel IC'de görünmez.
+  Kripto evreninde hiç çekilmedi (yalnız FX'te, kısa pencereyle: h53).
+- **Kaynak ölçümü (yalnız IS, OOS'a bakılmadı):** R7 işaret testi `roc720 > 0` üyeleri +0,87 pp/hafta (t 2,07,
+  iki yarı aynı işaret; 336: t 0,68; 1440: t −1,04). Haftalık zamanlama, IS sonu 2023-12-24: BTC 4 hafta t 2,64,
+  ETH 8 hafta t 2,09, ADA 4 hafta t 2,14, BNB 2 hafta t 1,95; XRP, LTC yok. **Orta düzey kanıt;** tek pencere ve
+  majörler taşıyor.
+- **Karşı argüman (sonucu görmeden):**
+  1. OOS (2024-01→2026-09) 2024 boğasını ve 2025-26 düşüşünü içeriyor. Trend takipçisi dönüş noktalarında
+     testere yer.
+  2. Kesitsel momentum aynı evrende kıyasın altında kaldı. Zamanlama bileşeni kıyasın düşüşünü azaltabilir ama
+     Sharpe'ı 1,04'e taşımayabilir (K-108'in "risk profilini değiştirir, risk-ayarlı getiriyi değil" bulgusu).
+  3. Altcoin'lerde IS zamanlama kanıtı yok.
+- **Izgara:** pencere {336, 720, 1440, 2160} × n {5, 10, 20}, `hedef_brut` 0,2. 12 nokta; K-119 kapılarının
+  doğrulandığı biçim.
+- **Çekilişler ve durma kuralı:**
+  1. `zs_trend_haftalik` (dengeleme 168).
+  2. `zs_trend_aylik` (720) yalnız haftalık çekiliş OOS'ta kıyası (n = 10 sabit, K-072) geçerse koşulur. Bu bir
+     takvim tekrarıdır, genişletme değil. Geçmezse program kapanır, aylık harcanmaz.
+- **Kapılar:** K-119'un 12 kapısı aynen. Tek OOS başarısı promotion değildir. Geçerse sıradaki adımlar
+  paper/shadow ve embargo sonrası yeni veridir.
+- **Bütçe:** 2 çekiliş. Defter 62 → en çok 64. Çoklu test fotoğrafı program sonunda yeniden ölçülür (K-044); eşik
+  bu karar içinde değiştirilmez.

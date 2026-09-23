@@ -83,6 +83,8 @@ PROGRAM_AYARI = {
     # R7(2) (K-109): kesitsel düşük oynaklık — Faz 12 kesitsel programının iskeleti ve kıyas kalıbı
     # (sabit yoğunluk 10, K-072: kıyas ayarlanmaz).
     "kesit_oynaklik": (False, ed.KESITSEL_PORTFOY, False),
+    # K-120: kripto zaman serisi trend — kesitsel iskelet, kıyas sabit yoğunluk 10 (K-072).
+    "kripto_zs_trend": (False, ed.KESITSEL_PORTFOY, False),
 }
 #: Ölçüm (24 GB makine): veri yüklü süreç ≈4,5 GB; tek koşunun tepesi in-sample +0,6 GB,
 #: tam pencere +0,9 GB. Ana süreç + 3 işçi in-sample'da ≈20 GB; tam pencere 2 işçiyle.

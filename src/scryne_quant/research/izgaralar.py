@@ -290,6 +290,17 @@ KESIT_OYNAKLIK_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]
     "r7_dusuk_oynaklik_aylik": ("kesitsel_dusuk_oynaklik", _evren(_ORTA_VADE, AYLIK)),
 }
 
+#: `kripto_zs_trend` programının çekilişleri (K-120): kripto PIT evreninde **zaman serisi**
+#: (mutlak) trend — üye kendi `pencere` barlık getirisi pozitifse taşınır, yükselen yoksa portföy
+#: nakde döner. Kesitsel momentumdan (h39-h42, sıralama) farkı piyasa zamanlaması. Pencereler
+#: 14/30/60/90 gün (2160 = 90 gün, Liu-Tsyvinski'nin 1-4 haftalık + klasik 3 aylık TSMOM ufku);
+#: yoğunluk Faz 12'nin (5, 10, 20). 12 nokta (4 × 3), K-119 kapılarının doğrulandığı biçim.
+_ZS_PENCERE: Final = (336, 720, 1440, 2160)
+ZS_TREND_CEKILISLERI: Final[dict[str, tuple[str, dict[str, Sequence[Any]]]]] = {
+    "zs_trend_haftalik": ("zaman_serisi_trend", _evren(_ZS_PENCERE, HAFTALIK)),
+    "zs_trend_aylik": ("zaman_serisi_trend", _evren(_ZS_PENCERE, AYLIK)),
+}
+
 #: `fx_fiyat` programının çekilişleri (R5, K-102): ilk FX alfa araştırması, üç aile, üç çekiliş.
 #:
 #: Pencereler **FX seans barında** (1h, 5x24 → 120 bar = 1 hafta, K-099): 24 = 1 gün, 48 = 2 gün,
@@ -374,6 +385,7 @@ PROGRAM_CEKILISLERI: Final[dict[str, tuple[str, ...]]] = {
     "kurma_evren": tuple(KURMA_CEKILISLERI),
     "portfoy_kurma": tuple(PORTFOY_CEKILISLERI),
     "kesit_oynaklik": tuple(KESIT_OYNAKLIK_CEKILISLERI),
+    "kripto_zs_trend": tuple(ZS_TREND_CEKILISLERI),
     "fx_fiyat": tuple(FX_CEKILISLERI),
     "fx_ortalama_donus": tuple(FX_DONUS_CEKILISLERI),
     "fx_oynaklik": tuple(FX_OYNAKLIK_CEKILISLERI),
@@ -385,7 +397,7 @@ def _TUM_CEKILISLER() -> dict[str, tuple[str, dict[str, Sequence[Any]]]]:
     değişsin diye ayrı: iki ayrı birleştirme listesi sessizce ayrışabilirdi."""
     return {**EVREN_CEKILISLERI, **TUREV_CEKILISLERI, **MAKRO_CEKILISLERI,
             **KONUMLANMA_CEKILISLERI, **KURMA_CEKILISLERI, **PORTFOY_CEKILISLERI,
-            **KESIT_OYNAKLIK_CEKILISLERI, **FX_CEKILISLERI,
+            **KESIT_OYNAKLIK_CEKILISLERI, **ZS_TREND_CEKILISLERI, **FX_CEKILISLERI,
             **FX_DONUS_CEKILISLERI, **FX_OYNAKLIK_CEKILISLERI}
 
 
