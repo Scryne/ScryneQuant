@@ -33,6 +33,8 @@ en yeni K kazanır; eski doküman tarihsel kayıttır.
   seçim/dönüş/oynaklık, zaman serisi trend (kripto evreni) — `docs/research/records/2026-09-22-R7-kapanis-alfa-envanteri.md` §3.
 - **Carry (Hat B):** funding son 12 ay BTC %3,4/yıl; bugün risksiz getirinin altında
   (`tools/funding_guncel.py`, işaret: son 90 gün ≥ %8).
+- **Vadeli long/short (K-123):** IS tavanında short bacak her pencerede risk-ayarlı getiriyi
+  düşürüyor (yalnız 2022'de kazanıyor) → vadeli hesap gerekçesi yok, short mimarisi yazılmaz.
 - **Açık kaynaklar:** on-chain, emir defteri, haber (ileriye toplama ister); envanter §5.
 
 ## 3. Kapılar (12, K-119)
