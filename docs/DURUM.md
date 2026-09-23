@@ -27,6 +27,10 @@ ve en fazla 1:10 kaldıraç.
 - **Yer: ikinci bilgisayar (host, 192.168.1.4), K-138.** Takip: **http://192.168.1.4:8790** (ev ağından).
   Ana makinede bot çalışmaz. Karne hostta: `sq aktif karne --hesap <ad>`.
 - Ek demo hesaplar (K-138, doğrulanmamış aday): `mt5-gece` (16:00→09:00 ET), `mt5-aydonumu` (ay sonu → 3. gün).
+- `kripto-carry` (K-139): funding carry, yön nötr; backtest 2020-26 +%6,6/yıl, azami düşüş −%0,7.
+- `vadeli-bollinger-3x`, `vadeli-donchian-2x` (K-140): kaldıraçlı vadeli günlük kırılım, long/short, %2 stop;
+  backtest 2024-26 +%57 / +%22 yıllık, en kötü düşüş −%42 / −%15. 10-20x veride her yapılandırmada hesabı sıfırlıyor.
+- Toplam 9 demo hesap. Host kod güncellemesi: `tools/host_guncelle.ps1 [-BotlariYenile]`.
 - Hostta MT5 terminali Integral demo hesabı **50545513**'e bağlı (yalnız fiyat kaynağı); terminal ve Windows
   oturumu açık kalmalı.
 - Kayıp freni: gün başına göre %3, hafta başına göre %8 düşüşte her şey kapanır.
