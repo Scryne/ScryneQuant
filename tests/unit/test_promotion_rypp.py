@@ -874,7 +874,7 @@ def test_gercek_defterin_kimlikleri_degismedi():
     from scryne_quant.research.hipotez import VARSAYILAN_YOL, Hipotez, HipotezDefteri
 
     alanlar = ("strateji", "timeframe", "veri_sha256", "izgara", "secim", "gerekce",
-               "program", "evren", "portfoy", "rejim")
+               "program", "evren", "portfoy", "rejim", "protokol")
     satirlar = HipotezDefteri(VARSAYILAN_YOL).tumu()
     assert len(satirlar) >= 63
     for satir in satirlar:

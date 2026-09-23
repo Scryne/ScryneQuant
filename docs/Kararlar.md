@@ -6486,3 +6486,69 @@ kapısı (K-115) R8 ve promotion istemiyordu; şart yalnız karar metnindeydi. K
    - Binance'ta işlem yetkili, IP kısıtlı, çekimsiz bir API anahtarı.
    - Hesapta ~100 USDT.
    - `sq execution preflight --hedef live --ag` geçtikten sonra `sq execution onayla`.
+
+---
+
+## K-130 — C fazı açıldı: `kripto_risk_kapisi` programı (bütçe 1), tek aday `evren_risk_kapisi`, RYPP ön kaydı
+
+**Durum:** kabul (ön kayıt; OOS'a bakılmadı) · **Tarih:** 2026-09-23 · **Onay:** Scryne ("nasıl devam etmemiz
+gerekiyor ise o şekilde devam et", K-128'de B kapandı) · **Tabi:** K-039, K-051, K-072, K-121, K-125, K-128 ·
+**Kaynak:** `src/scryne_quant/strategy/kutuphane/evren_risk_kapisi.py`, `src/scryne_quant/research/rypp_kosu.py`,
+`tools/rypp_kos.py`, `tests/unit/test_evren_risk_kapisi.py`, `tests/unit/test_rypp_kosu.py`
+
+### Aday (dondurulmuş, ızgara yok)
+
+| Alan | Değer |
+| --- | --- |
+| Kıyas | `evren_esit_agirlik`: PIT evren `27b7a16ed0ed`, hacimde ilk 10, eşit ağırlık, 168 barda (haftalık) dengeleme, brüt 1,0, aynı maliyet modeli |
+| Aday | Kıyasın kendisi + rejim kapısı: `BTCUSDT` kapanışı 2.400 barlık (100 gün) SMA'nın üstündeyse risk açık, değilse bütün pozisyonlar kapanır ve nakitte beklenir |
+| Kontrol | Her 24 barda bir (günde bir); karar bar kapanışında, dolum sonraki bar açılışında (K-004) |
+| Bilinmeyen rejim | Risk kapalı (tutucu) |
+| Parametre seçimi | Yalnız IS: rejim penceresi 50/100/200 gün, önceden yazılı kuralla 100 gün (aşağıda) |
+
+### Protokol
+
+- **Program:** `kripto_risk_kapisi`, bütçe **1**. Bu yüzden k = 1 ve P3 persentili 0,95 (K-128/2).
+- **Doğrulama:** RYPP. Kripto OOS'u, `pencereler` ile öteki evren çekilişleriyle aynı %30 kesim.
+  Bağımsız doğrulama K-128/4 eşlemesiyle yapılır:
+  - French 202607 (2004-06 → 2026-07).
+  - French 201705 (2004-06 → 2017-05).
+  - Rejim sinyali piyasa endeksi (Mkt-RF + RF) > 69 işlem günü SMA (100 takvim günü).
+  - Günde bir kontrol, 5 günde bir dengeleme, taraf başı 5 bps, gecikme 2 gün.
+- **Koşu:** `tools/rypp_kos.py kos`. Bir kez yapılır; temiz ağaç ve kayıtlı hipotez şart. FAIL ya da INCONCLUSIVE'de
+  aynı OOS'ta tuning yapılmaz, program kapanır.
+- **Plasebo:** Adayın zamanlama takvimi (`g_t`: risk açık mı) kıyasın bar getirisine uygulanır ve dairesel
+  kaydırılır. Aday kıyastan yalnız zamanlamayla ayrıldığı için doğru sıfır noktası budur.
+
+### IS ölçümü (yalnız in-sample; OOS'a bakılmadı)
+
+Pencere 2018-03-08 → 2023-12-30 (bar 4.802-55.678). Isınma ızgaranın en büyük ısınması, varyantlar aynı barlarda.
+Kayıt: `runs/rypp/kripto_risk_kapisi/is_izgara.json` ve `is_olcum.json`, commit `a01658c6`, temiz ağaç.
+
+| | Azami düşüş | CAGR | MAR | Düşüş azaltımı | Rejim değişimi |
+| --- | --- | --- | --- | --- | --- |
+| Kıyas (brüt 1,0) | %89,9 | −%7,9 | −0,09 | — | — |
+| Aday, 50 gün | %69,8 | %50,6 | 0,73 | %22,4 ✗ | 108 |
+| **Aday, 100 gün (seçilen)** | **%59,1** | **%59,9** | **1,01** | **%34,3 ✓** | 60 |
+| Aday, 200 gün | %71,8 | %39,4 | 0,55 | %20,2 ✗ | 36 |
+
+**Seçim kuralı (ölçümden önce yazılı):** IS düşüş azaltımı ≥ %25 (P1 eşiği) olanlar arasında en yüksek IS MAR; hiçbiri
+geçmezse program açılmazdı. Seçilen **100 gün (2.400 bar)**. İlk koşuda literatür standardı 200 gündü ve IS'te P1'i
+geçemedi (%20); bu yüzden OOS'a sokulmadı, ızgaraya genişletildi. Izgaranın tamamı hipotez kimliğinde. Not: ilk
+ızgara koşusu commit'siz ağaçtaydı ve IS penceresi seçilen adayın ısınmasına bağlıydı; iki sorun düzeltildi ve
+temiz koşu ilk ölçümle birebir aynı çıktı.
+
+### Önceden yazılan karşı argümanlar
+
+1. **Testere riski.** h63 (üye başına trend) OOS'ta 2024 boğası ve 2025-26 düşüşünün dönüşlerinde testereye yakalandı
+   (K-121). 100 günlük tek piyasa kapısı daha yavaştır ama aynı dönüşlerde geç çıkıp geç girebilir. Bu durumda P3 ya da
+   P2 kalır.
+2. **Hindsight.** Kripto OOS'undaki düşüş biliniyor (B-3). Pencere yalnız IS'te seçildi.
+   Plasebo ve iki vintage bağımsız veri bu avantajı dengelemek için var.
+3. **Maruziyet düşürme.** Aday nakitte kaldıkça düşüşü kendiliğinden azaltır. P1 bu yüzden tek başına kanıt değil;
+   asıl kapı P3'tür.
+4. **Brüt 1,0.** Araştırma motoru risk motorunu koşmaz (K-073). Canlıda drawdown limiti (0,20) ve maruziyet tavanı
+   (0,30/enstrüman) ayrıca bağlar. PASS gelse bile `risk_incelemesi` bunu ölçer.
+5. **Parametre duyarlılığı.** IS ızgarası monoton değil: komşu pencereler (50 ve 200 gün) P1'i geçemiyor. Sonuç
+   pencereye duyarlı olabilir. RYPP'nin R1 (başlangıç tarihi) ve R2 (alt dönem) koşulları ile bağımsız veri bunu
+   kısmen sınar. Canlıya geçmeden önce ayrıca not edilmeli.
