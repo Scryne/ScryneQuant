@@ -39,6 +39,18 @@ audit çapraz kontrolü yakalar (`audit_ile_dogrula`).
 bağımlı olması, bir deney betiğindeki değişikliğin canlı davranışı etkileyebilmesi demek.
 Bu yüzden kapı sonucu buraya **veri olarak** geliyor (`Kanit.kapi_sonucu`); değerlendirmeyi
 CLI yapıyor ve sonucu taşıyor. Bağımlılık yönü testle korunuyor.
+
+**İki protokol, tek zincir (K-126).** `Kanit.protokol` yalnızca `out_of_sample` aşamasının
+**ekonomik/istatistiksel ölçütünü** seçer: `alfa` → `ZORUNLU_KAPILAR` (K-119'un 12 kapısı),
+`rypp` → `RYPP_KOSULLARI` (K-125'in 13 koşulu) + B-3 bağımsız doğrulaması. Geri kalan her şey
+iki protokolde **aynı** ve protokolden bağımsız sistem değişmezidir: yeniden üretilebilirlik ve
+temiz ağaç (`backtest`), veri kalitesi ve maliyet modeli (`kalite_kontrol`), K-039 çekiliş sayımı
+(`hipotez_sirasi`, iki yolda da `out_of_sample`ın ön şartı), risk motoru altında düşüş
+(`risk_incelemesi`), 30 gün paper, `elle_onay`. RYPP bu aşamaların hiçbirini atlamaz. Kanıt
+kurulurken protokoller karıştırılamaz (alfa kanıtı RYPP sonucu, RYPP kanıtı alfa kapı sonucu
+taşıyamaz); `out_of_sample`ı bir protokolle geçen strateji sonraki aşamalarda başka protokolün
+kanıtıyla ilerletilemez. Protokol her satırın `kanit`ine, dolayısıyla zincir hash'ine ve audit'e
+girer; K-126 öncesi satırlarda alan yok ve anlamı `alfa`dır.
 """
 
 from __future__ import annotations
@@ -67,6 +79,44 @@ ZORUNLU_KAPILAR: Final[frozenset[str]] = frozenset({
     "asgari_islem", "max_drawdown", "stres_dayanikliligi",
     "pbo", "parametre_perturbasyonu", "rejim_kararliligi", "evren_dayanikliligi",
 })
+
+
+class Protokol(StrEnum):
+    """Kanıtın hangi promotion protokolüne göre üretildiği (K-126)."""
+
+    ALFA = "alfa"
+    """K-019/K-113/K-054 → K-119: 12 kapı. K-126 öncesi bütün kanıtlar bu protokoldür."""
+
+    RYPP = "rypp"
+    """K-125: Risk Yönetimli Promotion Protokolü (`research/risk_protokolu.py`)."""
+
+
+#: RYPP koşulları, `research.risk_protokolu.degerlendir`in karar sırasıyla (K-125). `risk/`
+#: `research/`i import edemediği için kopya; eşitliğini `test_promotion_rypp.py` korur.
+#: Yeterlilik: biri sağlanmazsa INCONCLUSIVE. Nokta: biri kalırsa FAIL. Belirsizlik: nokta
+#: koşulları geçtiği hâlde bootstrap yetmezse INCONCLUSIVE.
+RYPP_YETERLILIK: Final[tuple[str, ...]] = ("oos_suresi", "kiyas_epizot", "plasebo_var", "stres_var")
+RYPP_NOKTA: Final[tuple[str, ...]] = (
+    "P1_dusus_azaltimi", "P2a_getiri_korunumu", "P2b_verimlilik", "P3_plasebo",
+    "S1_maliyet_stresi", "R1_baslangic", "R2_alt_donem", "R3_tek_olay",
+)
+RYPP_BELIRSIZLIK: Final[tuple[str, ...]] = ("B_bootstrap",)
+RYPP_KOSULLARI: Final[frozenset[str]] = frozenset(
+    (*RYPP_YETERLILIK, *RYPP_NOKTA, *RYPP_BELIRSIZLIK)
+)
+
+#: K-125 eşiklerinin değerleri. Kanıt `esikler` alanında bunlardan farklı bir değer taşıyorsa
+#: (gevşetilmiş kodla üretilmiş) kabul edilmez. Kopya; `risk_protokolu.ESIKLER` ile eşitliğini
+#: test korur.
+RYPP_ESIKLER: Final[dict[str, float]] = {
+    "asgari_oos_yil": 2.0, "asgari_epizot": 2, "asgari_dd_azaltim": 0.25,
+    "asgari_getiri_koruma": 0.5, "alfa": 0.05, "asgari_baslangic_orani": 0.70,
+    "epizot_iyilesme": 0.90, "asgari_bootstrap_p": 0.80,
+}
+
+#: Üç değerli hüküm → RYPP etiketi. `True` PASS, `False` FAIL, `None` INCONCLUSIVE;
+#: `AsamaSonucu.gecti` ile aynı anlam ("ölçülemedi/karara yetmedi" ≠ "kaldı" ≠ "geçti").
+RYPP_ETIKET: Final[dict[bool | None, str]] = {True: "PASS", False: "FAIL", None: "INCONCLUSIVE"}
 
 
 class Asama(StrEnum):
@@ -199,13 +249,49 @@ class Kanit:
     olurdu — yani K-018'in "eşik esnetilemez" kuralı bir mod adı yazarak delinirdi.
     """
 
+    protokol: Protokol = Protokol.ALFA
+    """Kanıtın promotion protokolü (K-126). Varsayılan `alfa`: K-126 öncesi davranışın aynısı
+    ve en katı yol (12 kapının tamamını ister); varsayılan hiçbir ölçümü dolu göstermez."""
+
+    rypp_sonucu: dict[str, Any] | None = None
+    """RYPP değerlendirmesi (`RyppSonucu.sozluk()` biçimi): donmuş adayın OOS koşusu. Yalnız
+    `rypp` kanıtında. Hüküm satırlardan **yeniden türetilir** (`rypp_hukmu`)."""
+
+    bagimsiz_dogrulama: dict[str, Any] | None = None
+    """B-3 bağımsız doğrulaması (K-125 §5): aynı donmuş kuralın, OOS'una bu projede hiç
+    bakılmamış veride RYPP değerlendirmesi + `veri_sha256`. Yoksa RYPP PASS üretilemez."""
+
     def __post_init__(self) -> None:
-        """Kanıtın **kurulmasını** engelleyen tek kontrol. Değerlendirmeye bırakılmadı.
+        """Kanıtın **kurulmasını** engelleyen kontroller. Değerlendirmeye bırakılmadı.
 
         `_paper` içinde `gecti=False` döndürmek de bir reddetme olurdu, ama farklı bir
         şey: "ölçüldü ve yetmedi" ile "bu ölçüm bu koşudan alınamaz" aynı şey değil.
         İkincisi bir kanıt hatasıdır ve sessizce bir kapı sonucuna dönüşmemeli (K-035/2).
+        Protokol karışması ve kendi içinde tutarsız RYPP kanıtı da bu türdendir (K-126).
         """
+        try:
+            object.__setattr__(self, "protokol", Protokol(self.protokol))
+        except ValueError:
+            raise PromotionHatasi(f"bilinmeyen promotion protokolü: {self.protokol!r}") from None
+        if self.protokol is Protokol.ALFA and (
+            self.rypp_sonucu is not None or self.bagimsiz_dogrulama is not None
+        ):
+            raise PromotionHatasi(
+                "alfa kanıtı RYPP değerlendirmesi taşıyamaz: RYPP sonucu alfa kapısı yerine "
+                "geçmez (K-126, protokol karışması)"
+            )
+        if self.protokol is Protokol.RYPP:
+            if self.kapi_sonucu is not None:
+                raise PromotionHatasi(
+                    "RYPP kanıtı alfa kapı sonucu taşıyamaz: RYPP yolu alfa kapılarını "
+                    "değerlendirmez, alfa kapıları RYPP koşulu sayılmaz (K-126, protokol karışması)"
+                )
+            # Yapısal hatalar (bilinmeyen koşul, farklı eşik, raporlanan durum ≠ satırlar,
+            # ana OOS verisiyle aynı "bağımsız" veri) burada, kurulurken patlar.
+            if self.rypp_sonucu is not None:
+                rypp_hukmu(self.rypp_sonucu)
+            bagimsiz_hukmu(self.bagimsiz_dogrulama, self.veri_sha256)
+
         if self.paper_gun is None and self.paper_kesinti is None:
             return
         if self.paper_mod != "paper":
@@ -215,6 +301,24 @@ class Kanit:
             )
 
     def sozluk(self) -> dict[str, Any]:
+        """Satıra (dolayısıyla zincir hash'ine ve audit'e) giren kanıt özeti. `protokol` her
+        satırda; RYPP'ye özgü alanlar yalnız RYPP kanıtında — alfa satırının geri kalanı K-126
+        öncesiyle aynı. Tam RYPP gövdeleri hash'leriyle bağlanır (kanıt dosyası sonradan
+        değiştirilirse fark edilir)."""
+        d = self._alfa_sozlugu()
+        d["protokol"] = str(self.protokol)
+        if self.protokol is Protokol.RYPP:
+            r, b = self.rypp_sonucu, self.bagimsiz_dogrulama
+            d |= {
+                "rypp_durum": None if r is None else r.get("durum"),
+                "rypp_hash": None if r is None else nesne_hash(r),
+                "bagimsiz_durum": None if b is None else b.get("durum"),
+                "bagimsiz_veri_sha256": None if b is None else b.get("veri_sha256"),
+                "bagimsiz_hash": None if b is None else nesne_hash(b),
+            }
+        return d
+
+    def _alfa_sozlugu(self) -> dict[str, Any]:
         return {
             "config_hash": self.config_hash,
             "sonuc_hash": self.sonuc_hash,
@@ -256,6 +360,127 @@ class AsamaSonucu:
 ASGARI_PAPER_GUN: Final = 30.0
 
 
+def _rypp_satirlari(sonuc: dict[str, Any], ne: str) -> dict[str, Any]:
+    """RYPP gövdesinin koşul satırları `{ad: gecti}`. Yapısal hata → `PromotionHatasi`."""
+    esikler = sonuc.get("esikler")
+    if not isinstance(esikler, dict) or {
+        a: (v or {}).get("deger") for a, v in esikler.items()
+    } != RYPP_ESIKLER:
+        raise PromotionHatasi(
+            f"{ne}: eşikler yok ya da K-125'tekinden farklı — RYPP eşiği gevşetilemez, farklı "
+            "eşikle üretilmiş kanıt kabul edilmez (K-125)"
+        )
+    satirlar: dict[str, Any] = {}
+    for s in sonuc.get("kosullar") or []:
+        ad = (s or {}).get("ad")
+        if ad not in RYPP_KOSULLARI:
+            raise PromotionHatasi(f"{ne}: bilinmeyen koşul {ad!r} — protokol karışması (K-126)")
+        if ad in satirlar:
+            raise PromotionHatasi(f"{ne}: {ad} koşulu iki kez var — hangisinin kanıt olduğu "
+                                  "tahmin edilmez")
+        satirlar[ad] = s.get("gecti")
+    return satirlar
+
+
+def _gecti(v: Any) -> bool:
+    return v is True
+
+
+def _kaldi(v: Any) -> bool:
+    return v is False
+
+
+def rypp_hukmu(sonuc: dict[str, Any], *, ne: str = "RYPP kanıtı") -> tuple[bool | None, str]:
+    """RYPP değerlendirmesinin hükmü, raporlanan `durum`a değil **satırlara** bakarak (K-126).
+
+    `True` PASS, `False` FAIL, `None` INCONCLUSIVE. Sıra `risk_protokolu.degerlendir`inkiyle
+    aynı: (1) yeterlilik satırlarından biri yok ya da geçmedi → INCONCLUSIVE; (2) nokta
+    koşullarından biri **kaldı** → FAIL; ölçülmemiş nokta koşulu → INCONCLUSIVE; (3) bootstrap
+    yok ya da geçmedi → INCONCLUSIVE; (4) hepsi → PASS. Yalnız `gecti is True` geçer: eksik
+    satır, `None`, `1`, `"true"` geçmiş sayılmaz. Türetilen hüküm raporlanan `durum`la
+    uyuşmazsa kanıt kendi içinde tutarsızdır → `PromotionHatasi` (fail closed).
+    """
+    satirlar = _rypp_satirlari(sonuc, ne)
+    yetersiz = [a for a in RYPP_YETERLILIK if not _gecti(satirlar.get(a))]
+    kalan = [a for a in RYPP_NOKTA if _kaldi(satirlar.get(a))]
+    olcusuz = [a for a in RYPP_NOKTA
+               if not (_gecti(satirlar.get(a)) or _kaldi(satirlar.get(a)))]
+    hukum: bool | None
+    if yetersiz:
+        hukum, gerekce = None, f"veri yeterliliği sağlanmadı: {', '.join(yetersiz)}"
+    elif kalan:
+        hukum, gerekce = False, f"kalan koşul(lar): {', '.join(kalan)}"
+    elif olcusuz:
+        hukum, gerekce = None, f"ölçülmemiş koşul(lar): {', '.join(olcusuz)}"
+    elif not _gecti(satirlar.get("B_bootstrap")):
+        hukum, gerekce = None, "bootstrap güven aralığı karara yetmiyor ya da ölçülmedi"
+    else:
+        hukum, gerekce = True, f"{len(RYPP_KOSULLARI)} koşulun tamamı geçti"
+    rapor = sonuc.get("durum")
+    if rapor != RYPP_ETIKET[hukum]:
+        raise PromotionHatasi(
+            f"{ne} kendi içinde tutarsız: raporlanan durum {rapor!r}, satırlardan türeyen "
+            f"{RYPP_ETIKET[hukum]} (fail closed)"
+        )
+    return hukum, gerekce
+
+
+def bagimsiz_hukmu(
+    bagimsiz: dict[str, Any] | None, ana_veri_sha256: str | None
+) -> tuple[bool | None, str]:
+    """B-3 bağımsız doğrulamasının ana hükme katkısı (K-125 §5, K-126).
+
+    Kripto OOS'una 18 çekiliş baktı; o pencere risk-off tasarımı için kirli. K-125 §5: "PASS
+    için bağımsız veride en az FAIL olmamalı". Buradan:
+
+    - **Yok → `None` (INCONCLUSIVE), FAIL değil.** Donmuş aday bağımsız veride ölçülmedi;
+      yanlışlanmadı da. FAIL "ölçüldü ve kaldı" demektir ve K-125 §5.3'e göre yeni araştırma
+      döngüsü açtırır; burada ölçülmüş bir başarısızlık yok, eksik kanıt var. INCONCLUSIVE'in
+      tanımı (eşik gevşemez, veri beklenir) B-3'ün durumunun ta kendisi.
+    - Kimliği (`veri_sha256`) yok → `None`: bağımsızlık kanıtlanamıyor. Ana OOS verisiyle aynı
+      kimlik → `PromotionHatasi`: kirli veri bağımsız sayılamaz.
+    - Bağımsız veride FAIL → `False`.
+    - Bağımsız veride **veri yeterliliği** sağlanmadıysa → `None`. "En az FAIL olmamalı"
+      kuralı yeterliliği sağlanmamış bir INCONCLUSIVE'e uygulanırsa, çok kısa bir seri vererek
+      B-3 boşa düşürülebilirdi; yetersiz veri "veri yok"la aynıdır.
+    - Nokta koşullarından biri ölçülmemişse → `None` (aynı gerekçe: ölçülmemiş = FAIL-olmadığı
+      gösterilmemiş).
+    - Yeterli veride, bütün nokta koşulları ölçülüp geçmişken PASS ya da (yalnız bootstrap
+      belirsizliğinden) INCONCLUSIVE → `True`: K-125 §5'in "FAIL olmamalı" şartı sağlandı.
+    """
+    if bagimsiz is None:
+        return None, ("B-3: bağımsız doğrulama yok — kripto OOS'u kirli (18 çekiliş), tek başına "
+                      "PASS üretemez")
+    veri = bagimsiz.get("veri_sha256")
+    if not veri:
+        return None, "B-3: bağımsız verinin kimliği (veri_sha256) yok; bağımsızlık kanıtlanamıyor"
+    if veri == ana_veri_sha256:
+        raise PromotionHatasi(
+            "B-3: bağımsız doğrulama ana OOS ile aynı veride (veri_sha256 aynı) — kirli veri "
+            "bağımsız sayılmaz"
+        )
+    hukum, gerekce = rypp_hukmu(bagimsiz, ne="B-3 bağımsız doğrulama")
+    if hukum is False:
+        return False, f"B-3 bağımsız veride FAIL ({gerekce})"
+    satirlar = _rypp_satirlari(bagimsiz, "B-3 bağımsız doğrulama")
+    if not all(_gecti(satirlar.get(a)) for a in RYPP_YETERLILIK):
+        return None, f"B-3: bağımsız veri yetersiz ({gerekce}); yetersiz veri yok sayılır"
+    if not all(_gecti(satirlar.get(a)) for a in RYPP_NOKTA):
+        # Ölçülmemiş nokta koşulu da "FAIL değil" sayılamaz: P3'ü hiç koşmadan bağımsız
+        # doğrulamayı geçmek mümkün olurdu. Tolere edilen tek belirsizlik bootstrap'tır.
+        return None, f"B-3: bağımsız veride ölçülmemiş koşul ({gerekce})"
+    return True, f"B-3 bağımsız veride {RYPP_ETIKET[hukum]} (FAIL değil, K-125 §5)"
+
+
+def _ve(*hukumler: bool | None) -> bool | None:
+    """Üç değerli VE: bir `False` → `False`; yoksa bir `None` → `None`; hepsi `True` → `True`."""
+    if any(h is False for h in hukumler):
+        return False
+    if any(h is None for h in hukumler):
+        return None
+    return True
+
+
 def _backtest(k: Kanit) -> AsamaSonucu:
     if k.sonuc_hash is None or k.config_hash is None or k.commit is None:
         return AsamaSonucu(
@@ -282,6 +507,8 @@ def _kalite_kontrol(k: Kanit) -> AsamaSonucu:
 
 
 def _out_of_sample(k: Kanit) -> AsamaSonucu:
+    if k.protokol is Protokol.RYPP:
+        return _out_of_sample_rypp(k)
     if k.kapi_sonucu is None:
         return AsamaSonucu(Asama.OUT_OF_SAMPLE, None, "K-019 kapıları değerlendirilmemiş")
 
@@ -317,6 +544,32 @@ def _out_of_sample(k: Kanit) -> AsamaSonucu:
     kalan = k.kapi_sonucu.get("kalan_kapilar") or []
     return AsamaSonucu(
         Asama.OUT_OF_SAMPLE, False, f"geçilmeyen kapı(lar): {', '.join(kalan) or 'bilinmiyor'}"
+    )
+
+
+def _out_of_sample_rypp(k: Kanit) -> AsamaSonucu:
+    """RYPP yolunda `out_of_sample` (K-126). `ZORUNLU_KAPILAR` burada aranmaz; yerine RYPP'nin
+    13 koşulu + B-3. K-039 ön şartı alfa yoluyla aynı. PASS/FAIL/INCONCLUSIVE → True/False/None."""
+    if k.rypp_sonucu is None:
+        return AsamaSonucu(
+            Asama.OUT_OF_SAMPLE, None, "RYPP INCONCLUSIVE — RYPP değerlendirmesi yok (K-125)"
+        )
+    if k.hipotez_sirasi is None:
+        return AsamaSonucu(
+            Asama.OUT_OF_SAMPLE,
+            None,
+            "hipotez defterinde kayıt yok: bu stratejinin kaçıncı deneme olduğu "
+            "bilinmiyor (K-039)",
+        )
+    ana, g_ana = rypp_hukmu(k.rypp_sonucu)
+    bag, g_bag = bagimsiz_hukmu(k.bagimsiz_dogrulama, k.veri_sha256)
+    hukum = _ve(ana, bag)
+    toplam = k.hipotez_toplami or k.hipotez_sirasi
+    return AsamaSonucu(
+        Asama.OUT_OF_SAMPLE,
+        hukum,
+        f"RYPP {RYPP_ETIKET[hukum]} — OOS {RYPP_ETIKET[ana]}: {g_ana}; {g_bag} — "
+        f"{k.hipotez_sirasi}. hipotez (defterde toplam {toplam})",
     )
 
 
@@ -479,6 +732,7 @@ class PromotionKaydi:
         giren elle onay adımını "geçilecek bir engel" hâline getirirdi. Zincir adım adım
         tırmanılır, koşulmaz.
         """
+        self._protokol_kilidi(kanit)
         hedef = sonraki(self.asama)
         if hedef is None:
             return AsamaSonucu(self.asama, True, "zincirin sonunda")
@@ -513,7 +767,8 @@ class PromotionKaydi:
                 "elle onay bir gerekçe ister (≥10 karakter): gerekçesiz onay bir tıktır, "
                 "karar değil (K-010)"
             )
-        k = kanit or Kanit()
+        k = kanit or Kanit(protokol=self.protokol or Protokol.ALFA)
+        self._protokol_kilidi(k)
         sonuc = AsamaSonucu(Asama.ELLE_ONAY, True, f"elle onay: {metin}")
         self._kaydet(sonuc, k)
         self.asama = Asama.ELLE_ONAY
@@ -521,6 +776,24 @@ class PromotionKaydi:
         self._kaydet(_live(k), k)
         self.asama = Asama.LIVE
         return sonuc
+
+    @property
+    def protokol(self) -> Protokol | None:
+        """`out_of_sample`ı hangi protokolle geçtiği; geçmediyse `None` (K-126). Geçmişten
+        türer (zincir hash'li satırlar); K-126 öncesi satırda alan yok → `alfa`."""
+        for satir in reversed(self.gecmis):
+            if satir.get("asama") == Asama.OUT_OF_SAMPLE and satir.get("gecti") is True:
+                return Protokol((satir.get("kanit") or {}).get("protokol", Protokol.ALFA))
+        return None
+
+    def _protokol_kilidi(self, kanit: Kanit) -> None:
+        """`out_of_sample`ı bir protokolle geçen strateji başka protokolün kanıtıyla ilerlemez."""
+        kilit = self.protokol
+        if kilit is not None and kanit.protokol is not kilit:
+            raise PromotionHatasi(
+                f"{self.strateji}: out_of_sample {kilit} protokolüyle geçildi; {kanit.protokol} "
+                "kanıtıyla ilerletilemez (K-126, protokol karışması)"
+            )
 
     def eksik_asamalar(self) -> list[Asama]:
         """Bu stratejinin henüz geçmediği aşamalar."""
@@ -724,14 +997,24 @@ __all__ = [
     "ASGARI_PAPER_GUN",
     "KONTROLLER",
     "MOD_ESIGI",
+    "RYPP_BELIRSIZLIK",
+    "RYPP_ESIKLER",
+    "RYPP_ETIKET",
+    "RYPP_KOSULLARI",
+    "RYPP_NOKTA",
+    "RYPP_YETERLILIK",
     "SIRA",
+    "ZORUNLU_KAPILAR",
     "Asama",
     "AsamaSonucu",
     "Kanit",
     "PromotionDefteri",
     "PromotionHatasi",
     "PromotionKaydi",
+    "Protokol",
+    "bagimsiz_hukmu",
     "beklenen_asama",
+    "rypp_hukmu",
     "satir_hashi",
     "sonraki",
     "yeterli_mi",

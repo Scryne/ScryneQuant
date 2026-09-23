@@ -6149,3 +6149,75 @@ testnet ayrımı (K-114/K-122).
    yalnız K-122'nin iki hükmü ve Scryne'ın açık onayıyla.
 4. **Açık (bir sonraki adım):** RYPP'nin promotion zincirine bağlanması (`Kanit` için protokol türü; RYPP yolunda
    `ZORUNLU_KAPILAR` yerine RYPP koşul listesi) ve bağımsız veri (French) yükleyicisi. İkisi de strateji değil.
+
+## K-126 — RYPP promotion zincirine bağlandı: protokol türü `Kanit`te, alfa yolu değişmedi; B-3 yoksa PASS yok (INCONCLUSIVE)
+
+**Durum:** kabul (altyapı; strateji yok, eşik değişikliği yok) · **Tarih:** 2026-09-23 · **Onay:** Scryne (K-126 talimatı:
+"yalnızca RYPP'nin mevcut promotion zincirine güvenli ve deterministik biçimde bağlanması") · **Tabi:** K-010, K-035,
+K-039, K-082, K-118, K-119, K-122, K-125 · **Kaynak:** `src/scryne_quant/risk/promotion.py`,
+`src/scryne_quant/cli/main.py` (`sq promotion degerlendir --protokol/--rypp/--bagimsiz`),
+`tests/unit/test_promotion_rypp.py`
+
+### Mimari bulgu: `ZORUNLU_KAPILAR` protokole özgü, sistem değişmezleri başka aşamalarda
+
+Zincir (`backtest → kalite_kontrol → out_of_sample → risk_incelemesi → paper → live_adayi → elle_onay → live`) incelendi.
+`ZORUNLU_KAPILAR` yalnız `_out_of_sample`da okunuyor ve içeriği alfa protokolünün ekonomik/istatistiksel ölçütü
+(OOS Sharpe ≥ 1,04, PBO, WF, parametre kararlılığı, mutlak `max_drawdown` ≤ 0,25 — K-125/B-5'e göre tam maruziyetli
+dağılımda anlamsız). Yani **protokole özgü**. Gerçek sistem değişmezleri başka yerde ve protokolden bağımsız:
+
+| Değişmez | Nerede | RYPP'de |
+| --- | --- | --- |
+| Yeniden üretilebilirlik, temiz ağaç, sonuç/config/commit kimliği (K-009) | `backtest` | aynen |
+| Veri kalitesi, maliyet modeli, `data_quality_warning` (K-006/K-021) | `kalite_kontrol` | aynen |
+| Çekiliş sayımı (K-039) | `out_of_sample` ön şartı (`hipotez_sirasi`) | aynen (iki yolda da) |
+| Kanıt tamlığı (K-118) | `out_of_sample` | alfa: 12 kapı; RYPP: 13 koşul (`RYPP_KOSULLARI`) |
+| Risk motoru altında düşüş, kill switch'e değmemek (K-008) | `risk_incelemesi` | aynen |
+| 30 gün kesintisiz paper, yalnız `paper` modu (K-035) | `paper`, `Kanit.__post_init__` | aynen |
+| Elle onay makinece verilemez (K-010) | `elle_onay` | aynen |
+| Zincir hash'i + audit bağı (K-082) | `PromotionKaydi` | aynen; protokol satırın içinde |
+| Look-ahead | kod düzeyi, `test_look_ahead_genel.py` (K-118) | kanıt başına değil, değişmedi |
+
+### Karar
+
+1. **`Kanit.protokol`** (`Protokol.ALFA` | `Protokol.RYPP`), varsayılan `alfa`: K-126 öncesi davranışın aynısı ve en katı
+   yol; varsayılan hiçbir ölçümü dolu göstermez. Yalnız `out_of_sample`ın ölçütünü seçer; diğer aşamalar ortak.
+2. **Karışma yasak (kurulurken, K-035/2 kalıbı):** alfa kanıtı `rypp_sonucu`/`bagimsiz_dogrulama` taşıyamaz; RYPP kanıtı
+   `kapi_sonucu` taşıyamaz; RYPP gövdesi alfa `kapi_sonucu`na konursa 12 kapı eksik → `False`. `out_of_sample`ı bir
+   protokolle geçen strateji sonraki aşamalarda (ve `elle_onayla`da) ötekinin kanıtıyla ilerletilemez
+   (`PromotionKaydi.protokol`, geçmişten türer; K-126 öncesi satır = alfa).
+3. **Hüküm satırlardan türer, raporlanan `durum`dan değil** (`rypp_hukmu`): yeterlilik satırı yok/geçmedi → INCONCLUSIVE;
+   nokta koşulu **kaldı** → FAIL; ölçülmemiş nokta koşulu → INCONCLUSIVE; bootstrap yok/geçmedi → INCONCLUSIVE; hepsi →
+   PASS. Yalnız `gecti is True` geçer (`1`, `"true"`, `None` geçmez). Türetilen ≠ raporlanan, bilinmeyen/çift satır,
+   `esikler` yok ya da K-125 değerlerinden farklı (`RYPP_ESIKLER`, gevşetilmiş kodla üretilmiş kanıt) → `PromotionHatasi`.
+   PASS/FAIL/INCONCLUSIVE → `AsamaSonucu.gecti` True/False/**None** ("ölçülemedi"; zincirin mevcut üç değeri).
+4. **B-3 → INCONCLUSIVE, FAIL değil.** Bağımsız doğrulama yoksa RYPP PASS üretemez. FAIL seçilmedi çünkü FAIL "ölçüldü ve
+   kaldı" demek ve K-125 §5.3'e göre yeni araştırma döngüsü/hipotez açtırır; burada donmuş aday yanlışlanmadı, kanıt eksik.
+   INCONCLUSIVE'in K-125 tanımı ("eşik gevşemez, daha fazla veri beklenir") B-3'ün durumunun kendisi. Ayrıntı:
+   - kimliksiz (`veri_sha256` yok) bağımsız veri → INCONCLUSIVE; ana OOS ile aynı `veri_sha256` → kanıt hatası;
+   - bağımsız veride FAIL → FAIL (üç değerli VE: bir FAIL her şeye baskın, sonra INCONCLUSIVE);
+   - K-125 §5 "PASS için bağımsız veride en az FAIL olmamalı" **yorumu**: bağımsız veride yeterlilik satırlarının ve
+     bütün nokta koşullarının ölçülüp geçmesi şart; tolere edilen tek belirsizlik bootstrap'tır. Aksi hâlde kısa bir seri
+     (yeterlilik INCONCLUSIVE) ya da P3'ü hiç koşmamak (ölçülmemiş koşul → INCONCLUSIVE) "FAIL değil" sayılıp B-3'ü boşa
+     düşürürdü. Bu bir **sıkılaştırma yorumu**, eşik değişikliği değil; ikinci açığı özellik testi yakaladı (ilk sürüm
+     yalnız yeterliliği arıyordu).
+5. **Kanıt izi:** her satırın `kanit` özetinde `protokol`; RYPP satırında `rypp_durum`, `rypp_hash`, `bagimsiz_durum`,
+   `bagimsiz_veri_sha256`, `bagimsiz_hash` (tam gövdelerin `nesne_hash`i). Hepsi satır hash'ine ve audit'e girer; hash
+   sözleşmesi (`satir_hashi`, `HASH_DISI`) değişmedi, eski satırlar olduğu gibi doğrulanır.
+6. **CLI:** `sq promotion degerlendir <strateji> --protokol rypp --rypp <RyppSonucu.sozluk JSON> --bagimsiz <aynı + veri_sha256>
+   --sonuc <kayıt>`. `--protokol alfa` + `--rypp` ya da `--protokol rypp` + `--kapilar` → hata. RYPP koşusunu dosyaya
+   yazan üretici komut henüz yok (C fazının işi).
+
+### Alfa regresyonu
+
+16 alfa kanıt varyantında (tam, boş, dirty, DQ, kapı yok/eksik/kalan, üst `gecti` doğru satır yanlış, hipotez yok, risk
+yok/aşım, paper yok/kısa/kesinti) aşama aşama `(asama, gecti, gerekce)` ve eski kanıt alanları K-126 öncesiyle **byte
+aynı**; `runs/promotion/sma_kesisim.json` üzerinde `sq promotion durum --json` çıktısı aynı. Alfa satırına eklenen tek
+alan `"protokol": "alfa"` (yeni satırların içeriği, dolayısıyla hash'i, bu bir alan kadar farklı; karar aynı).
+
+### Sınırlar (açık)
+
+- `aile_sayisi` (P3'ün Bonferroni k'sı) RYPP gövdesinde yapısal alan değil; promotion defterden doğrulayamıyor (yalnız P3
+  satırının açıklamasında). Kayıt ve üretici komut yazılırken yapısal alana alınmalı.
+- B-3 bağımsız veri yolu (French, 2004-05 sonrası) **yok**; bu yüzden şu an hiçbir RYPP kanıtı PASS olamaz — tasarım gereği.
+- B fazı kapanmadı: RYPP entegre, ama bağımsız doğrulama veri yolu, metodolojinin yeniden denetimi ve B kararı eksik.
+  **C fazı açılmaz.**

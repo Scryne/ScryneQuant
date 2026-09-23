@@ -2553,15 +2553,39 @@ def risk_serbest(
 
 
 def _kanit_kur(
-    sonuc_yolu: Path | None, kapi_yollari: Path | list[Path] | None, strateji: str
+    sonuc_yolu: Path | None,
+    kapi_yollari: Path | list[Path] | None,
+    strateji: str,
+    *,
+    protokol: str = "alfa",
+    rypp_yolu: Path | None = None,
+    bagimsiz_yolu: Path | None = None,
 ) -> promotion_mod.Kanit:
     """Sonuç kaydı ve kapı değerlendirmesinden promotion kanıtı kurar.
 
     Eksik dosya **hata değil**: kanıtın o kısmı `None` kalır ve ilgili aşama "ölçülemedi"
     olur. Zorunlu kılmak, henüz ölçülemeyen bir aşamayı (örn. paper) hiç değerlendirilemez
     yapardı; `None` ise zincirin nerede durduğunu söylüyor.
+
+    Protokol (K-126): `alfa` kapı kayıtlarını, `rypp` RYPP değerlendirmesini
+    (`RyppSonucu.sozluk()` JSON'u) ve B-3 bağımsız doğrulamasını (aynı biçim + `veri_sha256`)
+    okur. Karışık girdi reddedilir; bir protokolün kanıtı ötekinin yerine geçmez.
     """
-    alanlar: dict[str, Any] = {}
+    try:
+        protokol_ = promotion_mod.Protokol(protokol)
+    except ValueError:
+        raise typer.BadParameter(f"bilinmeyen protokol {protokol!r} (alfa | rypp)") from None
+    if protokol_ is promotion_mod.Protokol.ALFA and (rypp_yolu or bagimsiz_yolu):
+        raise typer.BadParameter("--rypp/--bagimsiz yalnız `--protokol rypp` ile (K-126)")
+    if protokol_ is promotion_mod.Protokol.RYPP and kapi_yollari:
+        raise typer.BadParameter(
+            "--kapilar alfa kanıtıdır; `--protokol rypp` ile verilemez (K-126)"
+        )
+    alanlar: dict[str, Any] = {"protokol": protokol_}
+    if rypp_yolu is not None:
+        alanlar["rypp_sonucu"] = json.loads(rypp_yolu.read_text(encoding="utf-8"))
+    if bagimsiz_yolu is not None:
+        alanlar["bagimsiz_dogrulama"] = json.loads(bagimsiz_yolu.read_text(encoding="utf-8"))
 
     if sonuc_yolu is not None:
         kayit = json.loads(sonuc_yolu.read_text(encoding="utf-8"))
@@ -2677,6 +2701,20 @@ def promotion_degerlendir(
             "`sq lab kapilar-v2`). 12 kapının tamamı gerekir (K-118).",
         ),
     ] = None,
+    protokol: Annotated[
+        str,
+        typer.Option("--protokol", help="alfa (12 kapı, K-119) | rypp (K-125). Karışık kanıt "
+                     "reddedilir (K-126)."),
+    ] = "alfa",
+    rypp: Annotated[
+        Path | None,
+        typer.Option("--rypp", help="RYPP değerlendirmesi (`RyppSonucu.sozluk()` JSON'u)."),
+    ] = None,
+    bagimsiz: Annotated[
+        Path | None,
+        typer.Option("--bagimsiz", help="B-3 bağımsız doğrulama (aynı biçim + veri_sha256). "
+                     "Yoksa RYPP PASS üretilemez."),
+    ] = None,
     kok: Annotated[Path, typer.Option("--kok")] = Path("runs/promotion"),
     audit: AuditYolu = VARSAYILAN_AUDIT,
     json_cikti: JsonCikti = False,
@@ -2691,7 +2729,8 @@ def promotion_degerlendir(
         # Kayıt zincirle **ve** audit'le doğrulanmadan ilerletilmez; her yeni satır önce
         # audit'e, sonra dosyaya (K-082 P1/P2).
         kayit = defter.oku(strateji, audit=audit_defteri)
-        kanit = _kanit_kur(sonuc, kapilar, strateji)
+        kanit = _kanit_kur(sonuc, kapilar, strateji, protokol=protokol, rypp_yolu=rypp,
+                           bagimsiz_yolu=bagimsiz)
 
         adimlar: list[dict[str, Any]] = []
         while True:

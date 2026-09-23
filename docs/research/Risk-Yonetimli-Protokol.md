@@ -88,6 +88,12 @@ nötralize eder: yalnız **zamanlama** ödüllendirilir.
 4. **Promotion:** PASS gerekli ama yeterli değil. Ardından K-122 zinciri gelir: paper/shadow
    gösterimi ve sistem hazır.
 
+**Zincire bağlantı (K-126):** `sq promotion degerlendir --protokol rypp --rypp … --bagimsiz …`.
+RYPP yalnız `out_of_sample` aşamasının ölçütünü değiştirir; temiz ağaç, veri kalitesi, K-039 sayımı,
+risk incelemesi, paper ve elle onay alfa yoluyla ortaktır. Bağımsız doğrulama yoksa sonuç
+INCONCLUSIVE'dir (FAIL değil: aday yanlışlanmadı, kanıt eksik); bağımsız veride yeterlilik ve bütün
+nokta koşulları ölçülüp geçmiş olmalı, tolere edilen tek belirsizlik bootstrap'tır.
+
 **Ek doğrulama (kirlenme nedeniyle zorunlu):** kripto OOS'u (B-3) tek başına yeterli sayılmaz.
 Aynı donmuş kural, bu projede OOS'una hiç bakılmamış bağımsız bir veride de raporlanır: ABD
 piyasası/sektörleri, French verisi, **2004-05 sonrası** (K-124'te yalnız öncesi ölçüldü). Bu veri
