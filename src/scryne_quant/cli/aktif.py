@@ -158,6 +158,16 @@ def calistir_komut(hesap: HesapOpt) -> None:
         typer.echo(f"AKTİF DEMO '{hesap}' · vadeli {v_ayar.strat} · {v_ayar.kaldirac:g}x")
         vadeli.calistir_vadeli(KOK / hesap, float(ham["sermaye"]), v_ayar, yaz=typer.echo)
         return
+    if ayar.strateji == "cekirdek":  # K-141: BTC+ETH trend filtreli vol hedefli spot, günlük
+        from scryne_quant.aktif import cekirdek
+
+        c_ayar = cekirdek.CekirdekAyari(semboller=ayar.semboller,
+                                        hedef_vol=float(ham.get("hedef_vol", 0.3)),
+                                        tavan=float(ham.get("tavan", 1.0)),
+                                        bant=float(ham.get("bant", 0.05)))
+        typer.echo(f"AKTİF DEMO '{hesap}' · çekirdek · vol {c_ayar.hedef_vol:g} · spot")
+        cekirdek.calistir_cekirdek(_araci(ayar, ham), KOK / hesap, c_ayar, yaz=typer.echo)
+        return
     araci = _araci(ayar, ham)
     typer.echo(f"AKTİF DEMO '{hesap}' · {ayar.araci} · {ayar.strateji} · {ayar.timeframe} · "
                f"{len(ayar.semboller)} sembol")

@@ -7074,3 +7074,56 @@ sonunda açık işlem sayılmıyordu. İkisi de düzeltilip yeniden koşuldu. Ka
 `vadeli-bollinger-3x` (S3, 3x; IS'te büyümeyi en çok artıran kaldıraç) ve `vadeli-donchian-2x` (S1, 2x; IS en iyi)
 demoya. İkisi OOS'a bakılarak seçildi → doğrulanmamış aday; demo ölçer. Gerçek para bu kaldıraçta **en az 3 ay demo**
 + ayrı K ister. 10-20x demo dahil hiçbir hesapta kullanılmaz: veride hesap sıfırlıyor.
+
+---
+
+## K-141 — Yeniden odak: çekirdek portföy (BTC + ETH trend filtreli, oynaklık hedefli spot); negatif ölçülen 6 demo kapandı
+
+**Durum:** kabul · **Tarih:** 2026-09-24 · **Onay:** Scryne ("projede şu ana verilmiş tüm kararlar, vs. tüm her şeyi
+yoksay. projemin amacı trade bot ve karlı bir şekilde para kazanma amacım var. geriye kalan herşeyi sana bırakıyorum.
+tüm yetki sende.") · **Değiştirir:** K-134'ün "çok varlıkta sık işlem" hedefi → hedef **maliyet sonrası kâr**;
+K-138'in demo listesi · **Kaynak:** `tools/trend_portfoy.py`, `tools/cekirdek_arastirma.py`,
+`docs/research/records/2026-09-24-{trend-portfoy,cekirdek}-sonuc.json`, `src/scryne_quant/aktif/cekirdek.py`,
+`tests/unit/test_cekirdek.py`
+
+### Neden
+
+Önceki kararların törensel kısmı (ön kayıt, Holm, program bütçesi) bırakıldı; ölçüm hijyeni (gelecek görmezlik,
+sonraki bar dolumu, aleyhte maliyet, PIT evren) **kalıyor** — bunlar karar değil, backtest'in doğru olmasının şartı.
+Onlarsız her strateji kâğıtta kâr gösterir.
+
+### Ölçülen
+
+1. **Geniş evrenli kripto trend (378 perp, PIT ilk N hacim, 2020-26, 10 bps/taraf + funding):** 36 + 40
+   yapılandırma, Sharpe 0,3-0,75, düşüş −%30…−%90, iki yarıda da pozitif 20/36. Oynaklık ayarlı BTC tutmanın
+   (yıllık +%18, Sharpe 0,86) **altında**. Alt coin evrenini genişletmek getiriyi düşürüyor. Terk edildi.
+2. **Çekirdek: BTC + ETH, ağırlık = (hedef_vol/2)/30g oynaklık × SMA100/200 filtresi (0, ½, 1), brüt ≤ 1, bant
+   0,05, spot kaldıraçsız, 15 bps/taraf, boş nakit faizsiz:**
+
+   | hedef_vol | 2018-19 | 2020-22 | 2023-26 | 2018-26 yıllık | Sharpe | en kötü düşüş |
+   |---|---|---|---|---|---|---|
+   | 0,2 | +%7 | +%21 | +%15 | +%15 | 1,13 | −%16 |
+   | 0,3 | +%12 | +%28 | +%22 | +%22 | 1,08 | −%23 |
+   | **0,4** | **+%16** | **+%40** | **+%29** | **+%29** | **1,11** | **−%30** |
+   | 0,5 | +%19 | +%46 | +%34 | +%35 | 1,09 | −%37 |
+   | BTC tut-bekle | −%28 | +%32 | +%53 | +%23 | 0,9 | −%81 |
+
+   Yıl yıl (0,4): 2018 −%10 · 2019 +%51 · 2020 +%121 · 2021 +%42 · 2022 −%14 · 2023 +%56 · 2024 +%44 · 2025 +%3 ·
+   2026 +%14. Yalnız BTC, bant 0 / 0,1 aynı bölgede (plato, tek nokta değil). **2018-19 seçimde hiç kullanılmadı**
+   (ilk tarama 2020-26) ve orada da pozitif.
+
+### Okuma (dürüst)
+
+Bu bir "gizli üstünlük" değil: kriptonun uzun vadeli yükselişine **düşüş korumalı** maruziyet. Getiri kriptonun
+yükselmeye devam etmesine bağlı; SMA filtresi 2018 ve 2022 çöküşlerinin çoğunu atlattı ama yatay testere piyasada
+(2025) sıfıra yakın kalır. Beklenti tarihsel tablonun altında tutulmalı: gerçekçi hedef yıllık %10-25, düşüş −%30-40.
+
+### Karar
+
+1. Demo hesap `cekirdek` (10.000 USDT simüle, `hedef_vol` 0,4, KriptoPaper, günde bir karar UTC 00:05). Karar
+   kodu backtest'le ortak (`aktif/cekirdek.py`).
+2. Kapatılan (maliyet sonrası negatif ölçülmüş): `kripto-trend`, `kripto-kirilim`, `kripto-donus`, `mt5-demo`,
+   `mt5-gece`, `mt5-aydonumu`. Kalan: `cekirdek`, `kripto-carry`, `vadeli-bollinger-3x`, `vadeli-donchian-2x`.
+3. Gerçek para: strateji spot ve kaldıraçsız olduğu için likidasyon riski yok. Geçiş için Scryne'dan gereken:
+   Binance hesabı + **yalnız spot işlem izni olan, para çekme kapalı, IP kısıtlı** API anahtarı ve başlangıç tutarı.
+   Para Scryne'ın; ilk emir onun açık onayıyla gider.

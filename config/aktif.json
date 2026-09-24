@@ -83,6 +83,20 @@
       "sunucu_utc_farki_saat": 3,
       "risk": {"sembol_kaldirac": 1.0, "toplam_kaldirac": 3.0}
     },
+    "cekirdek": {
+      "araci": "kripto_paper",
+      "sermaye": 10000,
+      "_not": "K-141: çekirdek portföy. BTC + ETH spot, kaldıraçsız; ağırlık = (hedef_vol/2)/30g oynaklık × SMA100/200 filtresi (0, ½, 1); brüt ≤ 1; bant 0,05; günde bir karar (UTC 00:05). Backtest 2018-26 (15 bps/taraf): yıllık +%29, Sharpe 1,1, en kötü düşüş −%30; 2018 −%10 (BTC −%72).",
+      "ucret_bps": 10,
+      "kayma_bps": 5,
+      "yalniz_long": true,
+      "semboller": ["BTCUSDT", "ETHUSDT"],
+      "timeframe": "1d",
+      "strateji": "cekirdek",
+      "hedef_vol": 0.4,
+      "tavan": 1.0,
+      "bant": 0.05
+    },
     "kripto-carry": {
       "araci": "carry_paper",
       "sermaye": 10000,

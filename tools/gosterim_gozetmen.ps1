@@ -1,4 +1,4 @@
-# Gösterim dönemi gözetmeni (K-122): 14 günlük testnet + shadow koşularını Claude oturumundan
+﻿# Gösterim dönemi gözetmeni (K-122): 14 günlük testnet + shadow koşularını Claude oturumundan
 # bağımsız ayakta tutar. Windows zamanlanmış görevi (`ScryneQuant-Gosterim`) bunu oturum açılışında
 # ve her 10 dakikada bir çağırır.
 #
@@ -51,7 +51,8 @@ foreach ($k in $Kosular) {
 
 # K-134: aktif çok varlıklı DEMO bot hesapları (config/aktif.json). Her hesap kendi dizininde,
 # kendi simüle/demo hesabında; `sq aktif durdur` `kapali` bırakır ve gözetmen onu başlatmaz.
-$Aktif = @("kripto-trend", "kripto-kirilim", "kripto-donus", "mt5-demo", "mt5-gece", "mt5-aydonumu", "kripto-carry", "vadeli-bollinger-3x", "vadeli-donchian-2x")
+# K-141: maliyet sonrası negatif ölçülen 15m kripto ve MT5 hesapları listeden çıktı (kapali).
+$Aktif = @("cekirdek", "kripto-carry", "vadeli-bollinger-3x", "vadeli-donchian-2x")
 foreach ($ad in $Aktif) {
     if ($Calisan | Where-Object { $_ -match "aktif calistir --hesap $ad( |$)" }) { continue }
     $dizin = Join-Path $Kok "runs\aktif\$ad"

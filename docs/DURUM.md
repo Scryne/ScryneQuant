@@ -1,67 +1,46 @@
 ---
 proje: ScryneQuant
-guncellendi: 2026-09-23
+guncellendi: 2026-09-24
 type: durum
 ---
 # ScryneQuant — şu anki gerçek
 
-Tek sayfa. "Neden böyle" için `docs/Kararlar.md` (K-134…K-136), geçmiş için `docs/arsiv/`
-(2026-09-23 öncesi DURUM dahil).
+Tek sayfa. "Neden böyle" için `docs/Kararlar.md` (K-141), geçmiş için `docs/arsiv/`.
 
-## Hedef
+## Hedef (K-141)
 
-Çok varlıkta (kripto, EURUSD ve diğer pariteler, altın, S&P, Nasdaq, Dow) sık işlem yapan bot.
-**Şu an yalnız demo; gerçek para yok.** Gerçek paraya geçiş yeni K + önceden yazılmış sayısal
-ölçüt + elle onay ister. TR'de kaldıraçlı FX/CFD gerçek parası SPK kuralıyla ≥ 50.000 TL teminat
-ve en fazla 1:10 kaldıraç.
+Maliyet sonrası kâr eden bot. Eski kararların törensel kısmı bırakıldı; ölçüm hijyeni (gelecek görmezlik,
+sonraki bar dolumu, aleyhte maliyet, PIT evren) kalıyor. **Şu an yalnız demo; gerçek para Scryne'ın API anahtarı
+ve açık onayıyla.**
 
-## Çalışan
+## Çekirdek strateji
 
-| Hesap | Piyasa | Strateji | Aracı |
-|---|---|---|---|
-| `kripto-trend` | 10 büyük coin, 15 dk, yalnız alış | EMA 20/50 trend | Binance fiyatı, simüle dolum |
-| `kripto-kirilim` | aynı | 20 bar kırılım | aynı |
-| `kripto-donus` | aynı | RSI 3 ortalamaya dönüş | aynı |
-| `mt5-demo` | EURUSD, GBPUSD, USDCHF, USDJPY, AUDUSD, NZDUSD, USDCAD, XAUUSD, S&P, NASDAQ, DJI · 1 saat · alış + açığa satış | RSI 3 ortalamaya dönüş | Integral MT5 demo fiyatı/spread'i, simüle dolum, kur çevrimi, gecelik swap |
+`cekirdek`: BTC + ETH spot, kaldıraçsız. Ağırlık = (0,4/2) / 30 günlük oynaklık × SMA100/200 filtresi, brüt ≤ %100,
+günde bir karar (UTC 00:05). Backtest 2018-26: yıllık **+%29**, Sharpe 1,1, en kötü düşüş **−%30** (BTC tutmak
+−%81). Her alt dönem pozitif (2018-19 +%16, 2020-22 +%40, 2023-26 +%29). Kriptonun yükselişine düşüş korumalı
+maruziyettir; gerçekçi beklenti yıllık %10-25.
 
-- **Yer: ikinci bilgisayar (host, 192.168.1.4), K-138.** Takip: **http://192.168.1.4:8790** (ev ağından).
-  Ana makinede bot çalışmaz. Karne hostta: `sq aktif karne --hesap <ad>`.
-- Ek demo hesaplar (K-138, doğrulanmamış aday): `mt5-gece` (16:00→09:00 ET), `mt5-aydonumu` (ay sonu → 3. gün).
-- `kripto-carry` (K-139): funding carry, yön nötr; backtest 2020-26 +%6,6/yıl, azami düşüş −%0,7.
-- `vadeli-bollinger-3x`, `vadeli-donchian-2x` (K-140): kaldıraçlı vadeli günlük kırılım, long/short, %2 stop;
-  backtest 2024-26 +%57 / +%22 yıllık, en kötü düşüş −%42 / −%15. 10-20x veride her yapılandırmada hesabı sıfırlıyor.
-- Toplam 9 demo hesap. Host kod güncellemesi: `tools/host_guncelle.ps1 [-BotlariYenile]`.
-- Hostta MT5 terminali Integral demo hesabı **50545513**'e bağlı (yalnız fiyat kaynağı); terminal ve Windows
-  oturumu açık kalmalı.
-- Kayıp freni: gün başına göre %3, hafta başına göre %8 düşüşte her şey kapanır.
-- Gözetmen hostta `ScryneQuant-Aktif` (oturumda, 10 dk) altı hesabı ve panoyu ayakta tutar; MT5 terminali
-  açık kalmalı. Kalıcı durdurma `sq aktif durdur --hesap <ad>`.
-- Integral demo sunucusu algoritmik emri kapalı tutuyor (retcode 10026). Açılırsa `mt5-demo`
-  `araci: "mt5"` yapılır ve emirler demo hesaba gider.
+## Çalışan demo hesaplar (host 192.168.1.4, pano http://192.168.1.4:8790)
 
-## Ölçülen (dürüst tablo)
+| Hesap | Ne | Backtest |
+|---|---|---|
+| `cekirdek` | yukarıdaki | +%29/yıl, DD −%30 (2018-26) |
+| `kripto-carry` | funding carry, yön nötr | +%6,6/yıl, DD −%0,7 (2020-26) |
+| `vadeli-bollinger-3x` | 6 perp günlük kırılım, 3x | +%26/+%57 yıllık, DD −%42 (2020-26) |
+| `vadeli-donchian-2x` | 6 perp günlük kırılım, 2x | +%11/+%22 yıllık, DD −%15 |
 
-- **Geriye bakış (K-134, K-135):** 15 strateji × zaman dilimi denemesinin hepsi maliyet sonrası
-  negatif. Trend aileleri maliyetsiz de negatif; dönüş ailesinin brüt kârı var, maliyet yiyor.
-- **Ön kayıtlı dönüş araştırması (K-136):** 36 aday × 2 piyasa; IS'te seçilen aday OOS'ta **kaldı**
-  (kripto −%8,6, MT5 −%3,9). OOS'ta pozitif aday kripto 7/36, MT5 8/36; medyan −%9. Yeni demo
-  hesap eklenmedi.
-- **Program 2 (K-137, literatür etkileri, Holm k=4):** gece getirisi, gün içi momentum, ay dönümü,
-  zaman serisi momentumu → 0/4 PASS. Gece ve ay dönümü etkileri 30 yıllık bağımsız veride gerçek
-  (SPY gece +4 bps/gün, t 6); Integral CFD'sinde gece etkisini maliyet (≈ 2,8 bps/gün) sıfırlıyor, ay
-  dönümü tutarlı ama 12 yılda istatistiksel eşiği geçmiyor.
-- Eski alfa araştırması (64 çekiliş) aynı sonucu vermişti: maliyet sonrası üstünlük yok.
-- Yani çalışan demolar **kazanç beklentisiyle değil ölçmek için** çalışıyor; demo karnesi geriye
-  bakıştan farklı çıkarsa o ayrı bir bulgu olur.
+Kapatılan (maliyet sonrası negatif): 15 dk kripto trend/kırılım/dönüş, MT5 RSI, gece, ay dönümü (K-141).
+Host güncelleme `tools/host_guncelle.ps1 [-BotlariYenile]`; kalıcı durdurma `sq aktif durdur --hesap <ad>`.
 
-## Açık işler
+## Ölçülen (özet)
 
-1. Dört hesabın ilk haftalık karnesi (2026-09-28 sonrası): demo ↔ geriye bakış tutarlı mı?
-2. Integral'den algoritmik işlem izni (Scryne) → gerçek demo emirleri; CFD komisyonu ölçülür.
-3. Integral CFD'nin gerçek maliyeti (komisyon + kayma) ölçülürse A1/A3 aynı tanımla yeni ön kayıtla
-   yeniden değerlendirilir (K-137). Yeni fikirler de ancak **yeni ön kayıtla**.
+- Sık işlem (15m/1h, 15 strateji, 36 aday dönüş ızgarası, literatür etkileri): hepsi maliyet sonrası negatif.
+- Geniş evrenli alt coin trendi: oynaklık ayarlı BTC tutmanın altında (K-141).
+- İşe yarayan: günlük/haftalık ufukta BTC/ETH trend filtresi + oynaklık hedefi; funding carry.
 
-## Dondurulmuş
+## Sıradaki
 
-Alfa/promotion/RYPP araştırması, BTC gösterim-pilot-R8 hattı, Jev gölgesi (K-136). Kod ve testler
-duruyor; süreç yok. Ayrıntı `.claude/CLAUDE.md` "Dosya haritası".
+1. `cekirdek` demo ↔ backtest tutarlılığı (ilk karar günleri emir/fiyat kontrolü).
+2. Gerçek para için Scryne'dan: Binance hesabı + yalnız spot işlem izinli, çekme kapalı, IP kısıtlı API anahtarı
+   + başlangıç tutarı. Sonra `cekirdek` için gerçek emir aracı (spot, kaldıraçsız) ve küçük tutarla başlangıç.
+3. Boştaki USDT'nin faiz getirisi (Binance Simple Earn) — backtest'te sayılmadı, ek getiri.
