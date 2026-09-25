@@ -1,9 +1,13 @@
 ---
 proje: ScryneQuant
-guncellendi: 2026-09-24
+guncellendi: 2026-09-25
 type: durum
 ---
 # ScryneQuant — şu anki gerçek
+
+> **⛔ DONDURULDU (2026-09-25).** Scryne projeye dönmeyecek; iş TradeBot'ta (`Projeler/TradeBot`, sıfırdan).
+> Host'taki dört demo bot `sq aktif durdur` ile durduruldu, `ScryneQuant-Aktif` görevi devre dışı, pano 8790
+> kapalı. Aşağısı dondurulduğu andaki durumdur.
 
 Tek sayfa. "Neden böyle" için `docs/Kararlar.md` (K-141), geçmiş için `docs/arsiv/`.
 

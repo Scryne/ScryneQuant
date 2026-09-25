@@ -1,8 +1,8 @@
 {
   "proje_adi": "ScryneQuant",
-  "asama": "uygulama",
-  "guncellendi": "2026-09-23",
+  "asama": "donduruldu",
+  "guncellendi": "2026-09-25",
   "roadmap": "docs/ROADMAP-RESET.md",
   "surum": 2,
-  "not": "Guncel durum docs/DURUM.md (tek sayfa). 2026-09-23 K-134..K-136: asil hedef cok varlikta sik islem; yururlukteki hat R17 aktif demo bot (kripto paper x3 + MT5 Integral demo 11 sembol, gercek para yok, takip 8790). Alfa/promotion/pilot/R8/Jev donduruldu; eski dokumanlar docs/arsiv/. Geriye bakis 15/15 ve on kayitli donus arastirmasi FAIL: maliyet sonrasi ustunluk yok; demolar olcum icin."
+  "not": "2026-09-25 DONDURULDU: Scryne projeye donmeyecek, yerine TradeBot (Projeler/TradeBot, sifirdan). Host 192.168.1.4 uzerindeki 4 demo bot `sq aktif durdur` ile durduruldu, ScryneQuant-Aktif gorevi devre disi, pano 8790 kapatildi. Son gercek: docs/DURUM.md. Guncel durum docs/DURUM.md (tek sayfa). 2026-09-23 K-134..K-136: asil hedef cok varlikta sik islem; yururlukteki hat R17 aktif demo bot (kripto paper x3 + MT5 Integral demo 11 sembol, gercek para yok, takip 8790). Alfa/promotion/pilot/R8/Jev donduruldu; eski dokumanlar docs/arsiv/. Geriye bakis 15/15 ve on kayitli donus arastirmasi FAIL: maliyet sonrasi ustunluk yok; demolar olcum icin."
 }
