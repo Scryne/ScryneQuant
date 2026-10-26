@@ -49,6 +49,13 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv]
+# ccxt 4.5.78 certifi'yi (2026.6.17, PYSEC-2026-4320), urllib3'ü (2.7.0, PYSEC-2026-4175) ve multidict'i (6.7.1,
+# PYSEC-2026-4244) birebir sabitliyor.
+# certifi yalnız CA paketi; urllib3 2.8 aynı ana sürüm, binance.py'nin urllib3.util.connection kancası duruyor
+# (3.037 test). ccxt kendi sabitlerini yükseltince bu satır kaldırılır.
+override-dependencies = ["certifi>=2026.10.19", "urllib3>=2.8.0,<3", "multidict>=6.9.1,<7"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/scryne_quant"]
 
